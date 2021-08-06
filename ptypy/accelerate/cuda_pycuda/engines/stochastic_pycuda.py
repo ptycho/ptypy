@@ -22,8 +22,13 @@ from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
+from ..mem_utils import GpuDataManager2
 
 MPI = False
+
+EX_MA_BLOCKS_RATIO = 2
+MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
+#AX_BLOCKS = 10  # can be used to limit the number of blocks, simulating that they don't fit
 
 class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
 
@@ -47,10 +52,12 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
 
     def __init__(self, ptycho_parent, pars=None):
         """
-        Difference map reconstruction engine.
+        Accelerated base engine for stochastic algorithms.
         """
         super().__init__(ptycho_parent, pars)
-
+        self.ma_data = None
+        self.mag_data = None
+        self.ex_data = None
     
     def engine_initialize(self):
         """
@@ -58,6 +65,8 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
         """
         self.context, self.queue = get_context(new_context=True, new_queue=True)
         super().engine_initialize()
+        self.qu_htod = cuda.Stream()
+        self.qu_dtoh = cuda.Stream()
 
     def _setup_kernels(self):
         """
@@ -126,30 +135,47 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
             #     kern.PCK = PositionCorrectionKernel(aux, nmodes, queue_thread=self.queue)
             #     kern.PCK.allocate()
             #     kern.PCK.address_mangler = addr_mangler
+        
+        ex_mem = 0
+        mag_mem = 0
+        fpc = self.ptycho.frames_per_block
+        for scan, kern in self.kernels.items():
+            ex_mem = max(kern.aux.nbytes * fpc, ex_mem)
+            mag_mem = max(kern.FUK.gpu.fdev.nbytes * fpc, mag_mem)
+        ma_mem = mag_mem
+        mem = cuda.mem_get_info()[0]
+        blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
+        fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
 
-            log(4, "Kernel setup completed")
+        # TODO grow blocks dynamically
+        nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)
+        nma = min(fit, MAX_BLOCKS)
 
+        log(3, 'PyCUDA max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
+        # reset memory or create new
+        self.ex_data = GpuDataManager2(ex_mem, 0, nex, True)
+        self.ma_data = GpuDataManager2(ma_mem, 0, nma, False)
+        self.mag_data = GpuDataManager2(mag_mem, 0, nma, False)
+        log(4, "Kernel setup completed")
 
     def engine_prepare(self):
-
         super().engine_prepare()
 
         for name, s in self.ob.S.items():
-            s.gpu = gpuarray.to_gpu(s.data)
+            s.gpu, s.data = mppa(s.data)
         for name, s in self.pr.S.items():
             s.gpu, s.data = mppa(s.data)
 
-        # TODO : like the serialization this one is needed due to object reformatting
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
             prep.addr_gpu = gpuarray.to_gpu(prep.addr)
 
         for label, d in self.ptycho.new_data:
-            prep = self.diff_info[d.ID]
-            prep.ex = gpuarray.to_gpu(prep.ex)
-            prep.mag = gpuarray.to_gpu(prep.mag)
-            prep.ma = gpuarray.to_gpu(prep.ma)
-            prep.ma_sum = gpuarray.to_gpu(prep.ma_sum)
+            dID = d.ID
+            prep = self.diff_info[dID]
+            pID, oID, eID = prep.poe_IDs
+
+            prep.ma_sum_gpu = gpuarray.to_gpu(prep.ma_sum)
             prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
             prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
             prep.err_exit_gpu = gpuarray.to_gpu(prep.err_exit)
@@ -157,17 +183,30 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
             #     prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
             prep.obn = gpuarray.to_gpu(prep.obn)
             prep.prn = gpuarray.to_gpu(prep.prn)
+            # prepare page-locked mems:
+            ma = self.ma.S[dID].data.astype(np.float32)
+            prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
+            prep.ma[:] = ma
+            ex = self.ex.S[eID].data
+            prep.ex = cuda.pagelocked_empty(ex.shape, ex.dtype, order="C", mem_flags=4)
+            prep.ex[:] = ex
+            mag = prep.mag
+            prep.mag = cuda.pagelocked_empty(mag.shape, mag.dtype, order="C", mem_flags=4)
+            prep.mag[:] = mag
 
+            self.ex_data.add_data_block()
+            self.ma_data.add_data_block()
+            self.mag_data.add_data_block()
 
     def engine_iterate(self, num=1):
         """
         Compute one iteration.
         """
-        queue = self.queue
+        self.dID_list = list(self.di.S.keys())
         error = {}
         for it in range(num):
             
-            for dID in self.di.S.keys():
+            for iblock, dID in enumerate(self.dID_list):
 
                 # find probe, object and exit ID in dependence of dID
                 prep = self.diff_info[dID]
@@ -191,15 +230,23 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
                 vieworder = prep.vieworder
                 prep.rng.shuffle(vieworder)
 
+                # Schedule ex, ma, mag to device
+                ev_ex, ex_full, data_ex = self.ex_data.to_gpu(prep.ex, dID, self.qu_htod)
+                ev_mag, mag_full, data_mag = self.mag_data.to_gpu(prep.mag, dID, self.qu_htod)
+                ev_ma, ma_full, data_ma = self.ma_data.to_gpu(prep.ma, dID, self.qu_htod)
+
+                ## synchronize h2d stream with compute stream
+                self.queue.wait_for_event(ev_ex)
+
                 # Iterate through views
                 for i in vieworder:
 
                     # Get local adress and arrays
                     addr = prep.addr_gpu[i,None]
                     ex_from, ex_to = prep.addr_ex[i]
-                    ex = prep.ex[ex_from:ex_to]
-                    mag = prep.mag[i,None]
-                    ma = prep.ma[i,None]
+                    ex = ex_full[ex_from:ex_to]
+                    mag = mag_full[i,None]
+                    ma = ma_full[i,None]
                     ma_sum = prep.ma_sum[i,None]
                     obn = prep.obn
                     prn = prep.prn
@@ -214,11 +261,14 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
                     PROP.fw(aux, aux)
 
                     ## Deviation from measured data
+                    self.queue.wait_for_event(ev_mag)
                     if self.p.compute_fourier_error:
+                        self.queue.wait_for_event(ev_ma)
                         FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                         FUK.error_reduce(addr, err_fourier)
                     else:
                         FUK.fourier_deviation(aux, addr, mag)
+                        self.queue.wait_for_event(ev_ma)
                     FUK.fmag_update_nopbound(aux, addr, mag, ma)
 
                     ## backward FFT
@@ -229,10 +279,6 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
                     if self.p.compute_exit_error:
                         FUK.exit_error(aux,addr)
                         FUK.error_reduce(addr, err_exit)
-
-                    ## probe/object rescale
-                    #if self.p.rescale_probe:
-                    #    pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
 
                     ## build auxilliary wave (ob * pr product)
                     AWK.build_aux2_no_ex(aux, addr, ob, pr)
@@ -250,13 +296,23 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
                         PROP.fw(aux, aux)
                         FUK.log_likelihood2(aux, addr, mag, ma, err_phot)
 
-            self.curiter += 1
+                data_ex.record_done(self.queue, 'compute')
+                if iblock + len(self.ex_data) < len(self.dID_list):
+                    data_ex.from_gpu(self.qu_dtoh)
 
-        queue.synchronize()
+            # swap direction
+            self.dID_list.reverse()
+
+            self.curiter += 1
+            self.ex_data.syncback = False
+
+        # finish all the compute
+        self.queue.synchronize()
+
         for name, s in self.ob.S.items():
-            s.gpu.get(s.data)
+            s.gpu.get_async(stream=self.qu_dtoh, ary=s.data)
         for name, s in self.pr.S.items():
-            s.gpu.get(s.data)
+            s.gpu.get_async(stream=self.qu_dtoh, ary=s.data)
 
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
@@ -265,6 +321,9 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
             error.update(zip(prep.view_IDs, errs))
 
+        # wait for the async transfers
+        self.qu_dtoh.synchronize()
+
         self.error = error
         return error
 
@@ -272,6 +331,10 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
         """
         clear GPU data and destroy context.
         """
+        self.ex_data = None
+        self.ma_data = None
+        self.mag_data = None
+
         for name, s in self.ob.S.items():
             del s.gpu
         for name, s in self.pr.S.items():
@@ -282,6 +345,8 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
         # copy data to cpu 
         # this kills the pagelock memory (otherwise we get segfaults in h5py)
         for name, s in self.pr.S.items():
+            s.data = np.copy(s.data)
+        for name, s in self.ob.S.items():
             s.data = np.copy(s.data)
 
         self.context.detach()
