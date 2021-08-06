@@ -26,7 +26,7 @@ class ArrayUtilsTest(unittest.TestCase):
         absed.reshape(array_shape)
         out = au.abs2(array_to_be_absed)
         np.testing.assert_array_equal(absed, out)
-        self.assertEqual(absed.dtype, np.float32)
+        self.assertEqual(absed.dtype, np.float64)
 
     def test_abs2_complex_input(self):
         single_dim = 50.0
@@ -38,7 +38,7 @@ class ArrayUtilsTest(unittest.TestCase):
         array_to_be_absed.reshape(array_shape)
         out = au.abs2(array_to_be_absed)
         np.testing.assert_array_equal(absed, out)
-        self.assertEqual(absed.dtype, np.float32)
+        self.assertEqual(absed.dtype, np.float64)
 
     def test_sum_to_buffer(self):
 
