@@ -88,11 +88,11 @@ class FftSetStreamTest(PyCudaTest):
 
 
 
-    def test_set_stream_reikna(self):
+    def test_set_stream_a_reikna(self):
         self.helper(ReiknaFFT)
 
-    def test_set_stream_cufft(self):
+    def test_set_stream_b_cufft(self):
         self.helper(cuFFT)
 
-    def test_set_stream_skcuda_cufft(self):
+    def test_set_stream_c_skcuda_cufft(self):
         self.helper(SkcudaCuFFT)
