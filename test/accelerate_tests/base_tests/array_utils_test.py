@@ -26,7 +26,7 @@ class ArrayUtilsTest(unittest.TestCase):
         absed.reshape(array_shape)
         out = au.abs2(array_to_be_absed)
         np.testing.assert_array_equal(absed, out)
-        self.assertEqual(absed.dtype, np.float)
+        self.assertEqual(absed.dtype, np.float32)
 
     def test_abs2_complex_input(self):
         single_dim = 50.0
@@ -38,7 +38,7 @@ class ArrayUtilsTest(unittest.TestCase):
         array_to_be_absed.reshape(array_shape)
         out = au.abs2(array_to_be_absed)
         np.testing.assert_array_equal(absed, out)
-        self.assertEqual(absed.dtype, np.float)
+        self.assertEqual(absed.dtype, np.float32)
 
     def test_sum_to_buffer(self):
 
@@ -256,7 +256,7 @@ class ArrayUtilsTest(unittest.TestCase):
 
     def test_crop_pad_1(self):
         # pad, integer, 2D
-        B = np.indices((4, 4), dtype=np.int)
+        B = np.indices((4, 4), dtype=np.int32)
         A = np.zeros((6, 6), dtype=B.dtype)
         au.crop_pad_2d_simple(A, B.sum(0))
         exp_A = np.array([[0, 0, 0, 0, 0, 0],
