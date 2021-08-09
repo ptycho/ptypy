@@ -92,9 +92,32 @@ class StochasticBaseEngine(PositionCorrectionEngine):
                 # Probe update
                 self.probe_update(view, exit_wave)
 
+                # Position update
+                self.position_update_local(view)
+
             self.curiter += 1
 
         return error_dct
+
+    def position_update_local(self, view):
+        """
+        Position refinement update for current view.
+        """
+        if not self.do_position_refinement:
+            return
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+
+        # Update positions
+        if do_update_pos:
+            """
+            refines position of current view by a given algorithm. 
+            """
+            self.position_refinement.update_constraints(self.curiter) # this stays here
+
+            # Check for new coordinates
+            if view.active:
+                self.position_refinement.update_view_position(view)
 
     def fourier_update(self, view):
         """

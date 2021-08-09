@@ -122,8 +122,10 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
             kern.PROP.allocate()
             kern.resolution = geo.resolution[0]
 
-            # if self.do_position_refinement:
-            #     log(4, "Setting up position correction")
+            if self.do_position_refinement:
+                log(4, "Setting up position correction")
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
+                kern.PCK.allocate()
             #     addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
             #                                                     self.p.position_refinement.start,
             #                                                     self.p.position_refinement.stop,
@@ -169,6 +171,8 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
             prep.addr_gpu = gpuarray.to_gpu(prep.addr)
+            if self.do_position_refinement:
+                prep.mangled_addr_gpu = prep.addr_gpu.copy()
 
         for label, d in self.ptycho.new_data:
             dID = d.ID
@@ -179,8 +183,8 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
             prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
             prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
             prep.err_exit_gpu = gpuarray.to_gpu(prep.err_exit)
-            # if self.do_position_refinement:
-            #     prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
+            if self.do_position_refinement:
+                prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
             prep.obn = gpuarray.to_gpu(prep.obn)
             prep.prn = gpuarray.to_gpu(prep.prn)
             # prepare page-locked mems:
@@ -296,6 +300,9 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
                         PROP.fw(aux, aux)
                         FUK.log_likelihood2(aux, addr, mag, ma, err_phot)
 
+                    # position update
+                    self.position_update()
+
                 data_ex.record_done(self.queue, 'compute')
                 if iblock + len(self.ex_data) < len(self.dID_list):
                     data_ex.from_gpu(self.qu_dtoh)
@@ -326,6 +333,23 @@ class StochasticBaseEnginePycuda(stochastic_serial.StochasticBaseEngineSerial):
 
         self.error = error
         return error
+
+    def position_update(self):
+        """
+        Position refinement
+        """
+        if not self.do_position_refinement or (not self.curiter):
+            return
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+
+        # Update positions
+        if do_update_pos:
+            """
+            Iterates through all positions and refines them by a given algorithm.
+            """
+            log(4, "----------- START POS REF -------------")
+
 
     def engine_finalize(self):
         """

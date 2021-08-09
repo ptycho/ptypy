@@ -132,17 +132,8 @@ class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
             kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
-                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
-                                                                self.p.position_refinement.start,
-                                                                self.p.position_refinement.stop,
-                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
-                                                                randomseed=0)
-                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
-                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
-
-                kern.PCK = PositionCorrectionKernel(aux, nmodes)
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution)
                 kern.PCK.allocate()
-                kern.PCK.address_mangler = addr_mangler
 
     def engine_prepare(self):
         """
@@ -306,6 +297,9 @@ class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
                         FUK.log_likelihood(aux, addr, mag, ma, err_phot)
                         self.benchmark.F_LLerror += time.time() - t1
 
+                    # position update
+                    self.position_update()
+
                 # update errors
                 errs = np.ascontiguousarray(np.vstack([np.hstack(prep.err_fourier), 
                                                        np.hstack(prep.err_phot), 
@@ -317,6 +311,21 @@ class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
         #error = parallel.gather_dict(error_dct)
         return error_dct
 
+    def position_update(self):
+        """
+        Position refinement
+        """
+        if not self.do_position_refinement:
+            return
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+
+        # Update positions
+        if do_update_pos:
+            """
+            Iterates through all positions and refines them by a given algorithm. 
+            """
+            log(4, "----------- START POS REF -------------")
 
     def engine_finalize(self):
         """
