@@ -453,6 +453,7 @@ class ML_pycuda(ML_serial):
             del s.cpu
         for dID, prep in self.diff_info.items():
             prep.addr = prep.addr_gpu.get()
+            prep.float_intens_coeff = prep.fic_gpu.get()
 
         #self.queue.synchronize()
         self.context.detach()

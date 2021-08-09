@@ -253,7 +253,7 @@ def aperture(A, grids=None, pars=None, **kwargs):
     if p.form is not None:
         off = u.expect2(p.offset)
         cgrid = grids[0].astype(complex) + 1j*grids[1]
-        cgrid -= np.complex(off[0], off[1])
+        cgrid -= complex(off[0], off[1])
         cgrid *= np.exp(1j * p.rotate)
         grids[0] = cgrid.real / psize[0]
         grids[1] = cgrid.imag / psize[1]

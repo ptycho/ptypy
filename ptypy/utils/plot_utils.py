@@ -285,7 +285,7 @@ HSV_to_P1A = hsv2complex
 
 
 def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
-    """
+    r"""
     Take array `a` and transform to `PIL.Image` object that may be used
     by `pyplot.imshow` for example. Also save image buffer directly
     without the sometimes unnecessary Gui-frame and overhead.
@@ -817,7 +817,7 @@ class PtyAxis(object):
 
         if self.channel == 'c':
             self.cax.xaxis.set_major_locator(mpl.ticker.FixedLocator([0,np.pi, 2*np.pi]))
-            self.cax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(['0', '$\pi$', '2$\pi$']))
+            self.cax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(['0', r'$\pi$', r'2$\pi$']))
             self.cax.set_xlabel('phase [rad]', fontsize=self.fontsize+2)
             self.cax.xaxis.set_label_position("top")
 

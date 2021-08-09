@@ -498,8 +498,12 @@ class DM_pycuda(DM_serial.DM_serial):
             del s.gpu
         for name, s in self.pr.S.items():
             del s.gpu
+        for name, s in self.pr_buf.S.items():
+            del s.gpu
         for name, s in self.pr_nrm.S.items():
             del s.gpu
+
+        # copy addr to cpu
         for dID, prep in self.diff_info.items():
             prep.addr = prep.addr_gpu.get()
 
