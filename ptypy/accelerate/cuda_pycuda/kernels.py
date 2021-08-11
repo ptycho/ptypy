@@ -1018,7 +1018,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                  block=(16, 16, 1), grid=grid, stream=self.queue)
 
 
-    def ob_update_local(self, addr, ob, pr, ex, aux, prn, A=0., B=1.):
+    def ob_update_local(self, addr, ob, pr, ex, aux, prn, a=0., b=1.):
         prn_max = gpuarray.max(prn, stream=self.queue)
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
@@ -1038,13 +1038,13 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             obsh[0], obsh[1], obsh[2],
             addr,
             prn_max,
-            np.float32(A),
-            np.float32(B),
+            np.float32(a),
+            np.float32(b),
             block=(bx, by, 1),
             grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
             stream=self.queue)
 
-    def pr_update_local(self, addr, pr, ob, ex, aux, obn, A=0., B=1.):
+    def pr_update_local(self, addr, pr, ob, ex, aux, obn, a=0., b=1.):
         obn_max = gpuarray.max(obn, stream=self.queue)
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
@@ -1064,8 +1064,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             obsh[0], obsh[1], obsh[2],
             addr,
             obn_max,
-            np.float32(A),
-            np.float32(B),
+            np.float32(a),
+            np.float32(b),
             block=(bx, by, 1),
             grid=(1, int((exsh[1] + by - 1) // by), int(num_pods)),
             stream=self.queue)

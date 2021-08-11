@@ -553,26 +553,26 @@ class PoUpdateKernel(BaseKernel):
                 ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * fac
         return
 
-    def ob_update_local(self, addr, ob, pr, ex, aux, prn, A=0., B=1.):
+    def ob_update_local(self, addr, ob, pr, ex, aux, prn, a=0., b=1.):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = ex.shape[-2:]
-        pr_norm = (1 - A) * prn.max() + A * prn
+        pr_norm = (1 - a) * prn.max() + a * prn
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += \
-                (A + B) * pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
+                (a + b) * pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
                 (ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] - aux[ind,:,:]) / \
                 pr_norm[dic[0], dic[1]:dic[1] + rows, dic[2]:dic[2] + cols]
         return
 
-    def pr_update_local(self, addr, pr, ob, ex, aux, obn, A=0., B=1.):
+    def pr_update_local(self, addr, pr, ob, ex, aux, obn, a=0., b=1.):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = ex.shape[-2:]
-        ob_norm = (1 - A) * obn.max() + A * obn
+        ob_norm = (1 - a) * obn.max() + a * obn
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
-                (A + B) * ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
+                (a + b) * ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
                 (ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] - aux[ind,:,:]) / \
                 ob_norm[dic[0], dic[1]:dic[1] + rows, dic[2]:dic[2] + cols]
         return
@@ -633,9 +633,11 @@ class PositionCorrectionKernel(BaseKernel):
 
     def setup(self):
         Mangler = self.MANGLERS[self.param.method]
-        self.mangler = Mangler(int(self.param.amplitude // self.resolution[0]), self.param.start, self.param.stop,
-                               self.param.nshifts, decay=self.param.decay,
-                               max_bound=int(self.param.max_shift // self.resolution[0]), randomseed=0)
+        amplitude = int(np.ceil(self.param.amplitude / self.resolution[0]))
+        max_shift = int(np.ceil(self.param.max_shift / self.resolution[0]))
+        self.mangler = Mangler(amplitude, self.param.start, self.param.stop,
+                               self.param.nshifts, decay=self.param.amplitude_decay,
+                               max_bound=max_shift, randomseed=0)
 
     def allocate(self):
         self.npy.fdev = np.zeros(self.fshape, dtype=np.float32) # we won't use this again but preallocate for speed
@@ -735,6 +737,6 @@ class PositionCorrectionKernel(BaseKernel):
         updates the addresses and err state vector corresponding to the smallest error. I think this can be done on the cpu
         '''
         update_indices = err_sum < error_state
-        log(4, "Position correction: updating %s indices" % np.sum(update_indices))
+        #log(4, "Position correction: updating %s indices" % np.sum(update_indices))
         addr[update_indices] = mangled_addr[update_indices]
         error_state[update_indices] = err_sum[update_indices]

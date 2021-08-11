@@ -237,9 +237,12 @@ class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
                     err_fourier = prep.err_fourier[i,None]
                     err_exit = prep.err_exit[i,None]
 
+                    # position update
+                    self.position_update_local(prep,i)
+
                     ## build auxilliary wave
                     t1 = time.time()
-                    AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.alpha)
+                    AWK.build_aux(aux, addr, ob, pr, ex, alpha=self._alpha)
                     self.benchmark.A_Build_aux += time.time() - t1
 
                     ## forward FFT
@@ -264,7 +267,7 @@ class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
 
                     ## build exit wave
                     t1 = time.time()
-                    AWK.build_exit_alpha_tau(aux, addr, ob, pr, ex, alpha=self.alpha, tau=self.tau)
+                    AWK.build_exit_alpha_tau(aux, addr, ob, pr, ex, alpha=self._alpha, tau=self._tau)
                     if self.p.compute_exit_error:
                         FUK.exit_error(aux,addr)
                         FUK.error_reduce(addr, err_exit)
@@ -279,14 +282,14 @@ class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
                     # object update
                     t1 = time.time()
                     POK.pr_norm_local(addr, pr, prn)
-                    POK.ob_update_local(addr, ob, pr, ex, aux, prn, A=self.obA, B=self.obB)
+                    POK.ob_update_local(addr, ob, pr, ex, aux, prn, a=self._ob_a, b=self._ob_b)
                     self.benchmark.object_update += time.time() - t1
                     self.benchmark.calls_object += 1
 
                     # probe update
                     t1 = time.time()
                     POK.ob_norm_local(addr, ob, obn)
-                    POK.pr_update_local(addr, pr, ob, ex, aux, obn, A=self.prA, B=self.prB)
+                    POK.pr_update_local(addr, pr, ob, ex, aux, obn, a=self._pr_a, b=self._pr_b)
                     self.benchmark.probe_update += time.time() - t1
                     self.benchmark.calls_probe += 1
 
@@ -296,9 +299,6 @@ class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
                         aux[:] = FW(aux)
                         FUK.log_likelihood(aux, addr, mag, ma, err_phot)
                         self.benchmark.F_LLerror += time.time() - t1
-
-                    # position update
-                    self.position_update()
 
                 # update errors
                 errs = np.ascontiguousarray(np.vstack([np.hstack(prep.err_fourier), 
@@ -311,9 +311,9 @@ class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
         #error = parallel.gather_dict(error_dct)
         return error_dct
 
-    def position_update(self):
+    def position_update_local(self, prep, i):
         """
-        Position refinement
+        Position refinement update for current view.
         """
         if not self.do_position_refinement:
             return
@@ -325,7 +325,53 @@ class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
             """
             Iterates through all positions and refines them by a given algorithm. 
             """
-            log(4, "----------- START POS REF -------------")
+            #log(4, "----------- START POS REF -------------")
+            pID, oID, eID = prep.poe_IDs
+            mag = prep.mag[i,None]
+            ma = prep.ma[i,None]
+            ma_sum = prep.ma_sum[i,None]
+            ob = self.ob.S[oID].data
+            pr = self.pr.S[pID].data
+            kern = self.kernels[prep.label]
+            aux = kern.aux
+            addr = prep.addr[i,None]
+            original_addr = prep.original_addr[i,None]
+            mangled_addr = addr.copy()
+            err_fourier = prep.err_fourier[i,None]
+
+            PCK = kern.PCK
+            FW = kern.FW
+
+            # Keep track of object boundaries
+            max_oby = ob.shape[-2] - aux.shape[-2] - 1
+            max_obx = ob.shape[-1] - aux.shape[-1] - 1
+
+            # We first need to calculate the current error 
+            PCK.build_aux(aux, addr, ob, pr)
+            aux[:] = FW(aux)
+            if self.p.position_refinement.metric == "fourier":
+                PCK.fourier_error(aux, addr, mag, ma, ma_sum)
+                PCK.error_reduce(addr, err_fourier)
+            if self.p.position_refinement.metric == "photon":
+                PCK.log_likelihood(aux, addr, mag, ma, err_fourier)
+            error_state = np.zeros_like(err_fourier)
+            error_state[:] = err_fourier
+            PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
+
+            #log(4, 'Position refinement trial: iteration %s' % (self.curiter))
+            for i in range(PCK.mangler.nshifts):
+                PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
+                PCK.build_aux(aux, mangled_addr, ob, pr)
+                aux[:] = FW(aux)
+                if self.p.position_refinement.metric == "fourier":
+                    PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
+                    PCK.error_reduce(mangled_addr, err_fourier)
+                if self.p.position_refinement.metric == "photon":
+                    PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
+                PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
+
+            prep.err_fourier[i,None] = error_state
+            prep.addr[i,None] = addr
 
     def engine_finalize(self):
         """

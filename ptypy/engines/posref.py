@@ -174,7 +174,7 @@ class AnnealingRefine(PositionRefine):
             # Generate coordinate shift in one of the 4 cartesian quadrants
             a, b = np.random.uniform(np.max(psize), self.max_shift_dist, 2)
             delta = np.array([(-1)**i * a, (-1)**(i//2) *b])
-            print(i, delta)
+
             if np.linalg.norm(delta) > self.p.max_shift:
                 # Positions drifted too far, skip this position
                 continue
@@ -190,7 +190,7 @@ class AnnealingRefine(PositionRefine):
                 continue 
                 
             new_error = self.fourier_error(di_view, data)
-            print(i, error, new_error)
+
             if new_error < error:
                 # keep
                 error = new_error
@@ -274,15 +274,15 @@ class GridSearchRefine(PositionRefine):
         # This can be optimized by saving existing iteration fourier error...
         error = self.fourier_error(di_view, ob_view.data)
         
-        max_shift_pix = self.max_shift_dist // np.min(psize)
-        max_bound_pix = self.p.max_shift // np.min(psize)
+        max_shift_pix = np.ceil(self.max_shift_dist / np.min(psize))
+        max_bound_pix = np.ceil(self.p.max_shift / np.min(psize))
 
         # Create the search grid
         deltas = np.mgrid[-max_shift_pix:max_shift_pix+1:1,
                           -max_shift_pix:max_shift_pix+1:1]
         within_bound = (deltas[0]**2 + deltas[1]**2) < (max_bound_pix**2)
         deltas = (deltas[:,within_bound] * np.min(psize)).T
-        print(max_shift_pix, max_bound_pix, deltas)
+
         for i in range(deltas.shape[0]):
             # Current shift
             delta = deltas[i]
@@ -298,8 +298,7 @@ class GridSearchRefine(PositionRefine):
                 continue 
                 
             new_error = self.fourier_error(di_view, data)
-            print(i, error, new_error, new_error < error)
-            
+
             if new_error < error:
                 # keep
                 error = new_error

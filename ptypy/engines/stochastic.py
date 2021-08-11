@@ -37,21 +37,21 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         """
         Stochastic Douglas-Rachford reconstruction engine.
         """
-        super(StochasticBaseEngine, self).__init__(ptycho_parent, pars)
+        super().__init__(ptycho_parent, pars)
         if parallel.MPIenabled:
             raise NotImplementedError("The stochastic engines are not compatible with MPI")
 
         # Adjustment parameters for fourier update
-        self.alpha = 0.0
-        self.tau = 1.0
+        self._alpha = 0.0
+        self._tau = 1.0
 
         # Adjustment parameters for probe update
-        self.prA = 0.0
-        self.prB = 1.0
+        self._pr_a = 0.0
+        self._pr_b = 1.0
 
         # Adjustment parameters for object update
-        self.obA = 0.0
-        self.obB = 1.0
+        self._ob_a = 0.0
+        self._ob_b = 1.0
 
     def engine_prepare(self):
         """
@@ -78,6 +78,9 @@ class StochasticBaseEngine(PositionCorrectionEngine):
                 if not view.active:
                     continue
 
+                # Position update
+                self.position_update_local(view)
+
                 # Fourier update
                 error_dct[name] = self.fourier_update(view)
                 
@@ -91,9 +94,6 @@ class StochasticBaseEngine(PositionCorrectionEngine):
 
                 # Probe update
                 self.probe_update(view, exit_wave)
-
-                # Position update
-                self.position_update_local(view)
 
             self.curiter += 1
 
@@ -128,7 +128,7 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         view : View
         View to diffraction data
         """
-        return basic_fourier_update(view, alpha=self.alpha, tau=self.tau, 
+        return basic_fourier_update(view, alpha=self._alpha, tau=self._tau, 
                                     LL_error=self.p.compute_log_likelihood)
 
     def object_update(self, view, exit_wave):
@@ -143,7 +143,7 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         exit_wave: dict
         Collection of exit waves associated with the current view
         """
-        self._generic_object_update(view, exit_wave, A=self.obA, B=self.obB)
+        self._generic_object_update(view, exit_wave, a=self._ob_a, b=self._ob_b)
 
     def probe_update(self, view, exit_wave):
         """
@@ -157,9 +157,9 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         exit_wave: dict
         Collection of exit waves associated with the current view
         """
-        self._generic_probe_update(view, exit_wave, A=self.prA, B=self.prB)
+        self._generic_probe_update(view, exit_wave, a=self._pr_a, b=self._pr_b)
 
-    def _generic_object_update(self, view, exit_wave, A=0., B=1.):
+    def _generic_object_update(self, view, exit_wave, a=0., b=1.):
         """
         A generic object update for stochastic algorithms.
 
@@ -171,28 +171,28 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         exit_wave: dict
         Collection of exit waves associated with the current view
 
-        A : float
+        a : float
         Generic parameter for adjusting step size of object update
 
-        B : float
+        b : float
         Generic parameter for adjusting step size of object update
 
-        A = 0, B = \\alpha is the ePIE update with parameter \\alpha.
-        A = \\beta_O, B = 0 is the SDR update with parameter \\beta_O.
+        a = 0, b = \\alpha is the ePIE update with parameter \\alpha.
+        a = \\beta_O, b = 0 is the SDR update with parameter \\beta_O.
 
         .. math::
-            O^{j+1} += (A + B) * \\bar{P^{j}} * (\\Psi^{\\prime} - \\Psi^{j}) / P_{norm}
-            P_{norm} = (1 - A) * ||P^{j}||_{max}^2 + A * |P^{j}|^2
+            O^{j+1} += (a + b) * \\bar{P^{j}} * (\\Psi^{\\prime} - \\Psi^{j}) / P_{norm}
+            P_{norm} = (1 - a) * ||P^{j}||_{max}^2 + a * |P^{j}|^2
 
         """
         probe_power = 0
         for name, pod in view.pods.items():
             probe_power += u.abs2(pod.probe)
-        probe_norm = (1 - A) * np.max(probe_power) + A * probe_power
+        probe_norm = (1 - a) * np.max(probe_power) + a * probe_power
         for name, pod in view.pods.items():
-            pod.object += (A + B) * np.conj(pod.probe) * (pod.exit - exit_wave[name]) / probe_norm
+            pod.object += (a + b) * np.conj(pod.probe) * (pod.exit - exit_wave[name]) / probe_norm
 
-    def _generic_probe_update(self, view, exit_wave, A=0., B=1.):
+    def _generic_probe_update(self, view, exit_wave, a=0., b=1.):
         """
         A generic probe update for stochastic algorithms.
 
@@ -204,23 +204,23 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         exit_wave: dict
         Collection of exit waves associated with the current view
 
-        A : float
+        a : float
         Generic parameter for adjusting step size of probe update
 
-        B : float
+        b : float
         Generic parameter for adjusting step size of probe update
 
-        A = 0, B = \\beta is the ePIE update with parameter \\beta.
-        A = \\beta_P, B = 0 is the SDR update with parameter \\beta_P.
+        a = 0, b = \\beta is the ePIE update with parameter \\beta.
+        a = \\beta_P, b = 0 is the SDR update with parameter \\beta_P.
 
         .. math::
-            P^{j+1} += (A + B) * \\bar{O^{j}} * (\\Psi^{\\prime} - \\Psi^{j}) / O_{norm}
-            O_{norm} = (1 - A) * ||O^{j}||_{max}^2 + A * |O^{j}|^2
+            P^{j+1} += (a + b) * \\bar{O^{j}} * (\\Psi^{\\prime} - \\Psi^{j}) / O_{norm}
+            O_{norm} = (1 - a) * ||O^{j}||_{max}^2 + a * |O^{j}|^2
 
         """
         object_power = 0
         for name, pod in view.pods.items():
             object_power += u.abs2(pod.object)
-        object_norm = (1 - A) * np.max(object_power) + A * object_power
+        object_norm = (1 - a) * np.max(object_power) + a * object_power
         for name, pod in view.pods.items():
-            pod.probe += (A + B) * np.conj(pod.object) * (pod.exit - exit_wave[name]) / object_norm
+            pod.probe += (a + b) * np.conj(pod.object) * (pod.exit - exit_wave[name]) / object_norm

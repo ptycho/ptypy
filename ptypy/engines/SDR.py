@@ -66,12 +66,12 @@ class SDR(StochasticBaseEngine):
         super().__init__(ptycho_parent, pars)
 
         # SDR Adjustment parameters
-        self.alpha = self.p.sigma # TODO: replace with generic fourier update params
-        self.tau = self.p.tau # TODO: replace with generic fourier update params
-        self.prA = self.p.beta_probe
-        self.prB = 0.0
-        self.obA = self.p.beta_object
-        self.obB = 0.0
+        self._alpha = self.p.sigma 
+        self._tau = self.p.tau
+        self._pr_a = self.p.beta_probe
+        self._ob_a = self.p.beta_object
+        self._pr_b = 0.0
+        self._ob_b = 0.0
 
         self.ptycho.citations.add_article(
             title='Semi-implicit relaxed Douglas-Rachford algorithm (sDR) for ptychography',
@@ -83,3 +83,20 @@ class SDR(StochasticBaseEngine):
             doi='10.1364/OE.27.031246',
             comment='The semi-implicit relaxed Douglas-Rachford reconstruction algorithm',
         )
+
+    @property
+    def beta_probe(self):
+        return self._pr_a
+
+    @beta_probe.setter
+    def beta_probe(self, beta):
+        print("setting beta_probe")
+        self._pr_a = beta
+
+    @property
+    def beta_object(self):
+        return self._ob_a
+
+    @beta_object.setter
+    def beta_object(self, beta):
+        self._ob_a = beta

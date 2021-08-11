@@ -54,12 +54,12 @@ class EPIE(StochasticBaseEngine):
         super().__init__(ptycho_parent, pars)
 
         # EPIE Adjustment parameters
-        self.alpha = 0.0 # TODO: replace with generic fourier update params
-        self.tau = 1.0 # TODO: replace with generic fourier update params
-        self.prA = 0.0
-        self.prB = self.p.alpha
-        self.obA = 0.0
-        self.obB = self.p.beta
+        self._alpha = 0.0 
+        self._tau = 1.0
+        self._pr_a = 0.0
+        self._ob_a = 0.0
+        self._pr_b = self.p.alpha
+        self._ob_b = self.p.beta
 
         self.ptycho.citations.add_article(
             title='An improved ptychographical phase retrieval algorithm for diffractive imaging',
@@ -71,3 +71,19 @@ class EPIE(StochasticBaseEngine):
             doi='10.1016/j.ultramic.2009.05.012',
             comment='The ePIE reconstruction algorithm',
         )
+
+    @property
+    def alpha(self):
+        return self._pr_a
+
+    @alpha.setter
+    def alpha(self, alpha):
+        self._pr_b = alpha
+
+    @property
+    def beta(self):
+        return self._ob_b
+
+    @beta.setter
+    def beta(self, beta):
+        self._ob_b = beta
