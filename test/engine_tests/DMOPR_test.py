@@ -10,17 +10,24 @@ import unittest
 from test import utils as tu
 from ptypy import utils as u
 from ptypy.core import Ptycho
-
+import tempfile
+import shutil
 
 class DMOPRTest(unittest.TestCase):
+    def setUp(self):
+        self.outpath = tempfile.mkdtemp(suffix="DMOPR_test")
+
+    def tearDown(self):
+        shutil.rmtree(self.outpath)
+
     def test_DMOPR(self):
         p = u.Param()
         p.verbose_level = 3
         p.io = u.Param()
         p.io.interaction = u.Param()
         p.io.interaction.active = False
-        p.io.home = './'
-        p.io.rfile = "./DMOPRTest.ptyr"
+        p.io.home = self.outpath
+        p.io.rfile = "DMOPRTest.ptyr"
         p.io.autosave = u.Param(active=False)
         p.io.autoplot = u.Param(active=False)
         p.ipython_kernel = False
@@ -42,7 +49,7 @@ class DMOPRTest(unittest.TestCase):
         p.scans.MF.data.experimentID = None
         p.scans.MF.data.label = None
         p.scans.MF.data.version = 0.1
-        p.scans.MF.data.dfile = "./DMOPRTest.ptyd"
+        p.scans.MF.data.dfile = "DMOPRTest.ptyd"
         p.scans.MF.data.psize = 0.000172
         p.scans.MF.data.load_parallel = None
         p.scans.MF.data.distance = 7.0
