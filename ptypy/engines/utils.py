@@ -113,7 +113,7 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
     all constraints must be 1, thus we choose
 
     .. math::
-        x = -a - b - c
+        x = 1 - a - b - c
 
     The choice of a,b,c should enable a wide range of projection based
     algorithms.
@@ -161,7 +161,7 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
     for name, pod in diff_view.pods.items():
         if not pod.active:
             continue
-        f[name] = pod.fw(b + pod.exit + c * pod.probe * pod.object)
+        f[name] = pod.fw(b * pod.exit + c * pod.probe * pod.object)
         af2 += pod.downsample(u.abs2(f[name]))
 
     fmag = np.sqrt(np.abs(I))
@@ -172,27 +172,59 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
     err_fmag = np.sum(fmask * fdev**2) / fmask.sum()
     err_exit = 0.
 
-    fm = None
+    """
+    if pbound is None:
+        # No power bound
+        fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
+        for name, pod in diff_view.pods.items():
+            if not pod.active:
+                continue
+            df = pod.bw(pod.upsample(fm) * f[name]) + \
+                 a * pod.probe * pod.object - (a + b + c) * pod.exit
+            pod.exit += df
+            err_exit += np.mean(u.abs2(df))
+    elif err_fmag > pbound:
+        # Power bound is applied
+        renorm = np.sqrt(pbound / err_fmag)
+        fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
+        for name, pod in diff_view.pods.items():
+            if not pod.active:
+                continue
+            df = pod.bw(pod.upsample(fm) * f[name]) + \
+                 a * pod.probe * pod.object - (a + b + c) * pod.exit
+            pod.exit += df
+            err_exit += np.mean(u.abs2(df))
+    else:
+        # Within power bound so no constraint applied.
+        for name, pod in diff_view.pods.items():
+            if not pod.active:
+                continue
+            df = (a + c) * (pod.probe * pod.object - pod.exit)
+            pod.exit += df
+            err_exit += np.mean(u.abs2(df))
+    """
+    # Essentially, the following is all the same formula
+    # fm = (1 - fmask) + fmask * (fmag + fdev * renorm)
+    # with
+    # renorm = 1.0 for pbound >= err_fmag
+    # renorm = np.sqrt(pbound / err_fmag) for pbound < err_fmag
+    # renorm = 0.0 for pbound == None (off-switch)
+    # und we use that for GPU and the serial/batched engines.
+    # See the basic_fourier_update_LEGACY function for the original
+    # implementation. We'll save a few FFTs this way but that only
+    # makes a difference if all ranks get similar numbers of diffraction
+    # frames with err_fmag inside the pbound.
+    if pbound is None:
+         fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
+    elif err_fmag > pbound:
+         renorm = np.sqrt(pbound / err_fmag)
+         fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
+    else:
+         fm = None
+
     for name, pod in diff_view.pods.items():
         if not pod.active:
             continue
-
-        # essentially this is all the same formula
-        # fm = (1 - fmask) + fmask * (fmag + fdev * renorm)
-        # with
-        # renorm = 1.0 for pbound <= err_fmag
-        # renorm = np.sqrt(pbound / err_fmag) for pbound > fmag
-        # renorm = 0.0 for pbound == None (off-switch)
-        # und we use that for GPU and the serial/batched engines.
-        # See the basic_fourier_update_LEGACY function for the original
-        # implementation. We'll save a few FFTs this way but that only
-        # makes a difference if all ranks get similar numbers of diffraction
-        # frames with err_fmag inside the pbound.
-        if pbound is None and fm is None:
-            fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
-        elif err_fmag > pbound and fm is None:
-            renorm = np.sqrt(pbound / err_fmag)
-            fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
 
         if fm is not None:
             df = pod.bw(pod.upsample(fm) * f[name]) + \
@@ -236,7 +268,7 @@ def projection_update_DM_AP(diff_view, alpha=1.0, pbound=None):
           projection
     """
     a = -alpha
-    b = alpha
+    b = -alpha
     c = 1.+alpha
     return projection_update_generalized(diff_view, a, b, c, pbound=pbound)
 
@@ -356,8 +388,8 @@ def basic_fourier_update_LEGACY(diff_view, pbound=None, alpha=1., LL_error=True)
     for name, pod in diff_view.pods.items():
         if not pod.active:
             continue
-        f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
-                         - alpha * pod.exit)
+        f[name] = pod.fw(-alpha * pod.exit+
+                         (1 + alpha) * pod.probe * pod.object)
         af2 += pod.downsample(u.abs2(f[name]))
 
     fmag = np.sqrt(np.abs(I))
