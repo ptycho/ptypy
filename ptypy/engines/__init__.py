@@ -39,7 +39,7 @@ def by_name(name):
 from .base import BaseEngine, DEFAULT_iter_info
 
 # These imports should be executable separately
-from . import DM
+from . import projections
 from . import DM_simple
 from . import DMOPR
 from . import ML

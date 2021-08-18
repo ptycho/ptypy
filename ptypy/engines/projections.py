@@ -12,32 +12,16 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
-from .utils import basic_fourier_update
+from .utils import projection_update_generalized, log_likelihood
 from . import register
 from .base import PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
-__all__ = ['DM']
+__all__ = ['DM', 'RAAR']
 
-#@register()
-class DM(PositionCorrectionEngine):
+class _ProjectionEngine(PositionCorrectionEngine):
     """
-    A full-fledged Difference Map engine.
-
-
     Defaults:
-
-    [name]
-    default = DM
-    type = str
-    help =
-    doc =
-
-    [alpha]
-    default = 1
-    type = float
-    lowlim = 0.0
-    help = Difference map parameter
 
     [probe_update_start]
     default = 2
@@ -122,7 +106,6 @@ class DM(PositionCorrectionEngine):
     type = bool
     help = A switch for computing the log-likelihood error (this can impact the performance of the engine) 
 
-
     """
 
     SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
@@ -131,9 +114,12 @@ class DM(PositionCorrectionEngine):
         """
         Difference map reconstruction engine.
         """
-        super(DM, self).__init__(ptycho_parent, pars)
+        super().__init__(ptycho_parent, pars)
 
-        # Instance attributes
+        self._a = 0.
+        self._b = 0.
+        self._c = 1.
+
         self.error = None
 
         self.ob_buf = None
@@ -165,7 +151,7 @@ class DM(PositionCorrectionEngine):
         """
         Prepare for reconstruction.
         """
-        super(DM, self).engine_initialize()
+        super().engine_initialize()
 
         self.error = []
 
@@ -246,7 +232,7 @@ class DM(PositionCorrectionEngine):
         """
         Try deleting ever helper container.
         """
-        super(DM, self).engine_finalize()
+        super().engine_finalize()
 
         containers = [
             self.ob_buf,
@@ -278,10 +264,19 @@ class DM(PositionCorrectionEngine):
                 continue
             #pbound = self.pbound[di_view.storage.ID]
             pbound = self.pbound_scan[di_view.storage.label]
+            """
             error_dct[name] = basic_fourier_update(di_view,
                                                    pbound=pbound,
                                                    alpha=self.p.alpha,
                                                    LL_error=self.p.compute_log_likelihood)
+            """
+            err_fmag, err_exit = projection_update_generalized(di_view, self._a, self._b, self._c, pbound)
+            if self.p.compute_log_likelihood:
+                err_phot = log_likelihood(di_view)
+            else:
+                err_phot = 0.
+            error_dct[name] = np.array([err_fmag, err_phot, err_exit])
+
         return error_dct
 
     def clip_object(self, ob):
@@ -446,3 +441,94 @@ class DM(PositionCorrectionEngine):
             buf[:] = s.data
 
         return np.sqrt(change / len(pr.storages))
+
+
+class DMMixin:
+
+    def __init__(self, alpha):
+        self._alpha = 1.
+        self._a = -alpha
+        self._b = -alpha
+        self._c = 1.+alpha
+        self.alpha = alpha
+
+    @property
+    def alpha(self):
+        return self._alpha
+
+    @alpha.setter
+    def alpha(self, alpha):
+        self._alpha = alpha
+        self._a = -alpha
+        self._b = -alpha
+        self._c = 1.+alpha
+
+class RAARMixin:
+
+    def __init__(self, beta):
+        self._beta = 1.
+        self._a = beta
+        self._b = 1. - 2. * beta
+        self._c = 2. * beta
+        self.beta = beta
+
+    @property
+    def beta(self):
+        return self._beta
+
+    @beta.setter
+    def beta(self, beta):
+        self._beta = beta
+        self._a = beta
+        self._b = 1. - 2. * beta
+        self._c = 2. * beta
+
+
+@register()
+class DM(_ProjectionEngine, DMMixin):
+    """
+    A full-fledged Difference Map engine.
+
+    Defaults:
+
+    [name]
+    default = DM
+    type = str
+    help =
+    doc =
+
+    [alpha]
+    default = 1.
+    type = float
+    lowlim = 0.0
+    help = Mix parameter between Difference Map (alpha=1.) and Alternating Projections (alpha=0.)
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _ProjectionEngine.__init__(self, ptycho_parent, pars)
+        DMMixin.__init__(self, self.p.alpha)
+
+
+@register()
+class RAAR(_ProjectionEngine, RAARMixin):
+    """
+    A full-fledged Difference Map engine.
+
+    Defaults:
+
+    [name]
+    default = RAAR
+    type = str
+    help =
+    doc =
+
+    [beta]
+    default = 0.75
+    type = float
+    lowlim = 0.0
+    help = Beta parameter for RAAR algorithm
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _ProjectionEngine.__init__(self, ptycho_parent, pars)
+        RAARMixin.__init__(self, self.p.beta)

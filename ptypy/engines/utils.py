@@ -242,7 +242,7 @@ def projection_update_DM_AP(diff_view, alpha=1.0, pbound=None):
     """
     Linear interpolation between Difference Map algorithm (a,b,c = -1,1,2)
     and Alternating Projections algorithm (a,b,c = 0,0,1) with coefficients
-    a = -alpha, b = alpha, c = 1 + alpha. Alpha = 1.0 corresponds to DM and
+    a = -alpha, b = -alpha, c = 1 + alpha. Alpha = 1.0 corresponds to DM and
     alpha = 0.0 to AP.
 
     Parameters
@@ -286,8 +286,8 @@ def projection_update_RAAR(diff_view, beta=0.75, pbound=None):
     diff_view : View
         View to diffraction data
 
-    alpha : float, optional
-        Blend between AP (alpha=0.0 and DM (alpha=1.0) . Valid interval ``[0, 1]``
+    beta : float, optional
+        beta parameter for RAAR
 
     pbound : float, optional
         Power bound. Fourier update is bypassed if the quadratic deviation
