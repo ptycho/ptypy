@@ -45,8 +45,7 @@ from . import DMOPR
 from . import ML
 from . import MLOPR
 from . import dummy
-from . import SDR
-from . import EPIE
+from . import stochastic
 from . import Bragg3d_engines
 
 # TODO: make this better / explicit

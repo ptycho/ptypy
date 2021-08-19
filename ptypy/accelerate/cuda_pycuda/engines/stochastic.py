@@ -16,7 +16,9 @@ import pycuda.driver as cuda
 from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
-from ptypy.accelerate.base.engines import stochastic
+from ptypy.engines import register
+from ptypy.engines.stochastic import EPIEMixin, SDRMixin
+from ptypy.accelerate.base.engines.stochastic import _StochasticEngineSerial
 from ptypy.accelerate.base import address_manglers
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
@@ -30,7 +32,7 @@ EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
 #MAX_BLOCKS = 10  # can be used to limit the number of blocks, simulating that they don't fit
 
-class StochasticBaseEnginePycuda(stochastic.StochasticBaseEngineSerial):
+class _StochasticEnginePycuda(_StochasticEngineSerial):
 
     """
     An accelerated implementation of a stochastic algorithm for ptychography
@@ -417,3 +419,100 @@ class StochasticBaseEnginePycuda(stochastic.StochasticBaseEngineSerial):
 
         self.context.detach()
         super().engine_finalize()
+
+
+@register()
+class EPIE_pycuda(_StochasticEnginePycuda, EPIEMixin):
+    """
+    An accelerated implementation of the EPIE algorithm.
+
+    Defaults:
+
+    [name]
+    default = EPIE_pycuda
+    type = str
+    help =
+    doc =
+
+    [alpha]
+    default = 1.0
+    type = float
+    lowlim = 0.0
+    help = Parameter for adjusting the step size of the object update
+
+    [beta]
+    default = 1.0
+    type = float
+    lowlim = 0.0
+    help = Parameter for adjusting the step size of the probe update
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _StochasticEnginePycuda.__init__(self, ptycho_parent, pars)
+        EPIEMixin.__init__(self, self.p.alpha, self.p.beta)
+
+        self.ptycho.citations.add_article(
+            title='An improved ptychographical phase retrieval algorithm for diffractive imaging',
+            author='Maiden A. and Rodenburg J.',
+            journal='Ultramicroscopy',
+            volume=10,
+            year=2009,
+            page=1256,
+            doi='10.1016/j.ultramic.2009.05.012',
+            comment='The ePIE reconstruction algorithm',
+        )
+
+@register()
+class SDR_pycuda(_StochasticEnginePycuda, SDRMixin):
+    """
+    An accelerated implementation of the semi-implicit relaxed Douglas-Rachford (SDR) algorithm.
+
+    Defaults:
+
+    [name]
+    default = SDR_pycuda
+    type = str
+    help =
+    doc =
+
+    [sigma]
+    default = 1
+    type = float
+    lowlim = 0.0
+    help = Relaxed Fourier reflection parameter.
+
+    [tau]
+    default = 1
+    type = float
+    lowlim = 0.0
+    help = Relaxed modulus constraint parameter.
+
+    [beta_probe]
+    default = 0.1
+    type = float
+    lowlim = 0.0
+    help = Parameter for adjusting the step size of the probe update
+
+    [beta_object]
+    default = 0.9
+    type = float
+    lowlim = 0.0
+    help = Parameter for adjusting the step size of the object update
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _StochasticEnginePycuda.__init__(self, ptycho_parent, pars)
+        SDRMixin.__init__(self, self.p.sigma, self.p.tau, self.p.beta_probe, self.p.beta_object)
+
+        self.ptycho.citations.add_article(
+            title='Semi-implicit relaxed Douglas-Rachford algorithm (sDR) for ptychography',
+            author='Pham et al.',
+            journal='Opt. Express',
+            volume=27,
+            year=2019,
+            page=31246,
+            doi='10.1364/OE.27.031246',
+            comment='The semi-implicit relaxed Douglas-Rachford reconstruction algorithm',
+        )

@@ -14,8 +14,12 @@ from ..utils.verbose import logger, log
 from ..utils import parallel
 from .utils import basic_fourier_update
 from .base import PositionCorrectionEngine
+from . import register
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
-class StochasticBaseEngine(PositionCorrectionEngine):
+__all__ = ['EPIE', 'SDR']
+
+class _StochasticEngine(PositionCorrectionEngine):
     """
     The base implementation of a stochastic algorithm for ptychography
 
@@ -32,6 +36,8 @@ class StochasticBaseEngine(PositionCorrectionEngine):
     help = A switch for computing the log-likelihood error (this can impact the performance of the engine)
 
     """
+
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -224,3 +230,154 @@ class StochasticBaseEngine(PositionCorrectionEngine):
         object_norm = (1 - a) * np.max(object_power) + a * object_power
         for name, pod in view.pods.items():
             pod.probe += (a + b) * np.conj(pod.object) * (pod.exit - exit_wave[name]) / object_norm
+
+class EPIEMixin:
+
+    def __init__(self, alpha, beta):
+        self._alpha = 0.0 
+        self._tau = 1.0
+        self._pr_a = 0.0
+        self._ob_a = 0.0
+        self._pr_b = alpha
+        self._ob_b = beta
+
+    @property
+    def alpha(self):
+        return self._pr_a
+
+    @alpha.setter
+    def alpha(self, alpha):
+        self._pr_b = alpha
+
+    @property
+    def beta(self):
+        return self._ob_b
+
+    @beta.setter
+    def beta(self, beta):
+        self._ob_b = beta
+
+
+class SDRMixin:
+
+    def __init__(self, sigma, tau, beta_probe, beta_object):
+        # SDR Adjustment parameters
+        self._alpha = sigma 
+        self._tau = tau
+        self._pr_a = beta_probe
+        self._ob_a = beta_object
+        self._pr_b = 0.0
+        self._ob_b = 0.0
+
+    @property
+    def beta_probe(self):
+        return self._pr_a
+
+    @beta_probe.setter
+    def beta_probe(self, beta):
+        print("setting beta_probe")
+        self._pr_a = beta
+
+    @property
+    def beta_object(self):
+        return self._ob_a
+
+    @beta_object.setter
+    def beta_object(self, beta):
+        self._ob_a = beta
+
+@register()
+class EPIE(_StochasticEngine, EPIEMixin):
+    """
+    The ePIE algorithm.
+
+    Defaults:
+
+    [name]
+    default = EPIE
+    type = str
+    help =
+    doc =
+
+    [alpha]
+    default = 1.0
+    type = float
+    lowlim = 0.0
+    help = Parameter for adjusting the step size of the object update
+
+    [beta]
+    default = 1.0
+    type = float
+    lowlim = 0.0
+    help = Parameter for adjusting the step size of the probe update
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _StochasticEngine.__init__(self, ptycho_parent, pars)
+        EPIEMixin.__init__(self, self.p.alpha, self.p.beta)
+
+        self.ptycho.citations.add_article(
+            title='An improved ptychographical phase retrieval algorithm for diffractive imaging',
+            author='Maiden A. and Rodenburg J.',
+            journal='Ultramicroscopy',
+            volume=10,
+            year=2009,
+            page=1256,
+            doi='10.1016/j.ultramic.2009.05.012',
+            comment='The ePIE reconstruction algorithm',
+        )
+
+@register()
+class SDR(_StochasticEngine, SDRMixin):
+    """
+    The stochastic Douglas-Rachford algorithm.
+
+    Defaults:
+
+    [name]
+    default = SDR
+    type = str
+    help =
+    doc =
+
+    [sigma]
+    default = 1
+    type = float
+    lowlim = 0.0
+    help = Relaxed Fourier reflection parameter.
+
+    [tau]
+    default = 1
+    type = float
+    lowlim = 0.0
+    help = Relaxed modulus constraint parameter.
+
+    [beta_probe]
+    default = 0.1
+    type = float
+    lowlim = 0.0
+    help = Parameter for adjusting the step size of the probe update
+
+    [beta_object]
+    default = 0.9
+    type = float
+    lowlim = 0.0
+    help = Parameter for adjusting the step size of the object update
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _StochasticEngine.__init__(self, ptycho_parent, pars)
+        SDRMixin.__init__(self, self.p.sigma, self.p.tau, self.p.beta_probe, self.p.beta_object)
+
+        self.ptycho.citations.add_article(
+            title='Semi-implicit relaxed Douglas-Rachford algorithm (sDR) for ptychography',
+            author='Pham et al.',
+            journal='Opt. Express',
+            volume=27,
+            year=2019,
+            page=31246,
+            doi='10.1364/OE.27.031246',
+            comment='The semi-implicit relaxed Douglas-Rachford reconstruction algorithm',
+        )

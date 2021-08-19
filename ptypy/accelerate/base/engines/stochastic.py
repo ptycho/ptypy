@@ -14,15 +14,17 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy import defaults_tree
-from ptypy.engines import register, stochastic
-from ptypy.core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
+from ptypy.engines import register
+from ptypy.engines.stochastic import _StochasticEngine, EPIEMixin, SDRMixin
+#from ptypy.core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 from ptypy.accelerate.base.engines import DM_serial
 from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ptypy.accelerate.base import address_manglers
 from ptypy.accelerate.base import array_utils as au
 
+__all__ = ["EPIE_serial", "SDR_serial"]
 
-class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
+class _StochasticEngineSerial(_StochasticEngine):
     """
     A serialized base implementation of a stochastic algorithm for ptychography
 
@@ -49,6 +51,8 @@ class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
     help = A switch for computing the fourier error (this can impact the performance of the engine)
 
     """
+
+    #SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -406,3 +410,99 @@ class StochasticBaseEngineSerial(stochastic.StochasticBaseEngine):
                         delta = (prep.original_addr[i][j][1][1:] - prep.addr[i][j][1][1:]) * res
                         pod.ob_view.coord += delta 
                         pod.ob_view.storage.update_views(pod.ob_view)
+
+
+@register()
+class EPIE_serial(_StochasticEngineSerial, EPIEMixin):
+    """
+    A serialized implementation of the EPIE algorithm.
+
+    Defaults:
+
+    [name]
+    default = EPIE_serial
+    type = str
+    help =
+    doc =
+
+    [alpha]
+    default = 1.0
+    type = float
+    lowlim = 0.0
+    help = Parameter for adjusting the step size of the object update
+
+    [beta]
+    default = 1.0
+    type = float
+    lowlim = 0.0
+    help = Parameter for adjusting the step size of the probe update
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _StochasticEngineSerial.__init__(self, ptycho_parent, pars)
+        EPIEMixin.__init__(self, self.p.alpha, self.p.beta)
+
+        self.ptycho.citations.add_article(
+            title='An improved ptychographical phase retrieval algorithm for diffractive imaging',
+            author='Maiden A. and Rodenburg J.',
+            journal='Ultramicroscopy',
+            volume=10,
+            year=2009,
+            page=1256,
+            doi='10.1016/j.ultramic.2009.05.012',
+            comment='The ePIE reconstruction algorithm',
+        )
+
+@register()
+class SDR_serial(_StochasticEngineSerial, SDRMixin):
+    """
+    A serialized implemnentation of the semi-implicit relaxed Douglas-Rachford (SDR) algorithm.
+
+    Defaults:
+
+    [name]
+    default = SDR_serial
+    type = str
+    help =
+    doc =
+
+    [sigma]
+    default = 1
+    type = float
+    lowlim = 0.0
+    help = Relaxed Fourier reflection parameter.
+
+    [tau]
+    default = 1
+    type = float
+    lowlim = 0.0
+    help = Relaxed modulus constraint parameter.
+
+    [beta_probe]
+    default = 0.1
+    type = float
+    lowlim = 0.0
+    help = Parameter for adjusting the step size of the probe update
+
+    [beta_object]
+    default = 0.9
+    type = float
+    lowlim = 0.0
+    help = Parameter for adjusting the step size of the object update
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _StochasticEngineSerial.__init__(self, ptycho_parent, pars)
+        SDRMixin.__init__(self, self.p.sigma, self.p.tau, self.p.beta_probe, self.p.beta_object)
+
+        self.ptycho.citations.add_article(
+            title='Semi-implicit relaxed Douglas-Rachford algorithm (sDR) for ptychography',
+            author='Pham et al.',
+            journal='Opt. Express',
+            volume=27,
+            year=2019,
+            page=31246,
+            doi='10.1364/OE.27.031246',
+            comment='The semi-implicit relaxed Douglas-Rachford reconstruction algorithm',
+        )
