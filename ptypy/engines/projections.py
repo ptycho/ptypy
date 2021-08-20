@@ -136,16 +136,6 @@ class _ProjectionEngine(PositionCorrectionEngine):
         # Another possibility would be to use the maximum value of all probe storages.
         self.mean_power = None
 
-        self.ptycho.citations.add_article(
-            title='Probe retrieval in ptychographic coherent diffractive imaging',
-            author='Thibault et al.',
-            journal='Ultramicroscopy',
-            volume=109,
-            year=2009,
-            page=338,
-            doi='10.1016/j.ultramic.2008.12.011',
-            comment='The difference map reconstruction algorithm',
-        )
 
     def engine_initialize(self):
         """
@@ -445,12 +435,32 @@ class _ProjectionEngine(PositionCorrectionEngine):
 
 class DMMixin:
 
+    """
+    Defaults:
+
+    [alpha]
+    default = 1.
+    type = float
+    lowlim = 0.0
+    help = Mix parameter between Difference Map (alpha=1.) and Alternating Projections (alpha=0.)
+    """
+
     def __init__(self, alpha):
         self._alpha = 1.
         self._a = -alpha
         self._b = -alpha
         self._c = 1.+alpha
         self.alpha = alpha
+        self.article = dict(
+            title='Probe retrieval in ptychographic coherent diffractive imaging',
+            author='Thibault et al.',
+            journal='Ultramicroscopy',
+            volume=109,
+            year=2009,
+            page=338,
+            doi='10.1016/j.ultramic.2008.12.011',
+            comment='The difference map reconstruction algorithm',
+        )
 
     @property
     def alpha(self):
@@ -464,6 +474,15 @@ class DMMixin:
         self._c = 1.+alpha
 
 class RAARMixin:
+    """
+    Defaults:
+
+    [beta]
+    default = 0.75
+    type = float
+    lowlim = 0.0
+    help = Beta parameter for RAAR algorithm
+    """
 
     def __init__(self, beta):
         self._beta = 1.
@@ -497,22 +516,18 @@ class DM(_ProjectionEngine, DMMixin):
     help =
     doc =
 
-    [alpha]
-    default = 1.
-    type = float
-    lowlim = 0.0
-    help = Mix parameter between Difference Map (alpha=1.) and Alternating Projections (alpha=0.)
     """
 
     def __init__(self, ptycho_parent, pars=None):
         _ProjectionEngine.__init__(self, ptycho_parent, pars)
         DMMixin.__init__(self, self.p.alpha)
+        ptycho_parent.citations.add_article(**self.article)
 
 
 @register()
 class RAAR(_ProjectionEngine, RAARMixin):
     """
-    A full-fledged Difference Map engine.
+    A RAAR engine.
 
     Defaults:
 
@@ -522,13 +537,9 @@ class RAAR(_ProjectionEngine, RAARMixin):
     help =
     doc =
 
-    [beta]
-    default = 0.75
-    type = float
-    lowlim = 0.0
-    help = Beta parameter for RAAR algorithm
     """
 
     def __init__(self, ptycho_parent, pars=None):
+
         _ProjectionEngine.__init__(self, ptycho_parent, pars)
         RAARMixin.__init__(self, self.p.beta)
