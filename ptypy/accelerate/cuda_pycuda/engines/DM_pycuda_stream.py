@@ -81,7 +81,7 @@ class _ProjectionEngine_pycuda_stream(DM_pycuda._ProjectionEngine_pycuda):
 
     def engine_prepare(self):
 
-        super().engine_prepare()
+        super(DM_pycuda._ProjectionEngine_pycuda, self).engine_prepare()
 
         for name, s in self.ob.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
