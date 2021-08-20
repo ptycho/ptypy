@@ -515,6 +515,10 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                              np.float32(c_e) if ex.dtype == np.complex64 else np.float64(c_e),
                              block=(32, 32, 1), grid=(int(maxz * nmodes), 1, 1), stream=self.queue)
 
+    def build_aux2(self, b_aux, addr, ob, pr, ex, alpha=1.0):
+        # DM only, legacy. also make_aux2 does no exit in the parent
+        self.make_aux2(b_aux, addr, ob, pr, ex, 1.+alpha, -alpha)
+
     """
     def build_exit_alpha_tau(self, b_aux, addr, ob, pr, ex, alpha=1, tau=1):
         obr, obc = self._cache_object_shape(ob)

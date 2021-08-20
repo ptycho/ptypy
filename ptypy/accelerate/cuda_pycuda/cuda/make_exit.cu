@@ -18,7 +18,7 @@ __device__ inline void atomicAdd(complex<T>* x, complex<T> y)
   atomicAdd(xf + 1, y.imag());
 }
 
-extern "C" __global__ void build_exit(complex<OUT_TYPE>* auxiliary_wave,
+extern "C" __global__ void make_exit(complex<OUT_TYPE>* auxiliary_wave,
                                       complex<OUT_TYPE>* exit_wave,
                                       int B,
                                       int C,

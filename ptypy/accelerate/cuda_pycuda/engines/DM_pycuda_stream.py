@@ -37,7 +37,6 @@ MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that
 __all__ = ['DM_pycuda_stream']
 
 
-@register()
 class _ProjectionEngine_pycuda_stream(DM_pycuda._ProjectionEngine_pycuda):
 
     def __init__(self, ptycho_parent, pars=None):
@@ -235,7 +234,8 @@ class _ProjectionEngine_pycuda_stream(DM_pycuda._ProjectionEngine_pycuda):
 
                         # synchronize h2d stream with compute stream
                         self.queue.wait_for_event(ev_ex)
-                        AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        #AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c, c_e=self._b)
 
                         ## FFT
                         PROP.fw(aux, aux)
@@ -252,7 +252,8 @@ class _ProjectionEngine_pycuda_stream(DM_pycuda._ProjectionEngine_pycuda):
 
                         PROP.bw(aux, aux)
                         ## apply changes
-                        AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        #AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        AWK.make_exit(aux, addr, ob, pr, ex, c_a=1.0, c_po=self._a, c_e=-(self._a + self._b + self._c))
                         FUK.exit_error(aux, addr)
                         FUK.error_reduce(addr, err_exit)
 
