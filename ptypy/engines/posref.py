@@ -43,7 +43,9 @@ class PositionRefine(object):
         '''
         start, end = self.p.start, self.p.stop
         # Compute the maximum shift allowed at this iteration
-        self.max_shift_dist = self.p.amplitude * (end - iteration) / (end - start)
+        self.max_shift_dist = self.p.amplitude 
+        if self.p.amplitude_decay:
+            self.max_shift_dist *= (end - iteration) / (end - start)
 
     def estimate_fourier_metric(self, di_view, obj):
         '''
@@ -188,7 +190,7 @@ class AnnealingRefine(PositionRefine):
                 continue 
                 
             new_error = self.fourier_error(di_view, data)
-            
+
             if new_error < error:
                 # keep
                 error = new_error
@@ -272,8 +274,8 @@ class GridSearchRefine(PositionRefine):
         # This can be optimized by saving existing iteration fourier error...
         error = self.fourier_error(di_view, ob_view.data)
         
-        max_shift_pix = self.max_shift_dist // np.min(psize)
-        max_bound_pix = self.p.max_shift // np.min(psize)
+        max_shift_pix = np.ceil(self.max_shift_dist / np.min(psize))
+        max_bound_pix = np.ceil(self.p.max_shift / np.min(psize))
 
         # Create the search grid
         deltas = np.mgrid[-max_shift_pix:max_shift_pix+1:1,
@@ -296,7 +298,7 @@ class GridSearchRefine(PositionRefine):
                 continue 
                 
             new_error = self.fourier_error(di_view, data)
-            
+
             if new_error < error:
                 # keep
                 error = new_error

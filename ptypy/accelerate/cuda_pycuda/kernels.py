@@ -880,6 +880,19 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             'MATH_TYPE': self.math_type,
             'ACC_TYPE': self.accumulator_type
         })
+        self.ob_norm_local_cuda = load_kernel("ob_norm_local", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
+        self.pr_norm_local_cuda = load_kernel("pr_norm_local", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
+
 
     def ob_update(self, addr, ob, obn, pr, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
@@ -1040,18 +1053,14 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                  block=(16, 16, 1), grid=grid, stream=self.queue)
 
 
-    def ob_update_local(self, addr, ob, pr, ex, aux):
-        # lazy allocation of temporary 1-element array
-        if self.norm is None:
-            self.norm = gpuarray.empty((1,), dtype=np.float32)
-        self.MAK.max_abs2(pr, self.norm)
-        
+    def ob_update_local(self, addr, ob, pr, ex, aux, prn, a=0., b=1.):
+        prn_max = gpuarray.max(prn, stream=self.queue)
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
         exsh = [np.int32(ax) for ax in ex.shape]
         # atomics version only
         if addr.shape[3] != 3 or addr.shape[2] != 5:
-            raise ValueError('Address not in required shape for tiled pr_update')
+            raise ValueError('Address not in required shape for tiled ob_update')
         num_pods = np.int32(addr.shape[0] * addr.shape[1])
         bx = 64
         by = 1
@@ -1059,20 +1068,19 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             exsh[0], exsh[1], exsh[2],
             pr,
             prsh[0], prsh[1], prsh[2],
-            self.norm,
+            prn,
             ob,
             obsh[0], obsh[1], obsh[2],
             addr,
+            prn_max,
+            np.float32(a),
+            np.float32(b),
             block=(bx, by, 1),
             grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
             stream=self.queue)
 
-    def pr_update_local(self, addr, pr, ob, ex, aux):
-        # lazy allocation of temporary 1-element array
-        if self.norm is None:
-            self.norm = gpuarray.empty((1,), dtype=np.float32)
-        self.MAK.max_abs2(ob, self.norm)
-        
+    def pr_update_local(self, addr, pr, ob, ex, aux, obn, a=0., b=1.):
+        obn_max = gpuarray.max(obn, stream=self.queue)
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
         exsh = [np.int32(ax) for ax in ex.shape]
@@ -1080,21 +1088,50 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         if addr.shape[3] != 3 or addr.shape[2] != 5:
             raise ValueError('Address not in required shape for tiled pr_update')
         num_pods = np.int32(addr.shape[0] * addr.shape[1])
-
         bx = 64
         by = 1
         self.pr_update_local_cuda(ex, aux,
             exsh[0], exsh[1], exsh[2],
             pr,
             prsh[0], prsh[1], prsh[2],
-            self.norm,
+            obn,
             ob,
             obsh[0], obsh[1], obsh[2],
             addr,
+            obn_max,
+            np.float32(a),
+            np.float32(b),
             block=(bx, by, 1),
             grid=(1, int((exsh[1] + by - 1) // by), int(num_pods)),
             stream=self.queue)
 
+    def ob_norm_local(self, addr, ob, obn):
+        obsh =  [np.int32(ax) for ax in ob.shape]
+        obnsh = [np.int32(ax) for ax in obn.shape]
+        bx = 64
+        by = 1
+        self.ob_norm_local_cuda(obn, 
+            obnsh[0], obnsh[1], obnsh[2],
+            ob,
+            obsh[0], obsh[1], obsh[2],
+            addr,
+            block=(bx, by, 1),
+            grid=(1, int((obnsh[1] + by - 1)//by), int(obnsh[0])),
+            stream=self.queue)
+
+    def pr_norm_local(self, addr, pr, prn):        
+        prsh  = [np.int32(ax) for ax in pr.shape]
+        prnsh = [np.int32(ax) for ax in prn.shape]
+        bx = 64
+        by = 1
+        self.pr_norm_local_cuda(prn, 
+            prnsh[0], prnsh[1], prnsh[2],
+            pr,
+            prsh[0], prsh[1], prsh[2],
+            addr,
+            block=(bx, by, 1),
+            grid=(1, int((prnsh[1] + by - 1)//by), int(prnsh[0])),
+            stream=self.queue)
 
 
 class PositionCorrectionKernel(ab.PositionCorrectionKernel):

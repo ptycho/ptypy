@@ -76,7 +76,7 @@ def dynamic_load(path, baselist, fail_silently = True):
             u.logger.warning(traceback.format_exc(tb))
 
 
-def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
+def basic_fourier_update(diff_view, pbound=None, alpha=1., tau=1., LL_error=True):
     """\
     Fourier update a single view using its associated pods.
     Updates on all pods' exit waves.
@@ -88,6 +88,9 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
 
     alpha : float, optional
         Mixing between old and new exit wave. Valid interval ``[0, 1]``
+
+    tau : float, optional
+        Gives a weight to the auxilliary wave. Valid interval ``[0,1]``
 
     pbound : float, optional
         Power bound. Fourier update is bypassed if the quadratic deviation
@@ -152,7 +155,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = pod.bw(pod.upsample(fm) * f[name]) - alpha * pod.probe * pod.object + (alpha - 1) * pod.exit
+            df = tau * pod.bw(pod.upsample(fm) * f[name]) + (1 - tau * (1 + alpha)) * pod.probe * pod.object + (tau * alpha - 1) * pod.exit
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     elif err_fmag > pbound:
@@ -162,7 +165,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = pod.bw(pod.upsample(fm) * f[name]) - alpha * pod.probe * pod.object + (alpha - 1) * pod.exit
+            df = tau * pod.bw(pod.upsample(fm) * f[name]) + (1 - tau * (1 + alpha)) * pod.probe * pod.object + (tau * alpha - 1) * pod.exit
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     else:

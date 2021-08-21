@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Local Difference Map/Alternate Projections reconstruction engine.
+Serialized stochastic reconstruction engine.
 
 This file is part of the PTYPY package.
 
@@ -15,64 +15,25 @@ from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy import defaults_tree
 from ptypy.engines import register
-from ptypy.engines.base import PositionCorrectionEngine
-from ptypy.core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
+from ptypy.engines.stochastic import _StochasticEngine, EPIEMixin, SDRMixin
+#from ptypy.core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 from ptypy.accelerate.base.engines import DM_serial
 from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ptypy.accelerate.base import address_manglers
 from ptypy.accelerate.base import array_utils as au
 
+__all__ = ["EPIE_serial", "SDR_serial"]
 
-__all__ = ['DR_serial']
-
-@register()
-class DR_serial(PositionCorrectionEngine):
+class _StochasticEngineSerial(_StochasticEngine):
     """
-    An implementation of the Douglas-Rachford algorithm
-    that can be operated like the ePIE algorithm.
+    A serialized base implementation of a stochastic algorithm for ptychography
 
     Defaults:
-
-    [name]
-    default = DR_serial
-    type = str
-    help =
-    doc =
-
-    [alpha]
-    default = 1
-    type = float
-    lowlim = 0.0
-    help = Tuning parameter, a value of 0 makes it equal to ePIE.
-
-    [tau]
-    default = 1
-    type = float
-    lowlim = 0.0
-    help = fourier update parameter, a value of 0 means no fourier update.
-
-    [probe_inertia]
-    default = 1e-9
-    type = float
-    lowlim = 0.0
-    help = Weight of the current probe estimate in the update
-
-    [object_inertia]
-    default = 1e-4
-    type = float
-    lowlim = 0.0
-    help = Weight of the current object in the update
 
     [clip_object]
     default = None
     type = tuple
     help = Clip object amplitude into this interval
-
-    [rescale_probe]
-    default = True
-    type = bool
-    lowlim = 0
-    help = Normalise probe power according to data
 
     [compute_log_likelihood]
     default = True
@@ -91,17 +52,13 @@ class DR_serial(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
+    #SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
 
     def __init__(self, ptycho_parent, pars=None):
         """
-        Local difference map reconstruction engine.
+        Stochastic reconstruction engine.
         """
-        super(DR_serial, self).__init__(ptycho_parent, pars)
-
-        # Instance attributes
-        self.error = None
-        self.mean_power = None
+        super().__init__(ptycho_parent, pars)
 
         # keep track of timings
         self.benchmark = u.Param()
@@ -112,22 +69,11 @@ class DR_serial(PositionCorrectionEngine):
         self.pr_cfact = {}
         self.kernels = {}
 
-        self.ptycho.citations.add_article(
-            title='Semi-implicit relaxed Douglas-Rachford algorithm (sDR) for ptychography',
-            author='Pham et al.',
-            journal='Opt. Express',
-            volume=27,
-            year=2019,
-            page=31246,
-            doi='10.1364/OE.27.031246',
-            comment='The local douglas-rachford reconstruction algorithm',
-        )
-
     def engine_initialize(self):
         """
         Prepare for reconstruction.
         """
-        super(DR_serial, self).engine_initialize()
+        super().engine_initialize()
 
         self.error = []
         self._reset_benchmarks()
@@ -190,20 +136,10 @@ class DR_serial(PositionCorrectionEngine):
             kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
-                addr_mangler = address_manglers.RandomIntMangle(int(self.p.position_refinement.amplitude // geo.resolution[0]),
-                                                                self.p.position_refinement.start,
-                                                                self.p.position_refinement.stop,
-                                                                max_bound=int(self.p.position_refinement.max_shift // geo.resolution[0]),
-                                                                randomseed=0)
-                logger.warning("amplitude is %s " % (self.p.position_refinement.amplitude // geo.resolution[0]))
-                logger.warning("max bound is %s " % (self.p.position_refinement.max_shift // geo.resolution[0]))
-
-                kern.PCK = PositionCorrectionKernel(aux, nmodes)
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution)
                 kern.PCK.allocate()
-                kern.PCK.address_mangler = addr_mangler
 
     def engine_prepare(self):
-
         """
         Last minute initialization.
 
@@ -252,14 +188,9 @@ class DR_serial(PositionCorrectionEngine):
             # Reference to ex
             prep.ex = self.ex.S[eID].data
 
-            # calculate c_facts
-            #cfact = self.p.object_inertia * self.mean_power
-            #self.ob_cfact[oID] = cfact / u.parallel.size
-
-            #pr = self.pr.S[pID]
-            #cfact = self.p.probe_inertia * len(pr.views) / pr.data.shape[0]
-            #self.pr_cfact[pID] = cfact / u.parallel.size
-
+            # Object / probe norm
+            prep.obn = np.zeros_like(prep.mag[0,None], dtype=np.float32)
+            prep.prn = np.zeros_like(prep.mag[0,None], dtype=np.float32)
 
     def engine_iterate(self, num=1):
         """
@@ -304,13 +235,18 @@ class DR_serial(PositionCorrectionEngine):
                     mag = prep.mag[i,None]
                     ma = prep.ma[i,None]
                     ma_sum = prep.ma_sum[i,None]
+                    obn = prep.obn
+                    prn = prep.prn
                     err_phot = prep.err_phot[i,None]
                     err_fourier = prep.err_fourier[i,None]
                     err_exit = prep.err_exit[i,None]
 
+                    # position update
+                    self.position_update_local(prep,i)
+
                     ## build auxilliary wave
                     t1 = time.time()
-                    AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                    AWK.build_aux(aux, addr, ob, pr, ex, alpha=self._alpha)
                     self.benchmark.A_Build_aux += time.time() - t1
 
                     ## forward FFT
@@ -335,16 +271,12 @@ class DR_serial(PositionCorrectionEngine):
 
                     ## build exit wave
                     t1 = time.time()
-                    AWK.build_exit_alpha_tau(aux, addr, ob, pr, ex, alpha=self.p.alpha, tau=self.p.tau)
+                    AWK.build_exit_alpha_tau(aux, addr, ob, pr, ex, alpha=self._alpha, tau=self._tau)
                     if self.p.compute_exit_error:
                         FUK.exit_error(aux,addr)
                         FUK.error_reduce(addr, err_exit)
                     self.benchmark.E_Build_exit += time.time() - t1
                     self.benchmark.calls_fourier += 1
-
-                    ## probe/object rescale
-                    #if self.p.rescale_probe:
-                    #    pr *= np.sqrt(self.mean_power / (np.abs(pr)**2).mean())
 
                     ## build auxilliary wave (ob * pr product)
                     t1 = time.time()
@@ -353,13 +285,15 @@ class DR_serial(PositionCorrectionEngine):
 
                     # object update
                     t1 = time.time()
-                    POK.ob_update_local(addr, ob, pr, ex, aux)
+                    POK.pr_norm_local(addr, pr, prn)
+                    POK.ob_update_local(addr, ob, pr, ex, aux, prn, a=self._ob_a, b=self._ob_b)
                     self.benchmark.object_update += time.time() - t1
                     self.benchmark.calls_object += 1
 
                     # probe update
                     t1 = time.time()
-                    POK.pr_update_local(addr, pr, ob, ex, aux)
+                    POK.ob_norm_local(addr, ob, obn)
+                    POK.pr_update_local(addr, pr, ob, ex, aux, obn, a=self._pr_a, b=self._pr_b)
                     self.benchmark.probe_update += time.time() - t1
                     self.benchmark.calls_probe += 1
 
@@ -378,9 +312,70 @@ class DR_serial(PositionCorrectionEngine):
 
             self.curiter += 1
 
-        error = parallel.gather_dict(error_dct)
-        return error
+        #error = parallel.gather_dict(error_dct)
+        return error_dct
 
+    def position_update_local(self, prep, i):
+        """
+        Position refinement update for current view.
+        """
+        if not self.do_position_refinement:
+            return
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+
+        # Update positions
+        if do_update_pos:
+            """
+            Iterates through all positions and refines them by a given algorithm. 
+            """
+            #log(4, "----------- START POS REF -------------")
+            pID, oID, eID = prep.poe_IDs
+            mag = prep.mag[i,None]
+            ma = prep.ma[i,None]
+            ma_sum = prep.ma_sum[i,None]
+            ob = self.ob.S[oID].data
+            pr = self.pr.S[pID].data
+            kern = self.kernels[prep.label]
+            aux = kern.aux
+            addr = prep.addr[i,None]
+            original_addr = prep.original_addr[i,None]
+            mangled_addr = addr.copy()
+            err_fourier = prep.err_fourier[i,None]
+
+            PCK = kern.PCK
+            FW = kern.FW
+
+            # Keep track of object boundaries
+            max_oby = ob.shape[-2] - aux.shape[-2] - 1
+            max_obx = ob.shape[-1] - aux.shape[-1] - 1
+
+            # We first need to calculate the current error 
+            PCK.build_aux(aux, addr, ob, pr)
+            aux[:] = FW(aux)
+            if self.p.position_refinement.metric == "fourier":
+                PCK.fourier_error(aux, addr, mag, ma, ma_sum)
+                PCK.error_reduce(addr, err_fourier)
+            if self.p.position_refinement.metric == "photon":
+                PCK.log_likelihood(aux, addr, mag, ma, err_fourier)
+            error_state = np.zeros_like(err_fourier)
+            error_state[:] = err_fourier
+            PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
+
+            #log(4, 'Position refinement trial: iteration %s' % (self.curiter))
+            for i in range(PCK.mangler.nshifts):
+                PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
+                PCK.build_aux(aux, mangled_addr, ob, pr)
+                aux[:] = FW(aux)
+                if self.p.position_refinement.metric == "fourier":
+                    PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
+                    PCK.error_reduce(mangled_addr, err_fourier)
+                if self.p.position_refinement.metric == "photon":
+                    PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
+                PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
+
+            prep.err_fourier[i,None] = error_state
+            prep.addr[i,None] = addr
 
     def engine_finalize(self):
         """
@@ -415,3 +410,44 @@ class DR_serial(PositionCorrectionEngine):
                         delta = (prep.original_addr[i][j][1][1:] - prep.addr[i][j][1][1:]) * res
                         pod.ob_view.coord += delta 
                         pod.ob_view.storage.update_views(pod.ob_view)
+
+
+@register()
+class EPIE_serial(_StochasticEngineSerial, EPIEMixin):
+    """
+    A serialized implementation of the EPIE algorithm.
+
+    Defaults:
+
+    [name]
+    default = EPIE_serial
+    type = str
+    help =
+    doc =
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _StochasticEngineSerial.__init__(self, ptycho_parent, pars)
+        EPIEMixin.__init__(self, self.p.alpha, self.p.beta)
+        ptycho_parent.citations.add_article(**self.article)
+
+@register()
+class SDR_serial(_StochasticEngineSerial, SDRMixin):
+    """
+    A serialized implemnentation of the semi-implicit relaxed Douglas-Rachford (SDR) algorithm.
+
+    Defaults:
+
+    [name]
+    default = SDR_serial
+    type = str
+    help =
+    doc =
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _StochasticEngineSerial.__init__(self, ptycho_parent, pars)
+        SDRMixin.__init__(self, self.p.sigma, self.p.tau, self.p.beta_probe, self.p.beta_object)
+        ptycho_parent.citations.add_article(**self.article)
