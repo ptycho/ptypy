@@ -721,9 +721,9 @@ class PoUpdateKernelTest(PyCudaTest):
         addr_dev = gpuarray.to_gpu(addr)
 
         POUK.pr_norm_local(addr_dev, probe_dev, probe_norm_dev)
-        POUK.ob_update_local(addr_dev, object_array_dev, probe_dev, exit_wave_dev, auxiliary_wave_dev, probe_norm_dev, A=0.5, B=0.5)
+        POUK.ob_update_local(addr_dev, object_array_dev, probe_dev, exit_wave_dev, auxiliary_wave_dev, probe_norm_dev, a=0.5, b=0.5)
         nPOUK.pr_norm_local(addr, probe, probe_norm)
-        nPOUK.ob_update_local(addr, object_array, probe, exit_wave, auxiliary_wave, probe_norm, A=0.5, B=0.5)
+        nPOUK.ob_update_local(addr, object_array, probe, exit_wave, auxiliary_wave, probe_norm, a=0.5, b=0.5)
 
         np.testing.assert_allclose(object_array_dev.get(), object_array, rtol=1e-6, atol=1e-6,
                                       err_msg="The object array has not been updated as expected")
@@ -801,9 +801,9 @@ class PoUpdateKernelTest(PyCudaTest):
         addr_dev = gpuarray.to_gpu(addr)
 
         POUK.ob_norm_local(addr_dev, object_array_dev, object_norm_dev)
-        POUK.pr_update_local(addr_dev,  probe_dev, object_array_dev,exit_wave_dev, auxiliary_wave_dev, object_norm_dev, A=0.5, B=0.5)
+        POUK.pr_update_local(addr_dev,  probe_dev, object_array_dev,exit_wave_dev, auxiliary_wave_dev, object_norm_dev, a=0.5, b=0.5)
         nPOUK.ob_norm_local(addr, object_array, object_norm)
-        nPOUK.pr_update_local(addr, probe, object_array, exit_wave, auxiliary_wave, object_norm, A=0.5, B=0.5)
+        nPOUK.pr_update_local(addr, probe, object_array, exit_wave, auxiliary_wave, object_norm, a=0.5, b=0.5)
 
         np.testing.assert_allclose(probe_dev.get(), probe, rtol=1e-6, atol=1e-6,
                                       err_msg="The probe has not been updated as expected")
