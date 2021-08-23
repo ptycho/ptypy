@@ -30,16 +30,6 @@ class _StochasticEngineSerial(_StochasticEngine):
 
     Defaults:
 
-    [clip_object]
-    default = None
-    type = tuple
-    help = Clip object amplitude into this interval
-
-    [compute_log_likelihood]
-    default = True
-    type = bool
-    help = A switch for computing the log-likelihood error (this can impact the performance of the engine)
-
     [compute_exit_error]
     default = False
     type = bool
