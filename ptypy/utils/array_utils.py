@@ -330,7 +330,7 @@ c_affine_transform.__doc__='*complex input*\n\n'+c_affine_transform.__doc__
 """
 
 def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
-    """\
+    """
     Move array from center `cen_old` to `cen_new` and perform a zoom `zoom`.
     
     This function wraps `scipy.ndimage.affine_transform <https://docs.scipy.org/
@@ -338,7 +338,7 @@ def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
     uses the same keyword arguments.
 
     Addiionally, it allows for complex input and out by complex overloading, see
-    :any:`complex_overload`\ . 
+    :any:`complex_overload`. 
 
     Parameters
     ----------
@@ -370,7 +370,7 @@ def shift_zoom(c,zoom,cen_old,cen_new,**kwargs):
 
 
 def fill3D(A,B,offset=[0,0,0]):
-    """\
+    """
     Fill 3-dimensional array A with B.
     """
     if A.ndim != 3 or B.ndim!=3:
@@ -392,7 +392,7 @@ def fill3D(A,B,offset=[0,0,0]):
 
 
 def mirror(A,axis=-1):
-    """\
+    """
     Mirrors array `A` along one axis `axis`
 
     Parameters
@@ -473,7 +473,7 @@ def pad_lr(A,axis,l,r,fillpar=0.0, filltype='scalar'):
         right=np.ones(fsh,A.dtype)*fillpar
     if filltype=='custom':
         left=fillpar[0].astype(A.dtype)
-        rigth=fillpar[1].astype(A.dtype)
+        right=fillpar[1].astype(A.dtype)
     return np.concatenate((left,A,right),axis=axis)
 
 

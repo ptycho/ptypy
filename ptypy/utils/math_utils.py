@@ -57,8 +57,8 @@ def gaussian(x, std=1.0, off=0.0):
     Evaluates gaussian standard normal
 
     .. math::
-        g(x)=\\frac{1}{\mathrm{std}\sqrt{2\pi}}\,\exp
-        \\left(-\\frac{(x-\mathrm{off})^2}{2 \mathrm{std}^2 }\\right)
+        g(x)=\\frac{1}{\\mathrm{std}\\sqrt{2\\pi}}\\,\\exp
+        \\left(-\\frac{(x-\\mathrm{off})^2}{2 \\mathrm{std}^2 }\\right)
 
     Parameters
     ----------
@@ -163,7 +163,7 @@ def delxf(a, axis=-1, out=None):
     slice1 = [slice(1, None) if i == axis else slice(None) for i in range(nd)]
     slice2 = [slice(None, -1) if i == axis else slice(None) for i in range(nd)]
 
-    if out == None:
+    if (out is None):
         out = np.zeros_like(a)
 
     out[tuple(slice2)] = a[tuple(slice1)] - a[tuple(slice2)]

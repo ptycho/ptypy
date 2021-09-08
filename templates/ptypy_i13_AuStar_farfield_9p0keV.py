@@ -8,7 +8,6 @@ import numpy as np
 p = u.Param()
 p.verbose_level = 3
 p.run = None
-p.frames_per_block = 20
 
 p.data_type = "single"
 p.run = None
@@ -61,7 +60,6 @@ sim.plot = False
 p.scans = u.Param()
 p.scans.scan00 = u.Param()
 p.scans.scan00.name = 'Full'
-p.scans.scan00.propagation = "nearfield"
 
 p.scans.scan00.coherence = u.Param()
 p.scans.scan00.coherence.num_probe_modes = 1

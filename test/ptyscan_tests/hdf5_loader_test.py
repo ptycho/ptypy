@@ -5,7 +5,7 @@ import h5py as h5
 import shutil
 import numpy as np
 import ptypy
-from ptypy.test.utils import PtyscanTestRunner
+from test.utils import PtyscanTestRunner
 from ptypy.experiment.hdf5_loader import Hdf5Loader
 from ptypy import utils as u
 
@@ -58,6 +58,10 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         self.normalisation_key = 'entry/normalisation'
         create_file_and_dataset(path=self.normalisation_file, key=self.normalisation_key, data_type=np.float)
 
+        self.framefilter_file = os.path.join(self.outdir, 'framefilter.h5')
+        self.framefilter_key = 'entry/framefilter'
+        create_file_and_dataset(path=self.framefilter_file, key=self.framefilter_key, data_type=np.bool)
+
         self.top_file = os.path.join(self.outdir, 'top_file.h5')
         self.recorded_energy_key = 'entry/energy'
         self.recorded_distance_key = 'entry/distance'
@@ -71,6 +75,7 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
             f[self.positions_slow_key] = h5.ExternalLink(self.positions_file, self.positions_slow_key)
             f[self.positions_fast_key] = h5.ExternalLink(self.positions_file, self.positions_fast_key)
             f[self.normalisation_key] = h5.ExternalLink(self.normalisation_file, self.normalisation_key)
+            f[self.framefilter_key] = h5.ExternalLink(self.framefilter_file, self.framefilter_key)
 
     def tearDown(self):
         if os.path.exists(self.outdir):
@@ -259,6 +264,54 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         np.testing.assert_equal(out_data.shape, ground_truth.shape, err_msg="The shapes don't match for the positions for case 1 with skipping")
         np.testing.assert_array_equal(out_data, ground_truth, err_msg='There is something up with the positions for case 1 with skipping')
 
+    def test_position_data_mapping_case_1_with_framefilter(self):
+        '''
+        axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n),
+        '''
+        A = 106
+        B = 101
+        frame_size_m = 5
+        frame_size_n = 5
+
+        positions_slow = np.arange(A)
+        positions_fast = np.arange(B)
+        fast, slow = np.meshgrid(positions_fast, positions_slow) # just pretend it's a simple grid
+        fast = fast[..., np.newaxis, np.newaxis]
+        slow = slow[..., np.newaxis, np.newaxis]
+        # now chuck them in the files
+        with h5.File(self.positions_file, 'w') as f:
+            f[self.positions_slow_key] = slow
+            f[self.positions_fast_key] = fast
+
+        # make up some data ...
+        data = np.arange(A*B*frame_size_m*frame_size_n).reshape(A, B, frame_size_m, frame_size_n)
+        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+
+        # create framefilter
+        framefilter = data.sum(axis=(2,3)) > 0
+        framefilter[50:60,40:50] = False 
+        h5.File(self.framefilter_file, 'w')[self.framefilter_key] = framefilter
+
+        data_params = u.Param()
+        data_params.auto_center = False
+        data_params.intensities = u.Param()
+        data_params.intensities.file = self.intensity_file
+        data_params.intensities.key = self.intensity_key
+
+        data_params.positions = u.Param()
+        data_params.positions.file = self.positions_file
+        data_params.positions.slow_key = self.positions_slow_key
+        data_params.positions.fast_key = self.positions_fast_key
+
+        data_params.framefilter = u.Param()
+        data_params.framefilter.file = self.framefilter_file
+        data_params.framefilter.key = self.framefilter_key
+        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=A*B, cleanup=False)
+
+        out_data = h5.File(output['output_file'],'r')['chunks/0/data'][...].squeeze()
+        ground_truth = data[framefilter].reshape((-1, frame_size_m, frame_size_n))
+        np.testing.assert_equal(out_data.shape, ground_truth.shape, err_msg="The shapes don't match for the positions for case 1 with framefilter")
+        np.testing.assert_array_equal(out_data, ground_truth, err_msg='There is something up with the positions for case 1 with framefilter')
 
     def test_darkfield_applied_case_1(self):
         '''
@@ -470,6 +523,56 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
                                 err_msg="The shapes don't match for the positions for case 2 with skipping")
         np.testing.assert_array_equal(ground_truth, out_data,
                                       err_msg='There is something up with the positions for case 2 with skipping')
+
+    def test_position_data_mapping_case_2_with_framefilter(self):
+        '''
+        axis_data.shape (k,) for data.shape (k, frame_size_m, frame_size_n)
+        '''
+        k = 12
+        frame_size_m = 5
+        frame_size_n = 5
+
+        positions_slow = np.arange(k)
+        positions_fast = np.arange(k)
+
+        # now chuck them in the files
+        with h5.File(self.positions_file, 'w') as f:
+            f[self.positions_slow_key] = positions_slow
+            f[self.positions_fast_key] = positions_fast
+
+        # make up some data ...
+        data = np.arange(k*frame_size_m*frame_size_n).reshape(k, frame_size_m, frame_size_n)
+        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+
+        # create framefilter
+        framefilter = data.sum(axis=(1,2)) > 0
+        framefilter[5:7] = False 
+        h5.File(self.framefilter_file, 'w')[self.framefilter_key] = framefilter
+
+        data_params = u.Param()
+        data_params.auto_center = False
+        data_params.intensities = u.Param()
+        data_params.intensities.file = self.intensity_file
+        data_params.intensities.key = self.intensity_key
+
+        data_params.positions = u.Param()
+        data_params.positions.file = self.positions_file
+        data_params.positions.slow_key = self.positions_slow_key
+        data_params.positions.fast_key = self.positions_fast_key
+
+        data_params.framefilter = u.Param()
+        data_params.framefilter.file = self.framefilter_file
+        data_params.framefilter.key = self.framefilter_key
+
+        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
+
+        out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
+        ground_truth = data[framefilter].reshape((-1, frame_size_m, frame_size_n))
+
+        np.testing.assert_equal(ground_truth.shape, out_data.shape,
+                                err_msg="The shapes don't match for the positions for case 2 with framefilter")
+        np.testing.assert_array_equal(ground_truth, out_data,
+                                      err_msg='There is something up with the positions for case 2 with framefilter')
 
 
     def test_flatfield_applied_case_2(self):

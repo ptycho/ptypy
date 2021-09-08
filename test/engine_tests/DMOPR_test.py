@@ -1,5 +1,5 @@
 """
-Test for the DM_simple engine.
+Test for the DM engine.
 
 This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
@@ -7,21 +7,20 @@ This file is part of the PTYPY package.
 """
 
 import unittest
-from ptypy.test import utils as tu
+from test import utils as tu
 from ptypy import utils as u
 from ptypy.core import Ptycho
 
-class MLOPRTest(unittest.TestCase):
 
-    def test_MLOPR(self):
-
+class DMOPRTest(unittest.TestCase):
+    def test_DMOPR(self):
         p = u.Param()
         p.verbose_level = 3
         p.io = u.Param()
         p.io.interaction = u.Param()
         p.io.interaction.active = False
         p.io.home = './'
-        p.io.rfile = "./MLOPRTest.ptyr"
+        p.io.rfile = "./DMOPRTest.ptyr"
         p.io.autosave = u.Param(active=False)
         p.io.autoplot = u.Param(active=False)
         p.ipython_kernel = False
@@ -43,7 +42,7 @@ class MLOPRTest(unittest.TestCase):
         p.scans.MF.data.experimentID = None
         p.scans.MF.data.label = None
         p.scans.MF.data.version = 0.1
-        p.scans.MF.data.dfile = "./MLOPRTest.ptyd"
+        p.scans.MF.data.dfile = "./DMOPRTest.ptyd"
         p.scans.MF.data.psize = 0.000172
         p.scans.MF.data.load_parallel = None
         p.scans.MF.data.distance = 7.0
@@ -52,12 +51,20 @@ class MLOPRTest(unittest.TestCase):
         p.scans.MF.data.photons = 100000000.0
         p.scans.MF.data.psf = 0.0
         p.scans.MF.data.density = 0.2
+
         p.engines = u.Param()
-
         p.engines.engine00 = u.Param()
-        p.engines.engine00.name = "MLOPR"
-        P = Ptycho(p, level=5)
+        p.engines.engine00.name = "DMOPR"
+        p.engines.engine00.numiter = 5
+        p.engines.engine00.numiter_contiguous = 5
+        p.engines.engine00.overlap_converge_factor = 0.05
+        p.engines.engine00.overlap_max_iterations = 2
+        p.engines.engine00.fourier_relax_factor = 0.01
+        p.engines.engine00.IP_metric = 1.
+        p.engines.engine00.subspace_dim = 10
+        p.engines.engine00.subspace_start = 2
 
+        P = Ptycho(p, level=5)
 
 if __name__ == "__main__":
     unittest.main()

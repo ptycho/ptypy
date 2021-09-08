@@ -531,6 +531,7 @@ class Storage(Base):
         elif np.isscalar(fill):
             # Fill with scalar value
             self.data.fill(fill)
+            self.fill_value = fill
         elif type(fill) is np.ndarray:
             # Replace the buffer
             if fill.ndim < self.ndim or fill.ndim > (self.ndim + 1):
@@ -627,14 +628,12 @@ class Storage(Base):
 
         # List of views on this storage
         views = self.views
-        if not views:
-            return self
 
         logger.debug('%s[%s] :: %d views for this storage'
                      % (self.owner.ID, self.ID, len(views)))
 
         sh = self.data.shape
-        
+
         # Loop through all active views to get individual boundaries
         dlow_fov = [np.inf] * self.ndim
         dhigh_fov = [-np.inf] * self.ndim
@@ -660,12 +659,16 @@ class Storage(Base):
 
         self._update_distributed(new_layermap, dlow_fov, dhigh_fov)
 
+        # Return if no views, it is important that this only happens after self.distributed is updated 
+        if not views:
+            return self
+
         sh = self.data.shape
 
         # Compute Nd misfit (distance between the buffer boundaries and the
         # region required to fit all the views)
         misfit = self.padding + np.array([[-dlow_fov[d], dhigh_fov[d] - sh[d+1]] for d in dims])
-        
+
         _misfit_str = ', '.join(['%s' % m for m in misfit])
         logger.debug('%s[%s] :: misfit = [%s]'
                      % (self.owner.ID, self.ID, _misfit_str))

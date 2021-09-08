@@ -83,7 +83,6 @@ class Geo(Base):
     help = Distance from object to detector (in meters)
     doc =
     userlevel = 0
-    lowlim = 0
 
     [psize]
     type = float
@@ -507,7 +506,7 @@ class BasicFarfieldPropagator(object):
     coordinates are rolled periodically, just like in the conventional fft case.
     """
 
-    def __init__(self, geo_pars=None, ffttype='fftw', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='numpy', **kwargs):
         """
         Parameters
         ----------
@@ -621,14 +620,15 @@ class BasicFarfieldPropagator(object):
         # Factors for inverse operation
         self.pre_ifft = self.post_fft.conj()
         self.post_ifft = self.pre_fft.conj()
-
         self.sc, self.isc = self.FFTch.assign_scaling(self.sh)
+
 
     def fw(self, W):
         """
         Computes forward propagated wavefront of input wavefront W.
         """
         # Check for cropping
+
         if (self.crop_pad != 0).any():
             w = u.crop_pad(W, self.crop_pad)
         else:
@@ -746,7 +746,7 @@ class BasicNearfieldPropagator(object):
         a2 = (V**2 + W**2)
 
         self.kernel = np.exp(
-            2j * np.pi * (p.distance / p.lam) * (np.sqrt(1-a2) - 1))
+            2j * np.pi * (p.distance / p.lam) * (np.sqrt(1-a2) - 1)).astype(self.dtype)
         # self.kernel = np.fft.fftshift(self.kernel)
         self.ikernel = self.kernel.conj()
 

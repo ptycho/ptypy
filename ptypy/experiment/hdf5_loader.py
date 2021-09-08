@@ -221,6 +221,22 @@ class Hdf5Loader(PtyScan):
     type = int
     help = Sigma value applied for automatic detection of outliers in the normalisation dataset.
 
+    [framefilter]
+    default = 
+    type = Param
+    help = Parameters for the filtering of frames
+    doc = The shape of loaded data is assumed to hvae the same dimensionality as data.shape[:-2]
+
+    [framefilter.file]
+    default = None
+    type = str
+    help = This is the path to the file containing the filter information. 
+
+    [framefilter.key]
+    default = None
+    type = str
+    help = This is the key to the frame filter entry in the hdf5 file.
+
     [recorded_energy]
     default =
     type = Param
@@ -241,6 +257,11 @@ class Hdf5Loader(PtyScan):
     default = 1.0
     type = float
     help = This is the multiplier for the recorded energy.
+
+    [recorded_energy.offset]
+    default = 0.0
+    type = float
+    help = This is an optional offset for the recorded energy in keV.
 
     [recorded_distance]
     default =
@@ -292,6 +313,11 @@ class Hdf5Loader(PtyScan):
       Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
     userlevel = 1
 
+    [outer_index]
+    type = int
+    default = None
+    help = Index for outer dimension (e.g. tomography, spectro scans), default is None.
+   
     """
 
     def __init__(self, pars=None, **kwargs):
@@ -317,6 +343,8 @@ class Hdf5Loader(PtyScan):
         self.flatfield_field_laid_out_like_data = None
         self.mask_laid_out_like_data = None
         self.preview_indices = None
+        self.framefilter = None
+        self._is_spectro_scan = False
 
         # lets raise some exceptions here for the essentials
         if None in [self.p.intensities.file,
@@ -332,26 +360,53 @@ class Hdf5Loader(PtyScan):
                     self.p.normalisation.is_swmr]:
             raise NotImplementedError("Currently swmr functionality is not implemented! Coming soon...")
 
+        # Check for spectro scans
+        if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
+            _energy_dset = h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key]
+            if len(_energy_dset.shape):
+                if _energy_dset.shape[0] > 1:
+                    self._is_spectro_scan = True
+        if self._is_spectro_scan and self.p.outer_index is None:
+            self.p.outer_index = 0
+        if self._is_spectro_scan:
+            log(3, "This is appears to be a spectro scan, selecting index = {}".format(self.p.outer_index))
+
         self.intensities = h5.File(self.p.intensities.file, 'r')[self.p.intensities.key]
+        if self._is_spectro_scan and self.p.outer_index is not None:
+            self.intensities = self.intensities[self.p.outer_index]
         data_shape = self.intensities.shape
 
         fast_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.fast_key][...]
+        if self._is_spectro_scan and self.p.outer_index is not None:
+            fast_axis = fast_axis[self.p.outer_index]
         self.fast_axis = np.squeeze(fast_axis) if fast_axis.ndim > 2 else fast_axis
         positions_fast_shape = self.fast_axis.shape
 
-
         slow_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.slow_key][...]
+        if self._is_spectro_scan and self.p.outer_index is not None:
+            slow_axis = slow_axis[self.p.outer_index]
         self.slow_axis = np.squeeze(slow_axis) if slow_axis.ndim > 2 else slow_axis
         positions_slow_shape = self.slow_axis.shape
 
 
 
         log(3, "The shape of the \n\tdiffraction intensities is: {}\n\tslow axis data:{}\n\tfast axis data:{}".format(data_shape,
-                                                                                                                       positions_slow_shape,
+                                                                                                                      positions_slow_shape,
                                                                                                                       positions_fast_shape))
         if self.p.positions.skip > 1:
             log(3, "Skipping every {:d} positions".format(self.p.positions.skip))
         
+        if None not in [self.p.framefilter.file, self.p.framefilter.key]:
+            self.framefilter = h5.File(self.p.framefilter.file, 'r')[self.p.framefilter.key]
+            if (self.framefilter.shape == self.fast_axis.shape == self.slow_axis.shape):
+                log(3, "The frame filter has the same dimensionality as the axis information.")
+            elif self.framefilter.shape[:2] == self.fast_axis.shape == self.slow_axis.shape:
+                log(3, "The frame filter matches the axis information, but will average the other dimensions.")
+            else:
+                raise RuntimeError("I have no idea what to do with this is shape of frame filter data.")
+        else:
+            log(3, "No frame filter will be applied.")
+
         self.compute_scan_mapping_and_trajectory(data_shape, positions_fast_shape, positions_slow_shape)
 
         if None not in [self.p.darkfield.file, self.p.darkfield.key]:
@@ -413,10 +468,13 @@ class Hdf5Loader(PtyScan):
             log(3, "No normalisation will be applied.")
 
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()] * self.p.recorded_energy.multiplier)
+            if self._is_spectro_scan and self.p.outer_index is not None:
+                self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][self.p.outer_index])
+            else:
+                self.p.energy = np.float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()])
+            self.p.energy = self.p.energy * self.p.recorded_energy.multiplier + self.p.recorded_energy.offset
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
-
 
         if None not in [self.p.recorded_distance.file, self.p.recorded_distance.key]:
             self.p.distance = np.float(h5.File(self.p.recorded_distance.file, 'r')[self.p.recorded_distance.key][()] * self.p.recorded_distance.multiplier)
@@ -590,6 +648,8 @@ class Hdf5Loader(PtyScan):
 
                 indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
+                if self.framefilter is not None:
+                    self.preview_indices = self.preview_indices[:,self.framefilter[::skip,::skip].flatten()]
                 self.num_frames = len(self.preview_indices[0])
             else:
                 if (set_slow_axis_bounds is not None) and (set_fast_axis_bounds is not None):
@@ -602,6 +662,8 @@ class Hdf5Loader(PtyScan):
                         fast_axis_bounds = set_fast_axis_bounds
                 self._scantype = "arb"
                 self.preview_indices = np.array(list(range(*fast_axis_bounds)))[::skip]
+                if self.framefilter is not None:
+                    self.preview_indices = self.preview_indices[self.framefilter[::skip]]
                 self.num_frames = len(self.preview_indices)
 
         elif ((len(positions_fast_shape)>1) and (len(positions_slow_shape)>1)) and data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
@@ -628,6 +690,8 @@ class Hdf5Loader(PtyScan):
 
             indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
             self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()])
+            if self.framefilter:
+                log(3, "Framefilter not supported for this case")
             self.num_frames = len(self.preview_indices[0])
             self._ismapped = False
             self._scantype = 'raster'
@@ -659,10 +723,12 @@ class Hdf5Loader(PtyScan):
 
                 indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
+                if self.framefilter:
+                    log(3, "Framefilter not supported for this case")
                 self.num_frames = len(self.preview_indices[0])
-
                 self._ismapped = True
                 self._scantype = 'raster'
+
             elif data_shape[0] == (positions_slow_shape[0] * positions_fast_shape[0]):
                 '''
                 cases covered:
@@ -688,11 +754,12 @@ class Hdf5Loader(PtyScan):
 
                 indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
+                if self.framefilter:
+                    log(3, "Framefilter not supported for this case")
                 self.num_frames = len(self.preview_indices[0])
-
-
                 self._ismapped = False
                 self._scantype = 'raster'
+
             else:
                 raise IOError("I don't know what to do with these positions/data shapes")
         else:

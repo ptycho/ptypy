@@ -739,6 +739,24 @@ def MPIrand_uniform(low=0.0, high=1.0, size=(1)):
 
 MPIrand_uniform.__doc__+=np.random.uniform.__doc__
 
+if MPI is not None:
+    # local rank
+    hosts_ranks = {}
+    host = MPI.Get_processor_name()   
+    rank_host = gather_dict({rank : host})
+    for k,v in rank_host.items():
+        if v not in hosts_ranks:
+            hosts_ranks[v]=[k]
+        else:
+            hosts_ranks[v].append(k)
+            
+    bcast_dict(hosts_ranks)
+    rank_local = hosts_ranks[host].index(rank)
+    del rank_host
+else:
+    rank_local = 0
+    hosts_ranks={'localhost':[0]}
+
 def MPInoise2d(sh,rms=1.0, mfs=2,rms_mod=None, mfs_mod=2):
     """
     Creates complex-valued statistical noise in the shape of `sh`
