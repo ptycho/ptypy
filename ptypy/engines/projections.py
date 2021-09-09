@@ -486,8 +486,8 @@ class RAARMixin:
 
     def __init__(self, beta):
         self._beta = 1.
-        self._a = beta
-        self._b = 1. - 2. * beta
+        self._a = 1. - 2. * beta
+        self._b = - beta
         self._c = 2. * beta
         self.beta = beta
 
@@ -498,8 +498,8 @@ class RAARMixin:
     @beta.setter
     def beta(self, beta):
         self._beta = beta
-        self._a = beta
-        self._b = 1. - 2. * beta
+        self._a = 1. - 2. * beta
+        self._b = - beta
         self._c = 2. * beta
 
 
