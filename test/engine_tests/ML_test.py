@@ -9,8 +9,16 @@ This file is part of the PTYPY package.
 import unittest
 from test import utils as tu
 from ptypy import utils as u
+import tempfile
+import shutil
 
 class MLTest(unittest.TestCase):
+
+    def setUp(self):
+        self.outpath = tempfile.mkdtemp(suffix="DMOPR_test")
+
+    def tearDown(self):
+        shutil.rmtree(self.outpath)
 
     def test_ML_farfield_floating_intensities(self):
         engine_params = u.Param()
@@ -24,7 +32,7 @@ class MLTest(unittest.TestCase):
         engine_params.smooth_gradient = 0.0
         engine_params.scale_precond =False
         engine_params.probe_update_start = 0
-        tu.EngineTestRunner(engine_params)
+        tu.EngineTestRunner(engine_params, output_path=self.outpath)
 
     def test_ML_farfield(self):
         engine_params = u.Param()
@@ -38,7 +46,7 @@ class MLTest(unittest.TestCase):
         engine_params.smooth_gradient = 0.0
         engine_params.scale_precond =False
         engine_params.probe_update_start = 0
-        tu.EngineTestRunner(engine_params)
+        tu.EngineTestRunner(engine_params, output_path=self.outpath)
 
 
     def test_ML_nearfield(self):
@@ -54,7 +62,7 @@ class MLTest(unittest.TestCase):
         engine_params.scale_precond =False
         engine_params.probe_update_start = 0
 
-        tu.EngineTestRunner(engine_params, propagator='nearfield')
+        tu.EngineTestRunner(engine_params, propagator='nearfield', output_path=self.outpath)
 
 if __name__ == "__main__":
     unittest.main()

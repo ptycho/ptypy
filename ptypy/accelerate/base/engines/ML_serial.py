@@ -15,7 +15,7 @@ import numpy as np
 import time
 
 from ptypy.engines.ML import ML, BaseModel
-from .DM_serial import serialize_array_access
+from .projectional_serial import serialize_array_access
 from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel

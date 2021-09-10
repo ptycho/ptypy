@@ -17,7 +17,8 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
-from . import DM_pycuda
+from ptypy.engines.projectional import DMMixin, RAARMixin
+from . import projectional_pycuda
 from ..mem_utils import GpuDataManager
 
 # factor how many more exit waves we wanna keep on GPU compared to 
@@ -89,8 +90,7 @@ class GpuStreamData:
         self.queue.synchronize()
 
 
-@register()
-class DM_pycuda_streams(DM_pycuda.DM_pycuda):
+class _ProjectionEngine_pycuda_streams(projectional_pycuda._ProjectionEngine_pycuda):
 
     """
     Defaults:
@@ -110,7 +110,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
     def __init__(self, ptycho_parent, pars = None):
 
-        super(DM_pycuda_streams, self).__init__(ptycho_parent, pars)
+        super().__init__(ptycho_parent, pars)
         self.streams = None 
         self.ma_data = None
         self.mag_data = None
@@ -120,7 +120,7 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
     def engine_prepare(self):
 
-        super(DM_pycuda.DM_pycuda, self).engine_prepare()
+        super(projectional_pycuda._ProjectionEngine_pycuda, self).engine_prepare()
 
         for name, s in self.ob.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
@@ -350,7 +350,8 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
 
                         ## prep + forward FFT
                         t1 = time.time()
-                        AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        #AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c, c_e=self._b)
                         self.benchmark.A_Build_aux += time.time() - t1
 
                         t1 = time.time()
@@ -369,7 +370,8 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
                         t1 = time.time()
                         PROP.bw(aux, aux)
                         ## apply changes
-                        AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        #AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        AWK.make_exit(aux, addr, ob, pr, ex, c_a=1.0, c_po=self._a, c_e=-(self._a + self._b + self._c))
                         FUK.exit_error(aux, addr)
                         FUK.error_reduce(addr, err_exit)
                         self.benchmark.E_Build_exit += time.time() - t1
@@ -619,3 +621,45 @@ class DM_pycuda_streams(DM_pycuda.DM_pycuda):
         self.mag_data = None
 
         super().engine_finalize(benchmark)
+
+
+@register()
+class DM_pycuda_streams(_ProjectionEngine_pycuda_streams, DMMixin):
+    """
+    A full-fledged Difference Map engine accelerated with pycuda.
+
+    Defaults:
+
+    [name]
+    default = DM_pycuda
+    type = str
+    help =
+    doc =
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _ProjectionEngine_pycuda_streams.__init__(self, ptycho_parent, pars)
+        DMMixin.__init__(self, self.p.alpha)
+        ptycho_parent.citations.add_article(**self.article)
+
+
+@register()
+class RAAR_pycuda_streams(_ProjectionEngine_pycuda_streams, RAARMixin):
+    """
+    A RAAR engine in accelerated with pycuda.
+
+    Defaults:
+
+    [name]
+    default = RAAR_pycuda
+    type = str
+    help =
+    doc =
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+
+        _ProjectionEngine_pycuda_streams.__init__(self, ptycho_parent, pars)
+        RAARMixin.__init__(self, self.p.beta)

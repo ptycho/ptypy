@@ -7,7 +7,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from .DM import DM
+from .projectional import DM
 from . import register
 from ..core.manager import Bragg3dModel
 from ..utils import parallel

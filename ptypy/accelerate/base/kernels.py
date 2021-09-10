@@ -396,6 +396,10 @@ class AuxiliaryWaveKernel(BaseKernel):
         pass
 
     def build_aux(self, b_aux, addr, ob, pr, ex, alpha=1.0):
+        # DM only, legacy
+        self.make_aux(b_aux, addr, ob, pr, ex, 1.+alpha, -alpha)
+
+    def _build_aux(self, b_aux, addr, ob, pr, ex, alpha=1.0):
 
         sh = addr.shape
 
@@ -417,7 +421,58 @@ class AuxiliaryWaveKernel(BaseKernel):
             aux[ind, :, :] = tmp
         return
 
+    def make_aux(self, b_aux, addr, ob, pr, ex, c_po=1.0, c_e=0.0):
+
+        sh = addr.shape
+
+        nmodes = sh[1]
+
+        # stopper
+        maxz = sh[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * nmodes]
+        flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            tmp = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
+                  pr[prc[0], :, :] * c_po + \
+                  ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * c_e
+            aux[ind, :, :] = tmp
+        return
+
     def build_exit(self, b_aux, addr, ob, pr, ex, alpha=1):
+        self.make_exit(b_aux, addr, ob, pr, ex, 1.0, -alpha, alpha-1)
+
+    def build_exit_alpha_tau(self, b_aux, addr, ob, pr, ex, alpha=1, tau=1):
+        self.make_exit(b_aux, addr, ob, pr, ex, tau, 1 - tau * (1 + alpha), tau * alpha - 1)
+
+    def make_exit(self, b_aux, addr, ob, pr, ex, c_a=1.0, c_po=0.0, c_e=-1.0):
+
+        sh = addr.shape
+
+        nmodes = sh[1]
+
+        # stopper
+        maxz = sh[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * nmodes]
+
+        flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            dex = c_a * aux[ind, :, :] + c_po * \
+                  ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
+                  pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] + c_e * \
+                  ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
+
+            ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] += dex
+            aux[ind, :, :] = dex
+        return
+
+    def _build_exit(self, b_aux, addr, ob, pr, ex, alpha=1):
 
         sh = addr.shape
 
@@ -442,7 +497,7 @@ class AuxiliaryWaveKernel(BaseKernel):
             aux[ind, :, :] = dex
         return
 
-    def build_exit_alpha_tau(self, b_aux, addr, ob, pr, ex, alpha=1, tau=1):
+    def _build_exit_alpha_tau(self, b_aux, addr, ob, pr, ex, alpha=1, tau=1):
         sh = addr.shape
 
         nmodes = sh[1]
@@ -613,9 +668,9 @@ class PositionCorrectionKernel(BaseKernel):
         self.npy.ferr = np.zeros(self.fshape, dtype=np.float32)
 
     def build_aux(self, b_aux, addr, ob, pr):
-        '''
+        """
         different to the AWK, no alpha subtraction. It would be the same, but with alpha permanentaly set to 0.
-        '''
+        """
         sh = addr.shape
 
         nmodes = sh[1]
@@ -633,9 +688,9 @@ class PositionCorrectionKernel(BaseKernel):
             aux[ind, :, :] = dex
 
     def fourier_error(self, b_aux, addr, mag, mask, mask_sum):
-        '''
+        """
         Should be identical to that of the FUK, but we don't need fdev out.
-        '''
+        """
         # reference shape (write-to shape)
         sh = self.fshape
         # stopper
@@ -661,9 +716,9 @@ class PositionCorrectionKernel(BaseKernel):
         return
 
     def error_reduce(self, addr, err_sum):
-        '''
+        """
         This should the exact same tree reduction as the FUK.
-        '''
+        """
         # reference shape (write-to shape)
         sh = self.fshape
 
@@ -702,9 +757,9 @@ class PositionCorrectionKernel(BaseKernel):
         return
 
     def update_addr_and_error_state(self, addr, error_state, mangled_addr, err_sum):
-        '''
+        """
         updates the addresses and err state vector corresponding to the smallest error. I think this can be done on the cpu
-        '''
+        """
         update_indices = err_sum < error_state
         log(4, "Position correction: updating %s indices" % np.sum(update_indices))
         addr[update_indices] = mangled_addr[update_indices]

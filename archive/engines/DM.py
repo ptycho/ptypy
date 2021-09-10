@@ -19,7 +19,7 @@ from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 __all__ = ['DM']
 
-@register()
+#@register()
 class DM(PositionCorrectionEngine):
     """
     A full-fledged Difference Map engine.

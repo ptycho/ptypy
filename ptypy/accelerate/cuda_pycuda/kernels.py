@@ -426,13 +426,13 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         self.math_type = math_type
         if math_type not in ['float', 'double']:
             raise ValueError('Only double or float math is supported')
-        self.build_aux_cuda, self.build_aux2_cuda = load_kernel(
-            ("build_aux", "build_aux2"), {
+        self.make_aux_cuda, self.make_aux2_cuda = load_kernel(
+            ("make_aux", "make_aux2"), {
                 'IN_TYPE': 'float',
                 'OUT_TYPE': 'float',
                 'MATH_TYPE': self.math_type
-            }, "build_aux.cu")
-        self.build_exit_cuda = load_kernel("build_exit", {
+            }, "make_aux.cu")
+        self.make_exit_cuda = load_kernel("make_exit", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
@@ -443,11 +443,11 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                 'OUT_TYPE': 'float',
                 'MATH_TYPE': self.math_type
             }, "build_aux_no_ex.cu")
-        self.build_exit_alpha_tau_cuda = load_kernel("build_exit_alpha_tau", {
-            'IN_TYPE': 'float',
-            'OUT_TYPE': 'float',
-            'MATH_TYPE': self.math_type
-        })
+        # self.build_exit_alpha_tau_cuda = load_kernel("build_exit_alpha_tau", {
+        #     'IN_TYPE': 'float',
+        #     'OUT_TYPE': 'float',
+        #     'MATH_TYPE': self.math_type
+        # })
 
     # DEPRECATED?
     def load(self, aux, ob, pr, ex, addr):
@@ -455,12 +455,12 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         for key, array in self.npy.__dict__.items():
             self.ocl.__dict__[key] = gpuarray.to_gpu(array)
 
-    def build_aux(self, b_aux, addr, ob, pr, ex, alpha=1.0):
+    def make_aux(self, b_aux, addr, ob, pr, ex, c_po=1.0, c_e=0.0):
         obr, obc = self._cache_object_shape(ob)
         sh = addr.shape
         nmodes = sh[1]
         maxz = sh[0]
-        self.build_aux_cuda(b_aux,
+        self.make_aux_cuda(b_aux,
                             ex,
                             np.int32(ex.shape[1]), np.int32(ex.shape[2]),
                             pr,
@@ -468,17 +468,18 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                             ob,
                             obr, obc,
                             addr,
-                            np.float32(alpha) if ex.dtype == np.complex64 else np.float64(alpha),
+                            np.float32(c_po) if ex.dtype == np.complex64 else np.float64(c_po),
+                            np.float32(c_e) if ex.dtype == np.complex64 else np.float64(c_e),
                             block=(32, 32, 1), grid=(int(maxz * nmodes), 1, 1), stream=self.queue)
 
-    def build_aux2(self, b_aux, addr, ob, pr, ex, alpha=1.0):
+    def make_aux2(self, b_aux, addr, ob, pr, ex, c_po=1.0, c_e=0.0):
         obr, obc = self._cache_object_shape(ob)
         sh = addr.shape
         nmodes = sh[1]
         maxz = sh[0]
         bx = 64
         by = 1
-        self.build_aux2_cuda(b_aux,
+        self.make_aux2_cuda(b_aux,
                             ex,
                             np.int32(ex.shape[1]), np.int32(ex.shape[2]),
                             pr,
@@ -486,20 +487,22 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                             ob,
                             obr, obc,
                             addr,
-                            np.float32(alpha) if ex.dtype == np.complex64 else np.float64(alpha),
-                            block=(bx, by, 1), 
+                            np.float32(c_po) if ex.dtype == np.complex64 else np.float64(c_po),
+                            np.float32(c_e) if ex.dtype == np.complex64 else np.float64(c_e),
+                            block=(bx, by, 1),
                             grid=(
                                 1, 
                                 int((ex.shape[1] + by - 1)//by), 
                                 int(maxz * nmodes)), 
                             stream=self.queue)
 
-    def build_exit(self, b_aux, addr, ob, pr, ex, alpha=1):
+
+    def make_exit(self, b_aux, addr, ob, pr, ex, c_a=1.0, c_po=0.0, c_e=-1.0):
         obr, obc = self._cache_object_shape(ob)
         sh = addr.shape
         nmodes = sh[1]
         maxz = sh[0]
-        self.build_exit_cuda(b_aux,
+        self.make_exit_cuda(b_aux,
                              ex,
                              np.int32(ex.shape[1]), np.int32(ex.shape[2]),
                              pr,
@@ -507,9 +510,16 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                              ob,
                              obr, obc,
                              addr,
-                             np.float32(alpha) if ex.dtype == np.complex64 else np.float64(alpha),
+                             np.float32(c_a) if ex.dtype == np.complex64 else np.float64(c_a),
+                             np.float32(c_po) if ex.dtype == np.complex64 else np.float64(c_po),
+                             np.float32(c_e) if ex.dtype == np.complex64 else np.float64(c_e),
                              block=(32, 32, 1), grid=(int(maxz * nmodes), 1, 1), stream=self.queue)
 
+    def build_aux2(self, b_aux, addr, ob, pr, ex, alpha=1.0):
+        # DM only, legacy. also make_aux2 does no exit in the parent
+        self.make_aux2(b_aux, addr, ob, pr, ex, 1.+alpha, -alpha)
+
+    """
     def build_exit_alpha_tau(self, b_aux, addr, ob, pr, ex, alpha=1, tau=1):
         obr, obc = self._cache_object_shape(ob)
         sh = addr.shape
@@ -529,7 +539,7 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                                        block=(bx, by, 1), 
                                        grid=(1, int((ex.shape[1] + by - 1) // by), int(maxz * nmodes)), 
                                        stream=self.queue)
-
+    """
     def build_aux_no_ex(self, b_aux, addr, ob, pr, fac=1.0, add=False):
         obr, obc = self._cache_object_shape(ob)
         sh = addr.shape
