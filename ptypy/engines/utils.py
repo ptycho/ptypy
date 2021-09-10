@@ -145,7 +145,7 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
         - `err_exit`, quadratic deviation between exit waves before and after
           projection
     """
-
+    print("abc: ", a,b,c)
     # Prepare dict for storing propagated waves
     f = {}
 

@@ -12,7 +12,7 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
-from .utils import basic_fourier_update
+from .utils import projection_update_generalized, log_likelihood
 from .base import PositionCorrectionEngine
 from . import register
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
@@ -48,8 +48,11 @@ class _StochasticEngine(PositionCorrectionEngine):
             raise NotImplementedError("The stochastic engines are not compatible with MPI")
 
         # Adjustment parameters for fourier update
-        self._alpha = 0.0
-        self._tau = 1.0
+        #self._alpha = 0.0
+        #self._tau = 1.0
+        self._a = 0
+        self._b = 0
+        self._c = 1
 
         # Adjustment parameters for probe update
         self._pr_a = 0.0
@@ -127,15 +130,22 @@ class _StochasticEngine(PositionCorrectionEngine):
 
     def fourier_update(self, view):
         """
-        Engine-specific implementation of Fourier update
+        General implementation of Fourier update
 
         Parameters
         ----------
         view : View
         View to diffraction data
         """
-        return basic_fourier_update(view, alpha=self._alpha, tau=self._tau, 
-                                    LL_error=self.p.compute_log_likelihood)
+        #return basic_fourier_update(view, alpha=self._alpha, tau=self._tau, 
+        #                            LL_error=self.p.compute_log_likelihood)
+
+        err_fmag, err_exit = projection_update_generalized(view, self._a, self._b, self._c)
+        if self.p.compute_log_likelihood:
+            err_phot = log_likelihood(view)
+        else:
+            err_phot = 0.
+        return np.array([err_fmag, err_phot, err_exit])
 
     def object_update(self, view, exit_wave):
         """
@@ -249,8 +259,10 @@ class EPIEMixin:
 
     """
     def __init__(self, alpha, beta):
-        self._alpha = 0.0 
-        self._tau = 1.0
+        # EPIE adjustment parameters
+        self._a = 0
+        self._b = 0
+        self._c = 1
         self._pr_a = 0.0
         self._ob_a = 0.0
         self._pr_b = alpha
@@ -314,8 +326,9 @@ class SDRMixin:
     """
     def __init__(self, sigma, tau, beta_probe, beta_object):
         # SDR Adjustment parameters
-        self._alpha = sigma 
+        self._sigma = sigma
         self._tau = tau
+        self._update_abc()
         self._pr_a = beta_probe
         self._ob_a = beta_object
         self._pr_b = 0.0
@@ -332,13 +345,35 @@ class SDRMixin:
             comment='The semi-implicit relaxed Douglas-Rachford reconstruction algorithm',
         )
 
+    def _update_abc(self):
+        self._a = 1 - self._tau * (1 + self._sigma)
+        self._b = - self._sigma * self._tau
+        self._c = self._tau * (1 + self._sigma)
+        
+    @property
+    def sigma(self):
+        return self._sigma
+
+    @sigma.setter
+    def sigma(self, sigma):
+        self._sigma = sigma
+        self._update_abc()
+
+    @property
+    def tau(self):
+        return self._tau
+
+    @tau.setter
+    def tau(self, tau):
+        self._tau = tau
+        self._update_abc()
+
     @property
     def beta_probe(self):
         return self._pr_a
 
     @beta_probe.setter
     def beta_probe(self, beta):
-        print("setting beta_probe")
         self._pr_a = beta
 
     @property
