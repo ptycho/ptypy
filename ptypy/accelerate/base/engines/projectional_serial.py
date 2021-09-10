@@ -14,7 +14,7 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
-from ptypy.engines.projections import _ProjectionEngine, DMMixin, RAARMixin
+from ptypy.engines.projectional import _ProjectionEngine, DMMixin, RAARMixin
 from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ptypy.accelerate.base import array_utils as au
 

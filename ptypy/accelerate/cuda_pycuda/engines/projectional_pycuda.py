@@ -17,8 +17,8 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
-from ptypy.engines.projections import DMMixin, RAARMixin
-from ptypy.accelerate.base.engines import DM_serial
+from ptypy.engines.projectional import DMMixin, RAARMixin
+from ptypy.accelerate.base.engines import projectional_serial
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
@@ -28,7 +28,7 @@ from ..multi_gpu import get_multi_gpu_communicator
 
 __all__ = ['DM_pycuda', 'RAAR_pycuda']
 
-class _ProjectionEngine_pycuda(DM_serial._ProjectionEngine_serial):
+class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
 
     """
     Defaults:

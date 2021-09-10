@@ -24,8 +24,8 @@ from ptypy import utils as u
 from ptypy.utils.verbose import log, logger
 from ptypy.utils import parallel
 from ptypy.engines import register
-from ptypy.engines.projections import DMMixin, RAARMixin
-from . import DM_pycuda
+from ptypy.engines.projectional import DMMixin, RAARMixin
+from . import projectional_pycuda
 
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..mem_utils import GpuDataManager2
@@ -34,10 +34,10 @@ EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
 #MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
 
-__all__ = ['DM_pycuda_stream']
+__all__ = ['DM_pycuda_stream', 'RAAR_pycuda_stream']
 
 
-class _ProjectionEngine_pycuda_stream(DM_pycuda._ProjectionEngine_pycuda):
+class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycuda):
 
     def __init__(self, ptycho_parent, pars=None):
 
@@ -81,7 +81,7 @@ class _ProjectionEngine_pycuda_stream(DM_pycuda._ProjectionEngine_pycuda):
 
     def engine_prepare(self):
 
-        super(DM_pycuda._ProjectionEngine_pycuda, self).engine_prepare()
+        super(projectional_pycuda._ProjectionEngine_pycuda, self).engine_prepare()
 
         for name, s in self.ob.S.items():
             s.gpu = gpuarray.to_gpu(s.data)

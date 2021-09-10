@@ -273,42 +273,6 @@ def projection_update_DM_AP(diff_view, alpha=1.0, pbound=None):
     return projection_update_generalized(diff_view, a, b, c, pbound=pbound)
 
 
-def projection_update_RAAR(diff_view, beta=0.75, pbound=None):
-    """
-    RAAR - projection update, see https://journals.iucr.org/j/issues/2016/04/00/jo5020/index.html#sourceBB30
-    equation 16.
-
-    .. math::
-        a, b, c = \\beta, 1 - 2\\beta, 2\\beta
-
-    Parameters
-    ----------
-    diff_view : View
-        View to diffraction data
-
-    beta : float, optional
-        beta parameter for RAAR
-
-    pbound : float, optional
-        Power bound. Fourier update is bypassed if the quadratic deviation
-        between diffraction data and `diff_view` is below this value.
-        If ``None``, fourier update always happens.
-
-    Returns
-    -------
-    err_fmag, err_exit : float
-
-        - `err_fmag`, Fourier magnitude error; quadratic deviation from
-          root of experimental data
-        - `err_exit`, quadratic deviation between exit waves before and after
-          projection
-    """
-    a = beta
-    b = 1. - 2. * beta
-    c = 2. * beta
-    return projection_update_generalized(diff_view, a, b, c, pbound=pbound)
-
-
 def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     """
     *** DEPRECATED ***

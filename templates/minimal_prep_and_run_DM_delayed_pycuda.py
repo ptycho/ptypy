@@ -6,8 +6,8 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
-from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda, DM_pycuda_stream
-from ptypy.accelerate.base.engines import DM_serial
+from ptypy.accelerate.cuda_pycuda.engines import projectional_pycuda, projectional_pycuda_stream
+from ptypy.accelerate.base.engines import projectional_serial
 
 p = u.Param()
 

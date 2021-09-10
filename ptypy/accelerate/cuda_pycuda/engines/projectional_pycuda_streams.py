@@ -17,8 +17,8 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
-from ptypy.engines.projections import DMMixin, RAARMixin
-from . import DM_pycuda
+from ptypy.engines.projectional import DMMixin, RAARMixin
+from . import projectional_pycuda
 from ..mem_utils import GpuDataManager
 
 # factor how many more exit waves we wanna keep on GPU compared to 
@@ -90,7 +90,7 @@ class GpuStreamData:
         self.queue.synchronize()
 
 
-class _ProjectionEngine_pycuda_streams(DM_pycuda._ProjectionEngine_pycuda):
+class _ProjectionEngine_pycuda_streams(projectional_pycuda._ProjectionEngine_pycuda):
 
     """
     Defaults:
@@ -120,7 +120,7 @@ class _ProjectionEngine_pycuda_streams(DM_pycuda._ProjectionEngine_pycuda):
 
     def engine_prepare(self):
 
-        super(DM_pycuda._ProjectionEngine_pycuda, self).engine_prepare()
+        super(projectional_pycuda._ProjectionEngine_pycuda, self).engine_prepare()
 
         for name, s in self.ob.S.items():
             s.gpu = gpuarray.to_gpu(s.data)

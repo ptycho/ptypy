@@ -18,7 +18,7 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
-from .DM_serial import DM_serial
+from .projectional_serial import DM_serial
 
 ### TODOS 
 # 
