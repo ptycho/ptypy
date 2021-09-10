@@ -357,9 +357,9 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
             vmin, vmax = 0.9 * vmin, 1.1 * vmax
         im = Image.fromarray((255*(a.clip(vmin,vmax)-vmin)/(vmax-vmin)).astype('uint8'))
         if cmap is not None:
-            r = im.point(lambda x: cmap(x/255.0)[0] * 255)
-            g = im.point(lambda x: cmap(x/255.0)[1] * 255)
-            b = im.point(lambda x: cmap(x/255.0)[2] * 255)
+            r = im.point(lambda x: int(cmap(x/255.0)[0] * 255))
+            g = im.point(lambda x: int(cmap(x/255.0)[1] * 255))
+            b = im.point(lambda x: int(cmap(x/255.0)[2] * 255))
             im = Image.merge("RGB", (r, g, b))
 
     if filename is not None:

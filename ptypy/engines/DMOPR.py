@@ -13,7 +13,7 @@ from .. import utils as u
 from ..utils import parallel
 from .utils import reduce_dimension
 from . import register
-from .DM import DM
+from .projectional import DM
 from ..core.manager import OPRModel
 
 __all__ = ['DMOPR']

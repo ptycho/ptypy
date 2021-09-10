@@ -8,7 +8,7 @@ import numpy as np
 from ptypy.core import Ptycho
 from ptypy import utils as u
 
-from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_stream, DM_pycuda_streams, DM_pycuda
+from ptypy.accelerate.cuda_pycuda.engines import projectional_pycuda
 
 p = u.Param()
 
