@@ -39,12 +39,12 @@ def by_name(name):
 from .base import BaseEngine, DEFAULT_iter_info
 
 # These imports should be executable separately
-from . import projections
-from . import DM_simple
+from . import projectional
+#from . import DM_simple
 from . import DMOPR
 from . import ML
 from . import MLOPR
-from . import dummy
+#from . import dummy
 from . import ePIE
 from . import Bragg3d_engines
 
