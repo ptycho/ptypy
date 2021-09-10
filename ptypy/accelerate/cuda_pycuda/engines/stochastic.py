@@ -258,7 +258,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                     self.position_update_local(prep,i)
 
                     ## build auxilliary wave
-                    AWK.build_aux2(aux, addr, ob, pr, ex, alpha=self._alpha)
+                    AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c/self._rescale, c_e=self._b/self._rescale)
 
                     ## forward FFT
                     PROP.fw(aux, aux)
@@ -278,7 +278,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                     PROP.bw(aux, aux)
 
                     ## build exit wave
-                    AWK.build_exit_alpha_tau(aux, addr, ob, pr, ex, alpha=self._alpha, tau=self._tau)
+                    AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._rescale, c_po=self._a, c_e=-(self._a + self._b + self._c))
                     if self.p.compute_exit_error:
                         FUK.exit_error(aux,addr)
                         FUK.error_reduce(addr, err_exit)

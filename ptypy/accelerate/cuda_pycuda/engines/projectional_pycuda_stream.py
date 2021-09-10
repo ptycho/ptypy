@@ -235,7 +235,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
                         # synchronize h2d stream with compute stream
                         self.queue.wait_for_event(ev_ex)
                         #AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                        AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c, c_e=self._b)
+                        AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c/self._rescale, c_e=self._b/self._rescale)
 
                         ## FFT
                         PROP.fw(aux, aux)
@@ -253,7 +253,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
                         PROP.bw(aux, aux)
                         ## apply changes
                         #AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                        AWK.make_exit(aux, addr, ob, pr, ex, c_a=1.0, c_po=self._a, c_e=-(self._a + self._b + self._c))
+                        AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._rescale, c_po=self._a, c_e=-(self._a + self._b + self._c))
                         FUK.exit_error(aux, addr)
                         FUK.error_reduce(addr, err_exit)
 

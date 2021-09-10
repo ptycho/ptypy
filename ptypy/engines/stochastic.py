@@ -48,11 +48,10 @@ class _StochasticEngine(PositionCorrectionEngine):
             raise NotImplementedError("The stochastic engines are not compatible with MPI")
 
         # Adjustment parameters for fourier update
-        #self._alpha = 0.0
-        #self._tau = 1.0
         self._a = 0
         self._b = 0
         self._c = 1
+        self._rescale = 1
 
         # Adjustment parameters for probe update
         self._pr_a = 0.0
@@ -140,7 +139,7 @@ class _StochasticEngine(PositionCorrectionEngine):
         #return basic_fourier_update(view, alpha=self._alpha, tau=self._tau, 
         #                            LL_error=self.p.compute_log_likelihood)
 
-        err_fmag, err_exit = projection_update_generalized(view, self._a, self._b, self._c)
+        err_fmag, err_exit = projection_update_generalized(view, self._a, self._b, self._c, rescale=self._rescale)
         if self.p.compute_log_likelihood:
             err_phot = log_likelihood(view)
         else:
@@ -349,6 +348,7 @@ class SDRMixin:
         self._a = 1 - self._tau * (1 + self._sigma)
         self._b = - self._sigma * self._tau
         self._c = self._tau * (1 + self._sigma)
+        self._rescale = self._tau
         
     @property
     def sigma(self):

@@ -236,7 +236,7 @@ class _StochasticEngineSerial(_StochasticEngine):
 
                     ## build auxilliary wave
                     t1 = time.time()
-                    AWK.build_aux(aux, addr, ob, pr, ex, alpha=self._alpha)
+                    AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c/self._rescale, c_e=self._b/self._rescale)
                     self.benchmark.A_Build_aux += time.time() - t1
 
                     ## forward FFT
@@ -261,7 +261,7 @@ class _StochasticEngineSerial(_StochasticEngine):
 
                     ## build exit wave
                     t1 = time.time()
-                    AWK.build_exit_alpha_tau(aux, addr, ob, pr, ex, alpha=self._alpha, tau=self._tau)
+                    AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._rescale, c_po=self._a, c_e=-(self._a+self._b+self._c))
                     if self.p.compute_exit_error:
                         FUK.exit_error(aux,addr)
                         FUK.error_reduce(addr, err_exit)

@@ -97,7 +97,7 @@ def log_likelihood(diff_view):
     return np.sum(diff_view.pod.mask * (LL - I)**2 / (I + 1.)) / np.prod(LL.shape)
 
 
-def projection_update_generalized(diff_view, a, b, c, pbound=None):
+def projection_update_generalized(diff_view, a, b, c, pbound=None, rescale=1):
     """
     Generalized projection update of a single view using its associated pods.
     Updates on all pods' exit waves. We assume here that the current state
@@ -145,7 +145,6 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
         - `err_exit`, quadratic deviation between exit waves before and after
           projection
     """
-    print("abc: ", a,b,c)
     # Prepare dict for storing propagated waves
     f = {}
 
@@ -161,7 +160,7 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
     for name, pod in diff_view.pods.items():
         if not pod.active:
             continue
-        f[name] = pod.fw(b * pod.exit + c * pod.probe * pod.object)
+        f[name] = pod.fw(b/rescale * pod.exit + c/rescale * pod.probe * pod.object)
         af2 += pod.downsample(u.abs2(f[name]))
 
     fmag = np.sqrt(np.abs(I))
@@ -227,7 +226,7 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
             continue
 
         if fm is not None:
-            df = pod.bw(pod.upsample(fm) * f[name]) + \
+            df = rescale * pod.bw(pod.upsample(fm) * f[name]) + \
                  a * pod.probe * pod.object - (a + b + c) * pod.exit
         else:
             df = (a + c) * (pod.probe * pod.object - pod.exit)

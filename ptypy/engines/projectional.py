@@ -119,6 +119,7 @@ class _ProjectionEngine(PositionCorrectionEngine):
         self._a = 0.
         self._b = 0.
         self._c = 1.
+        self._rescale = 1.
 
         self.error = None
 
@@ -260,7 +261,7 @@ class _ProjectionEngine(PositionCorrectionEngine):
                                                    alpha=self.p.alpha,
                                                    LL_error=self.p.compute_log_likelihood)
             """
-            err_fmag, err_exit = projection_update_generalized(di_view, self._a, self._b, self._c, pbound)
+            err_fmag, err_exit = projection_update_generalized(di_view, self._a, self._b, self._c, pbound, self._rescale)
             if self.p.compute_log_likelihood:
                 err_phot = log_likelihood(di_view)
             else:
@@ -489,6 +490,7 @@ class RAARMixin:
         self._a = 1. - 2. * beta
         self._b = - beta
         self._c = 2. * beta
+        self._rescale = beta
         self.beta = beta
 
     @property
@@ -501,6 +503,7 @@ class RAARMixin:
         self._a = 1. - 2. * beta
         self._b = - beta
         self._c = 2. * beta
+        self._rescale = beta
 
 
 @register()
