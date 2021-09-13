@@ -25,6 +25,18 @@ class _StochasticEngine(PositionCorrectionEngine):
 
     Defaults:
 
+    [probe_update_start]
+    default = 2
+    type = int
+    lowlim = 0
+    help = Number of iterations before probe update starts
+
+    [probe_center_tol]
+    default = None
+    type = float
+    lowlim = 0.0
+    help = Pixel radius around optical axes that the probe mass center must reside in
+
     [clip_object]
     default = None
     type = tuple
@@ -172,6 +184,8 @@ class _StochasticEngine(PositionCorrectionEngine):
         exit_wave: dict
         Collection of exit waves associated with the current view
         """
+        if self.p.probe_update_start > self.curiter:
+            return
         self._generic_probe_update(view, exit_wave, a=self._pr_a, b=self._pr_b)
 
     def _generic_object_update(self, view, exit_wave, a=0., b=1.):
