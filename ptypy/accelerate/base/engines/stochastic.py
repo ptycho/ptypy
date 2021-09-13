@@ -17,7 +17,7 @@ from ptypy import defaults_tree
 from ptypy.engines import register
 from ptypy.engines.stochastic import _StochasticEngine, EPIEMixin, SDRMixin
 #from ptypy.core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
-from ptypy.accelerate.base.engines import DM_serial
+from ptypy.accelerate.base.engines import projectional_serial
 from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ptypy.accelerate.base import address_manglers
 from ptypy.accelerate.base import array_utils as au
@@ -160,7 +160,7 @@ class _StochasticEngineSerial(_StochasticEngine):
         # TODO: possible scaling issue, remove the need for padding
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
-            prep.view_IDs, prep.poe_IDs, prep.addr = DM_serial.serialize_array_access(d)
+            prep.view_IDs, prep.poe_IDs, prep.addr = projectional_serial.serialize_array_access(d)
             if self.do_position_refinement:
                 prep.original_addr = np.zeros_like(prep.addr)
                 prep.original_addr[:] = prep.addr
