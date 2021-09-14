@@ -61,9 +61,8 @@ class _StochasticEngine(PositionCorrectionEngine):
 
         # Adjustment parameters for fourier update
         self._a = 0
-        self._b = 0
+        self._b = 1
         self._c = 1
-        self._rescale = 1
 
         # Adjustment parameters for probe update
         self._pr_a = 0.0
@@ -151,7 +150,7 @@ class _StochasticEngine(PositionCorrectionEngine):
         #return basic_fourier_update(view, alpha=self._alpha, tau=self._tau, 
         #                            LL_error=self.p.compute_log_likelihood)
 
-        err_fmag, err_exit = projection_update_generalized(view, self._a, self._b, self._c, rescale=self._rescale)
+        err_fmag, err_exit = projection_update_generalized(view, self._a, self._b, self._c)
         if self.p.compute_log_likelihood:
             err_phot = log_likelihood(view)
         else:
@@ -274,7 +273,7 @@ class EPIEMixin:
     def __init__(self, alpha, beta):
         # EPIE adjustment parameters
         self._a = 0
-        self._b = 0
+        self._b = 1
         self._c = 1
         self._pr_a = 0.0
         self._ob_a = 0.0
@@ -360,9 +359,8 @@ class SDRMixin:
 
     def _update_abc(self):
         self._a = 1 - self._tau * (1 + self._sigma)
-        self._b = - self._sigma * self._tau
-        self._c = self._tau * (1 + self._sigma)
-        self._rescale = self._tau
+        self._b = self._tau
+        self._c = 1 + self._sigma
         
     @property
     def sigma(self):

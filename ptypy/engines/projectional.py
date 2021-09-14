@@ -117,9 +117,8 @@ class _ProjectionEngine(PositionCorrectionEngine):
         super().__init__(ptycho_parent, pars)
 
         self._a = 0.
-        self._b = 0.
+        self._b = 1.
         self._c = 1.
-        self._rescale = 1.
 
         self.error = None
 
@@ -261,7 +260,7 @@ class _ProjectionEngine(PositionCorrectionEngine):
                                                    alpha=self.p.alpha,
                                                    LL_error=self.p.compute_log_likelihood)
             """
-            err_fmag, err_exit = projection_update_generalized(di_view, self._a, self._b, self._c, pbound, self._rescale)
+            err_fmag, err_exit = projection_update_generalized(di_view, self._a, self._b, self._c, pbound)
             if self.p.compute_log_likelihood:
                 err_phot = log_likelihood(di_view)
             else:
@@ -449,7 +448,7 @@ class DMMixin:
     def __init__(self, alpha):
         self._alpha = 1.
         self._a = -alpha
-        self._b = -alpha
+        self._b = 1
         self._c = 1.+alpha
         self.alpha = alpha
         self.article = dict(
@@ -471,7 +470,7 @@ class DMMixin:
     def alpha(self, alpha):
         self._alpha = alpha
         self._a = -alpha
-        self._b = -alpha
+        self._b = 1
         self._c = 1.+alpha
 
 class RAARMixin:
@@ -488,9 +487,8 @@ class RAARMixin:
     def __init__(self, beta):
         self._beta = 1.
         self._a = 1. - 2. * beta
-        self._b = - beta
-        self._c = 2. * beta
-        self._rescale = beta
+        self._b = beta
+        self._c = 2
         self.beta = beta
 
     @property
@@ -501,9 +499,8 @@ class RAARMixin:
     def beta(self, beta):
         self._beta = beta
         self._a = 1. - 2. * beta
-        self._b = - beta
-        self._c = 2. * beta
-        self._rescale = beta
+        self._b = beta
+        self._c = 2
 
 
 @register()
