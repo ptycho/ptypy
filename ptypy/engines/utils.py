@@ -132,7 +132,7 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
     diff_view : View
         View to diffraction data
 
-    a,b,c,d : float
+    a,b,c : float
         Coefficients for Overlap, Fourier and Fourier * Overlap constraints,
         respectively
 
@@ -234,7 +234,7 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
             df = b * pod.bw(pod.upsample(fm) * f[name]) + \
                  a * pod.probe * pod.object - (a + b) * pod.exit
         else:
-            df = (pod.probe * pod.object - pod.exit)
+            df = (a + b*c) * (pod.probe * pod.object - pod.exit)
 
         pod.exit += df
         err_exit += np.mean(u.abs2(df))
