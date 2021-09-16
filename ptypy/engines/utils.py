@@ -107,13 +107,18 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
     the general projection update can be expressed with four coefficients
 
     .. math::
-        \\psi^{j+1} = [x 1 + a O + b F + c F \\circ O](\\psi^{j})
+        \\psi^{j+1} = [x 1 + a O + b F (c O + y 1)](\\psi^{j})
 
     However, the coefficients aren't all independent as the sum of
-    all constraints must be 1, thus we choose
+    x+a+b and d+y must be 1, thus we choose
 
     .. math::
-        x = 1 - a - b - c
+        x = 1 - a - b
+
+    and 
+
+    .. math::
+       y = 1 - c
 
     The choice of a,b,c should enable a wide range of projection based
     algorithms.
@@ -145,7 +150,6 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
         - `err_exit`, quadratic deviation between exit waves before and after
           projection
     """
-
     # Prepare dict for storing propagated waves
     f = {}
 
@@ -161,7 +165,7 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
     for name, pod in diff_view.pods.items():
         if not pod.active:
             continue
-        f[name] = pod.fw(b * pod.exit + c * pod.probe * pod.object)
+        f[name] = pod.fw((1-c) * pod.exit + c * pod.probe * pod.object)
         af2 += pod.downsample(u.abs2(f[name]))
 
     fmag = np.sqrt(np.abs(I))
@@ -227,10 +231,10 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
             continue
 
         if fm is not None:
-            df = pod.bw(pod.upsample(fm) * f[name]) + \
-                 a * pod.probe * pod.object - (a + b + c) * pod.exit
+            df = b * pod.bw(pod.upsample(fm) * f[name]) + \
+                 a * pod.probe * pod.object - (a + b) * pod.exit
         else:
-            df = (a + c) * (pod.probe * pod.object - pod.exit)
+            df = (a + b*c) * (pod.probe * pod.object - pod.exit)
 
         pod.exit += df
         err_exit += np.mean(u.abs2(df))
@@ -241,8 +245,8 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
 def projection_update_DM_AP(diff_view, alpha=1.0, pbound=None):
     """
     Linear interpolation between Difference Map algorithm (a,b,c = -1,1,2)
-    and Alternating Projections algorithm (a,b,c = 0,0,1) with coefficients
-    a = -alpha, b = -alpha, c = 1 + alpha. Alpha = 1.0 corresponds to DM and
+    and Alternating Projections algorithm (a,b,c = 0,1,1) with coefficients
+    a = -alpha, b = 1, c = 1 + alpha. Alpha = 1.0 corresponds to DM and
     alpha = 0.0 to AP.
 
     Parameters
@@ -268,7 +272,7 @@ def projection_update_DM_AP(diff_view, alpha=1.0, pbound=None):
           projection
     """
     a = -alpha
-    b = -alpha
+    b = 1
     c = 1.+alpha
     return projection_update_generalized(diff_view, a, b, c, pbound=pbound)
 

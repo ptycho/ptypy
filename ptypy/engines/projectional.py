@@ -117,7 +117,7 @@ class _ProjectionEngine(PositionCorrectionEngine):
         super().__init__(ptycho_parent, pars)
 
         self._a = 0.
-        self._b = 0.
+        self._b = 1.
         self._c = 1.
 
         self.error = None
@@ -448,7 +448,7 @@ class DMMixin:
     def __init__(self, alpha):
         self._alpha = 1.
         self._a = -alpha
-        self._b = -alpha
+        self._b = 1
         self._c = 1.+alpha
         self.alpha = alpha
         self.article = dict(
@@ -470,7 +470,7 @@ class DMMixin:
     def alpha(self, alpha):
         self._alpha = alpha
         self._a = -alpha
-        self._b = -alpha
+        self._b = 1
         self._c = 1.+alpha
 
 class RAARMixin:
@@ -487,8 +487,8 @@ class RAARMixin:
     def __init__(self, beta):
         self._beta = 1.
         self._a = 1. - 2. * beta
-        self._b = - beta
-        self._c = 2. * beta
+        self._b = beta
+        self._c = 2
         self.beta = beta
 
     @property
@@ -499,8 +499,8 @@ class RAARMixin:
     def beta(self, beta):
         self._beta = beta
         self._a = 1. - 2. * beta
-        self._b = - beta
-        self._c = 2. * beta
+        self._b = beta
+        self._c = 2
 
 
 @register()

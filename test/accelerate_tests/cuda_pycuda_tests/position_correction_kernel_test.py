@@ -29,6 +29,7 @@ class PositionCorrectionKernelTest(PyCudaTest):
         self.params.start = 0
         self.params.stop = 10
         self.params.max_shift = 2e-9
+        self.params.amplitude_decay = True
         self.resolution = [1e-9,1e-9]
 
     def update_addr_and_error_state_UNITY_helper(self, size, modes):

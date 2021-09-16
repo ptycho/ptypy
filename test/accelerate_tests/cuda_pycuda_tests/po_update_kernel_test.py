@@ -670,7 +670,6 @@ class PoUpdateKernelTest(PyCudaTest):
         total_number_modes = G * D
         A = total_number_scan_positions * total_number_modes # this is a 16 point scan pattern (4x4 grid) over all the modes
 
-
         probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
         for idx in range(D):
             probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
@@ -683,6 +682,8 @@ class PoUpdateKernelTest(PyCudaTest):
         for idx in range(A):
             exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
         auxiliary_wave = exit_wave.copy() * 2
+
+        probe_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
 
         X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
         X = X.reshape((total_number_scan_positions))
@@ -716,10 +717,13 @@ class PoUpdateKernelTest(PyCudaTest):
         probe_dev = gpuarray.to_gpu(probe)
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
         auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
+        probe_norm_dev = gpuarray.to_gpu(probe_norm)
         addr_dev = gpuarray.to_gpu(addr)
 
-        POUK.ob_update_local(addr_dev, object_array_dev, probe_dev, exit_wave_dev, auxiliary_wave_dev)
-        nPOUK.ob_update_local(addr, object_array, probe, exit_wave, auxiliary_wave)
+        POUK.pr_norm_local(addr_dev, probe_dev, probe_norm_dev)
+        POUK.ob_update_local(addr_dev, object_array_dev, probe_dev, exit_wave_dev, auxiliary_wave_dev, probe_norm_dev, a=0.5, b=0.5)
+        nPOUK.pr_norm_local(addr, probe, probe_norm)
+        nPOUK.ob_update_local(addr, object_array, probe, exit_wave, auxiliary_wave, probe_norm, a=0.5, b=0.5)
 
         np.testing.assert_allclose(object_array_dev.get(), object_array, rtol=1e-6, atol=1e-6,
                                       err_msg="The object array has not been updated as expected")
@@ -746,7 +750,6 @@ class PoUpdateKernelTest(PyCudaTest):
         total_number_modes = G * D
         A = total_number_scan_positions * total_number_modes # this is a 16 point scan pattern (4x4 grid) over all the modes
 
-
         probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
         for idx in range(D):
             probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
@@ -759,6 +762,8 @@ class PoUpdateKernelTest(PyCudaTest):
         for idx in range(A):
             exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
         auxiliary_wave = exit_wave.copy() * 1.5
+
+        object_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
 
         X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
         X = X.reshape((total_number_scan_positions))
@@ -792,13 +797,146 @@ class PoUpdateKernelTest(PyCudaTest):
         probe_dev = gpuarray.to_gpu(probe)
         exit_wave_dev = gpuarray.to_gpu(exit_wave)
         auxiliary_wave_dev = gpuarray.to_gpu(auxiliary_wave)
+        object_norm_dev = gpuarray.to_gpu(object_norm)
         addr_dev = gpuarray.to_gpu(addr)
 
-        POUK.pr_update_local(addr_dev,  probe_dev, object_array_dev,exit_wave_dev, auxiliary_wave_dev)
-        nPOUK.pr_update_local(addr, probe, object_array, exit_wave, auxiliary_wave)
+        POUK.ob_norm_local(addr_dev, object_array_dev, object_norm_dev)
+        POUK.pr_update_local(addr_dev,  probe_dev, object_array_dev,exit_wave_dev, auxiliary_wave_dev, object_norm_dev, a=0.5, b=0.5)
+        nPOUK.ob_norm_local(addr, object_array, object_norm)
+        nPOUK.pr_update_local(addr, probe, object_array, exit_wave, auxiliary_wave, object_norm, a=0.5, b=0.5)
 
         np.testing.assert_allclose(probe_dev.get(), probe, rtol=1e-6, atol=1e-6,
                                       err_msg="The probe has not been updated as expected")
+
+    def test_ob_norm_local_UNITY(self):
+        '''
+        setup
+        '''
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+        H = B + npts_greater_than  #  object size y
+        I = C + npts_greater_than  #  object size x
+
+        scan_pts = 1  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+        object_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):#
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        '''
+        test
+        '''
+        from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
+        nPOUK = npPoUpdateKernel()
+        POUK = PoUpdateKernel(queue_thread=self.stream)
+
+        object_array_dev = gpuarray.to_gpu(object_array)
+        object_norm_dev = gpuarray.to_gpu(object_norm)
+        addr_dev = gpuarray.to_gpu(addr)
+
+        POUK.ob_norm_local(addr_dev, object_array_dev, object_norm_dev)
+        nPOUK.ob_norm_local(addr, object_array, object_norm)
+
+        np.testing.assert_allclose(object_norm_dev.get(), object_norm, rtol=1e-6, atol=1e-6,
+                                      err_msg="The object norm has not been updated as expected")
+
+    def test_pr_norm_local_UNITY(self):
+        '''
+        setup
+        '''
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+        H = B + npts_greater_than  #  object size y
+        I = C + npts_greater_than  #  object size x
+
+        scan_pts = 1  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+        probe_norm = np.empty(shape=(1,B,C), dtype=FLOAT_TYPE)
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):#
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+        '''
+        test
+        '''
+        from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
+        nPOUK = npPoUpdateKernel()
+        POUK = PoUpdateKernel()
+
+        probe_dev = gpuarray.to_gpu(probe)
+        probe_norm_dev = gpuarray.to_gpu(probe_norm) 
+        addr_dev = gpuarray.to_gpu(addr)
+
+        POUK.pr_norm_local(addr_dev,  probe_dev, probe_norm_dev)
+        nPOUK.pr_norm_local(addr, probe, probe_norm)
+
+        np.testing.assert_allclose(probe_norm_dev.get(), probe_norm, rtol=1e-6, atol=1e-6,
+                                      err_msg="The probe norm has not been updated as expected")
 
 
 if __name__ == '__main__':

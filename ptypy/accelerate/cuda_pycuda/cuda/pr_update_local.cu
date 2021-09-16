@@ -33,7 +33,10 @@ extern "C" __global__ void pr_update_local(
     int G,
     int H,
     int I,
-    const int* __restrict__ addr)
+    const int* __restrict__ addr,
+    const IN_TYPE* ob_norm_max,
+    const IN_TYPE A_,
+    const IN_TYPE B_)
 {
   assert(B == E);  // prsh[1]
   assert(C == F);  // prsh[2]
@@ -51,7 +54,9 @@ extern "C" __global__ void pr_update_local(
   probe += pa[0] * E * F + pa[1] * F + pa[2];
   obj += oa[0] * H * I + oa[1] * I + oa[2];
   aux += bid * B * C;
-  MATH_TYPE norm_val = ob_norm[0];
+  const MATH_TYPE ob_norm_max_val = ob_norm_max[0];
+  const MATH_TYPE A_val = A_;
+  const MATH_TYPE B_val = B_;
 
   assert(oa[0] * H * I + oa[1] * I + oa[2] + (B - 1) * I + C - 1 < G * H * I);
 
@@ -62,8 +67,9 @@ extern "C" __global__ void pr_update_local(
       complex<MATH_TYPE> obj_val = obj[b * I + c];
       complex<MATH_TYPE> exit_val = exit_wave[b * C + c];
       complex<MATH_TYPE> aux_val = aux[b * C + c];
+      MATH_TYPE norm_val = (MATH_TYPE(1) - A_val) * ob_norm_max_val + A_val * ob_norm[b * C + c];
 
-      complex<MATH_TYPE> add_val_m = conj(obj_val) * (exit_val - aux_val) / norm_val;
+      complex<MATH_TYPE> add_val_m = (A_val + B_val) * conj(obj_val) * (exit_val - aux_val) / norm_val;
       complex<OUT_TYPE> add_val = add_val_m;
       atomicAdd(&probe[b * F + c], add_val);
   }

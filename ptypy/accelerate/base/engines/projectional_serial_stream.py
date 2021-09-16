@@ -116,7 +116,7 @@ class DM_serial_stream(DM_serial):
                     if do_update_fourier:
                         log(4, '----- Fourier update -----', True)
                         t1 = time.time()
-                        AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c, c_e=1-self._c)
                         self.benchmark.A_Build_aux += time.time() - t1
 
                         ## FFT
@@ -137,7 +137,7 @@ class DM_serial_stream(DM_serial):
 
                         ## apply changes #2
                         t1 = time.time()
-                        AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._b, c_po=self._a, c_e=-(self._a+self._b))
                         self.benchmark.E_Build_exit += time.time() - t1
 
                         err_phot = np.zeros_like(err_fourier)

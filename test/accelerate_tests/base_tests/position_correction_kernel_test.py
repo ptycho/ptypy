@@ -24,6 +24,7 @@ class PositionCorrectionKernelTest(unittest.TestCase):
         self.params.start = 0
         self.params.stop = 10
         self.params.max_shift = 2e-9
+        self.params.amplitude_decay = True
         self.resolution = [1e-9,1e-9]
 
     def tearDown(self):

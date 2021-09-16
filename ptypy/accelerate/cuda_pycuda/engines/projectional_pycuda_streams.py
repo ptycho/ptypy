@@ -351,7 +351,7 @@ class _ProjectionEngine_pycuda_streams(projectional_pycuda._ProjectionEngine_pyc
                         ## prep + forward FFT
                         t1 = time.time()
                         #AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                        AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c, c_e=self._b)
+                        AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c, c_e=1-self._c)
                         self.benchmark.A_Build_aux += time.time() - t1
 
                         t1 = time.time()
@@ -371,7 +371,7 @@ class _ProjectionEngine_pycuda_streams(projectional_pycuda._ProjectionEngine_pyc
                         PROP.bw(aux, aux)
                         ## apply changes
                         #AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                        AWK.make_exit(aux, addr, ob, pr, ex, c_a=1.0, c_po=self._a, c_e=-(self._a + self._b + self._c))
+                        AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._b, c_po=self._a, c_e=-(self._a + self._b))
                         FUK.exit_error(aux, addr)
                         FUK.error_reduce(addr, err_exit)
                         self.benchmark.E_Build_exit += time.time() - t1

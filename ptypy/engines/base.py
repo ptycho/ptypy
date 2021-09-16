@@ -353,6 +353,11 @@ class PositionCorrectionEngine(BaseEngine):
     type = float
     help = Distance from original position per random shift [m]
 
+    [position_refinement.amplitude_decay]
+    default = True
+    type = bool
+    help = After each interation, multiply amplitude by factor (stop - iteration) / (stop - start)
+
     [position_refinement.max_shift]
     default = 0.000002
     type = float
