@@ -337,7 +337,7 @@ class _ProjectionEngine_serial(_ProjectionEngine):
 
                 ## build exit wave
                 t1 = time.time()
-                AWK.build_exit(aux, addr, ob, pr, ex, c_a=self._b, c_po=self._a, c_e=-(self._a+self._b))
+                AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._b, c_po=self._a, c_e=-(self._a+self._b))
                 if resample:
                     aux_tmp1 = np.abs(aux)**2
                     au.resample(aux_tmp2, aux_tmp1)
