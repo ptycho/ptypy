@@ -10,7 +10,7 @@ if have_pycuda():
     import pycuda.driver as cuda
     from pycuda.compiler import SourceModule
     from pycuda.tools import DeviceMemoryPool
-    from ptypy.accelerate.cuda_pycuda.engines.DM_pycuda_streams import GpuStreamData
+    from ptypy.accelerate.cuda_pycuda.engines.projectional_pycuda_streams import GpuStreamData
     from ptypy.accelerate.cuda_pycuda.mem_utils import GpuData, GpuDataManager
 
 class GpuDataTest(PyCudaTest):

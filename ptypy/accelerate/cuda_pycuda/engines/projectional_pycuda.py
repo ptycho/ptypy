@@ -18,7 +18,8 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
-from ptypy.accelerate.base.engines import DM_serial
+from ptypy.engines.projectional import DMMixin, RAARMixin
+from ptypy.accelerate.base.engines import projectional_serial
 from .. import get_context, debug_options
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
@@ -26,10 +27,9 @@ from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, ResampleKer
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..multi_gpu import get_multi_gpu_communicator
 
-__all__ = ['DM_pycuda']
+__all__ = ['DM_pycuda', 'RAAR_pycuda']
 
-@register()
-class DM_pycuda(DM_serial.DM_serial):
+class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
 
     """
     Defaults:
@@ -60,7 +60,7 @@ class DM_pycuda(DM_serial.DM_serial):
         """
         Difference map reconstruction engine.
         """
-        super(DM_pycuda, self).__init__(ptycho_parent, pars)
+        super().__init__(ptycho_parent, pars)
         self.multigpu = None
 
     def engine_initialize(self):
@@ -82,7 +82,7 @@ class DM_pycuda(DM_serial.DM_serial):
         # Clip Magnitudes Kernel
         self.CMK = ClipMagnitudesKernel(queue=self.queue)
 
-        super(DM_pycuda, self).engine_initialize()
+        super().engine_initialize()
 
     def _setup_kernels(self):
         """
@@ -169,7 +169,7 @@ class DM_pycuda(DM_serial.DM_serial):
 
     def engine_prepare(self):
 
-        super(DM_pycuda, self).engine_prepare()
+        super().engine_prepare()
 
         for name, s in self.ob.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
@@ -274,7 +274,8 @@ class DM_pycuda(DM_serial.DM_serial):
                         FUK.log_likelihood(aux, addr, mag, ma, err_phot)
 
                 ## build auxilliary wave
-                AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                #AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c, c_e=1-self._c)
 
                 ## forward FFT
                 PROP.fw(aux, aux)
@@ -298,7 +299,7 @@ class DM_pycuda(DM_serial.DM_serial):
                 PROP.bw(aux, aux)
 
                 ## build exit wave
-                AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                AWK.build_exit(aux, addr, ob, pr, ex, c_a=self._b, c_po=self._a, c_e=-(self._a + self._b))
                 if resample:
                     ABS_SQR(aux, aux_tmp1, stream=self.queue)
                     RSMP.resample(aux_tmp2, aux_tmp1)
@@ -571,4 +572,46 @@ class DM_pycuda(DM_serial.DM_serial):
 
         self.context.pop()
         self.context.detach()
-        super(DM_pycuda, self).engine_finalize(benchmark)
+        super().engine_finalize(benchmark)
+
+
+@register()
+class DM_pycuda(_ProjectionEngine_pycuda, DMMixin):
+    """
+    A full-fledged Difference Map engine accelerated with pycuda.
+
+    Defaults:
+
+    [name]
+    default = DM_pycuda
+    type = str
+    help =
+    doc =
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _ProjectionEngine_pycuda.__init__(self, ptycho_parent, pars)
+        DMMixin.__init__(self, self.p.alpha)
+        ptycho_parent.citations.add_article(**self.article)
+
+
+@register()
+class RAAR_pycuda(_ProjectionEngine_pycuda, RAARMixin):
+    """
+    A RAAR engine in accelerated with pycuda.
+
+    Defaults:
+
+    [name]
+    default = RAAR_pycuda
+    type = str
+    help =
+    doc =
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+
+        _ProjectionEngine_pycuda.__init__(self, ptycho_parent, pars)
+        RAARMixin.__init__(self, self.p.beta)

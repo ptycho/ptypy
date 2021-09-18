@@ -9,11 +9,13 @@ class BaseMangler(object):
     '''
     Assumes integer pixel shift.
     '''
-    def __init__(self, max_step_per_shift,  start, stop, nshifts, max_bound=None,  randomseed=None):
+    def __init__(self, max_step_per_shift,  start, stop, nshifts, decay=True, max_bound=None,  randomseed=None):
         # can be initialised in the engine.init
 
-        self.max_bound = max_bound  # maximum distance from the starting positions
-        self.max_step = lambda it: np.ceil(max_step_per_shift * (stop - it) / (stop - start)) # maximum step per iteration, decreases with progression
+        # maximum distance from the starting positions
+        self.max_bound = max_bound  
+        # maximum step per iteration, decreases with progression
+        self.max_step = lambda it: np.ceil(max_step_per_shift * (stop - it) / (stop - start)) if decay else max_step_per_shift 
         self.nshifts = nshifts
         self.delta = 0
 

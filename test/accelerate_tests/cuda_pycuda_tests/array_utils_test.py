@@ -272,7 +272,7 @@ class ArrayUtilsTest(PyCudaTest):
 
     def test_crop_pad_simple_1_UNITY(self):
         # pad, integer, 2D
-        B = np.indices((4, 4), dtype=np.int).sum(0)
+        B = np.indices((4, 4), dtype=np.int32).sum(0)
         A = np.zeros((6, 6), dtype=B.dtype)
         B_dev = gpuarray.to_gpu(B)
         A_dev = gpuarray.to_gpu(A)

@@ -24,7 +24,8 @@ from ptypy import utils as u
 from ptypy.utils.verbose import log, logger
 from ptypy.utils import parallel
 from ptypy.engines import register
-from . import DM_pycuda
+from ptypy.engines.projectional import DMMixin, RAARMixin
+from . import projectional_pycuda
 
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..mem_utils import GpuDataManager2
@@ -33,15 +34,14 @@ EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
 #MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
 
-__all__ = ['DM_pycuda_stream']
+__all__ = ['DM_pycuda_stream', 'RAAR_pycuda_stream']
 
 
-@register()
-class DM_pycuda_stream(DM_pycuda.DM_pycuda):
+class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycuda):
 
     def __init__(self, ptycho_parent, pars=None):
 
-        super(DM_pycuda_stream, self).__init__(ptycho_parent, pars)
+        super().__init__(ptycho_parent, pars)
         self.ma_data = None
         self.mag_data = None
         self.ex_data = None
@@ -81,7 +81,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
     def engine_prepare(self):
 
-        super(DM_pycuda.DM_pycuda, self).engine_prepare()
+        super(projectional_pycuda._ProjectionEngine_pycuda, self).engine_prepare()
 
         for name, s in self.ob.S.items():
             s.gpu = gpuarray.to_gpu(s.data)
@@ -258,7 +258,8 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                         # synchronize h2d stream with compute stream
                         self.queue.wait_for_event(ev_ex)
-                        AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        #AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c, c_e=1-self._c)
 
                         ## FFT
                         PROP.fw(aux, aux)
@@ -287,7 +288,7 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
 
                         PROP.bw(aux, aux)
                         ## apply changes
-                        AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                        AWK.build_exit(aux, addr, ob, pr, ex, c_a=self._b, c_po=self._a, c_e=-(self._a + self._b))
                         if resample:
                             ABS_SQR(aux, aux_tmp1, stream=self.queue)
                             RSMP.resample(aux_tmp2, aux_tmp1)
@@ -512,3 +513,45 @@ class DM_pycuda_stream(DM_pycuda.DM_pycuda):
             s.data = np.copy(s.data)  # is this the same as s.data.get()?
 
         super().engine_finalize(benchmark)
+
+
+@register()
+class DM_pycuda_stream(_ProjectionEngine_pycuda_stream, DMMixin):
+    """
+    A full-fledged Difference Map engine accelerated with pycuda.
+
+    Defaults:
+
+    [name]
+    default = DM_pycuda
+    type = str
+    help =
+    doc =
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _ProjectionEngine_pycuda_stream.__init__(self, ptycho_parent, pars)
+        DMMixin.__init__(self, self.p.alpha)
+        ptycho_parent.citations.add_article(**self.article)
+
+
+@register()
+class RAAR_pycuda_stream(_ProjectionEngine_pycuda_stream, RAARMixin):
+    """
+    A RAAR engine in accelerated with pycuda.
+
+    Defaults:
+
+    [name]
+    default = RAAR_pycuda
+    type = str
+    help =
+    doc =
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+
+        _ProjectionEngine_pycuda_stream.__init__(self, ptycho_parent, pars)
+        RAARMixin.__init__(self, self.p.beta)
