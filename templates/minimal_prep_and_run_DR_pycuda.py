@@ -6,7 +6,7 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
-from ptypy.accelerate.cuda_pycuda.engines import DR_pycuda
+from ptypy.accelerate.cuda_pycuda.engines import SDR_pycuda
 p = u.Param()
 
 # for verbose output
@@ -47,7 +47,7 @@ p.scans.MF.coherence.num_probe_modes = 3
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DR_pycuda'
+p.engines.engine00.name = 'SDR_pycuda'
 p.engines.engine00.numiter = 100
 p.engines.engine00.alpha = 0 # alpha=0, tau=1 behaves like ePIE
 p.engines.engine00.tau = 1

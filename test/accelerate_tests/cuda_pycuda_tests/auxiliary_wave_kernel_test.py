@@ -185,7 +185,7 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
         AWK = AuxiliaryWaveKernel(self.stream)
-        alpha_set = FLOAT_TYPE(1.0)
+        alpha_set = FLOAT_TYPE(.75)
 
         AWK.build_aux(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, exit_wave_dev, alpha=alpha_set)
         nAWK.build_aux(auxiliary_wave, addr, object_array, probe, exit_wave, alpha=alpha_set)
@@ -205,7 +205,7 @@ class AuxiliaryWaveKernelTest(PyCudaTest):
         from ptypy.accelerate.base.kernels import AuxiliaryWaveKernel as npAuxiliaryWaveKernel
         nAWK = npAuxiliaryWaveKernel()
         AWK = AuxiliaryWaveKernel(self.stream)
-        alpha_set = FLOAT_TYPE(1.0)
+        alpha_set = FLOAT_TYPE(.75)
 
         AWK.build_aux2(auxiliary_wave_dev, addr_dev, object_array_dev, probe_dev, exit_wave_dev, alpha=alpha_set)
         nAWK.build_aux(auxiliary_wave, addr, object_array, probe, exit_wave, alpha=alpha_set)

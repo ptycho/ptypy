@@ -13,7 +13,8 @@ import time
 from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
-from ptypy.engines import BaseEngine, register, DM
+from ptypy.engines import register
+from ptypy.engines.projectional import _ProjectionEngine, DMMixin, RAARMixin
 from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ptypy.accelerate.base import array_utils as au
 
@@ -28,7 +29,7 @@ from ptypy.accelerate.base import array_utils as au
 # - Fourier_update_kernel needs to allow batched execution
 
 
-__all__ = ['DM_serial']
+__all__ = ['DM_serial', 'RAAR_serial']
 
 parallel = u.parallel
 
@@ -95,8 +96,7 @@ def serialize_array_access(diff_storage):
     return view_IDs, poe_ID, np.array(addr).astype(np.int32)
 
 
-@register()
-class DM_serial(DM.DM):
+class _ProjectionEngine_serial(_ProjectionEngine):
     """
     A full-fledged Difference Map engine that uses numpy arrays instead of iteration.
 
@@ -107,7 +107,7 @@ class DM_serial(DM.DM):
         Difference map reconstruction engine.
         """
 
-        super(DM_serial, self).__init__(ptycho_parent, pars)
+        super().__init__(ptycho_parent, pars)
 
         ## gaussian filter
         # dummy kernel
@@ -132,7 +132,7 @@ class DM_serial(DM.DM):
         Prepare for reconstruction.
         """
 
-        super(DM_serial, self).engine_initialize()
+        super().engine_initialize()
         self._reset_benchmarks()
         self._setup_kernels()
 
@@ -201,7 +201,7 @@ class DM_serial(DM.DM):
 
     def engine_prepare(self):
 
-        super(DM_serial, self).engine_prepare()
+        super().engine_prepare()
 
         ## Serialize new data ##
 
@@ -285,7 +285,7 @@ class DM_serial(DM.DM):
 
                 ## build auxilliary wave
                 t1 = time.time()
-                AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c, c_e=1-self._c)
                 self.benchmark.A_Build_aux += time.time() - t1
 
                 ## forward FFT
@@ -307,7 +307,7 @@ class DM_serial(DM.DM):
 
                 ## build exit wave
                 t1 = time.time()
-                AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
+                AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._b, c_po=self._a, c_e=-(self._a+self._b))
                 FUK.exit_error(aux,addr)
                 FUK.error_reduce(addr, err_exit)
                 self.benchmark.E_Build_exit += time.time() - t1
@@ -567,4 +567,46 @@ class DM_serial(DM.DM):
                         pod.ob_view.storage.update_views(pod.ob_view)
             self.ptycho.record_positions = True
 
-        super(DM_serial, self).engine_finalize()
+        super().engine_finalize()
+
+
+@register()
+class DM_serial(_ProjectionEngine_serial, DMMixin):
+    """
+    A full-fledged Difference Map engine serialized.
+
+    Defaults:
+
+    [name]
+    default = DM_serial
+    type = str
+    help =
+    doc =
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _ProjectionEngine_serial.__init__(self, ptycho_parent, pars)
+        DMMixin.__init__(self, self.p.alpha)
+        ptycho_parent.citations.add_article(**self.article)
+
+
+@register()
+class RAAR_serial(_ProjectionEngine_serial, RAARMixin):
+    """
+    A RAAR engine.
+
+    Defaults:
+
+    [name]
+    default = RAAR_serial
+    type = str
+    help =
+    doc =
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+
+        _ProjectionEngine_serial.__init__(self, ptycho_parent, pars)
+        RAARMixin.__init__(self, self.p.beta)
