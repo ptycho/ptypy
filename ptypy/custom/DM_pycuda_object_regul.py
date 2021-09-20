@@ -5,13 +5,13 @@ with object regularisation for air/vacuum regions.
 
 authors: Benedikt J. Daurer
 """
-from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda
+from ptypy.accelerate.cuda_pycuda.engines import projectional_pycuda
 from ptypy.engines import register
 from pycuda import gpuarray
 import numpy as np
 
 @register()
-class DM_pycuda_object_regul(DM_pycuda.DM_pycuda):
+class DM_pycuda_object_regul(projectional_pycuda.DM_pycuda):
     """
     An extension of DM_pycuda with the following additional parameters
 

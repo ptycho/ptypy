@@ -8,8 +8,7 @@ from ptypy.core import Ptycho
 from ptypy import utils as u
 p = u.Param()
 
-from ptypy.plugins import DM_object_regul 
-from ptypy.accelerate.cuda_pycuda.plugins import DM_pycuda_object_regul
+from ptypy.custom import DM_object_regul, DM_pycuda_object_regul
 import numpy as np
 
 ny,nx = (492,492)

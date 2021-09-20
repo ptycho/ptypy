@@ -5,12 +5,12 @@ with object regularisation for air/vacuum regions.
 
 authors: Benedikt J. Daurer
 """
-from ptypy.engines import DM
+from ptypy.engines import projectional
 from ptypy.engines import register
 import numpy as np
 
 @register()
-class DM_object_regul(DM.DM):
+class DM_object_regul(projectional.DM):
     """
     An extension of DM with the following additional parameters
 
