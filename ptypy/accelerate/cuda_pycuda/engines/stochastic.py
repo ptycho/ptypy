@@ -22,7 +22,7 @@ from ptypy.accelerate.base.engines.stochastic import _StochasticEngineSerial
 from ptypy.accelerate.base import address_manglers
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
-from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel
+from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel, MaxAbs2Kernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..mem_utils import GpuDataManager2
 
@@ -119,6 +119,9 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
             #log(4, "Setting up TransposeKernel")
             #kern.TK = TransposeKernel(queue=self.queue)
 
+            log(4, "setting up MaxAbs2Kernel")
+            kern.MAK = MaxAbs2Kernel(queue=self.queue)
+
             log(4, "Setting up PropagationKernel")
             kern.PROP = PropagationKernel(aux, geo.propagator, self.queue, self.p.fft_lib)
             kern.PROP.allocate()
@@ -212,6 +215,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                 FUK = kern.FUK
                 AWK = kern.AWK
                 POK = kern.POK
+                MAK = kern.MAK
                 PROP = kern.PROP
                 
                 # get aux buffer
@@ -291,8 +295,14 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                     POK.ob_update_local(addr, ob, pr, ex, aux, prn, a=self._ob_a, b=self._ob_b)
 
                     # probe update
-                    POK.ob_norm_local(addr, ob, obn)
-                    POK.pr_update_local(addr, pr, ob, ex, aux, obn, a=self._pr_a, b=self._pr_b)
+                    if self.p.object_norm_global and self._pr_a == 0:
+                        obn_max = gpuarray.empty((1,), dtype=np.float32)
+                        MAK.max_abs2(ob, obn_max)
+                        obn[:] = 0
+                    else:
+                        POK.ob_norm_local(addr, ob, obn)
+                        obn_max = gpuarray.max(obn, stream=self.queue)
+                    POK.pr_update_local(addr, pr, ob, ex, aux, obn, obn_max, a=self._pr_a, b=self._pr_b)
 
                     ## compute log-likelihood
                     if self.p.compute_log_likelihood:

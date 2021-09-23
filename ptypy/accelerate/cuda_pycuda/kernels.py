@@ -1054,8 +1054,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
             stream=self.queue)
 
-    def pr_update_local(self, addr, pr, ob, ex, aux, obn, a=0., b=1.):
-        obn_max = gpuarray.max(obn, stream=self.queue)
+    def pr_update_local(self, addr, pr, ob, ex, aux, obn, obn_max, a=0., b=1.):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
         exsh = [np.int32(ax) for ax in ex.shape]
