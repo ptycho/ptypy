@@ -42,6 +42,11 @@ class _StochasticEngine(PositionCorrectionEngine):
     type = tuple
     help = Clip object amplitude into this interval
 
+    [object_norm_global]
+    default = False
+    type = bool
+    help = Calculate the object norm based on the global object, otherwise local object is used
+
     [compute_log_likelihood]
     default = True
     type = bool
@@ -246,10 +251,17 @@ class _StochasticEngine(PositionCorrectionEngine):
             O_{norm} = (1 - a) * ||O^{j}||_{max}^2 + a * |O^{j}|^2
 
         """
-        object_power = 0
-        for name, pod in view.pods.items():
-            object_power += u.abs2(pod.object)
-        object_norm = (1 - a) * np.max(object_power) + a * object_power
+        # Calculate the object norm based on the global object
+        # This can only work if a = 0.
+        if self.p.object_norm_global and a == 0:
+            object_norm = np.max(u.abs2(view.pod.ob_view.storage.data).sum(axis=0))
+        # Calculate the object norm based on the local object
+        # (as defined in the original ePIE paper)
+        else:
+            object_power = 0
+            for name, pod in view.pods.items():
+                object_power += u.abs2(pod.object)
+            object_norm = (1 - a) * np.max(object_power) + a * object_power
         for name, pod in view.pods.items():
             pod.probe += (a + b) * np.conj(pod.object) * (pod.exit - exit_wave[name]) / object_norm
 

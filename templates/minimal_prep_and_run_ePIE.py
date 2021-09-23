@@ -14,7 +14,7 @@ p.verbose_level = 3
 # set home path
 p.io = u.Param()
 p.io.home = "/tmp/ptypy/"
-p.io.autosave = None
+p.io.autosave = u.Param(active=False)
 #p.io.autoplot = u.Param(active=False)
 
 # max 200 frames (128x128px) of diffraction data
@@ -36,17 +36,14 @@ p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
 p.scans.MF.data.psf = 0.
 
-#p.scans.MF.resample = 2
-
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'ePIE'
+p.engines.engine00.name = 'EPIE'
 p.engines.engine00.numiter = 100
-p.engines.engine00.average_probe = True
-#p.engines.engine00.obj_smooth_std = 2
 p.engines.engine00.probe_center_tol = None
 #p.engines.engine00.compute_log_likelihood = False
+p.engines.engine00.object_norm_global = True
 
 # prepare and run
 P = Ptycho(p,level=5)

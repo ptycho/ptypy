@@ -303,7 +303,7 @@ class PoUpdateKernelTest(unittest.TestCase):
         POUK = PoUpdateKernel()
         POUK.allocate()  # this doesn't do anything, but is the call pattern.
         POUK.ob_norm_local(addr, object_array, object_norm)
-        POUK.pr_update_local(addr, probe, object_array, exit_wave, auxiliary_wave, object_norm)
+        POUK.pr_update_local(addr, probe, object_array, exit_wave, auxiliary_wave, object_norm, object_norm.max())
 
         # assert
         expected_probe = np.array([[[0.5+1.j, 0.5+1.j, 0.5+1.j, 0.5+1.j, 0.5+1.j],
