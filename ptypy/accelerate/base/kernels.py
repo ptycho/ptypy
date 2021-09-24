@@ -620,11 +620,11 @@ class PoUpdateKernel(BaseKernel):
                 pr_norm[dic[0], dic[1]:dic[1] + rows, dic[2]:dic[2] + cols]
         return
 
-    def pr_update_local(self, addr, pr, ob, ex, aux, obn, a=0., b=1.):
+    def pr_update_local(self, addr, pr, ob, ex, aux, obn, obn_max, a=0., b=1.):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = ex.shape[-2:]
-        ob_norm = (1 - a) * obn.max() + a * obn
+        ob_norm = (1 - a) * obn_max + a * obn
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
                 (a + b) * ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \

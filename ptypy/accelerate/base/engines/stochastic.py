@@ -282,8 +282,13 @@ class _StochasticEngineSerial(_StochasticEngine):
 
                     # probe update
                     t1 = time.time()
-                    POK.ob_norm_local(addr, ob, obn)
-                    POK.pr_update_local(addr, pr, ob, ex, aux, obn, a=self._pr_a, b=self._pr_b)
+                    if self._object_norm_is_global and self._pr_a == 0:
+                        obn_max = au.max_abs2(ob)
+                        obn[:] = 0
+                    else:
+                        POK.ob_norm_local(addr, ob, obn)
+                        obn_max = obn.max()
+                    POK.pr_update_local(addr, pr, ob, ex, aux, obn, obn_max, a=self._pr_a, b=self._pr_b)
                     self.benchmark.probe_update += time.time() - t1
                     self.benchmark.calls_probe += 1
 

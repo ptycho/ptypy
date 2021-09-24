@@ -72,6 +72,9 @@ class _StochasticEngine(PositionCorrectionEngine):
         self._ob_a = 0.0
         self._ob_b = 1.0
 
+        # By default the object norm is based on the local object
+        self._object_norm_is_global = False
+
     def engine_prepare(self):
         """
         Last minute initialization.
@@ -246,10 +249,16 @@ class _StochasticEngine(PositionCorrectionEngine):
             O_{norm} = (1 - a) * ||O^{j}||_{max}^2 + a * |O^{j}|^2
 
         """
-        object_power = 0
-        for name, pod in view.pods.items():
-            object_power += u.abs2(pod.object)
-        object_norm = (1 - a) * np.max(object_power) + a * object_power
+        # Calculate the object norm based on the global object
+        # This only works if a = 0.
+        if self._object_norm_is_global and a == 0:
+            object_norm = np.max(u.abs2(view.pod.ob_view.storage.data).sum(axis=0))
+        # Calculate the object norm based on the local object
+        else:
+            object_power = 0
+            for name, pod in view.pods.items():
+                object_power += u.abs2(pod.object)
+            object_norm = (1 - a) * np.max(object_power) + a * object_power
         for name, pod in view.pods.items():
             pod.probe += (a + b) * np.conj(pod.object) * (pod.exit - exit_wave[name]) / object_norm
 
@@ -269,6 +278,11 @@ class EPIEMixin:
     lowlim = 0.0
     help = Parameter for adjusting the step size of the probe update
 
+    [object_norm_is_global]
+    default = False
+    type = bool
+    help = Calculate the object norm based on the global object instead of the local object
+
     """
     def __init__(self, alpha, beta):
         # EPIE adjustment parameters
@@ -279,6 +293,7 @@ class EPIEMixin:
         self._ob_a = 0.0
         self._pr_b = alpha
         self._ob_b = beta
+        self._object_norm_is_global = self.p.object_norm_is_global
         self.article = dict(
             title='An improved ptychographical phase retrieval algorithm for diffractive imaging',
             author='Maiden A. and Rodenburg J.',
