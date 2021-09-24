@@ -295,10 +295,10 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                     POK.ob_update_local(addr, ob, pr, ex, aux, prn, a=self._ob_a, b=self._ob_b)
 
                     # probe update
-                    if self.p.object_norm_global and self._pr_a == 0:
+                    if self._object_norm_is_global and self._pr_a == 0:
                         obn_max = gpuarray.empty((1,), dtype=np.float32)
                         MAK.max_abs2(ob, obn_max)
-                        obn[:] = 0
+                        obn.fill(np.float32(0.), stream=self.queue)
                     else:
                         POK.ob_norm_local(addr, ob, obn)
                         obn_max = gpuarray.max(obn, stream=self.queue)

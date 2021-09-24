@@ -282,7 +282,7 @@ class _StochasticEngineSerial(_StochasticEngine):
 
                     # probe update
                     t1 = time.time()
-                    if self.p.object_norm_global and self._pr_a == 0:
+                    if self._object_norm_is_global and self._pr_a == 0:
                         obn_max = au.max_abs2(ob)
                         obn[:] = 0
                     else:
