@@ -693,10 +693,42 @@ class NanomaxContrast(NanomaxStepscanSep2019):
     in a slightly matured state. Step and fly scan have the same
     format.
 
+    Defaults:
+
     [name]
     default = NanomaxContrast
     type = str
     help =
+
+    [cropOnLoad]
+    default = True
+    type = bool
+    help = Only load the used bits of each detector frame
+    doc =
+
+    [cropOnLoad_y_lower]
+    default = None
+    type = int, list, tuple
+    help = y-axis lower limit
+    doc =
+
+    [cropOnLoad_y_upper]
+    default = None
+    type = int, list, tuple
+    help = y-axis upper limit
+    doc =
+
+    [cropOnLoad_x_lower]
+    default = None
+    type = int, list, tuple
+    help = x-axis lower limit
+    doc =
+
+    [cropOnLoad_x_upper]
+    default = None
+    type = int, list, tuple
+    help = x-axis upper limit
+    doc =
 
     """
 
@@ -706,10 +738,30 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         filename = '%06u.h5' % self.info.scanNumber
         fullfilename = os.path.join(self.info.path, filename)
 
+        # setting limits for cropping on load if asked so by the user 
+        #... allows to load larger scans that would not fit in the memmory as full frames
+        # requires for the center of the diffraction pattern to be given as (py,px)
+        if self.info.cropOnLoad and self.info.cropOnLoad_y_lower == None:
+            cy, cx   = self.info.center
+            d        = self.info.shape
+            self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(cy)-d//2, int(cx)-d//2
+            self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower+d, self.info.cropOnLoad_x_lower+d
+            self.info.center = (d//2,d//2)		
+            if self.info.cropOnLoad_y_lower<0:
+                self.info.center[0] += self.info.cropOnLoad_y_lower
+                self.info.cropOnLoad_y_lower = 0
+            if self.info.cropOnLoad_x_lower<0:
+                self.info.center[1] += self.info.cropOnLoad_x_lower
+                self.info.cropOnLoad_x_lower = 0
+
+        # actually loading the detector frames
         with h5py.File(fullfilename, 'r') as fp:
             self.meta.energy = fp['entry/snapshot/energy'][:] * 1e-3
             for ind in indices:
-                raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][ind]
+                if self.info.cropOnLoad:
+                    raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][ind,self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                else:
+                    raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][ind]
                 if self.info.I0:
                     logger.info('normalizing frame %u by %f' % (ind, self.normdata[ind]))
                     logger.info('hack! assuming mask = 2**32-1 when I0-normalizing')
@@ -718,6 +770,7 @@ class NanomaxContrast(NanomaxStepscanSep2019):
                     raw[ind][msk] = 2**32-1
 
         return raw, positions, weights
+
 
     def load_weight(self):
         """
@@ -746,3 +799,5 @@ class NanomaxContrast(NanomaxStepscanSep2019):
                     (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
 
         return mask
+
+
