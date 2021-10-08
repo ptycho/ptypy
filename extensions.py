@@ -51,13 +51,11 @@ class NvccCompiler(UnixCCompiler):
         self.CUDA = locate_cuda()
         module_dir = os.path.join(__file__.strip('import_fft.py'), 'cuda', 'filtered_fft') 
         # by default, compile for all of these 
-        archflag = '-gencode=arch=compute_50,code=sm_50' + \
-            ' -gencode=arch=compute_52,code=sm_52' + \
-            ' -gencode=arch=compute_60,code=sm_60' + \
+        archflag = ' -gencode=arch=compute_60,code=sm_60' + \
             ' -gencode=arch=compute_61,code=sm_61' + \
             ' -gencode=arch=compute_70,code=sm_70' + \
             ' -gencode=arch=compute_75,code=sm_75' + \
-            ' -gencode=arch=compute_75,code=compute_75'
+            ' -gencode=arch=compute_80,code=sm_80'
         self.src_extensions.append('.cu')
         self.LD_FLAGS = [archflag, "-lcufft_static", "-lculibos", "-ldl", "-lrt", "-lpthread", "-cudart shared"]
         self.NVCC_FLAGS = ["-dc", archflag]
