@@ -41,26 +41,8 @@ from .base import BaseEngine, DEFAULT_iter_info
 # These imports should be executable separately
 from . import projectional
 from . import stochastic
-#from . import DM_simple
-from . import DMOPR
 from . import ML
-from . import MLOPR
-#from . import dummy
 from . import Bragg3d_engines
-
-# TODO: make this better / explicit
-# try:
-#     from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda
-#     from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_streams
-#     from ptypy.accelerate.cuda_pycuda.engines import ML_pycuda
-#     from ptypy.accelerate.cuda_pycuda.engines import DM_pycuda_stream
-# except:
-#     pass
-# try:
-#     from ptypy.accelerate.ocl_pyopencl.engines import DM_ocl
-# except:
-#     pass
-
 
 # dynamic load, maybe discarded in future
 dynamic_load('./', ['BaseEngine', 'PositionCorrectionEngine'] + list(ENGINES.keys()), True)
