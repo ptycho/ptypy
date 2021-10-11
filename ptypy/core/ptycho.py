@@ -720,7 +720,7 @@ class Ptycho(Base):
         citation_info = '\n'.join([headerline('This reconstruction relied on the following work', 'l', '='),
         str(self.citations),
         headerline('', 'l', '=')])
-        logger.warning(citation_info)
+        logger.critical(citation_info)
 
     @classmethod
     def _from_dict(cls, dct):
