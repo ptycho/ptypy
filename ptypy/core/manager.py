@@ -43,7 +43,7 @@ class _LogTime(object):
         self._t = time.time()
 
     def __call__(self, msg=None):
-        logger.warning('Duration %.2f for ' % (time.time() - self._t) + str(msg))
+        logger.info('Duration %.2f for ' % (time.time() - self._t) + str(msg))
         self._t = time.time()
 
 
