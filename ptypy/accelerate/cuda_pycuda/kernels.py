@@ -13,11 +13,11 @@ def choose_fft(fft_type, arr_shape):
     rows = arr_shape[0]
     columns = arr_shape[1]
     if rows != columns or rows not in [16, 32, 64, 128, 256, 512, 1024, 2048]:
-        _dims_are_powers_of_two = False
-    if fft_type=='cuda' and not _dims_are_powers_of_two:
+        dims_are_powers_of_two = False
+    if fft_type=='cuda' and not dims_are_powers_of_two:
         logger.warning('Array dimensions are not powers of two (16 to 2048) - using Reikna instead')
         from ptypy.accelerate.cuda_pycuda.fft import FFT
-    elif fft_type=='cuda' and _dims_are_powers_of_two:
+    elif fft_type=='cuda' and dims_are_powers_of_two:
         try:
             from ptypy.accelerate.cuda_pycuda.cufft import FFT_cuda as FFT
         except:
