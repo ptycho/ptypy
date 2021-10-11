@@ -9,7 +9,7 @@ from ..base import kernels as ab
 from ..base.kernels import Adict
 
 def choose_fft(fft_type, arr_shape):
-    _dims_are_powers_of_two = True
+    dims_are_powers_of_two = True
     rows = arr_shape[0]
     columns = arr_shape[1]
     if rows != columns or rows not in [16, 32, 64, 128, 256, 512, 1024, 2048]:
