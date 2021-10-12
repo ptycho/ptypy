@@ -56,8 +56,7 @@ class NvccCompiler(UnixCCompiler):
             ' -gencode=arch=compute_70,code=sm_70' + \
             ' -gencode=arch=compute_75,code=sm_75' + \
             ' -gencode=arch=compute_80,code=sm_80' + \
-            ' -gencode=arch=compute_86,code=sm_86' + \
-            ' -gencode=arch=compute_86,code=compute_86'
+            ' -gencode=arch=compute_80,code=compute_80'
         self.src_extensions.append('.cu')
         self.LD_FLAGS = [archflag, "-lcufft_static", "-lculibos", "-ldl", "-lrt", "-lpthread", "-cudart shared"]
         self.NVCC_FLAGS = ["-dc", archflag]
