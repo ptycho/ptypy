@@ -70,19 +70,17 @@ class Ptycho(Base):
     Defaults:
 
     [verbose_level]
-    default = 1
+    default = 'ERROR'
     help = Verbosity level
     doc = Verbosity level for information logging.
-       - ``0``: Only critical errors
-       - ``1``: All errors
-       - ``2``: Warning
-       - ``3``: Process Information
-       - ``4``: Object Information
-       - ``5``: Debug
-    type = int
+       - ``CRITICAL``: Only critical errors
+       - ``ERROR``:    All errors
+       - ``WARNING``:  Warning
+       - ``INFO``:     Process Information
+       - ``INSPECT``:  Object Information
+       - ``DEBUG``:    Debug
+    type = str, int
     userlevel = 0
-    lowlim = 0
-    uplim = 5
 
     [data_type]
     default = 'single'
@@ -659,6 +657,10 @@ class Ptycho(Base):
                                 'Time %(duration).3f' % info)
                     logger.info('Errors :: Fourier %.2e, Photons %.2e, '
                                 'Exit %.2e' % tuple(err))
+                    log("interactive",  'Iteration #%(iteration)d of %(engine)s :: '
+                                        'Time %(duration).3f \t\t | ' %info +
+                                        'Errors :: Fourier %.2e, Photons %.2e, '
+                                        'Exit %.2e' %tuple(err))
 
                 parallel.barrier()
 

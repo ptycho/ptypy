@@ -28,15 +28,18 @@ __all__ = ['logger', 'set_level', 'report', 'log']
 
 # custom logging level to diplay python objects (not as detailed as debug but also not that important for info)
 INSPECT = 15
+INTERACTIVE = 25
 
 CONSOLE_FORMAT = {logging.ERROR : 'ERROR %(name)s - %(message)s',
                   logging.WARNING : 'WARNING %(name)s - %(message)s',
+                  INTERACTIVE : '\rtest',
                   logging.INFO : '%(message)s',
                   INSPECT : 'INSPECT %(message)s',
                   logging.DEBUG : 'DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
 
 FILE_FORMAT = {logging.ERROR : '%(asctime)s ERROR %(name)s - %(message)s',
                   logging.WARNING : '%(asctime)s WARNING %(name)s - %(message)s',
+                  INTERACTIVE : '%(asctime)s %(message)s',
                   logging.INFO : '%(asctime)s %(message)s',
                   INSPECT : '%(asctime)s INSPECT %(message)s',
                   logging.DEBUG : '%(asctime)s DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
@@ -114,25 +117,35 @@ consolefilter = MPIFilter()
 logger.addFilter(consolefilter)
 
 level_from_verbosity = {0:logging.CRITICAL, 1:logging.ERROR, 2:logging.WARN, 3:logging.INFO, 4: INSPECT, 5:logging.DEBUG}
-level_from_string = {'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 'INFO':logging.INFO, 'INSPECT': INSPECT, 'DEBUG':logging.DEBUG}
+level_from_string = {'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 'INTERACTIVE':INTERACTIVE, 'INFO':logging.INFO, 'INSPECT': INSPECT, 'DEBUG':logging.DEBUG}
 vlevel_from_logging = dict([(v,k) for k,v in level_from_verbosity.items()])
 slevel_from_logging = dict([(v,k) for k,v in level_from_string.items()])
 
 def log(level,msg,parallel=False):
-    if not parallel:
-        logger.log(level_from_verbosity[level], msg)
+    if isinstance(level, int):
+        _level = level_from_verbosity[level]
+    elif isinstance(level, str):
+        _level = level_from_string[level.upper()]
     else:
-        logger.log(level_from_verbosity[level], msg,extra={'allprocesses':True})
+        raise TypeError("Verbosity level should be an integer or a string")
+    if not parallel:
+        logger.log(_level, msg)
+    else:
+        logger.log(_level, msg,extra={'allprocesses':True})
 
 def set_level(level):
     """
     Set verbosity level. Kept here for backward compatibility
     """
     logger.info('Verbosity set to %s' % str(level))
-    if str(level) == level:
+    if isinstance(level, str):
+        if level.upper() not in level_from_string:
+            raise KeyError("Verbosity level %s does not exist" %level)
         logger.setLevel(level_from_string[level.upper()])
-    else:
+    elif isinstance(level, int):
         logger.setLevel(level_from_verbosity[level])
+    else:
+        raise TypeError("Verbosity level should be an integer or a string")
     logger.info('Verbosity set to %s' % str(level))
 
 def get_level(num_or_string='num'):
