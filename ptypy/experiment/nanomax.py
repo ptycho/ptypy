@@ -738,30 +738,62 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         filename = '%06u.h5' % self.info.scanNumber
         fullfilename = os.path.join(self.info.path, filename)
 
-        # setting limits for cropping on load if asked so by the user 
-        #... allows to load larger scans that would not fit in the memmory as full frames
-        # requires for the center of the diffraction pattern to be given as (py,px)
+        # crop on load is requested, but the actual indices to crop are not yet defined
         if self.info.cropOnLoad and self.info.cropOnLoad_y_lower == None:
+            
+            # center of the diffraction patterns is not explicitly given
+            if self.info.center==None:
+                # requires to load the first frame and to find the center of mass there
+                with h5py.File(fullfilename, 'r') as fp:
+                    frame = fp['entry/measurement/%s/frames'%self.info.detector][0]
+                # and to mask the hot pixels ... sadly this will have double with self.load_weight
+                mask = np.ones_like(frame)
+                if self.info.detector == 'pilatus':
+                    mask[np.where(frame < 0)] = 0
+                if self.info.detector == 'eiger':
+                    mask[np.where(frame == 2**32-1)] = 0
+                    mask[np.where(frame == 2**16-1)] = 0
+                if self.info.maskfile:
+                    with h5py.File(self.info.maskfile, 'r') as hf:
+                        mask2 = np.array(hf.get('mask'))
+                    mask *= mask2
+                # now find the center of mass can be estimated using the ptypy internal function and make it integers
+                self.info.center = u.scripts.mass_center(frame*mask)
+                self.info.center = [int(x) for x in self.info.center]
+                logger.info('Estimated the center of the (first) diffraction pattern to be', self.info.center)
+
+            # the center of the full frames is (now) known, and thus the indices for the cropping can be defined
             cy, cx   = self.info.center
             d        = self.info.shape
+            logger.info('Found the center of the full frames at', self.info.center)
+            logger.info('Will crop all diffraction patterns on load to a size of ', self.info.shape)
             self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(cy)-d//2, int(cx)-d//2
             self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower+d, self.info.cropOnLoad_x_lower+d
-            self.info.center = (d//2,d//2)		
+
+            # the center needs to be redefined for the cropped frames
+            self.info.center = (d//2,d//2)
+
+            # if the lower crop indices are negative, set them zero
             if self.info.cropOnLoad_y_lower<0:
                 self.info.center[0] += self.info.cropOnLoad_y_lower
                 self.info.cropOnLoad_y_lower = 0
             if self.info.cropOnLoad_x_lower<0:
                 self.info.center[1] += self.info.cropOnLoad_x_lower
-                self.info.cropOnLoad_x_lower = 0
+                self.info.cropOnLoad_x_lower = 0            
+            # no need to have something similar for too large upper indices due to the way python slices arrays
+        
 
         # actually loading the detector frames
         with h5py.File(fullfilename, 'r') as fp:
             self.meta.energy = fp['entry/snapshot/energy'][:] * 1e-3
             for ind in indices:
+                # load only a cropped bit of the full frame
                 if self.info.cropOnLoad:
                     raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][ind,self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
-                else:
+                # load the full raw frame                
+                else:	
                     raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][ind]
+                # if there is I0 information, use it to normalize the just loaded frame                
                 if self.info.I0:
                     logger.info('normalizing frame %u by %f' % (ind, self.normdata[ind]))
                     logger.info('hack! assuming mask = 2**32-1 when I0-normalizing')
