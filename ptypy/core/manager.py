@@ -22,12 +22,13 @@ from . import geometry
 from . import data
 
 from .. import utils as u
-from ..utils.verbose import logger, headerline, log
+from ..utils.verbose import logger, headerline, log, interactivelog
 from .classes import *
 from .classes import DEFAULT_ACCESSRULE
 from .classes import MODEL_PREFIX
 from ..utils import parallel
 from ..utils.descriptor import EvalDescriptor
+from ..utils.misc import LogTime
 from .. import defaults_tree
 
 # Please set these globally later
@@ -1626,6 +1627,7 @@ class ModelManager(object):
             if not scan.data_available:
                 continue
             else:
+                interactivelog('%s: loading data for scan %s' %(type(scan).__name__,label), newline=False)
                 prb_ids, obj_ids, pod_ids = dict(), dict(), set()
                 nd = scan.new_data(_nframes)
                 while nd:
@@ -1633,14 +1635,19 @@ class ModelManager(object):
                     prb_ids.update(nd[1])
                     obj_ids.update(nd[2])
                     pod_ids = pod_ids.union(nd[3])
+                    interactivelog('%s: loading data for scan %s (%d diffraction frames, %d PODs, %d probes and %d objects)' 
+                                    %(type(scan).__name__,label, sum([d.shape[0] if l==label else 0 for l,d in new_data]), len(pod_ids), len(prb_ids), len(obj_ids)), newline=False)
                     nd = scan.new_data(_nframes)
+                interactivelog('', newline=True)
 
                 # Reformatting
+                interactivelog('%s: loading data for scan %s (reformatting probe/obj/exit)'  %(type(scan).__name__,label), newline=True)
                 self.ptycho.probe.reformat(True)
                 self.ptycho.obj.reformat(True)
                 self.ptycho.exit.reformat(True)
 
                 # Initialize probe/object/exit
+                interactivelog('%s: loading data for scan %s (initializing probe/obj/exit)'  %(type(scan).__name__,label), newline=True)
                 scan._initialize_probe(prb_ids)
                 scan._initialize_object(obj_ids)
                 scan._initialize_exit(list(pod_ids))

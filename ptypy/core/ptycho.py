@@ -8,13 +8,14 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
-import time
+import time, sys
 from . import paths
 from collections import OrderedDict
 
 from .. import utils as u
-from ..utils.verbose import logger, _, report, headerline, log
+from ..utils.verbose import logger, _, report, headerline, log, interactivelog
 from ..utils import parallel
+from ..utils.misc import LogTime
 from .. import engines
 from .classes import Base, Container, Storage, PTYCHO_PREFIX
 from .manager import ModelManager
@@ -494,7 +495,10 @@ class Ptycho(Base):
         """
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs. Sets self.new_data
-        self.new_data = self.model.new_data()
+        interactivelog('%s: loading data' %type(self.model).__name__, newline=False)
+        with LogTime() as t:
+            self.new_data = self.model.new_data()
+        interactivelog('%s: loading data took %s' %(type(self.model).__name__,t.readout), newline=True)
 
         # Print stats
         parallel.barrier()
@@ -613,13 +617,20 @@ class Ptycho(Base):
                 self.runtime.last_plot = 0
 
             # Prepare the engine
-            engine.initialize()
+            interactivelog('%s: initializing engine' %type(engine).__name__, newline=False)
+            with LogTime() as t:
+                engine.initialize()
+            interactivelog('%s: initializing engine took %s' %(type(engine).__name__,t.readout), newline=True)
 
             # One .prepare() is always executed, as Ptycho may hold data
-            self.new_data = [(d.label, d) for d in self.diff.S.values()]
-            engine.prepare()
+            interactivelog('%s: preparing engine' %type(engine).__name__, newline=False)
+            with LogTime() as t:
+                self.new_data = [(d.label, d) for d in self.diff.S.values()]
+                engine.prepare()
+            interactivelog('%s: preparing engine took %s' %(type(engine).__name__,t.readout), newline=True)
 
             # Start the iteration loop
+            interactivelog('%s: starting engine' %type(engine).__name__, newline=False)
             while not engine.finished:
                 # Check for client requests
                 if parallel.master and self.interactor is not None:
@@ -657,12 +668,14 @@ class Ptycho(Base):
                                 'Time %(duration).3f' % info)
                     logger.info('Errors :: Fourier %.2e, Photons %.2e, '
                                 'Exit %.2e' % tuple(err))
-                    log("interactive",  'Iteration #%(iteration)d of %(engine)s :: '
-                                        'Time %(duration).3f \t\t | ' %info +
-                                        'Errors :: Fourier %.2e, Photons %.2e, '
-                                        'Exit %.2e' %tuple(err))
+                    interactivelog('Iteration # %(iteration)d/%(numiter)d of %(engine)s :: ' %info + 
+                                   'Errors = Fourier %.2e, Photons %.2e, Exit %.2e :: ' %tuple(err) +
+                                   'Time %(duration).3f seconds' %info, newline=info["iteration"]==info["numiter"])
 
                 parallel.barrier()
+            _n = self.runtime.iter_info[-1]['iterations']
+            _t = sum([i['duration'] for i in self.runtime.iter_info])
+            interactivelog('%s: %d iterations took %.3f seconds' %(type(engine).__name__, _n,_t), newline=True)
 
             # Done. Let the engine finish up
             engine.finalize()
@@ -722,7 +735,7 @@ class Ptycho(Base):
         citation_info = '\n'.join([headerline('This reconstruction relied on the following work', 'l', '='),
         str(self.citations),
         headerline('', 'l', '=')])
-        logger.critical(citation_info)
+        logger.log(45, citation_info)
 
     @classmethod
     def _from_dict(cls, dct):

@@ -26,23 +26,26 @@ from . import parallel
 
 __all__ = ['logger', 'set_level', 'report', 'log']
 
-# custom logging level to diplay python objects (not as detailed as debug but also not that important for info)
+# custom logging levels
 INSPECT = 15
-INTERACTIVE = 25
+INTERACTIVE = 35
+CITATION = 45
 
-CONSOLE_FORMAT = {logging.ERROR : 'ERROR %(name)s - %(message)s',
+CONSOLE_FORMAT = {CITATION: '%(message)s',
+                  logging.ERROR : 'ERROR %(name)s - %(message)s',
+                  INTERACTIVE : '%(message)s',
                   logging.WARNING : 'WARNING %(name)s - %(message)s',
-                  INTERACTIVE : '\rtest',
                   logging.INFO : '%(message)s',
                   INSPECT : 'INSPECT %(message)s',
                   logging.DEBUG : 'DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
 
-FILE_FORMAT = {logging.ERROR : '%(asctime)s ERROR %(name)s - %(message)s',
-                  logging.WARNING : '%(asctime)s WARNING %(name)s - %(message)s',
-                  INTERACTIVE : '%(asctime)s %(message)s',
-                  logging.INFO : '%(asctime)s %(message)s',
-                  INSPECT : '%(asctime)s INSPECT %(message)s',
-                  logging.DEBUG : '%(asctime)s DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
+FILE_FORMAT = {CITATION: '%(message)s',
+               logging.ERROR : '%(asctime)s ERROR %(name)s - %(message)s',
+               INTERACTIVE : '%(asctime)s %(message)s',
+               logging.WARNING : '%(asctime)s WARNING %(name)s - %(message)s',
+               logging.INFO : '%(asctime)s %(message)s',
+               INSPECT : '%(asctime)s INSPECT %(message)s',
+               logging.DEBUG : '%(asctime)s DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
 
 # How many characters per line in console
 LINEMAX = 80
@@ -95,17 +98,25 @@ class CustomFormatter(logging.Formatter):
         self.FORMATS = {} if FORMATS is None else FORMATS
 
     def format(self, record):
-        self._fmt = self.FORMATS.get(record.levelno, self.DEFAULT)
+        self._style._fmt = self.FORMATS.get(record.levelno, self.DEFAULT)
         return logging.Formatter.format(self, record)
 
+class CustomStreamHandler(logging.StreamHandler):
+    def __init__(self, *args, **kwargs):
+        logging.StreamHandler.__init__(self, *args, **kwargs)
+    def emit(self, record):
+        if record.levelno == 25:
+            self.terminator = ""
+        logging.StreamHandler.emit(self, record)
+
 # Create logger
-logger = logging.getLogger()
+logger = logging.getLogger("ptypy")
 
 # Default level - should be changed as soon as possible
 logger.setLevel(logging.WARNING)
 
 # Create console handler
-consolehandler = logging.StreamHandler(stream = sys.stdout)
+consolehandler = CustomStreamHandler(stream = sys.stdout)
 logger.addHandler(consolehandler)
 
 # Add formatter
@@ -116,10 +127,26 @@ consolehandler.setFormatter(consoleformatter)
 consolefilter = MPIFilter()
 logger.addFilter(consolefilter)
 
+# Capture warnings and log them
+logging.captureWarnings(True)
+
 level_from_verbosity = {0:logging.CRITICAL, 1:logging.ERROR, 2:logging.WARN, 3:logging.INFO, 4: INSPECT, 5:logging.DEBUG}
-level_from_string = {'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 'INTERACTIVE':INTERACTIVE, 'INFO':logging.INFO, 'INSPECT': INSPECT, 'DEBUG':logging.DEBUG}
+level_from_string = {'CITATION':CITATION, 'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 
+                     'INTERACTIVE':INTERACTIVE, 'INFO':logging.INFO, 'INSPECT': INSPECT, 'DEBUG':logging.DEBUG}
 vlevel_from_logging = dict([(v,k) for k,v in level_from_verbosity.items()])
 slevel_from_logging = dict([(v,k) for k,v in level_from_string.items()])
+
+def interactivelog(msg, newline=False):
+    """
+    Interactive logging
+    """
+    if not slevel_from_logging[logger.level] == "INTERACTIVE":
+        return
+    consolehandler.terminator = ""
+    logger.log(level_from_string["INTERACTIVE"], "\r"+msg)
+    if newline:
+        logger.log(level_from_string["INTERACTIVE"], "\n")
+    consolehandler.terminator = "\n"
 
 def log(level,msg,parallel=False):
     if isinstance(level, int):
