@@ -1635,7 +1635,7 @@ class ModelManager(object):
                     prb_ids.update(nd[1])
                     obj_ids.update(nd[2])
                     pod_ids = pod_ids.union(nd[3])
-                    interactivelog('%s: loading data for scan %s (%d diffraction frames, %d PODs, %d probes and %d objects)' 
+                    interactivelog('%s: loading data for scan %s (%d diffraction frames, %d PODs, %d probe(s) and %d object(s))' 
                                     %(type(scan).__name__,label, sum([d.shape[0] if l==label else 0 for l,d in new_data]), len(pod_ids), len(prb_ids), len(obj_ids)), newline=False)
                     nd = scan.new_data(_nframes)
                 interactivelog('', newline=True)
