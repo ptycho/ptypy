@@ -99,7 +99,7 @@ try:
 except:
     EXTBUILD_MESSAGE = '*' * 75 + "\n"
     EXTBUILD_MESSAGE += "ptypy has been installed without the pre-compiled cufft extension.\n"
-    EXTBUILD_MESSAGE += "If you require cufft, make sure to have CUDA and pybind11 installed.\n"
+    EXTBUILD_MESSAGE += "If you require cufft, make sure to have CUDA >= 10 and pybind11 installed.\n"
     EXTBUILD_MESSAGE += '*' * 75 + "\n"
 
 exclude_packages = []
