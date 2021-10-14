@@ -495,10 +495,7 @@ class Ptycho(Base):
         """
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs. Sets self.new_data
-        interactivelog('%s: loading data' %type(self.model).__name__, newline=False)
-        with LogTime() as t:
-            self.new_data = self.model.new_data()
-        interactivelog('%s: loading data took %s' %(type(self.model).__name__,t.readout), newline=True)
+        self.new_data = self.model.new_data()
 
         # Print stats
         parallel.barrier()
@@ -617,17 +614,13 @@ class Ptycho(Base):
                 self.runtime.last_plot = 0
 
             # Prepare the engine
-            interactivelog('%s: initializing engine' %type(engine).__name__, newline=False)
-            with LogTime() as t:
-                engine.initialize()
-            interactivelog('%s: initializing engine took %s' %(type(engine).__name__,t.readout), newline=True)
+            interactivelog('%s: initializing engine' %type(engine).__name__, newline=True)
+            engine.initialize()
 
             # One .prepare() is always executed, as Ptycho may hold data
-            interactivelog('%s: preparing engine' %type(engine).__name__, newline=False)
-            with LogTime() as t:
-                self.new_data = [(d.label, d) for d in self.diff.S.values()]
-                engine.prepare()
-            interactivelog('%s: preparing engine took %s' %(type(engine).__name__,t.readout), newline=True)
+            interactivelog('%s: preparing engine' %type(engine).__name__, newline=True)
+            self.new_data = [(d.label, d) for d in self.diff.S.values()]
+            engine.prepare()
 
             # Start the iteration loop
             interactivelog('%s: starting engine' %type(engine).__name__, newline=False)
@@ -668,14 +661,10 @@ class Ptycho(Base):
                                 'Time %(duration).3f' % info)
                     logger.info('Errors :: Fourier %.2e, Photons %.2e, '
                                 'Exit %.2e' % tuple(err))
-                    interactivelog('Iteration # %(iteration)d/%(numiter)d of %(engine)s :: ' %info + 
-                                   'Errors = Fourier %.2e, Photons %.2e, Exit %.2e :: ' %tuple(err) +
-                                   'Time %(duration).3f seconds' %info, newline=info["iteration"]==info["numiter"])
+                    interactivelog('%(engine)s: Iteration # %(iteration)d/%(numiter)d :: ' %info + 
+                                   'Fourier %.2e, Photons %.2e, Exit %.2e' %tuple(err), newline=info["iteration"]==info["numiter"])
 
                 parallel.barrier()
-            _n = self.runtime.iter_info[-1]['iterations']
-            _t = sum([i['duration'] for i in self.runtime.iter_info])
-            interactivelog('%s: %d iterations took %.3f seconds' %(type(engine).__name__, _n,_t), newline=True)
 
             # Done. Let the engine finish up
             engine.finalize()
