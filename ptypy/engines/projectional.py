@@ -104,7 +104,7 @@ class _ProjectionEngine(PositionCorrectionEngine):
     [compute_log_likelihood]
     default = True
     type = bool
-    help = A switch for computing the log-likelihood error (this can impact the performance of the engine) 
+    help = A switch for computing the log-likelihood error (this can impact the performance of the engine)
 
     """
 
@@ -314,17 +314,25 @@ class _ProjectionEngine(PositionCorrectionEngine):
 
     def center_probe(self):
         if self.p.probe_center_tol is not None:
-            for name, s in self.pr.storages.items():
-                c1 = u.mass_center(u.abs2(s.data).sum(0))
-                c2 = np.asarray(s.shape[-2:]) // 2
+            for name, pr_s in self.pr.storages.items():
+                c1 = u.mass_center(u.abs2(pr_s.data).sum(0))
+                c2 = np.asarray(pr_s.shape[-2:]) // 2
                 # fft convention should however use geometry instead
                 if u.norm(c1 - c2) < self.p.probe_center_tol:
                     break
                 # SC: possible BUG here, wrong input parameter
-                s.data[:] = u.shift_zoom(s.data,
-                                         (1.,) * 3,
-                                         (0, c1[0], c1[1]),
-                                         (0, c2[0], c2[1]))
+                pr_s.data[:] = u.shift_zoom(pr_s.data, (1.,)*3,
+                        (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+
+                # shift the object
+                ob_s = self.ob.storages[name]
+                ob_s.data[:] = u.shift_zoom(ob_s.data, (1.,)*3,
+                        (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+
+                # shift the exit waves
+                ex_s = pr_s.views[0].pod.ex_view.storage
+                ex_s.data[:] = u.shift_zoom(ex_s.data, (1.,)*3,
+                        (0, c1[0], c1[1]), (0, c2[0], c2[1]))
 
                 log(4,'Probe recentered from %s to %s'
                             % (str(tuple(c1)), str(tuple(c2))))
