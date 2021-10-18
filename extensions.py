@@ -74,7 +74,7 @@ def get_cuda_arch_flags(version):
                    ' -gencode=arch=compute_75,code=sm_75' + \
                    ' -gencode=arch=compute_80,code=sm_80' + \
                    ' -gencode=arch=compute_80,code=compute_80'
-    if version >= 11.1:
+    elif version >= 11.1:
         archflag = ' -gencode=arch=compute_60,code=sm_60' + \
                    ' -gencode=arch=compute_61,code=sm_61' + \
                    ' -gencode=arch=compute_70,code=sm_70' + \
@@ -82,6 +82,8 @@ def get_cuda_arch_flags(version):
                    ' -gencode=arch=compute_80,code=sm_80' + \
                    ' -gencode=arch=compute_86,code=sm_86' + \
                    ' -gencode=arch=compute_86,code=compute_86'
+    else:
+        raise ValueError("CUDA version %s not supported" %str(version))
     return archflag
 
 class NvccCompiler(UnixCCompiler):
