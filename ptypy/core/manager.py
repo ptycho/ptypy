@@ -1638,7 +1638,9 @@ class ModelManager(object):
                     interactivelog('%s: loading data for scan %s (%d diffraction frames, %d PODs, %d probe(s) and %d object(s))' 
                                     %(type(scan).__name__,label, sum([d.shape[0] if l==label else 0 for l,d in new_data]), len(pod_ids), len(prb_ids), len(obj_ids)), newline=False)
                     nd = scan.new_data(_nframes)
-                interactivelog('', newline=True)
+                interactivelog('%s: loading data for scan %s (%d diffraction frames, %d PODs, %d probe(s) and %d object(s))' 
+                                %(type(scan).__name__,label, sum([d.shape[0] if l==label else 0 for l,d in new_data]), len(pod_ids), len(prb_ids), len(obj_ids)), newline=True)
+                #interactivelog('', newline=True)
 
                 # Reformatting
                 interactivelog('%s: loading data for scan %s (reformatting probe/obj/exit)'  %(type(scan).__name__,label), newline=True)
