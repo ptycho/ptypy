@@ -81,8 +81,11 @@ Alternative options for this switch:
    or detect if cuda is available on the system and enable it in this case, etc.
 """
 try:
-    from extensions import locate_cuda # this raises an error if pybind11 is not available
+    from extensions import locate_cuda, get_cuda_version # this raises an error if pybind11 is not available
     CUDA = locate_cuda() # this raises an error if CUDA is not available
+    CUDA_VERSION = get_cuda_version(CUDA['nvcc'])
+    if CUDA_VERSION < 10:
+        raise ValueError("ptypy cufft requires CUDA >= 10")
     from extensions import CustomBuildExt
     cufft_dir = os.path.join('ptypy', 'accelerate', 'cuda_pycuda', 'cuda', 'filtered_fft')
     ext_modules.append(
@@ -96,7 +99,7 @@ try:
 except:
     EXTBUILD_MESSAGE = '*' * 75 + "\n"
     EXTBUILD_MESSAGE += "ptypy has been installed without the pre-compiled cufft extension.\n"
-    EXTBUILD_MESSAGE += "If you require cufft, make sure to have CUDA and pybind11 installed.\n"
+    EXTBUILD_MESSAGE += "If you require cufft, make sure to have CUDA >= 10 and pybind11 installed.\n"
     EXTBUILD_MESSAGE += '*' * 75 + "\n"
 
 exclude_packages = []

@@ -1,7 +1,8 @@
 '''
 Compilation tools for Nvidia builds of extension modules.
 '''
-import os
+import os, re
+import subprocess
 import sysconfig
 import pybind11
 from distutils.unixccompiler import UnixCCompiler
@@ -45,18 +46,54 @@ def locate_cuda():
             raise EnvironmentError('The CUDA %s path could not be located in %s' % (k, v))
     return cudaconfig
 
+def get_cuda_version(nvcc):
+    """
+    Get the CUDA version py running `nvcc --version`.
+    """
+    stdout = subprocess.check_output([nvcc,"--version"]).decode("utf-8")
+    if bool(stdout.rstrip()):
+        regex = r'release (\S+),'
+        match = re.search(regex, stdout)
+        if match:
+            return float(match.group(1))
+        raise LookupError('Unable to parse nvcc version output from {}'.format(stdout))
+    else:
+        return None 
+
+def get_cuda_arch_flags(version):
+    if version in (10.0, 10.1, 10.2):
+        archflag = ' -gencode=arch=compute_60,code=sm_60' + \
+                   ' -gencode=arch=compute_61,code=sm_61' + \
+                   ' -gencode=arch=compute_70,code=sm_70' + \
+                   ' -gencode=arch=compute_75,code=sm_75' + \
+                   ' -gencode=arch=compute_75,code=compute_75'
+    elif version == 11.0:
+        archflag = ' -gencode=arch=compute_60,code=sm_60' + \
+                   ' -gencode=arch=compute_61,code=sm_61' + \
+                   ' -gencode=arch=compute_70,code=sm_70' + \
+                   ' -gencode=arch=compute_75,code=sm_75' + \
+                   ' -gencode=arch=compute_80,code=sm_80' + \
+                   ' -gencode=arch=compute_80,code=compute_80'
+    elif version >= 11.1:
+        archflag = ' -gencode=arch=compute_60,code=sm_60' + \
+                   ' -gencode=arch=compute_61,code=sm_61' + \
+                   ' -gencode=arch=compute_70,code=sm_70' + \
+                   ' -gencode=arch=compute_75,code=sm_75' + \
+                   ' -gencode=arch=compute_80,code=sm_80' + \
+                   ' -gencode=arch=compute_86,code=sm_86' + \
+                   ' -gencode=arch=compute_86,code=compute_86'
+    else:
+        raise ValueError("CUDA version %s not supported" %str(version))
+    return archflag
+
 class NvccCompiler(UnixCCompiler):
     def __init__(self, *args, **kwargs):
         super(NvccCompiler, self).__init__(*args, **kwargs)
         self.CUDA = locate_cuda()
+        self.CUDA_VERSION = get_cuda_version(self.CUDA["nvcc"])
         module_dir = os.path.join(__file__.strip('import_fft.py'), 'cuda', 'filtered_fft') 
-        # by default, compile for all of these 
-        archflag = ' -gencode=arch=compute_60,code=sm_60' + \
-            ' -gencode=arch=compute_61,code=sm_61' + \
-            ' -gencode=arch=compute_70,code=sm_70' + \
-            ' -gencode=arch=compute_75,code=sm_75' + \
-            ' -gencode=arch=compute_80,code=sm_80' + \
-            ' -gencode=arch=compute_80,code=compute_80'
+        # by default, compile for all of these
+        archflag = get_cuda_arch_flags(self.CUDA_VERSION)
         self.src_extensions.append('.cu')
         self.LD_FLAGS = [archflag, "-lcufft_static", "-lculibos", "-ldl", "-lrt", "-lpthread", "-cudart shared"]
         self.NVCC_FLAGS = ["-dc", archflag]
