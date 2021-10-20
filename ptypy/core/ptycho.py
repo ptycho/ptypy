@@ -13,7 +13,8 @@ from . import paths
 from collections import OrderedDict
 
 from .. import utils as u
-from ..utils.verbose import logger, _, report, headerline, log, interactivelog
+from ..utils.verbose import logger, _, report, headerline, log
+from ..utils.verbose import ilog_message, ilog_streamer, ilog_newline
 from ..utils import parallel
 from ..utils.misc import LogTime
 from .. import engines
@@ -614,16 +615,16 @@ class Ptycho(Base):
                 self.runtime.last_plot = 0
 
             # Prepare the engine
-            interactivelog('%s: initializing engine' %type(engine).__name__, newline=True)
+            ilog_message('%s: initializing engine' %type(engine).__name__)
             engine.initialize()
 
             # One .prepare() is always executed, as Ptycho may hold data
-            interactivelog('%s: preparing engine' %type(engine).__name__, newline=True)
+            ilog_message('%s: preparing engine' %type(engine).__name__)
             self.new_data = [(d.label, d) for d in self.diff.S.values()]
             engine.prepare()
 
             # Start the iteration loop
-            interactivelog('%s: starting engine' %type(engine).__name__, newline=False)
+            ilog_streamer('%s: starting engine' %type(engine).__name__)
             while not engine.finished:
                 # Check for client requests
                 if parallel.master and self.interactor is not None:
@@ -661,10 +662,12 @@ class Ptycho(Base):
                                 'Time %(duration).3f' % info)
                     logger.info('Errors :: Fourier %.2e, Photons %.2e, '
                                 'Exit %.2e' % tuple(err))
-                    interactivelog('%(engine)s: Iteration # %(iteration)d/%(numiter)d :: ' %info + 
-                                   'Fourier %.2e, Photons %.2e, Exit %.2e' %tuple(err), newline=info["iteration"]==info["numiter"])
+                    ilog_streamer('%(engine)s: Iteration # %(iteration)d/%(numiter)d :: ' %info + 
+                                   'Fourier %.2e, Photons %.2e, Exit %.2e' %tuple(err))
 
                 parallel.barrier()
+
+            ilog_newline()
 
             # Done. Let the engine finish up
             engine.finalize()

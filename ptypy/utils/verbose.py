@@ -88,8 +88,7 @@ class CustomFormatter(logging.Formatter):
     """
     Flexible formatting, depending on the logging level.
 
-    Adapted from http://stackoverflow.com/questions/1343227
-    Will have to be updated for python > 3.2.
+    Adapted from https://stackoverflow.com/questions/14844970
     """
     DEFAULT = '%(levelname)s: %(message)s'
 
@@ -136,16 +135,35 @@ level_from_string = {'CITATION':CITATION, 'CRITICAL':logging.CRITICAL, 'ERROR':l
 vlevel_from_logging = dict([(v,k) for k,v in level_from_verbosity.items()])
 slevel_from_logging = dict([(v,k) for k,v in level_from_string.items()])
 
-def interactivelog(msg, newline=False):
+def ilog_message(msg):
     """
-    Interactive logging
+    Interactive logging for jupyter notebooks, prints a normal message.
+    """
+    if not slevel_from_logging[logger.level] == "INTERACTIVE":
+        return
+    logger.log(level_from_string["INTERACTIVE"], msg)
+
+def ilog_streamer(msg):
+    """
+    Interactive logging for jupyter notebooks, 
+    streams a message by overwriting the same line.
     """
     if not slevel_from_logging[logger.level] == "INTERACTIVE":
         return
     consolehandler.terminator = ""
     logger.log(level_from_string["INTERACTIVE"], "\r"+msg)
-    if newline:
-        logger.log(level_from_string["INTERACTIVE"], "\n")
+    consolehandler.terminator = "\n"
+
+def ilog_newline():
+    """
+    Interactive logging for jupyter notebooks, 
+    moves cursor to next line. Call this after 
+    ilog_streamer() to escape the streaming.
+    """
+    if not slevel_from_logging[logger.level] == "INTERACTIVE":
+        return
+    consolehandler.terminator = ""
+    logger.log(level_from_string["INTERACTIVE"], "\n")
     consolehandler.terminator = "\n"
 
 def log(level,msg,parallel=False):
