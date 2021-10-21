@@ -307,7 +307,8 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                     else:
                         POK.ob_norm_local(addr, ob, obn)
                         obn_max = gpuarray.max(obn, stream=self.queue)
-                    POK.pr_update_local(addr, pr, ob, ex, aux, obn, obn_max, a=self._pr_a, b=self._pr_b)
+                    if self.p.probe_update_start <= self.curiter:
+                        POK.pr_update_local(addr, pr, ob, ex, aux, obn, obn_max, a=self._pr_a, b=self._pr_b)
 
                     ## compute log-likelihood
                     if self.p.compute_log_likelihood:

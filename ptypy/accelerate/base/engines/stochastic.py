@@ -288,7 +288,8 @@ class _StochasticEngineSerial(_StochasticEngine):
                     else:
                         POK.ob_norm_local(addr, ob, obn)
                         obn_max = obn.max()
-                    POK.pr_update_local(addr, pr, ob, ex, aux, obn, obn_max, a=self._pr_a, b=self._pr_b)
+                    if self.p.probe_update_start <= self.curiter:
+                        POK.pr_update_local(addr, pr, ob, ex, aux, obn, obn_max, a=self._pr_a, b=self._pr_b)
                     self.benchmark.probe_update += time.time() - t1
                     self.benchmark.calls_probe += 1
 
