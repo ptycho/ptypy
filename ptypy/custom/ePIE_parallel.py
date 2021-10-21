@@ -26,11 +26,11 @@ import numpy as np
 import time
 import random
 
-from .. import utils as u
-from ..utils.verbose import logger
-from ..utils import parallel
-from . import BaseEngine, register
-from ..core.manager import Full, Vanilla
+from ptypy import utils as u
+from ptypy.utils.verbose import logger
+from ptypy.utils import parallel
+from ptypy.engines import BaseEngine, register
+from ptypy.core.manager import Full, Vanilla
 
 __all__ = ['EPIEParallel']
 

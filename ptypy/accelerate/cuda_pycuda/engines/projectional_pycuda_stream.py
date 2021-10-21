@@ -15,7 +15,6 @@ This file is part of the PTYPY package.
 
 import numpy as np
 import time
-import sys
 from pycuda import gpuarray
 import pycuda.driver as cuda
 from pycuda.tools import DeviceMemoryPool
@@ -67,7 +66,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
             log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
             self.context.pop()
             self.context.detach()
-            sys.exit(0)
+            raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
         nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)

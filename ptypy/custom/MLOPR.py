@@ -12,13 +12,13 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
-from .. import utils as u
-from ..utils.verbose import logger
-from ..utils import parallel
-from .utils import reduce_dimension
-from . import register
-from .ML import ML
-from ..core.manager import OPRModel
+from ptypy import utils as u
+from ptypy.utils.verbose import logger
+from ptypy.utils import parallel
+from ptypy.engines.utils import reduce_dimension
+from ptypy.engines import register
+from ptypy.engines.ML import ML
+from ptypy.core.manager import OPRModel
 
 __all__ = ['MLOPR']
 

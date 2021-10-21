@@ -13,6 +13,8 @@ from ptypy.core import Ptycho
 import tempfile
 import shutil
 
+from ptypy.custom import DMOPR
+
 class DMOPRTest(unittest.TestCase):
     def setUp(self):
         self.outpath = tempfile.mkdtemp(suffix="DMOPR_test")

@@ -142,6 +142,11 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         mem = cuda.mem_get_info()[0]
         blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
         fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
+        if not fit:
+            log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
+            self.context.pop()
+            self.context.detach()
+            raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
         nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)

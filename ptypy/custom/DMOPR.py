@@ -9,12 +9,12 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
-from .. import utils as u
-from ..utils import parallel
-from .utils import reduce_dimension
-from . import register
-from .projectional import DM
-from ..core.manager import OPRModel
+from ptypy import utils as u
+from ptypy.utils import parallel
+from ptypy.engines.utils import reduce_dimension
+from ptypy.engines import register
+from ptypy.engines.projectional import DM
+from ptypy.core.manager import OPRModel
 
 __all__ = ['DMOPR']
 

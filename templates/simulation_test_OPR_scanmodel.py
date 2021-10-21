@@ -4,7 +4,7 @@
 from ptypy import utils as u
 from ptypy.core import Ptycho
 import numpy as np
-
+from ptypy.custom import DMOPR, MLOPR
 
 p = u.Param()
 p.verbose_level = 4
