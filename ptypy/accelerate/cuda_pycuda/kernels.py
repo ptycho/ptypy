@@ -138,7 +138,7 @@ class FourierSupportKernel:
         self.queue = queue_thread
         self._fft_type = fft
     def allocate(self):
-        FFT = choose_fft(self._fft_type)
+        FFT = choose_fft(self._fft_type, self.support.shape[-2:])
 
         self._fft1 = FFT(self.support, self.queue,
                         post_fft=self.support,
