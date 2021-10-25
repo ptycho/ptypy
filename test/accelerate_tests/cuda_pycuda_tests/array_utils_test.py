@@ -41,7 +41,7 @@ class ArrayUtilsTest(PyCudaTest):
 
         ## Assert
         np.testing.assert_equal(out, 30333303.0)
-    
+
     def test_dot_complex_float(self):
         ## Arrange
         X,Y,Z = np.indices((3,3,1001), dtype=np.float32)
@@ -86,7 +86,7 @@ class ArrayUtilsTest(PyCudaTest):
         inp,_ = np.indices((5,3), dtype=np.int32)
         inp_dev = gpuarray.to_gpu(inp)
         out_dev = gpuarray.empty((3,5), dtype=np.int32)
-        
+
         ## Act
         AU = gau.TransposeKernel()
         AU.transpose(inp_dev, out_dev)
@@ -101,7 +101,7 @@ class ArrayUtilsTest(PyCudaTest):
         inp,_ = np.indices((137,61), dtype=np.int32)
         inp_dev = gpuarray.to_gpu(inp)
         out_dev = gpuarray.empty((61,137), dtype=np.int32)
-        
+
         ## Act
         AU = gau.TransposeKernel()
         AU.transpose(inp_dev, out_dev)
@@ -160,7 +160,7 @@ class ArrayUtilsTest(PyCudaTest):
         out = data_dev.get()
         np.testing.assert_allclose(out_exp, out, rtol=1e-5)
 
-    
+
     def test_complex_gaussian_filter_1d_more_blurring_UNITY(self):
         # Arrange
         data = np.zeros((11,), dtype=np.complex64)
@@ -266,7 +266,7 @@ class ArrayUtilsTest(PyCudaTest):
 
         # Assert
         out_exp = au.complex_gaussian_filter(data, mfs)
-        out = data_dev.get()        
+        out = data_dev.get()
         np.testing.assert_allclose(out_exp, out, rtol=1e-4)
 
 
@@ -367,14 +367,14 @@ class ArrayUtilsTest(PyCudaTest):
 
         MAK = gau.MaxAbs2Kernel(queue=self.stream)
         MAK.max_abs2(X_dev, out_dev)
-        
+
         np.testing.assert_allclose(out_dev.get(), out, rtol=1e-6, atol=1e-6,
             err_msg="The object norm array has not been updated as expected")
 
     def test_max_abs2_float_UNITY(self):
         np.random.seed(1983)
         X = np.random.randint(-1000, 1000, (3,100,200)).astype(np.float32)
-            
+
         out = np.zeros((1,), dtype=np.float32)
         X_dev = gpuarray.to_gpu(X)
         out_dev = gpuarray.to_gpu(out)
@@ -383,7 +383,7 @@ class ArrayUtilsTest(PyCudaTest):
 
         MAK = gau.MaxAbs2Kernel(queue=self.stream)
         MAK.max_abs2(X_dev, out_dev)
-        
+
         np.testing.assert_allclose(out_dev.get(), out, rtol=1e-6, atol=1e-6,
             err_msg="The object norm array has not been updated as expected")
 
@@ -401,5 +401,23 @@ class ArrayUtilsTest(PyCudaTest):
 
         np.testing.assert_allclose(B_gpu.get(), B, rtol=1e-6, atol=1e-6,
             err_msg="The magnitudes of the array have not been clipped as expected")
+
+
+    def test_mass_center_UNITY(self):
+        np.random.seed(1987)
+        A = np.random.random((128, 128)).astype(np.float32)
+        A_gpu = gpuarray.to_gpu(A)
+
+        out = au.mass_center(A)
+
+        MCK = gau.MassCenterKernel()
+        mc_d = MCK.mass_center(A_gpu)
+        mc = mc_d.get()
+
+        print(out)
+        print(mc)
+
+        np.testing.assert_allclose(out, mc, rtol=1e-6, atol=1e-6,
+            err_msg="The centre of mass of the array have not been calculated as expected")
 
 

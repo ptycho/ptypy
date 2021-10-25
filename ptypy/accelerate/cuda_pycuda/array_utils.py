@@ -8,11 +8,11 @@ import numpy as np
 def map2ctype(dt):
     if dt == np.float32:
         return 'float'
-    elif dt == np.float64: 
+    elif dt == np.float64:
         return 'double'
-    elif dt == np.complex64: 
+    elif dt == np.complex64:
         return 'complex<float>'
-    elif dt == np.complex128: 
+    elif dt == np.complex128:
         return 'complex<double>'
     elif dt == np.int32:
         return 'int'
@@ -41,11 +41,11 @@ class ArrayUtilsKernel:
             'BDIM_X': 1024
         })
         self.Ctmp = None
-        
+
     def dot(self, A, B, out=None):
         assert A.dtype == B.dtype, "Input arrays must be of same data type"
         assert A.size == B.size, "Input arrays must be of the same size"
-        
+
         if out is None:
             out = gpuarray.zeros((1,), dtype=self.acc_dtype)
 
@@ -62,7 +62,7 @@ class ArrayUtilsKernel:
             Ctmp = out
         if np.iscomplexobj(B):
             self.cdot_cuda(A, B, np.int32(A.size), Ctmp,
-                block=block, grid=grid, 
+                block=block, grid=grid,
                 shared=1024 * elsize,
                 stream=self.queue)
         else:
@@ -71,10 +71,10 @@ class ArrayUtilsKernel:
                 shared=1024 * elsize,
                 stream=self.queue)
         if grid[0] > 1:
-            self.full_reduce_cuda(self.Ctmp, out, np.int32(grid[0]), 
+            self.full_reduce_cuda(self.Ctmp, out, np.int32(grid[0]),
                 block=(1024, 1, 1), grid=(1,1,1), shared=elsize*1024,
                 stream=self.queue)
-        
+
         return out
 
     def norm2(self, A, out=None):
@@ -97,7 +97,7 @@ class TransposeKernel:
             raise ValueError("Input/Output must be of flipped shape")
         if input.dtype != np.int32 or output.dtype != np.int32:
             raise ValueError("Only int types are supported at the moment")
-        
+
         width = input.shape[1]
         height = input.shape[0]
         blk = (16, 16, 1)
@@ -127,7 +127,7 @@ class MaxAbs2Kernel:
         version = '{},{},{}'.format(map2ctype(X.dtype), map2ctype(out.dtype), gy)
         if version not in self.max_abs2_cuda:
             step1, step2 = load_kernel(
-                    ("max_abs2_step1", "max_abs2_step2"), 
+                    ("max_abs2_step1", "max_abs2_step2"),
                     {
                         'IN_TYPE': map2ctype(X.dtype),
                         'OUT_TYPE': map2ctype(out.dtype),
@@ -144,7 +144,7 @@ class MaxAbs2Kernel:
         #     self.max_abs2_cuda[version]['scratchmem'] =
         scratch = self.max_abs2_cuda[version]['scratchmem']
 
-        
+
         self.max_abs2_cuda[version]['step1'](X, firstdims, rows, cols, scratch,
             block=(bx, 1, 1), grid=(1, gy, 1),
             stream=self.queue)
@@ -152,7 +152,7 @@ class MaxAbs2Kernel:
             block=(bx, 1, 1), grid=(1, 1, 1),
             stream=self.queue
         )
-    
+
 
 class CropPadKernel:
 
@@ -195,7 +195,7 @@ class CropPadKernel:
         ], dtype=np.int32)
         assert (lengths == lengths2).all(), "left and right lenghts are not matching"
         batch = int(np.prod(A.shape[:-3]))
-        
+
         # lazy loading depending on data type
         version = '{},{}'.format(map2ctype(B.dtype), map2ctype(A.dtype))
         if version not in self.fill3D_cuda:
@@ -205,7 +205,7 @@ class CropPadKernel:
             })
         bx = by = 32
         self.fill3D_cuda[version](
-            A, B, 
+            A, B,
             np.int32(A.shape[-3]), np.int32(A.shape[-2]), np.int32(A.shape[-1]),
             np.int32(B.shape[-3]), np.int32(B.shape[-2]), np.int32(B.shape[-1]),
             Ao[0], Ao[1], Ao[2],
@@ -255,8 +255,8 @@ class DerivativesKernel:
         self.mid_axis_block = (256, 4, 1)
 
         self.delxf_last, self.delxf_mid = load_kernel(
-            ("delx_last", "delx_mid"), 
-            file="delx.cu", 
+            ("delx_last", "delx_mid"),
+            file="delx.cu",
             subs={
                 'IS_FORWARD': 'true',
                 'BDIM_X': str(self.last_axis_block[0]),
@@ -265,8 +265,8 @@ class DerivativesKernel:
                 'OUT_TYPE': stype
             })
         self.delxb_last, self.delxb_mid  = load_kernel(
-            ("delx_last", "delx_mid"), 
-            file="delx.cu", 
+            ("delx_last", "delx_mid"),
+            file="delx.cu",
             subs={
                 'IS_FORWARD': 'false',
                 'BDIM_X': str(self.last_axis_block[0]),
@@ -274,7 +274,7 @@ class DerivativesKernel:
                 'IN_TYPE': stype,
                 'OUT_TYPE': stype
             })
-        
+
 
     def delxf(self, input, out, axis=-1):
         if input.dtype != self.dtype:
@@ -351,9 +351,9 @@ class GaussianSmoothingKernel:
         self.blockdim_x = 4
         self.blockdim_y = 16
 
-        
+
         # At least 2 blocks per SM
-        self.max_shared_per_block = 48 * 1024 // 2 
+        self.max_shared_per_block = 48 * 1024 // 2
         self.max_shared_per_block_complex = self.max_shared_per_block / 2 * np.dtype(np.float32).itemsize
         self.max_kernel_radius = int(self.max_shared_per_block_complex / self.blockdim_y)
 
@@ -378,7 +378,7 @@ class GaussianSmoothingKernel:
         self.r = 0
         self.std = 0
 
-    
+
     def convolution(self, data, mfs, tmp=None):
         """
         Calculates a stacked 2D convolution for smoothing, with the standard deviations
@@ -394,7 +394,7 @@ class GaussianSmoothingKernel:
             tmp = gpuarray.empty(shape, dtype=data.dtype)
         assert shape == tmp.shape and data.dtype == tmp.dtype
 
-        # Check input dimensions        
+        # Check input dimensions
         if ndims == 3:
             batches,y,x = shape
             stdy, stdx = mfs
@@ -429,19 +429,19 @@ class GaussianSmoothingKernel:
 
             bx = self.blockdim_x
             by = self.blockdim_y
-            
+
             shared = (bx + 2*r) * by * np.dtype(np.complex64).itemsize
             if shared > self.max_shared_per_block:
                 raise MemoryError("Cannot run kernel in shared memory")
 
             blk = (bx, by, 1)
             grd = (int((y + bx -1)// bx), int((x + by-1)// by), batches)
-            self.convolution_row(input, output, np.int32(y), np.int32(x), self.kernel_gpu, np.int32(r), 
+            self.convolution_row(input, output, np.int32(y), np.int32(x), self.kernel_gpu, np.int32(r),
                                  block=blk, grid=grd, shared=shared, stream=self.queue)
 
             input = output
             output = data
-        
+
         # Column convolution kernel
         # TODO: is this threshold acceptable in all cases?
         if stdy > 0.1:
@@ -456,20 +456,20 @@ class GaussianSmoothingKernel:
                 self.kernel_gpu[:r+1] = k[:]
                 self.r = r
                 self.std = stdy
-                
+
 
             bx = self.blockdim_y
             by = self.blockdim_x
-            
+
             shared = (by + 2*r) * bx * np.dtype(np.complex64).itemsize
             if shared > self.max_shared_per_block:
                 raise MemoryError("Cannot run kernel in shared memory")
 
             blk = (bx, by, 1)
             grd = (int((y + bx -1)// bx), int((x + by-1)// by), batches)
-            self.convolution_col(input, output, np.int32(y), np.int32(x), self.kernel_gpu, np.int32(r), 
+            self.convolution_col(input, output, np.int32(y), np.int32(x), self.kernel_gpu, np.int32(r),
                                  block=blk, grid=grd, shared=shared, stream=self.queue)
-            
+
         # TODO: is this threshold acceptable in all cases?
         if (stdx <= 0.1 and stdy <= 0.1):
             return   # nothing to do
@@ -499,3 +499,76 @@ class ClipMagnitudesKernel:
                 block=(bx, 1, 1),
                 grid=(gx, 1, 1),
                 stream=self.queue)
+
+class MassCenterKernel:
+
+    def __init__(self, queue=None):
+        self.queue = queue
+
+        self.indexed_sum_middim_cuda = load_kernel("indexed_sum_middim",
+                file="mass_center.cu", subs={
+                    'IN_TYPE': 'float',
+                    'BDIM_X' : 256,
+                    'BDIM_Y' : 1,
+                    }
+                )
+
+        self.indexed_sum_lastdim_cuda = load_kernel("indexed_sum_lastdim",
+                file="mass_center.cu", subs={
+                    'IN_TYPE': 'float',
+                    'BDIM_X' : 32,
+                    'BDIM_Y' : 32,
+                    }
+                )
+
+        self.final_sums_cuda = load_kernel("final_sums",
+                file="mass_center.cu", subs={
+                    'IN_TYPE': 'float',
+                    'BDIM_X' : 256,
+                    'BDIM_Y' : 1,
+                    }
+                )
+
+
+    def mass_center(self, array):
+        i = np.int32(array.shape[0])
+        m = np.int32(array.shape[1])
+        n = np.int32(1)
+
+        sc = 1. / gpuarray.sum(array, dtype=np.float32)
+
+        i_sum = gpuarray.zeros(i, dtype=np.float32)
+        m_sum = gpuarray.zeros(m, dtype=np.float32)
+        n_sum = gpuarray.zeros(n, dtype=np.float32)
+        out = gpuarray.empty(2, dtype=np.float32)
+
+        block_ = (256, 1, 1)
+        grid_ = (int(i), 1, 1)
+        self.indexed_sum_middim_cuda(array, i_sum, np.int32(1), i, n*m, sc,
+                block=block_,
+                grid=grid_,
+                stream=self.queue,
+                shared=256*4)
+
+        print('m sum before ', m_sum)
+        block_ = (32, 32, 1)
+        grid_ = (int(m + 32 - 1) // 32, 1)
+        self.indexed_sum_lastdim_cuda(array, m_sum, i, m, sc,
+                block=block_,
+                grid=grid_,
+                stream=self.queue,
+                shared=32*32*4)
+        print('m sum after ', m_sum)
+
+
+        block_ = (2, 1, 1)
+        grid_ = (256, 1, 1)
+        self.final_sums_cuda(i_sum, i, m_sum, m, n_sum, n, out,
+                block=block_,
+                grid=grid_,
+                stream=self.queue,
+                shared=256*4)
+
+
+        return out
+
