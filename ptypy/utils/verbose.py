@@ -100,14 +100,6 @@ class CustomFormatter(logging.Formatter):
         self._style._fmt = self.FORMATS.get(record.levelno, self.DEFAULT)
         return logging.Formatter.format(self, record)
 
-class CustomStreamHandler(logging.StreamHandler):
-    def __init__(self, *args, **kwargs):
-        logging.StreamHandler.__init__(self, *args, **kwargs)
-    def emit(self, record):
-        if record.levelno == 25:
-            self.terminator = ""
-        logging.StreamHandler.emit(self, record)
-
 # Create logger
 logger = logging.getLogger("ptypy")
 
@@ -115,7 +107,7 @@ logger = logging.getLogger("ptypy")
 logger.setLevel(logging.WARNING)
 
 # Create console handler
-consolehandler = CustomStreamHandler(stream = sys.stdout)
+consolehandler = logging.StreamHandler(stream = sys.stdout)
 logger.addHandler(consolehandler)
 
 # Add formatter

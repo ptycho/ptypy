@@ -8,7 +8,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
-import time, sys
+import time
 from . import paths
 from collections import OrderedDict
 
@@ -16,7 +16,6 @@ from .. import utils as u
 from ..utils.verbose import logger, _, report, headerline, log
 from ..utils.verbose import ilog_message, ilog_streamer, ilog_newline
 from ..utils import parallel
-from ..utils.misc import LogTime
 from .. import engines
 from .classes import Base, Container, Storage, PTYCHO_PREFIX
 from .manager import ModelManager
