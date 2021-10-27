@@ -26,20 +26,26 @@ from . import parallel
 
 __all__ = ['logger', 'set_level', 'report', 'log']
 
-# custom logging level to diplay python objects (not as detailed as debug but also not that important for info)
+# custom logging levels
 INSPECT = 15
+INTERACTIVE = 35
+CITATION = 45
 
-CONSOLE_FORMAT = {logging.ERROR : 'ERROR %(name)s - %(message)s',
+CONSOLE_FORMAT = {CITATION: '%(message)s',
+                  logging.ERROR : 'ERROR %(name)s - %(message)s',
+                  INTERACTIVE : '%(message)s',
                   logging.WARNING : 'WARNING %(name)s - %(message)s',
                   logging.INFO : '%(message)s',
                   INSPECT : 'INSPECT %(message)s',
                   logging.DEBUG : 'DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
 
-FILE_FORMAT = {logging.ERROR : '%(asctime)s ERROR %(name)s - %(message)s',
-                  logging.WARNING : '%(asctime)s WARNING %(name)s - %(message)s',
-                  logging.INFO : '%(asctime)s %(message)s',
-                  INSPECT : '%(asctime)s INSPECT %(message)s',
-                  logging.DEBUG : '%(asctime)s DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
+FILE_FORMAT = {CITATION: '%(message)s',
+               logging.ERROR : '%(asctime)s ERROR %(name)s - %(message)s',
+               INTERACTIVE : '%(asctime)s %(message)s',
+               logging.WARNING : '%(asctime)s WARNING %(name)s - %(message)s',
+               logging.INFO : '%(asctime)s %(message)s',
+               INSPECT : '%(asctime)s INSPECT %(message)s',
+               logging.DEBUG : '%(asctime)s DEBUG %(pathname)s [%(lineno)d] - %(message)s'}
 
 # How many characters per line in console
 LINEMAX = 80
@@ -82,8 +88,7 @@ class CustomFormatter(logging.Formatter):
     """
     Flexible formatting, depending on the logging level.
 
-    Adapted from http://stackoverflow.com/questions/1343227
-    Will have to be updated for python > 3.2.
+    Adapted from https://stackoverflow.com/questions/14844970
     """
     DEFAULT = '%(levelname)s: %(message)s'
 
@@ -92,11 +97,11 @@ class CustomFormatter(logging.Formatter):
         self.FORMATS = {} if FORMATS is None else FORMATS
 
     def format(self, record):
-        self._fmt = self.FORMATS.get(record.levelno, self.DEFAULT)
+        self._style._fmt = self.FORMATS.get(record.levelno, self.DEFAULT)
         return logging.Formatter.format(self, record)
 
 # Create logger
-logger = logging.getLogger()
+logger = logging.getLogger("ptypy")
 
 # Default level - should be changed as soon as possible
 logger.setLevel(logging.WARNING)
@@ -113,26 +118,71 @@ consolehandler.setFormatter(consoleformatter)
 consolefilter = MPIFilter()
 logger.addFilter(consolefilter)
 
+# Capture warnings and log them
+logging.captureWarnings(True)
+
 level_from_verbosity = {0:logging.CRITICAL, 1:logging.ERROR, 2:logging.WARN, 3:logging.INFO, 4: INSPECT, 5:logging.DEBUG}
-level_from_string = {'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 'INFO':logging.INFO, 'INSPECT': INSPECT, 'DEBUG':logging.DEBUG}
+level_from_string = {'CITATION':CITATION, 'CRITICAL':logging.CRITICAL, 'ERROR':logging.ERROR, 'WARN':logging.WARN, 'WARNING':logging.WARN, 
+                     'INTERACTIVE':INTERACTIVE, 'INFO':logging.INFO, 'INSPECT': INSPECT, 'DEBUG':logging.DEBUG}
 vlevel_from_logging = dict([(v,k) for k,v in level_from_verbosity.items()])
 slevel_from_logging = dict([(v,k) for k,v in level_from_string.items()])
 
+def ilog_message(msg):
+    """
+    Interactive logging for jupyter notebooks, prints a normal message.
+    """
+    if not slevel_from_logging[logger.level] == "INTERACTIVE":
+        return
+    logger.log(level_from_string["INTERACTIVE"], msg)
+
+def ilog_streamer(msg):
+    """
+    Interactive logging for jupyter notebooks, 
+    streams a message by overwriting the same line.
+    """
+    if not slevel_from_logging[logger.level] == "INTERACTIVE":
+        return
+    consolehandler.terminator = ""
+    logger.log(level_from_string["INTERACTIVE"], "\r"+msg)
+    consolehandler.terminator = "\n"
+
+def ilog_newline():
+    """
+    Interactive logging for jupyter notebooks, 
+    moves cursor to next line. Call this after 
+    ilog_streamer() to escape the streaming.
+    """
+    if not slevel_from_logging[logger.level] == "INTERACTIVE":
+        return
+    consolehandler.terminator = ""
+    logger.log(level_from_string["INTERACTIVE"], "\n")
+    consolehandler.terminator = "\n"
+
 def log(level,msg,parallel=False):
-    if not parallel:
-        logger.log(level_from_verbosity[level], msg)
+    if isinstance(level, int):
+        _level = level_from_verbosity[level]
+    elif isinstance(level, str):
+        _level = level_from_string[level.upper()]
     else:
-        logger.log(level_from_verbosity[level], msg,extra={'allprocesses':True})
+        raise TypeError("Verbosity level should be an integer or a string")
+    if not parallel:
+        logger.log(_level, msg)
+    else:
+        logger.log(_level, msg,extra={'allprocesses':True})
 
 def set_level(level):
     """
     Set verbosity level. Kept here for backward compatibility
     """
     logger.info('Verbosity set to %s' % str(level))
-    if str(level) == level:
+    if isinstance(level, str):
+        if level.upper() not in level_from_string:
+            raise KeyError("Verbosity level %s does not exist" %level)
         logger.setLevel(level_from_string[level.upper()])
-    else:
+    elif isinstance(level, int):
         logger.setLevel(level_from_verbosity[level])
+    else:
+        raise TypeError("Verbosity level should be an integer or a string")
     logger.info('Verbosity set to %s' % str(level))
 
 def get_level(num_or_string='num'):
