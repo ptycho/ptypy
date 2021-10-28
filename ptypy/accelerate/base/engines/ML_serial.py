@@ -74,11 +74,7 @@ class ML_serial(ML):
             geo = scan.geometries[0]
 
             # Get info to shape buffer arrays
-            # TODO: make this part of the engine rather than scan
-            fpc = self.ptycho.frames_per_block
-
-            # When using MPI, the nr. of frames per block is smaller
-            fpc = fpc // parallel.size
+            fpc = scan.max_frames_per_block
 
             # TODO : make this more foolproof
             try:

@@ -74,6 +74,8 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         """
         Setup kernels, one for each scan. Derive scans from ptycho class
         """
+        fpc = 0
+
         # get the scans
         for label, scan in self.ptycho.model.scans.items():
 
@@ -83,8 +85,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
             geo = scan.geometries[0]
 
             # Get info to shape buffer arrays
-            # TODO: make this part of the engine rather than scan
-            fpc = self.ptycho.frames_per_block
+            fpc = max(scan.max_frames_per_block, fpc)
 
             # TODO : make this more foolproof
             try:
@@ -94,8 +95,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                 nmodes = 1
 
             # create buffer arrays
-            fpc = 1
-            ash = (fpc * nmodes,) + tuple(geo.shape)
+            ash = (nmodes,) + tuple(geo.shape)
             aux = np.zeros(ash, dtype=np.complex64)
             kern.aux = gpuarray.to_gpu(aux)
 
@@ -134,7 +134,6 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         
         ex_mem = 0
         mag_mem = 0
-        fpc = self.ptycho.frames_per_block
         for scan, kern in self.kernels.items():
             ex_mem = max(kern.aux.nbytes * fpc, ex_mem)
             mag_mem = max(kern.FUK.gpu.fdev.nbytes * fpc, mag_mem)

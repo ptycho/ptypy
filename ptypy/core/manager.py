@@ -153,6 +153,11 @@ class ScanModel(object):
         self.CType = CType
         self.FType = FType
 
+        # Keep track of the maximum frames in a block
+        # For the ScanModel this will be equivalent to the total nr. of frames in the scan
+        # For the BlockScanModel this is defined by the user (frames_per_block) and the MPI settings
+        self.max_frames_per_block = 0
+
     @classmethod
     def makePtyScan(cls, pars):
         """
@@ -326,6 +331,9 @@ class ScanModel(object):
             # FIXME: Find a more transparent way than this.
             self.diff.data[self.diff.layermap.index(idx)][:] = diff_data
             self.mask.data[self.mask.layermap.index(idx)][:] = dct.get('mask', np.ones_like(diff_data))
+
+        # Update maximum nr. of frames in a block
+        self.max_frames_per_block = self.diff.nlayers
 
         self.diff.nlayers = parallel.MPImax(self.diff.layermap) + 1
         self.mask.nlayers = parallel.MPImax(self.mask.layermap) + 1
@@ -539,6 +547,7 @@ class BlockScanModel(ScanModel):
                                       fill=0.0, layermap=indices_node)
         mask = self.Cmask.new_storage(shape=sh, psize=self.psize, padonly=True,
                                       fill=1.0, layermap=indices_node)
+        print(sh, diff.shape, diff.nlayers)
         # Prepare for View generation
         AR_diff = DEFAULT_ACCESSRULE.copy()
         AR_diff.shape = self.diff_shape # this is None due to init
@@ -590,6 +599,9 @@ class BlockScanModel(ScanModel):
         positions = chunk.positions
 
         ## warning message for empty postions?
+
+        # Update maximum nr. of frames in a block
+        self.max_frames_per_block = max(diff.nlayers, self.max_frames_per_block)
 
         # this is not absolutely necessary
         # diff.update_views()
