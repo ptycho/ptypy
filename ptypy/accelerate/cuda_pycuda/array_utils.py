@@ -530,7 +530,6 @@ class MassCenterKernel:
                     }
                 )
 
-
     def mass_center(self, array):
         if array.dtype != np.float32:
             raise NotImplementedError("mass_center is only implemented for float32")
@@ -548,25 +547,48 @@ class MassCenterKernel:
         i_sum = gpuarray.empty(array.shape[0], dtype=np.float32)
         m_sum = gpuarray.empty(array.shape[1], dtype=np.float32)
         n_sum = gpuarray.empty(int(n), dtype=np.float32)
-        out = gpuarray.empty(2, dtype=np.float32)
+        out = gpuarray.empty(3 if n>1 else 2, dtype=np.float32)
 
-        block_ = (256, 1, 1)
+        # sum all dims except the first, multiplying by the index and scaling factor
+        block_ = (self.threadsPerBlock, 1, 1)
         grid_ = (int(i), 1, 1)
         self.indexed_sum_middim_cuda(array, i_sum, np.int32(1), i, n*m, sc,
                 block=block_,
                 grid=grid_,
                 stream=self.queue,
-                shared=256*4)
+                shared=self.threadsPerBlock*4)
 
-        block_ = (32, 32, 1)
-        grid_ = (1, int(m + 32 - 1) // 32, 1)
-        self.indexed_sum_lastdim_cuda(array, m_sum, i, m, sc,
-                block=block_,
-                grid=grid_,
-                stream=self.queue,
-                shared=32*32*4)
+        if array.ndim >= 3:
+            # 3d case
+            # sum all dims, except the middle, multiplying by the index and scaling factor
+            block_ = (self.threadsPerBlock, 1, 1)
+            grid_ = (int(m), 1, 1)
+            self.indexed_sum_middim_cuda(array, m_sum, i, n, m, sc,
+                    block=block_,
+                    grid=grid_,
+                    stream=self.queue,
+                    shared=self.threadsPerBlock*4)
 
-        block_ = (2, 1, 1)
+            # sum the all dims except the last, multiplying by the index and scaling factor
+            block_ = (32, 32, 1)
+            grid_ = (1, int(n + 32 - 1) // 32, 1)
+            self.indexed_sum_lastdim_cuda(array, n_sum, i*m, n, sc,
+                    block=block_,
+                    grid=grid_,
+                    stream=self.queue,
+                    shared=32*32*4)
+        else:
+            # 2d case
+            # sum the all dims except the last, multiplying by the index and scaling factor
+            block_ = (32, 32, 1)
+            grid_ = (1, int(m + 32 - 1) // 32, 1)
+            self.indexed_sum_lastdim_cuda(array, m_sum, i, m, sc,
+                    block=block_,
+                    grid=grid_,
+                    stream=self.queue,
+                    shared=32*32*4)
+
+        block_ = (3 if n>1 else 2, 1, 1)
         grid_ = (256, 1, 1)
         self.final_sums_cuda(i_sum, i, m_sum, m, n_sum, n, out,
                 block=block_,

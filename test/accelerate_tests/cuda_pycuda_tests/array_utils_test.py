@@ -403,7 +403,7 @@ class ArrayUtilsTest(PyCudaTest):
             err_msg="The magnitudes of the array have not been clipped as expected")
 
 
-    def test_mass_center_UNITY(self):
+    def test_mass_center_2d_UNITY(self):
         np.random.seed(1987)
         A = np.random.random((128, 128)).astype(np.float32)
         A_gpu = gpuarray.to_gpu(A)
@@ -414,10 +414,21 @@ class ArrayUtilsTest(PyCudaTest):
         mc_d = MCK.mass_center(A_gpu)
         mc = mc_d.get()
 
-        print(out)
-        print(mc)
-
         np.testing.assert_allclose(out, mc, rtol=1e-6, atol=1e-6,
             err_msg="The centre of mass of the array have not been calculated as expected")
 
+
+    def test_mass_center_3d_UNITY(self):
+        np.random.seed(1987)
+        A = np.random.random((128, 128, 128)).astype(np.float32)
+        A_gpu = gpuarray.to_gpu(A)
+
+        out = au.mass_center(A)
+
+        MCK = gau.MassCenterKernel()
+        mc_d = MCK.mass_center(A_gpu)
+        mc = mc_d.get()
+
+        np.testing.assert_allclose(out, mc, rtol=1e-6, atol=1e-6,
+            err_msg="The centre of mass of the array have not been calculated as expected")
 
