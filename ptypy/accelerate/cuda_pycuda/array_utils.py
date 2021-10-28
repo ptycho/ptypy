@@ -504,11 +504,12 @@ class MassCenterKernel:
 
     def __init__(self, queue=None):
         self.queue = queue
+        self.threadsPerBlock = 256
 
         self.indexed_sum_middim_cuda = load_kernel("indexed_sum_middim",
                 file="mass_center.cu", subs={
                     'IN_TYPE': 'float',
-                    'BDIM_X' : 256,
+                    'BDIM_X' : self.threadsPerBlock,
                     'BDIM_Y' : 1,
                     }
                 )
@@ -531,15 +532,22 @@ class MassCenterKernel:
 
 
     def mass_center(self, array):
+        if array.dtype != np.float32:
+            raise NotImplementedError("mass_center is only implemented for float32")
+
         i = np.int32(array.shape[0])
         m = np.int32(array.shape[1])
-        n = np.int32(1)
+        if array.ndim >= 3:
+            n = np.int32(array.shape[2])
+        else:
+            n = np.int32(1)
 
-        sc = 1. / gpuarray.sum(array, dtype=np.float32)
+        total_sum = gpuarray.sum(array, dtype=np.float32, stream=self.queue).get()
+        sc = np.float32(1. / total_sum.item())
 
-        i_sum = gpuarray.zeros(i, dtype=np.float32)
-        m_sum = gpuarray.zeros(m, dtype=np.float32)
-        n_sum = gpuarray.zeros(n, dtype=np.float32)
+        i_sum = gpuarray.empty(array.shape[0], dtype=np.float32)
+        m_sum = gpuarray.empty(array.shape[1], dtype=np.float32)
+        n_sum = gpuarray.empty(int(n), dtype=np.float32)
         out = gpuarray.empty(2, dtype=np.float32)
 
         block_ = (256, 1, 1)
@@ -550,16 +558,13 @@ class MassCenterKernel:
                 stream=self.queue,
                 shared=256*4)
 
-        print('m sum before ', m_sum)
         block_ = (32, 32, 1)
-        grid_ = (int(m + 32 - 1) // 32, 1)
+        grid_ = (1, int(m + 32 - 1) // 32, 1)
         self.indexed_sum_lastdim_cuda(array, m_sum, i, m, sc,
                 block=block_,
                 grid=grid_,
                 stream=self.queue,
                 shared=32*32*4)
-        print('m sum after ', m_sum)
-
 
         block_ = (2, 1, 1)
         grid_ = (256, 1, 1)
@@ -568,7 +573,6 @@ class MassCenterKernel:
                 grid=grid_,
                 stream=self.queue,
                 shared=256*4)
-
 
         return out
 

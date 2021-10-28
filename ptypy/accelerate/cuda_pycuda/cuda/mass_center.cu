@@ -1,4 +1,3 @@
-//indexed_sum_middim<threadsPerBlock><<<i, threadsPerBlock>>>(arr, i_sum, 1, i, m, sc);
 extern "C" __global__ void indexed_sum_middim(
     const IN_TYPE* data,
     IN_TYPE* sums,
@@ -136,5 +135,4 @@ extern "C" __global__ void final_sums(const IN_TYPE* sum_i,
     output[bid] = shared[0];
   }
 }
-
 
