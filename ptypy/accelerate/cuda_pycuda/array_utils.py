@@ -588,8 +588,8 @@ class MassCenterKernel:
                     stream=self.queue,
                     shared=32*32*4)
 
-        block_ = (3 if n>1 else 2, 1, 1)
-        grid_ = (256, 1, 1)
+        block_ = (256, 1, 1)
+        grid_ = (3 if n>1 else 2, 1, 1)
         self.final_sums_cuda(i_sum, i, m_sum, m, n_sum, n, out,
                 block=block_,
                 grid=grid_,
