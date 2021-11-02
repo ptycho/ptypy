@@ -3,6 +3,12 @@
  1. changes to `bcast_dict` and `gather_dict` (further explanations....)
  2. accelerate engines need to be imported explicitly
  3. ptyscan classes (experiment) need to be imported explicitly
+ 4. new power-bound parameter replacing fourier_relax_factor
+ 5. additional grid search method in position correction
+ 6. generalised projectional engine with derived engines DM, RAAR
+ 7. generalised stochastic engine with derived engines EPIE, SDR
+ 8. GPU-acceleration for all major engines DM, ML, EPIE, SDR, RAAR
+ 9. Non-standard engines in ptypy/custom e.g. OPR
 
 # PtyPy 0.4 release notes
 
