@@ -1632,9 +1632,10 @@ class ModelManager(object):
 
         logger.info('Processing new data.')
 
-        # Attempt to get new data
-        _nframes = self.ptycho.frames_per_block
+        # making sure frames_per_block is defined per rank
+        _nframes = self.ptycho.frames_per_block * parallel.size
 
+        # Attempt to get new data
         new_data = []
         for label, scan in self.scans.items():
             if not scan.data_available:
