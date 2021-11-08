@@ -547,7 +547,7 @@ class BlockScanModel(ScanModel):
                                       fill=0.0, layermap=indices_node)
         mask = self.Cmask.new_storage(shape=sh, psize=self.psize, padonly=True,
                                       fill=1.0, layermap=indices_node)
-        print(sh, diff.shape, diff.nlayers)
+
         # Prepare for View generation
         AR_diff = DEFAULT_ACCESSRULE.copy()
         AR_diff.shape = self.diff_shape # this is None due to init
