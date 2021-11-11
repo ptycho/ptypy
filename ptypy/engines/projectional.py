@@ -330,9 +330,9 @@ class _ProjectionEngine(PositionCorrectionEngine):
                         (0, c1[0], c1[1]), (0, c2[0], c2[1]))
 
                 # shift the exit waves, loop through different exit wave views
-                for k, pv in enumerate(pr_s.views):
-                    pr_s.views[k].pod.exit[:]  = u.shift_zoom(pv.pod.exit,
-                            (1.,)*2, (c1[0], c1[1]), (c2[0], c2[1]))
+                for pv in pr_s.views:
+                    pv.pod.exit = u.shift_zoom(pv.pod.exit, (1.,)*2,
+                            (c1[0], c1[1]), (c2[0], c2[1]))
 
                 log(4,'Probe recentered from %s to %s'
                             % (str(tuple(c1)), str(tuple(c2))))
