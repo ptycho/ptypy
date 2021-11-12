@@ -24,7 +24,7 @@ from ptypy.utils.verbose import log, logger
 from ptypy.utils import parallel
 from ptypy.engines import register
 from ptypy.engines.projectional import DMMixin, RAARMixin
-from . import projectional_pycuda
+from . import projectional_pycuda_nostream
 
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..mem_utils import GpuDataManager2
@@ -36,7 +36,7 @@ MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that
 __all__ = ['DM_pycuda_stream', 'RAAR_pycuda_stream']
 
 
-class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycuda):
+class _ProjectionEngine_pycuda_stream(projectional_pycuda_nostream._ProjectionEngine_pycuda_nostream):
 
     def __init__(self, ptycho_parent, pars=None):
 
