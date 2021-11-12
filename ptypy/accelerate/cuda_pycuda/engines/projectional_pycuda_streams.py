@@ -18,7 +18,7 @@ from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
 from ptypy.engines.projectional import DMMixin, RAARMixin
-from . import projectional_pycuda
+from . import projectional_pycuda_nostream
 from ..mem_utils import GpuDataManager
 
 # factor how many more exit waves we wanna keep on GPU compared to 

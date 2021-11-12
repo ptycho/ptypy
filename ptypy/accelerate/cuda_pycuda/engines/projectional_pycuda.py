@@ -33,10 +33,10 @@ EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
 #MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
 
-__all__ = ['DM_pycuda_stream', 'RAAR_pycuda_stream']
+__all__ = ['DM_pycuda', 'RAAR_pycuda']
 
 
-class _ProjectionEngine_pycuda_stream(projectional_pycuda_nostream._ProjectionEngine_pycuda_nostream):
+class _ProjectionEngine_pycuda(projectional_pycuda_nostream._ProjectionEngine_pycuda_nostream):
 
     def __init__(self, ptycho_parent, pars=None):
 
@@ -475,7 +475,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda_nostream._ProjectionEn
 
 
 @register()
-class DM_pycuda_stream(_ProjectionEngine_pycuda_stream, DMMixin):
+class DM_pycuda(_ProjectionEngine_pycuda, DMMixin):
     """
     A full-fledged Difference Map engine accelerated with pycuda.
 
@@ -490,13 +490,13 @@ class DM_pycuda_stream(_ProjectionEngine_pycuda_stream, DMMixin):
     """
 
     def __init__(self, ptycho_parent, pars=None):
-        _ProjectionEngine_pycuda_stream.__init__(self, ptycho_parent, pars)
+        _ProjectionEngine_pycuda.__init__(self, ptycho_parent, pars)
         DMMixin.__init__(self, self.p.alpha)
         ptycho_parent.citations.add_article(**self.article)
 
 
 @register()
-class RAAR_pycuda_stream(_ProjectionEngine_pycuda_stream, RAARMixin):
+class RAAR_pycuda(_ProjectionEngine_pycuda, RAARMixin):
     """
     A RAAR engine in accelerated with pycuda.
 
@@ -512,5 +512,5 @@ class RAAR_pycuda_stream(_ProjectionEngine_pycuda_stream, RAARMixin):
 
     def __init__(self, ptycho_parent, pars=None):
 
-        _ProjectionEngine_pycuda_stream.__init__(self, ptycho_parent, pars)
+        _ProjectionEngine_pycuda.__init__(self, ptycho_parent, pars)
         RAARMixin.__init__(self, self.p.beta)
