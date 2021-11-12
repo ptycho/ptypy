@@ -90,7 +90,7 @@ class _StochasticEngine(PositionCorrectionEngine):
         vieworder.sort()
         rng = np.random.default_rng()
 
-        for it in range(num):   
+        for it in range(num):
 
             error_dct = {}
             rng.shuffle(vieworder)
@@ -105,7 +105,7 @@ class _StochasticEngine(PositionCorrectionEngine):
 
                 # Fourier update
                 error_dct[name] = self.fourier_update(view)
-                
+
                 # A copy of the old exit wave
                 exit_wave = {}
                 for name, pod in view.pods.items():
@@ -116,6 +116,9 @@ class _StochasticEngine(PositionCorrectionEngine):
 
                 # Probe update
                 self.probe_update(view, exit_wave)
+
+                # Recenter the probe
+                self.center_probe()
 
             self.curiter += 1
 
@@ -133,7 +136,7 @@ class _StochasticEngine(PositionCorrectionEngine):
         # Update positions
         if do_update_pos:
             """
-            refines position of current view by a given algorithm. 
+            refines position of current view by a given algorithm.
             """
             self.position_refinement.update_constraints(self.curiter) # this stays here
 
@@ -150,7 +153,7 @@ class _StochasticEngine(PositionCorrectionEngine):
         view : View
         View to diffraction data
         """
-        #return basic_fourier_update(view, alpha=self._alpha, tau=self._tau, 
+        #return basic_fourier_update(view, alpha=self._alpha, tau=self._tau,
         #                            LL_error=self.p.compute_log_likelihood)
 
         err_fmag, err_exit = projection_update_generalized(view, self._a, self._b, self._c)
@@ -189,6 +192,31 @@ class _StochasticEngine(PositionCorrectionEngine):
         if self.p.probe_update_start > self.curiter:
             return
         self._generic_probe_update(view, exit_wave, a=self._pr_a, b=self._pr_b)
+
+    def center_probe(self):
+        if self.p.probe_center_tol is not None:
+            for name, pr_s in self.pr.storages.items():
+                c1 = u.mass_center(u.abs2(pr_s.data).sum(0))
+                c2 = np.asarray(pr_s.shape[-2:]) // 2
+                # fft convention should however use geometry instead
+                if u.norm(c1 - c2) < self.p.probe_center_tol:
+                    break
+                # SC: possible BUG here, wrong input parameter
+                pr_s.data[:] = u.shift_zoom(pr_s.data, (1.,)*3,
+                        (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+
+                # shift the object
+                ob_s = self.ob.storages[name]
+                ob_s.data[:] = u.shift_zoom(ob_s.data, (1.,)*3,
+                        (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+
+                # shift the exit waves, loop through different exit wave views
+                for pv in pr_s.views:
+                    pv.pod.exit = u.shift_zoom(pv.pod.exit, (1.,)*2,
+                            (c1[0], c1[1]), (c2[0], c2[1]))
+
+                log(4,'Probe recentered from %s to %s'
+                            % (str(tuple(c1)), str(tuple(c2))))
 
     def _generic_object_update(self, view, exit_wave, a=0., b=1.):
         """
@@ -376,7 +404,7 @@ class SDRMixin:
         self._a = 1 - self._tau * (1 + self._sigma)
         self._b = self._tau
         self._c = 1 + self._sigma
-        
+
     @property
     def sigma(self):
         return self._sigma
