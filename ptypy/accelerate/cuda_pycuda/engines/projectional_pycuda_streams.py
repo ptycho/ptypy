@@ -90,7 +90,7 @@ class GpuStreamData:
         self.queue.synchronize()
 
 
-class _ProjectionEngine_pycuda_streams(projectional_pycuda._ProjectionEngine_pycuda):
+class _ProjectionEngine_pycuda_streams(projectional_pycuda_nostream._ProjectionEngine_pycuda):
 
     """
     Defaults:
