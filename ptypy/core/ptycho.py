@@ -14,6 +14,7 @@ from collections import OrderedDict
 
 from .. import utils as u
 from ..utils.verbose import logger, _, report, headerline, log
+from ..utils.verbose import ilog_message, ilog_streamer, ilog_newline
 from ..utils import parallel
 from .. import engines
 from .classes import Base, Container, Storage, PTYCHO_PREFIX
@@ -70,19 +71,17 @@ class Ptycho(Base):
     Defaults:
 
     [verbose_level]
-    default = 1
+    default = 'ERROR'
     help = Verbosity level
     doc = Verbosity level for information logging.
-       - ``0``: Only critical errors
-       - ``1``: All errors
-       - ``2``: Warning
-       - ``3``: Process Information
-       - ``4``: Object Information
-       - ``5``: Debug
-    type = int
+       - ``CRITICAL``: Only critical errors
+       - ``ERROR``:    All errors
+       - ``WARNING``:  Warning
+       - ``INFO``:     Process Information
+       - ``INSPECT``:  Object Information
+       - ``DEBUG``:    Debug
+    type = str, int
     userlevel = 0
-    lowlim = 0
-    uplim = 5
 
     [data_type]
     default = 'single'
@@ -615,13 +614,16 @@ class Ptycho(Base):
                 self.runtime.last_plot = 0
 
             # Prepare the engine
+            ilog_message('%s: initializing engine' %type(engine).__name__)
             engine.initialize()
 
             # One .prepare() is always executed, as Ptycho may hold data
+            ilog_message('%s: preparing engine' %type(engine).__name__)
             self.new_data = [(d.label, d) for d in self.diff.S.values()]
             engine.prepare()
 
             # Start the iteration loop
+            ilog_streamer('%s: starting engine' %type(engine).__name__)
             while not engine.finished:
                 # Check for client requests
                 if parallel.master and self.interactor is not None:
@@ -659,8 +661,12 @@ class Ptycho(Base):
                                 'Time %(duration).3f' % info)
                     logger.info('Errors :: Fourier %.2e, Photons %.2e, '
                                 'Exit %.2e' % tuple(err))
+                    ilog_streamer('%(engine)s: Iteration # %(iteration)d/%(numiter)d :: ' %info + 
+                                   'Fourier %.2e, Photons %.2e, Exit %.2e' %tuple(err))
 
                 parallel.barrier()
+
+            ilog_newline()
 
             # Done. Let the engine finish up
             engine.finalize()
@@ -720,7 +726,7 @@ class Ptycho(Base):
         citation_info = '\n'.join([headerline('This reconstruction relied on the following work', 'l', '='),
         str(self.citations),
         headerline('', 'l', '=')])
-        logger.warning(citation_info)
+        log("CITATION", citation_info)
 
     @classmethod
     def _from_dict(cls, dct):

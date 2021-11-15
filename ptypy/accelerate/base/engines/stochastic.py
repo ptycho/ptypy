@@ -95,10 +95,6 @@ class _StochasticEngineSerial(_StochasticEngine):
             # TODO: needs to be adapted for broad bandwidth
             geo = scan.geometries[0]
 
-            # Get info to shape buffer arrays
-            # TODO: make this part of the engine rather than scan
-            fpc = self.ptycho.frames_per_block
-
             # TODO : make this more foolproof
             try:
                 nmodes = scan.p.coherence.num_probe_modes * \
@@ -107,7 +103,7 @@ class _StochasticEngineSerial(_StochasticEngine):
                 nmodes = 1
 
             # create buffer arrays
-            ash = (1 * nmodes,) + tuple(geo.shape)
+            ash = (nmodes,) + tuple(geo.shape)
             aux = np.zeros(ash, dtype=np.complex64)
             kern.aux = aux
 

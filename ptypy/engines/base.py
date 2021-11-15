@@ -20,6 +20,7 @@ __all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info', 'PositionCorr
 DEFAULT_iter_info = u.Param(
     iteration=0,
     iterations=0,
+    numiter=0,
     engine='None',
     duration=0.,
     error=np.zeros((3,))
@@ -262,6 +263,7 @@ class BaseEngine(object):
         info = dict(
             iteration=self.curiter,
             iterations=self.alliter,
+            numiter=self.numiter,
             engine=type(self).__name__,
             duration=time.time() - self.t,
             error=error

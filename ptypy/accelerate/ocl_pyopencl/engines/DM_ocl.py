@@ -91,8 +91,7 @@ class DM_ocl(DM_serial.DM_serial):
             geo = scan.geometries[0]
 
             # Get info to shape buffer arrays
-            # TODO: make this part of the engine rather than scan
-            fpc = self.ptycho.frames_per_block
+            fpc = scan.max_frames_per_block
 
             # TODO : make this more foolproof
             try:
