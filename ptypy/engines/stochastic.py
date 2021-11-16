@@ -15,7 +15,7 @@ from ..utils import parallel
 from .utils import projection_update_generalized, log_likelihood
 from .base import PositionCorrectionEngine
 from . import register
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, EPIEModel, BlockEPIEModel
 
 __all__ = ['EPIE', 'SDR']
 
@@ -26,7 +26,7 @@ class _StochasticEngine(PositionCorrectionEngine):
     Defaults:
 
     [probe_update_start]
-    default = 2
+    default = 0
     type = int
     lowlim = 0
     help = Number of iterations before probe update starts
@@ -37,11 +37,6 @@ class _StochasticEngine(PositionCorrectionEngine):
     lowlim = 0.0
     help = Pixel radius around optical axes that the probe mass center must reside in
 
-    [clip_object]
-    default = None
-    type = tuple
-    help = Clip object amplitude into this interval
-
     [compute_log_likelihood]
     default = True
     type = bool
@@ -49,7 +44,7 @@ class _StochasticEngine(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, EPIEModel, BlockEPIEModel]
 
     def __init__(self, ptycho_parent, pars=None):
         """

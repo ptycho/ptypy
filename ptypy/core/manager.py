@@ -158,6 +158,9 @@ class ScanModel(object):
         # For the BlockScanModel this is defined by the user (frames_per_block) and the MPI settings
         self.max_frames_per_block = 0
 
+        # By default we create a new exit buffer for each view
+        self.single_exit_buffer_for_all_views = False
+
     @classmethod
     def makePtyScan(cls, pars):
         """
@@ -944,7 +947,11 @@ class _Full(object):
         for i in range(len(self.new_diff_views)):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
 
-            index = dv.layer
+            # For stochastic engines (e.g. ePIE) we only need one exit buffer
+            if self.single_exit_buffer_for_all_views:
+                index = 0
+            else:
+                index = dv.layer
 
             # Object and probe position
             pos_pr = u.expect2(0.0)
@@ -1241,6 +1248,18 @@ class OPRModel(_OPRModel, Full):
 @defaults_tree.parse_doc('scan.BlockOPRModel')
 class BlockOPRModel(_OPRModel, BlockFull):
     pass
+
+@defaults_tree.parse_doc('scan.EPIEModel')
+class EPIEModel(Full):
+    def __init__(self, ptycho=None, pars=None, label=None):
+        super(EPIEModel, self).__init__(ptycho, pars, label)
+        self.single_exit_buffer_for_all_views = True
+
+@defaults_tree.parse_doc('scan.BlockEPIEModel')
+class BlockEPIEModel(BlockFull):
+    def __init__(self, ptycho=None, pars=None, label=None):
+        super(BlockEPIEModel, self).__init__(ptycho, pars, label)
+        self.single_exit_buffer_for_all_views = True
 
 # Append illumination and sample defaults
 defaults_tree['scan.Full'].add_child(illumination.illumination_desc)
