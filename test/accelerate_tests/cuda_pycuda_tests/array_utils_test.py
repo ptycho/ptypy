@@ -7,6 +7,7 @@ import unittest
 import numpy as np
 from . import perfrun, PyCudaTest, have_pycuda
 from ptypy.accelerate.base import array_utils as au
+from ptypy.utils import math_utils as mu
 
 if have_pycuda():
     from pycuda import gpuarray
@@ -415,7 +416,7 @@ class ArrayUtilsTest(PyCudaTest):
         mc = mc_d.get()
 
         np.testing.assert_allclose(out, mc, rtol=1e-6, atol=1e-6,
-            err_msg="The centre of mass of the array have not been calculated as expected")
+            err_msg="The centre of mass of the array has not been calculated as expected")
 
 
     def test_mass_center_3d_UNITY(self):
@@ -430,5 +431,35 @@ class ArrayUtilsTest(PyCudaTest):
         mc = mc_d.get()
 
         np.testing.assert_allclose(out, mc, rtol=1e-6, atol=1e-6,
-            err_msg="The centre of mass of the array have not been calculated as expected")
+            err_msg="The centre of mass of the array has not been calculated as expected")
+
+    def test_abs2sum_complex_float_UNITY(self):
+        np.random.seed(1987)
+        A = np.random.random((3, 321, 123)).astype(np.float32)
+        B = A + A**2 * 1j
+        B_gpu = gpuarray.to_gpu(B)
+
+        out = mu.abs2(B).sum(0)
+
+        A2SK = gau.Abs2SumKernel(dtype=B_gpu.dtype)
+        a2s_d = A2SK.abs2sum(B_gpu)
+        a2s = a2s_d.get()
+
+        np.testing.assert_allclose(out, a2s, rtol=1e-6, atol=1e-6,
+            err_msg="The sum of absolute values along the first dimension has not been calculated as expected")
+
+    def test_abs2sum_complex_double_UNITY(self):
+        np.random.seed(1987)
+        A = np.random.random((3, 321, 123)).astype(np.float64)
+        B = A + A**2 * 1j
+        B_gpu = gpuarray.to_gpu(B)
+
+        out = mu.abs2(B).sum(0)
+
+        A2SK = gau.Abs2SumKernel(dtype=B_gpu.dtype)
+        a2s_d = A2SK.abs2sum(B_gpu)
+        a2s = a2s_d.get()
+
+        np.testing.assert_allclose(out, a2s, rtol=1e-6, atol=1e-6,
+            err_msg="The sum of absolute values along the first dimension has not been calculated as expected")
 

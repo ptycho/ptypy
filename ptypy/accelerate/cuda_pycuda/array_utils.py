@@ -129,7 +129,7 @@ class MaxAbs2Kernel:
             step1, step2 = load_kernel(
                     ("max_abs2_step1", "max_abs2_step2"),
                     {
-                        'IN_TYPE': map2ctype(X.dtype),
+                       'IN_TYPE': map2ctype(X.dtype),
                         'OUT_TYPE': map2ctype(out.dtype),
                         'BDIM_X': bx,
                     }, "max_abs2.cu")
@@ -595,6 +595,44 @@ class MassCenterKernel:
                 grid=grid_,
                 stream=self.queue,
                 shared=256*4)
+
+        return out
+
+class Abs2SumKernel:
+
+    def __init__(self, dtype, queue=None):
+        self.in_stype = map2ctype(dtype)
+        if self.in_stype == 'complex<float>':
+            self.out_stype = 'float'
+            self.out_dtype = np.float32
+        elif self.in_stype == 'copmlex<double>':
+            self.out_stype = 'double'
+            self.out_dtype = np.float64
+        else:
+            self.out_stype = self.in_stype
+            self.out_dtype = dtype
+
+        self.queue = queue
+        self.threadsPerBlock = 32
+
+        self.abs2sum_cuda = load_kernel("abs2sum", subs={
+                    'IN_TYPE': self.in_stype,
+                    'OUT_TYPE' : self.out_stype,
+                    'BDIM_X' : 32,
+                    }
+                )
+
+    def abs2sum(self, array):
+        nmodes = np.int32(array.shape[0])
+        row, col = array.shape[1:]
+        out = gpuarray.empty(array.shape[1:], dtype=self.out_dtype)
+
+        block_ = (32, 1, 1)
+        grid_ = (1, row, 1)
+        self.abs2sum_cuda(array, nmodes, np.int32(row), np.int32(col), out,
+                block=block_,
+                grid=grid_,
+                stream=self.queue)
 
         return out
 
