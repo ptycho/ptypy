@@ -636,3 +636,68 @@ class Abs2SumKernel:
 
         return out
 
+class InterpolatedShiftKernel:
+
+    def __init__(self, queue=None):
+        self.queue = queue
+
+        self.integer_shift_cuda = load_kernel("integer_shift_kernel",
+                file="interpolated_shift.cu", subs={
+                    'IN_TYPE': 'complex<float>',
+                    'OUT_TYPE': 'complex<float>',
+                    'BDIM_X' : 32,
+                    'BDIM_Y' : 32,
+                    }
+                )
+
+        self.linear_interpolate_cuda = load_kernel("linear_interpolate_kernel",
+                file="interpolated_shift.cu", subs={
+                    'IN_TYPE': 'complex<float>',
+                    'OUT_TYPE': 'complex<float>',
+                    'BDIM_X' : 32,
+                    'BDIM_Y' : 32,
+                    }
+                )
+
+    def interpolate_shift(self, array, shift):
+        if array.ndim == 3:
+            items, rows, columns = array.shape
+        else:
+            items, rows, columns = 1, *array.shape
+
+        offsetRow, offsetCol = shift
+
+        offsetRowFrac, offsetRowInt = np.modf(offsetRow)
+        offsetColFrac, offsetColInt = np.modf(offsetCol)
+
+        out = gpuarray.empty_like(array)
+        block_ = (32, 32, 1)
+        #grid_ = ((rows + 31) // 32, (columns + 31) // 32, items)
+        grid_ = (int((rows + 31) / 32), int((columns + 31) / 32), items)
+
+        if np.abs(offsetRowFrac) < 1e-6 and np.abs(offsetColFrac) < 1e-6:
+            if offsetRowInt == 0 and offsetColInt == 0:
+                # no transformation at all
+                out = array
+            else:
+                # no fractional part, so we can just use a shifted copy
+                self.integer_shift_cuda(array, out, np.int32(rows),
+                        np.int32(columns), np.int32(offsetRow),
+                        np.int32(offsetCol),
+                        block=block_,
+                        grid=grid_,
+                        stream=self.queue)
+        else:
+            self.linear_interpolate_cuda(array, out, np.int32(rows),
+                    np.int32(columns), np.float32(offsetRow),
+                    np.float32(offsetCol),
+                    block=block_,
+                    grid=grid_,
+                    shared=(32+2)**2*8+32*(32+2)*8,
+                    stream=self.queue)
+
+        return out
+
+
+
+
