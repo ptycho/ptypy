@@ -166,6 +166,54 @@ extern "C" __global__ void linear_interpolate_kernel(const IN_TYPE* in,
       ascomplex(shr[tx + 1][BDIM_Y + 1]) = complex<float>();
     }
   }
+  // read top-left Halo
+  if ((tx == 0) && (ty == 0))
+  {
+    if (gx_old - 1 >= 0 && gx_old - 1 < rows && gy_old - 1 >= 0 && gy_old - 1 < columns)
+    {
+      ascomplex(shr[0][0]) = in[(gx_old - 1) * columns + gy_old - 1];
+    }
+    else
+    {
+      ascomplex(shr[0][0]) = complex<float>();
+    }
+  }
+  // read bottom-right Halo
+  if ((tx == BDIM_X - 1) && (ty == BDIM_Y - 1))
+  {
+    if (gx_old + 1 >= 0 && gx_old + 1 < rows && gy_old + 1 >= 0 && gy_old + 1 < columns)
+    {
+      ascomplex(shr[BDIM_X + 1][BDIM_Y + 1]) = in[(gx_old + 1) * columns + gy_old + 1];
+    }
+    else
+    {
+      ascomplex(shr[BDIM_X + 1][BDIM_Y + 1]) = complex<float>();
+    }
+  }
+  // read bottom-left Halo
+  if ((ty == 0) && (tx == BDIM_X - 1))
+  {
+    if (gx_old + 1 >= 0 && gx_old + 1 < rows && gy_old - 1 >= 0 && gy_old - 1 < columns)
+    {
+      ascomplex(shr[BDIM_X + 1][0]) = in[(gx_old + 1) * columns + gy_old - 1];
+    }
+    else
+    {
+      ascomplex(shr[BDIM_X + 1][0]) = complex<float>();
+    }
+  }
+  // read top-right Halo
+  if ((ty == BDIM_Y - 1) && (tx == 0))
+  {
+    if (gx_old - 1 >= 0 && gx_old - 1 < rows && gy_old + 1 >= 0 && gy_old + 1 < columns)
+    {
+      ascomplex(shr[0][BDIM_Y + 1]) = in[(gx_old - 1) * columns + gy_old + 1];
+    }
+    else
+    {
+      ascomplex(shr[0][BDIM_Y + 1]) = complex<float>();
+    }
+  }
   // read the rest
   if (gx_old >= 0 && gx_old < rows && gy_old >= 0 && gy_old < columns)
   {
@@ -190,8 +238,6 @@ extern "C" __global__ void linear_interpolate_kernel(const IN_TYPE* in,
     ascomplex(shry[tx][0]) = wx[0] * ascomplex(shr[tx][0]) +
                              wx[1] * ascomplex(shr[tx + 1][0]) +
                              wx[2] * ascomplex(shr[tx + 2][0]);
-        //printf("tx: %d\n", tx);
-        //printf("ty: %d\n", ty);
   }
   if (ty == BDIM_Y - 1)
   {
@@ -228,16 +274,6 @@ extern "C" __global__ void linear_interpolate_kernel(const IN_TYPE* in,
   }
   else
   {
-    if ((gx*columns + gy) == 32*64) {
-        printf("gx: %d\n", gx);
-        printf("gy: %d\n", gy);
-        printf("tx: %d\n", tx);
-        printf("ty: %d\n", ty);
-        printf("bx: %d\n", bx);
-        printf("by: %d\n", by);
-        printf("intv: %f\n", complex<float>::real(intv));
-    }
-
     out[gx * columns + gy] = intv;
   }
 }
