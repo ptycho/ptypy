@@ -641,16 +641,8 @@ class InterpolatedShiftKernel:
     def __init__(self, queue=None):
         self.queue = queue
 
-        self.integer_shift_cuda = load_kernel("integer_shift_kernel",
-                file="interpolated_shift.cu", subs={
-                    'IN_TYPE': 'complex<float>',
-                    'OUT_TYPE': 'complex<float>',
-                    'BDIM_X' : 32,
-                    'BDIM_Y' : 32,
-                    }
-                )
-
-        self.linear_interpolate_cuda = load_kernel("linear_interpolate_kernel",
+        self.integer_shift_cuda, self.linear_interpolate_cuda = load_kernel(
+                ("integer_shift_kernel", "linear_interpolate_kernel"),
                 file="interpolated_shift.cu", subs={
                     'IN_TYPE': 'complex<float>',
                     'OUT_TYPE': 'complex<float>',
@@ -660,10 +652,17 @@ class InterpolatedShiftKernel:
                 )
 
     def interpolate_shift(self, array, shift):
+        shift = np.asarray(shift, dtype=np.float32)
+        if len(shift) != 2:
+            raise NotImplementedError("Shift only applied to 2D array.")
+        if array.dtype != np.complex64:
+            raise NotImplementedError("Only complex single precision supported")
         if array.ndim == 3:
             items, rows, columns = array.shape
-        else:
+        elif array.ndim == 2:
             items, rows, columns = 1, *array.shape
+        else:
+            raise NotImplementedError("Only 2- or 3-dimensional arrays supported")
 
         offsetRow, offsetCol = shift
 
@@ -672,8 +671,7 @@ class InterpolatedShiftKernel:
 
         out = gpuarray.empty_like(array)
         block_ = (32, 32, 1)
-        #grid_ = ((rows + 31) // 32, (columns + 31) // 32, items)
-        grid_ = (int((rows + 31) / 32), int((columns + 31) / 32), items)
+        grid_ = ((rows + 31) // 32, (columns + 31) // 32, items)
 
         if np.abs(offsetRowFrac) < 1e-6 and np.abs(offsetColFrac) < 1e-6:
             if offsetRowInt == 0 and offsetColInt == 0:
@@ -697,7 +695,4 @@ class InterpolatedShiftKernel:
                     stream=self.queue)
 
         return out
-
-
-
 

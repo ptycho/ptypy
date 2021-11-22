@@ -7,7 +7,6 @@ import unittest
 import numpy as np
 from . import perfrun, PyCudaTest, have_pycuda
 from ptypy.accelerate.base import array_utils as au
-from ptypy.utils import math_utils as mu
 
 if have_pycuda():
     from pycuda import gpuarray
@@ -439,7 +438,7 @@ class ArrayUtilsTest(PyCudaTest):
         B = A + A**2 * 1j
         B_gpu = gpuarray.to_gpu(B)
 
-        out = mu.abs2(B).sum(0)
+        out = au.abs2(B).sum(0)
 
         A2SK = gau.Abs2SumKernel(dtype=B_gpu.dtype)
         a2s_d = A2SK.abs2sum(B_gpu)
@@ -454,7 +453,7 @@ class ArrayUtilsTest(PyCudaTest):
         B = A + A**2 * 1j
         B_gpu = gpuarray.to_gpu(B)
 
-        out = mu.abs2(B).sum(0)
+        out = au.abs2(B).sum(0)
 
         A2SK = gau.Abs2SumKernel(dtype=B_gpu.dtype)
         a2s_d = A2SK.abs2sum(B_gpu)
@@ -463,34 +462,79 @@ class ArrayUtilsTest(PyCudaTest):
         np.testing.assert_allclose(out, a2s, rtol=1e-6, atol=1e-6,
             err_msg="The sum of absolute values along the first dimension has not been calculated as expected")
 
-    def test_interpolate_shift_UNITY(self):
+    def test_interpolate_shift_2D_UNITY(self):
         np.random.seed(1987)
-        A = np.random.random((256, 256)).astype(np.float32)
+        A = np.random.random((259, 252)).astype(np.float32)
         A = A + A**2 * 1j
         A_gpu = gpuarray.to_gpu(A)
 
-        # cen_old = np.array([100.123, 150.678])
-        # cen_new = np.array([128.5, 127.5])
-        cen_old = np.array([100, 100]).astype(np.float32)
-        cen_new = np.array([105.123, 150.983]).astype(np.float32)
-        # cen_new = np.array([100-5.123, 100-50.983]).astype(np.float32)
+        cen_old = np.array([100.123, 5.678]).astype(np.float32)
+        cen_new = np.array([128.5, 127.5]).astype(np.float32)
         shift = cen_new - cen_old
 
         out = au.interpolated_shift(A, shift, do_linear=True)
-        #out_z = aau.shift_zoom(A, (1,1), cen_old, cen_new)
 
         ISK = gau.InterpolatedShiftKernel()
         isk_d = ISK.interpolate_shift(A_gpu, shift)
         isk = isk_d.get()
 
-        idx = np.argwhere(~np.isclose(out, isk))
-        for i in idx:
-            print(i, out[i[0], i[1]], isk[i[0], i[1]])
+        np.testing.assert_allclose(out, isk, rtol=1e-6, atol=1e-6,
+            err_msg="The shifting of array has not been calculated as expected")
 
-        # print(out[96,64])
-        # print(isk[96,64])
+    def test_interpolate_shift_3D_UNITY(self):
+        np.random.seed(1987)
+        A = np.random.random((3, 200, 300)).astype(np.float32)
+        A = A + A**2 * 1j
+        A_gpu = gpuarray.to_gpu(A)
 
+        cen_old = np.array([0., 180.123, 5.678]).astype(np.float32)
+        cen_new = np.array([0., 128.5, 127.5]).astype(np.float32)
+        shift = cen_new - cen_old
 
+        out = au.interpolated_shift(A, shift, do_linear=True)
+
+        ISK = gau.InterpolatedShiftKernel()
+        isk_d = ISK.interpolate_shift(A_gpu, shift[1:])
+        isk = isk_d.get()
 
         np.testing.assert_allclose(out, isk, rtol=1e-6, atol=1e-6,
             err_msg="The shifting of array has not been calculated as expected")
+
+    def test_interpolate_shift_integer_UNITY(self):
+        np.random.seed(1987)
+        A = np.random.random((3, 200, 300)).astype(np.float32)
+        A = A + A**2 * 1j
+        A_gpu = gpuarray.to_gpu(A)
+
+        cen_old = np.array([0, 180, 5]).astype(np.float32)
+        cen_new = np.array([0, 128, 127]).astype(np.float32)
+        shift = cen_new - cen_old
+
+        out = au.interpolated_shift(A, shift, do_linear=True)
+
+        ISK = gau.InterpolatedShiftKernel()
+        isk_d = ISK.interpolate_shift(A_gpu, shift[1:])
+        isk = isk_d.get()
+
+        np.testing.assert_allclose(out, isk, rtol=1e-6, atol=1e-6,
+            err_msg="The shifting of array has not been calculated as expected")
+
+    def test_interpolate_shift_no_shift_UNITY(self):
+        np.random.seed(1987)
+        A = np.random.random((3, 200, 300)).astype(np.float32)
+        A = A + A**2 * 1j
+        A_gpu = gpuarray.to_gpu(A)
+
+        cen_old = np.array([0, 0, 0]).astype(np.float32)
+        cen_new = np.array([0, 0, 0]).astype(np.float32)
+        shift = cen_new - cen_old
+
+        out = au.interpolated_shift(A, shift, do_linear=True)
+
+        ISK = gau.InterpolatedShiftKernel()
+        isk_d = ISK.interpolate_shift(A_gpu, shift[1:])
+        isk = isk_d.get()
+
+        np.testing.assert_allclose(out, isk, rtol=1e-6, atol=1e-6,
+            err_msg="The shifting of array has not been calculated as expected")
+
