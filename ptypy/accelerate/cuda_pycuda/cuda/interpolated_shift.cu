@@ -249,7 +249,7 @@ extern "C" __global__ void linear_interpolate_kernel(const IN_TYPE* in,
 
   __syncthreads();
 
-  if (gx >= columns || gy >= rows)
+  if (gx >= rows || gy >= columns)
   {
     return;
   }
