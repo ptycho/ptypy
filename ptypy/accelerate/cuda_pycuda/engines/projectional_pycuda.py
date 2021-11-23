@@ -22,7 +22,9 @@ from ptypy.accelerate.base.engines import projectional_serial
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
-from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel, ClipMagnitudesKernel
+from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel,\
+TransposeKernel, ClipMagnitudesKernel, MassCenterKernel, Abs2SumKernel,\
+InterpolatedShiftKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..multi_gpu import get_multi_gpu_communicator
 
@@ -80,6 +82,15 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
 
         # Clip Magnitudes Kernel
         self.CMK = ClipMagnitudesKernel(queue=self.queue)
+
+        # initialise kernels for centring probe if required
+        if self.p.probe_center_tol is not None:
+            # mass center kernel
+            self.MCK = MassCenterKernel(queue=self.queue)
+            # absolute sum kernel
+            self.A2SK = Abs2SumKernel(dtype=self.pr.dtype, queue=self.queue)
+            # interpolated shift kernel
+            self.ISK = InterpolatedShiftKernel(queue=self.queue)
 
         super().engine_initialize()
 
@@ -224,7 +235,7 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
                 ob = self.ob.S[oID].gpu
                 pr = self.pr.S[pID].gpu
                 ex = self.ex.S[eID].gpu
-                
+
                 ## compute log-likelihood
                 if self.p.compute_log_likelihood:
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
@@ -282,7 +293,7 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
         return error
 
     def position_update(self):
-        """ 
+        """
         Position refinement
         """
         if not self.do_position_refinement or (not self.curiter):
@@ -322,7 +333,7 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
                 max_oby = ob.shape[-2] - aux.shape[-2] - 1
                 max_obx = ob.shape[-1] - aux.shape[-1] - 1
 
-                # We need to re-calculate the current error 
+                # We need to re-calculate the current error
                 PCK.build_aux(aux, addr, ob, pr)
                 PROP.fw(aux, aux)
                 if self.p.position_refinement.metric == "fourier":
@@ -335,7 +346,7 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
                                     size=err_fourier.nbytes)
 
                 PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
-                                
+
                 log(4, 'Position refinement trial: iteration %s' % (self.curiter))
                 for i in range(PCK.mangler.nshifts):
                     PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
@@ -347,7 +358,7 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
                     if self.p.position_refinement.metric == "photon":
                         PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
                     PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
-                
+
                 cuda.memcpy_dtod(dest=err_fourier.ptr,
                                     src=error_state.ptr,
                                     size=err_fourier.nbytes)
@@ -355,6 +366,33 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
                     s1 = addr.shape[0] * addr.shape[1]
                     s2 = addr.shape[2] * addr.shape[3]
                     TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+
+
+    def center_probe(self):
+        if self.p.probe_center_tol is not None:
+            for name, pr_s in self.pr.storages.items():
+                psum_d = self.A2SK.abs2sum(pr_s.gpu)
+                c1 = self.MCK.mass_center(psum_d).get()
+                c2 = (np.asarray(pr_s.shape[-2:]) // 2).astype(c1.dtype)
+
+                shift = c2 - c1
+                # exit if the current center of mass is within the tolerance
+                if u.norm(shift) < self.p.probe_center_tol:
+                    break
+
+                # shift the probe
+                pr_s.gpu = self.ISK.interpolate_shift(pr_s.gpu, shift)
+
+                # shift the object
+                ob_s = self.ob.storages[name]
+                ob_s.gpu = self.ISK.interpolate_shift(ob_s.gpu, shift)
+
+                # shift the exit waves
+                for ex_s in self.ex.storages.values():
+                    ex_s.gpu = self.ISK.interpolate_shift(ex_s.gpu, shift)
+
+                log(4,'Probe recentered from %s to %s'
+                            % (str(tuple(c1)), str(tuple(c2))))
 
 
     ## object update
@@ -509,7 +547,7 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
         for dID, prep in self.diff_info.items():
             prep.addr = prep.addr_gpu.get()
 
-        # copy data to cpu 
+        # copy data to cpu
         # this kills the pagelock memory (otherwise we get segfaults in h5py)
         for name, s in self.pr.S.items():
             s.data = np.copy(s.data)
