@@ -1249,16 +1249,16 @@ class OPRModel(_OPRModel, Full):
 class BlockOPRModel(_OPRModel, BlockFull):
     pass
 
-@defaults_tree.parse_doc('scan.EPIEModel')
-class EPIEModel(Full):
+@defaults_tree.parse_doc('scan.GradFull')
+class GradFull(Full):
     def __init__(self, ptycho=None, pars=None, label=None):
-        super(EPIEModel, self).__init__(ptycho, pars, label)
+        super(GradFull, self).__init__(ptycho, pars, label)
         self.single_exit_buffer_for_all_views = True
 
-@defaults_tree.parse_doc('scan.BlockEPIEModel')
-class BlockEPIEModel(BlockFull):
+@defaults_tree.parse_doc('scan.BlockGradFull')
+class BlockGradFull(BlockFull):
     def __init__(self, ptycho=None, pars=None, label=None):
-        super(BlockEPIEModel, self).__init__(ptycho, pars, label)
+        super(BlockGradFull, self).__init__(ptycho, pars, label)
         self.single_exit_buffer_for_all_views = True
 
 # Append illumination and sample defaults

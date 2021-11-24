@@ -15,7 +15,7 @@ from ..utils import parallel
 from .utils import projection_update_generalized, log_likelihood
 from .base import PositionCorrectionEngine
 from . import register
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, EPIEModel, BlockEPIEModel
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull
 
 __all__ = ['EPIE', 'SDR']
 
@@ -44,7 +44,7 @@ class _StochasticEngine(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, EPIEModel, BlockEPIEModel]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
 
     def __init__(self, ptycho_parent, pars=None):
         """

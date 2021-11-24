@@ -91,6 +91,7 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
         for label, scan in self.ptycho.model.scans.items():
 
             kern = u.Param()
+            kern.scanmodel = type(scan).__name__
             self.kernels[label] = kern
             # TODO: needs to be adapted for broad bandwidth
             geo = scan.geometries[0]
