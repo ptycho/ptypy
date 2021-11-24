@@ -44,8 +44,6 @@ class _StochasticEngine(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
-
     def __init__(self, ptycho_parent, pars=None):
         """
         Stochastic Douglas-Rachford reconstruction engine.
@@ -421,6 +419,8 @@ class EPIE(_StochasticEngine, EPIEMixin):
 
     """
 
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
+
     def __init__(self, ptycho_parent, pars=None):
         _StochasticEngine.__init__(self, ptycho_parent, pars)
         EPIEMixin.__init__(self, self.p.alpha, self.p.beta)
@@ -441,6 +441,8 @@ class SDR(_StochasticEngine, SDRMixin):
     doc =
 
     """
+
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
 
     def __init__(self, ptycho_parent, pars=None):
         _StochasticEngine.__init__(self, ptycho_parent, pars)
