@@ -475,7 +475,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
 
 
 @register(name="DM_pycuda")
-class DM_pycuda(_ProjectionEngine_pycuda_stream, DMMixin):
+class DM_pycuda_stream(_ProjectionEngine_pycuda_stream, DMMixin):
     """
     A full-fledged Difference Map engine accelerated with pycuda.
 
@@ -496,7 +496,7 @@ class DM_pycuda(_ProjectionEngine_pycuda_stream, DMMixin):
 
 
 @register(name="RAAR_pycuda")
-class RAAR_pycuda(_ProjectionEngine_pycuda_stream, RAARMixin):
+class RAAR_pycuda_stream(_ProjectionEngine_pycuda_stream, RAARMixin):
     """
     A RAAR engine in accelerated with pycuda.
 

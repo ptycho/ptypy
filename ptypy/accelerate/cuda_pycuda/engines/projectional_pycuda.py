@@ -515,7 +515,7 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
         super().engine_finalize(benchmark)
 
 
-@register("DM_pycuda_nostream")
+@register(name="DM_pycuda_nostream")
 class DM_pycuda(_ProjectionEngine_pycuda, DMMixin):
     """
     A full-fledged Difference Map engine accelerated with pycuda.
