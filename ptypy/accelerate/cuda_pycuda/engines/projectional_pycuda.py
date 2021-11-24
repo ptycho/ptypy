@@ -28,7 +28,7 @@ from ..multi_gpu import get_multi_gpu_communicator
 
 __all__ = ['DM_pycuda_nostream', 'RAAR_pycuda_nostream']
 
-class _ProjectionEngine_pycuda_nostream(projectional_serial._ProjectionEngine_serial):
+class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
 
     """
     Defaults:
@@ -515,8 +515,8 @@ class _ProjectionEngine_pycuda_nostream(projectional_serial._ProjectionEngine_se
         super().engine_finalize(benchmark)
 
 
-@register()
-class DM_pycuda_nostream(_ProjectionEngine_pycuda_nostream, DMMixin):
+@register("DM_pycuda_nostream")
+class DM_pycuda(_ProjectionEngine_pycuda, DMMixin):
     """
     A full-fledged Difference Map engine accelerated with pycuda.
 
@@ -531,13 +531,13 @@ class DM_pycuda_nostream(_ProjectionEngine_pycuda_nostream, DMMixin):
     """
 
     def __init__(self, ptycho_parent, pars=None):
-        _ProjectionEngine_pycuda_nostream.__init__(self, ptycho_parent, pars)
+        _ProjectionEngine_pycuda.__init__(self, ptycho_parent, pars)
         DMMixin.__init__(self, self.p.alpha)
         ptycho_parent.citations.add_article(**self.article)
 
 
-@register()
-class RAAR_pycuda_nostream(_ProjectionEngine_pycuda_nostream, RAARMixin):
+@register(name="RAAR_pycuda_nostream")
+class RAAR_pycuda(_ProjectionEngine_pycuda, RAARMixin):
     """
     A RAAR engine in accelerated with pycuda.
 
@@ -552,6 +552,5 @@ class RAAR_pycuda_nostream(_ProjectionEngine_pycuda_nostream, RAARMixin):
     """
 
     def __init__(self, ptycho_parent, pars=None):
-
-        _ProjectionEngine_pycuda_nostream.__init__(self, ptycho_parent, pars)
+        _ProjectionEngine_pycuda.__init__(self, ptycho_parent, pars)
         RAARMixin.__init__(self, self.p.beta)
