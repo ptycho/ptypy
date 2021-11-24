@@ -68,6 +68,7 @@ class ML_serial(ML):
         for label, scan in self.ptycho.model.scans.items():
 
             kern = u.Param()
+            kern.scanmodel = type(scan).__name__
             self.kernels[label] = kern
 
             # TODO: needs to be adapted for broad bandwidth
@@ -126,6 +127,13 @@ class ML_serial(ML):
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
             prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
+            # Re-create exit addresses when gradient models (single exit buffer per view) are used
+            # TODO: this should not be necessary, kernels should not use exit wave information
+            if self.kernels[prep.label].scanmodel in ("GradFull", "BlockGradFull"):
+                for i,addr in enumerate(prep.addr):
+                    nmodes = len(addr[:,2,0])
+                    for j,ea in enumerate(addr[:,2,0]):
+                        prep.addr[i,j,2,0] = i*nmodes+j
             prep.I = d.data
             if self.do_position_refinement:
                 prep.original_addr = np.zeros_like(prep.addr)

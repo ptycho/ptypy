@@ -15,7 +15,7 @@ from ..utils import parallel
 from .utils import projection_update_generalized, log_likelihood
 from .base import PositionCorrectionEngine
 from . import register
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull
 
 __all__ = ['EPIE', 'SDR']
 
@@ -26,7 +26,7 @@ class _StochasticEngine(PositionCorrectionEngine):
     Defaults:
 
     [probe_update_start]
-    default = 2
+    default = 0
     type = int
     lowlim = 0
     help = Number of iterations before probe update starts
@@ -37,19 +37,12 @@ class _StochasticEngine(PositionCorrectionEngine):
     lowlim = 0.0
     help = Pixel radius around optical axes that the probe mass center must reside in
 
-    [clip_object]
-    default = None
-    type = tuple
-    help = Clip object amplitude into this interval
-
     [compute_log_likelihood]
     default = True
     type = bool
     help = A switch for computing the log-likelihood error (this can impact the performance of the engine)
 
     """
-
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -284,6 +277,8 @@ class EPIEMixin:
     help = Calculate the object norm based on the global object instead of the local object
 
     """
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
+
     def __init__(self, alpha, beta):
         # EPIE adjustment parameters
         self._a = 0
@@ -351,6 +346,8 @@ class SDRMixin:
     help = Parameter for adjusting the step size of the object update
 
     """
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
+
     def __init__(self, sigma, tau, beta_probe, beta_object):
         # SDR Adjustment parameters
         self._sigma = sigma
@@ -425,7 +422,6 @@ class EPIE(_StochasticEngine, EPIEMixin):
     doc =
 
     """
-
     def __init__(self, ptycho_parent, pars=None):
         _StochasticEngine.__init__(self, ptycho_parent, pars)
         EPIEMixin.__init__(self, self.p.alpha, self.p.beta)
@@ -446,7 +442,6 @@ class SDR(_StochasticEngine, SDRMixin):
     doc =
 
     """
-
     def __init__(self, ptycho_parent, pars=None):
         _StochasticEngine.__init__(self, ptycho_parent, pars)
         SDRMixin.__init__(self, self.p.sigma, self.p.tau, self.p.beta_probe, self.p.beta_object)

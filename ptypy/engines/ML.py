@@ -20,7 +20,7 @@ from ..utils import parallel
 from .utils import Cnorm2, Cdot
 from . import register
 from .base import BaseEngine, PositionCorrectionEngine
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull
 
 
 __all__ = ['ML']
@@ -102,7 +102,7 @@ class ML(PositionCorrectionEngine):
     
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
 
     def __init__(self, ptycho_parent, pars=None):
         """

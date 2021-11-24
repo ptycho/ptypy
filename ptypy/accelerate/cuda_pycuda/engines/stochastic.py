@@ -80,6 +80,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         for label, scan in self.ptycho.model.scans.items():
 
             kern = u.Param()
+            kern.scanmodel = type(scan).__name__
             self.kernels[label] = kern
             # TODO: needs to be adapted for broad bandwidth
             geo = scan.geometries[0]
@@ -135,7 +136,10 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         ex_mem = 0
         mag_mem = 0
         for scan, kern in self.kernels.items():
-            ex_mem = max(kern.aux.nbytes * fpc, ex_mem)
+            if kern.scanmodel in ("GradFull", "BlockGradFull"):
+                ex_mem = max(kern.aux.nbytes * 1, ex_mem)
+            else:
+                ex_mem = max(kern.aux.nbytes * fpc, ex_mem)
             mag_mem = max(kern.FUK.gpu.fdev.nbytes * fpc, mag_mem)
         ma_mem = mag_mem
         mem = cuda.mem_get_info()[0]

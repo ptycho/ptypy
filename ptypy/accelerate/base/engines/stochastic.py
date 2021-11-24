@@ -90,6 +90,7 @@ class _StochasticEngineSerial(_StochasticEngine):
         for label, scan in self.ptycho.model.scans.items():
 
             kern = u.Param()
+            kern.scanmodel = type(scan).__name__
             self.kernels[label] = kern
 
             # TODO: needs to be adapted for broad bandwidth
