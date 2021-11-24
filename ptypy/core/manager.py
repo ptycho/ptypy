@@ -159,7 +159,7 @@ class ScanModel(object):
         self.max_frames_per_block = 0
 
         # By default we create a new exit buffer for each view
-        self.single_exit_buffer_for_all_views = False
+        self._single_exit_buffer_for_all_views = False
 
     @classmethod
     def makePtyScan(cls, pars):
@@ -948,7 +948,7 @@ class _Full(object):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
 
             # For stochastic engines (e.g. ePIE) we only need one exit buffer
-            if self.single_exit_buffer_for_all_views:
+            if self._single_exit_buffer_for_all_views:
                 index = 0
             else:
                 index = dv.layer
@@ -1253,13 +1253,13 @@ class BlockOPRModel(_OPRModel, BlockFull):
 class GradFull(Full):
     def __init__(self, ptycho=None, pars=None, label=None):
         super(GradFull, self).__init__(ptycho, pars, label)
-        self.single_exit_buffer_for_all_views = True
+        self._single_exit_buffer_for_all_views = True
 
 @defaults_tree.parse_doc('scan.BlockGradFull')
 class BlockGradFull(BlockFull):
     def __init__(self, ptycho=None, pars=None, label=None):
         super(BlockGradFull, self).__init__(ptycho, pars, label)
-        self.single_exit_buffer_for_all_views = True
+        self._single_exit_buffer_for_all_views = True
 
 # Append illumination and sample defaults
 defaults_tree['scan.Full'].add_child(illumination.illumination_desc)
