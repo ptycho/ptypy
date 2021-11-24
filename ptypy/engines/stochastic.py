@@ -277,6 +277,8 @@ class EPIEMixin:
     help = Calculate the object norm based on the global object instead of the local object
 
     """
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
+
     def __init__(self, alpha, beta):
         # EPIE adjustment parameters
         self._a = 0
@@ -344,6 +346,8 @@ class SDRMixin:
     help = Parameter for adjusting the step size of the object update
 
     """
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
+
     def __init__(self, sigma, tau, beta_probe, beta_object):
         # SDR Adjustment parameters
         self._sigma = sigma
@@ -418,9 +422,6 @@ class EPIE(_StochasticEngine, EPIEMixin):
     doc =
 
     """
-
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
-
     def __init__(self, ptycho_parent, pars=None):
         _StochasticEngine.__init__(self, ptycho_parent, pars)
         EPIEMixin.__init__(self, self.p.alpha, self.p.beta)
@@ -441,9 +442,6 @@ class SDR(_StochasticEngine, SDRMixin):
     doc =
 
     """
-
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
-
     def __init__(self, ptycho_parent, pars=None):
         _StochasticEngine.__init__(self, ptycho_parent, pars)
         SDRMixin.__init__(self, self.p.sigma, self.p.tau, self.p.beta_probe, self.p.beta_object)
