@@ -26,7 +26,7 @@ from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKe
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..multi_gpu import get_multi_gpu_communicator
 
-__all__ = ['DM_pycuda_nostream', 'RAAR_pycuda_nostream']
+__all__ = ['DM_pycuda', 'RAAR_pycuda']
 
 class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
 

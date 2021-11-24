@@ -33,7 +33,7 @@ EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
 #MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
 
-__all__ = ['DM_pycuda', 'RAAR_pycuda']
+__all__ = ['DM_pycuda_stream', 'RAAR_pycuda_stream']
 
 
 class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycuda):
