@@ -139,6 +139,17 @@ class BaseEngine(object):
         self._probe_fourier_support = {}
         # Call engine specific initialization
         # TODO: Maybe child classes should be calling this?
+
+        # # Make sure all the pods are supported
+        # for label_, pod_ in self.pods.items():
+        #     if not pod_.model.__class__ in self.SUPPORTED_MODELS:
+        #         raise Exception('Model %s not supported by engine' % pod_.model.__class__)
+
+        # Make sure all scan models are supported
+        for model in self.ptycho.model.scans.values():
+            if not model.__class__ in self.SUPPORTED_MODELS:
+                raise Exception('Model %s not supported by engine %s' % (model.__class__,self.p.name))
+
         self.engine_initialize()
 
     def prepare(self):
@@ -146,11 +157,6 @@ class BaseEngine(object):
         Last-minute preparation before iterating.
         """
         self.finished = False
-
-        # Make sure all the pods are supported
-        for label_, pod_ in self.pods.items():
-            if not pod_.model.__class__ in self.SUPPORTED_MODELS:
-                raise Exception('Model %s not supported by engine' % pod_.model.__class__)
 
         # Calculate probe support
         # an individual support for each storage is calculated in saved
