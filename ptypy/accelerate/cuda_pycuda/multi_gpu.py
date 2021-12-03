@@ -27,7 +27,6 @@ Note that this is before any allreduce call - straight after initialising.
 
 """
 
-import mpi4py
 from pkg_resources import parse_version
 import numpy as np
 from pycuda import gpuarray
@@ -41,6 +40,11 @@ try:
     import cupy as cp
 except ImportError:
     nccl = None
+
+try:
+    import mpi4py
+except ImportError:
+    mpi4py = None
 
 # properties to check which versions are available
 
@@ -58,7 +62,8 @@ have_nccl = (nccl is not None) and \
 # and not setting the PTYPY_USE_MPI environment variable
 #
 # -> we ideally want to allow enabling support from a parameter in ptypy
-have_cuda_mpi = "OMPI_MCA_opal_cuda_support" in os.environ and \
+have_cuda_mpi = (mpi4py is not None) and \
+    "OMPI_MCA_opal_cuda_support" in os.environ and \
     os.environ["OMPI_MCA_opal_cuda_support"] == "true" and \
     parse_version(parse_version(mpi4py.__version__).base_version) >= parse_version("3.1.0") and \
     hasattr(gpuarray.GPUArray, '__cuda_array_interface__') and \
