@@ -481,10 +481,10 @@ class EPIEParallel(BaseEngine):
                 ob_s.data[:] = u.shift_zoom(ob_s.data, (1.,)*3,
                         (0, c1[0], c1[1]), (0, c2[0], c2[1]))
 
-                # shift the exit waves
-                for ex_s in self.ex.storages.values():
-                    ex_s.data[:] = u.shift_zoom(ex_s.data, (1.,)*3,
-                            (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+                # shift the exit waves, loop through different exit wave views
+                for pv in pr_s.views:
+                    pv.pod.exit = u.shift_zoom(pv.pod.exit, (1.,)*2,
+                            (c1[0], c1[1]), (c2[0], c2[1]))
 
                 logger.info('Probe recentered from %s to %s' %
                             (str(tuple(c1)), str(tuple(c2))))
