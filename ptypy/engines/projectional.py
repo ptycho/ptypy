@@ -201,6 +201,9 @@ class _ProjectionEngine(PositionCorrectionEngine):
             # Overlap update
             self.overlap_update()
 
+            # Recenter the probe
+            self.center_probe()
+
             t3 = time.time()
             to += t3 - t2
 
@@ -304,9 +307,6 @@ class _ProjectionEngine(PositionCorrectionEngine):
             log(4, pre_str + '----- probe update -----')
             change = self.probe_update()
             log(4, pre_str + 'change in probe is %.3f' % change)
-
-            # Recenter the probe
-            self.center_probe()
 
             # Stop iteration if probe change is small
             if change < self.p.overlap_converge_factor:

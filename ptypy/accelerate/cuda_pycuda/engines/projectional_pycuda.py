@@ -268,6 +268,8 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
             sync = (self.curiter % 1 == 0)
             self.overlap_update()
 
+            self.center_probe()
+
             parallel.barrier()
             self.position_update()
 

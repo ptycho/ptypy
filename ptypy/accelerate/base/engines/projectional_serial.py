@@ -322,6 +322,10 @@ class _ProjectionEngine_serial(_ProjectionEngine):
 
             sync = (self.curiter % 1 == 0)
             self.overlap_update(MPI=True)
+
+            # Recenter the probe
+            self.center_probe()
+
             parallel.barrier()
 
             self.position_update()
@@ -420,9 +424,6 @@ class _ProjectionEngine_serial(_ProjectionEngine):
             log(4, prestr + '----- probe update -----', True)
             change = self.probe_update(MPI=(parallel.size > 1 and MPI))
             log(4, prestr + 'change in probe is %.3f' % change, True)
-
-            # Recenter the probe
-            self.center_probe()
 
             # stop iteration if probe change is small
             if change < self.p.overlap_converge_factor: break
