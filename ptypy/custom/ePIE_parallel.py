@@ -477,7 +477,7 @@ class EPIEParallel(BaseEngine):
                         (0, c1[0], c1[1]), (0, c2[0], c2[1]))
 
                 # shift the object
-                ob_s = self.ob.storages[name]
+                ob_s = pr_s.views[0].pod.ob_view.storage
                 ob_s.data[:] = u.shift_zoom(ob_s.data, (1.,)*3,
                         (0, c1[0], c1[1]), (0, c2[0], c2[1]))
 
