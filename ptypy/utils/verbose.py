@@ -21,6 +21,7 @@ import time
 import sys
 import inspect
 import logging
+from time import perf_counter
 
 from . import parallel
 
@@ -310,3 +311,19 @@ report.level = 0
 report.maxchar = LINEMAX
 report.headernewline='\n'
 report.asterisk='*'
+
+
+class LogTime:
+    def __init__(self, active=False):
+        self.active = active
+        self.duration = 0
+    def __enter__(self):
+        if not self.active:
+            return
+        self.time = perf_counter()
+        return self
+    def __exit__(self, type, value, traceback):
+        if self.active:
+            self.duration = perf_counter() - self.time
+            self.duration = parallel.MPImax([self.duration])
+            self.readout = f'{self.duration:.3f} seconds'
