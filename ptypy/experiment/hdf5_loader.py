@@ -14,9 +14,12 @@ import numpy as np
 from ptypy import utils as u
 from ptypy.core.data import PtyScan
 from ptypy.experiment import register
+from ptypy.utils import parallel
 from ptypy.utils.verbose import log
 from ptypy.utils.array_utils import _translate_to_pix
 
+import os
+from multiprocessing import Pool, RawArray
 
 @register()
 class Hdf5Loader(PtyScan):
@@ -378,9 +381,10 @@ class Hdf5Loader(PtyScan):
             log(3, "This is appears to be a spectro scan, selecting index = {}".format(self.p.outer_index))
 
         self.intensities = h5.File(self.p.intensities.file, 'r')[self.p.intensities.key]
-        if self._is_spectro_scan and self.p.outer_index is not None:
-            self.intensities = self.intensities[self.p.outer_index]
+        self.intensities_dtype = self.intensities.dtype
         data_shape = self.intensities.shape
+        if self._is_spectro_scan and self.p.outer_index is not None:
+            data_shape = tuple(np.array(data_shape)[1:])
 
         fast_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.fast_key][...]
         if self._is_spectro_scan and self.p.outer_index is not None:
@@ -447,8 +451,7 @@ class Hdf5Loader(PtyScan):
 
         if None not in [self.p.mask.file, self.p.mask.key]:
             self.mask = h5.File(self.p.mask.file, 'r')[self.p.mask.key]
-            if self._is_spectro_scan and self.p.outer_index is not None:
-                self.mask = self.mask[self.p.outer_index]
+            self.mask_dtype = self.mask.dtype
             log(3, "The mask has shape: {}".format(self.mask.shape))
             if self.mask.shape == data_shape:
                 log(3, "The mask is laid out like the data.")
@@ -459,6 +462,7 @@ class Hdf5Loader(PtyScan):
             else:
                 raise RuntimeError("I have no idea what to do with this shape of mask data.")
         else:
+            self.mask_dtype = np.int64
             log(3, "No mask will be applied.")
 
 
@@ -511,6 +515,7 @@ class Hdf5Loader(PtyScan):
 
         if self.p.shape is None:
             self.frame_slices = (slice(None, None, 1), slice(None, None, 1))
+            self.frame_shape = data_shape[-2:]
             self.p.shape = frame_shape
             log(3, "Loading full shape frame.")
         elif self.p.shape is not None and not self.p.auto_center:
@@ -518,16 +523,17 @@ class Hdf5Loader(PtyScan):
             low_pix = center - pshape // 2
             high_pix = low_pix + pshape
             self.frame_slices = (slice(int(low_pix[0]), int(high_pix[0]), 1), slice(int(low_pix[1]), int(high_pix[1]), 1))
+            self.frame_shape = self.p.shape
             self.p.center = pshape // 2 #the  new center going forward
             self.info.center = self.p.center
             self.p.shape = pshape
             log(3, "Loading in frame based on a center in:%i, %i" % tuple(center))
         else:
             self.frame_slices = (slice(None, None, 1), slice(None, None, 1))
+            self.frame_shape = data_shape[-2:]
             self.info.center = None
             self.info.auto_center = self.p.auto_center
             log(3, "center is %s, auto_center: %s" % (self.info.center, self.info.auto_center))
-
             log(3, "The loader will not do any cropping.")
 
 
@@ -539,7 +545,7 @@ class Hdf5Loader(PtyScan):
 
         if (self._ismapped and (self._scantype == 'raster')):
             log(3, "This scan looks to be a mapped raster scan.")
-            self.load = self.loaded_mapped_and_raster_scan
+            self.load = self.load_mapped_and_raster_scan
 
         if (self._scantype == 'raster') and not self._ismapped:
             log(3, "This scan looks to be an unmapped raster scan.")
@@ -559,7 +565,7 @@ class Hdf5Loader(PtyScan):
         log(3, 'Data loaded successfully.')
         return intensities, positions, weights
 
-    def loaded_mapped_and_raster_scan(self, indices):
+    def load_mapped_and_raster_scan(self, indices):
         intensities = {}
         positions = {}
         weights = {}
@@ -595,6 +601,8 @@ class Hdf5Loader(PtyScan):
             index = (index,)
         indexed_frame_slices = tuple([slice(ix, ix+1, 1) for ix in index])
         indexed_frame_slices += self.frame_slices
+        if self._is_spectro_scan and self.p.outer_index is not None:
+            indexed_frame_slices = (self.p.outer_index,) + indexed_frame_slices
         intensity = self.intensities[indexed_frame_slices].squeeze()
 
         # TODO: Remove these logic blocks into something a bit more sensible.
@@ -787,3 +795,207 @@ class Hdf5Loader(PtyScan):
         else:
             raise IOError("I don't know what to do with these positions/data shapes")
 
+
+@register()
+class Hdf5LoaderFast(Hdf5Loader):
+    def __init__(self, pars=None, **kwargs):
+        super().__init__(pars=pars, **kwargs)
+        self.cpu_count_per_rank = max(os.cpu_count() // parallel.size,1)
+        print("Rank %d has access to %d processes" %(parallel.rank, self.cpu_count_per_rank))
+        self.intensities_array = None
+        self.weights_array = None
+
+    @staticmethod
+    def _init_worker(intensities_raw_array, weights_raw_array, 
+                     intensities_handle,
+                     weights_handle,
+                     darkfield_handle,
+                     flatfield_handle,
+                     intensities_dtype, weights_dtype,
+                     array_shape, 
+                     mask_laid_out_like_data,
+                     darkfield_laid_out_like_data,
+                     flatfield_laid_out_like_data):
+        Hdf5LoaderFast.worker_intensities_handle = intensities_handle
+        Hdf5LoaderFast.worker_intensities_array = np.frombuffer(intensities_raw_array, intensities_dtype, -1).reshape(array_shape)
+        Hdf5LoaderFast.worker_weights_handle = weights_handle
+        Hdf5LoaderFast.worker_weights_array = np.frombuffer(weights_raw_array, weights_dtype, -1).reshape(array_shape) if weights_raw_array else None
+        Hdf5LoaderFast.worker_mask_laid_out_like_data = mask_laid_out_like_data
+        Hdf5LoaderFast.worker_darkfield_handle = darkfield_handle
+        Hdf5LoaderFast.worker_darkfield_laid_out_like_data = darkfield_laid_out_like_data
+        Hdf5LoaderFast.worker_flatfield_handle = flatfield_handle
+        Hdf5LoaderFast.worker_flatfield_laid_out_like_data = flatfield_laid_out_like_data
+
+    @staticmethod
+    def _read_intensities_and_weights(slices):
+        '''
+        Copy intensities/weights into memory and correct for 
+        darkfield/flatfield if they exist
+        '''
+        indexed_frame_slices, dest_slices = slices
+        frame_slices = tuple(np.array(indexed_frame_slices)[-2:])
+
+        # Handle / target array for intensities
+        src_intensities  = Hdf5LoaderFast.worker_intensities_handle
+        dest_intensities = Hdf5LoaderFast.worker_intensities_array
+
+        # Handle / target array for mask/weights
+        src_weights  = Hdf5LoaderFast.worker_weights_handle
+        dest_weights = Hdf5LoaderFast.worker_weights_array
+        mask_laid_out_like_data = Hdf5LoaderFast.worker_mask_laid_out_like_data
+
+        # Handle for darkfield
+        src_darkfield = Hdf5LoaderFast.worker_darkfield_handle
+        darkfield_laid_out_like_data = Hdf5LoaderFast.worker_darkfield_laid_out_like_data
+
+        # Handle for flatfield
+        src_flatfield = Hdf5LoaderFast.worker_flatfield_handle
+        flatfield_laid_out_like_data = Hdf5LoaderFast.worker_flatfield_laid_out_like_data
+
+        # Copy intensities and weights
+        src_intensities.read_direct(dest_intensities, indexed_frame_slices, dest_slices)
+        if src_weights is not None:
+            if mask_laid_out_like_data:
+                src_weights.read_direct(dest_weights, indexed_frame_slices, dest_slices)
+            else:
+                src_weights.read_direct(dest_weights, frame_slices, dest_slices)
+
+        # Correct darkfield
+        if src_darkfield is not None:
+            if darkfield_laid_out_like_data:
+                dest_intensities[dest_slices] -= src_darkfield[indexed_frame_slices].squeeze()
+            else:
+                dest_intensities[dest_slices] -= src_darkfield[frame_slices].squeeze()
+
+        # Correct flatfield
+        if src_flatfield is not None:
+            if flatfield_laid_out_like_data:
+                dest_intensities[dest_slices] /= src_flatfield[indexed_frame_slices].squeeze()
+            else:
+                dest_intensities[dest_slices] /= src_flatfield[frame_slices].squeeze()
+
+    def _setup_raw_intensity_buffer(self, dtype, sh):
+        npixels = int(np.prod(sh))
+        if (self.intensities_array is not None) and (self.intensities_array.size == npixels):
+            return
+        self._intensities_raw_array = RawArray(np.ctypeslib.as_ctypes_type(dtype), npixels)
+        self.intensities_array = np.frombuffer(self._intensities_raw_array, self.intensities_dtype, -1).reshape(sh)
+        
+    def _setup_raw_weights_buffer(self, dtype, sh):
+        npixels = int(np.prod(sh))
+        if (self.weights_array is not None) and (self.weights_array.size == npixels):
+            return
+        if self.mask is not None:
+            self._weights_raw_array = RawArray(np.ctypeslib.as_ctypes_type(dtype), npixels)
+            self.weights_array = np.frombuffer(self._weights_raw_array, dtype, -1).reshape(sh)
+        else:
+            self._weights_raw_array = None
+            self.weights_array = np.ones(sh, dtype=int)
+
+    def load_multiprocessing(self, src_slices):
+        sh = (len(src_slices),) + self.frame_shape
+        self._setup_raw_intensity_buffer(self.intensities_dtype, sh)
+        self._setup_raw_weights_buffer(self.mask_dtype, sh)
+        dest_slices = [np.s_[i:i+1] for i in range(len(src_slices))]
+
+        with Pool(self.cpu_count_per_rank, 
+                  initializer=Hdf5LoaderFast._init_worker,
+                  initargs=(self._intensities_raw_array, self._weights_raw_array,
+                            self.intensities, self.mask, self.darkfield, self.flatfield,
+                            self.intensities_dtype, self.mask_dtype,
+                            sh, self.mask_laid_out_like_data,
+                            self.darkfield_laid_out_like_data, 
+                            self.flatfield_field_laid_out_like_data)) as p:
+            p.map(self._read_intensities_and_weights, zip(src_slices, dest_slices))
+
+    def load_unmapped_raster_scan(self, indices):
+
+        slices = []
+        for ii in indices:
+            slow_idx, fast_idx = self.preview_indices[:, ii]
+            jj = slow_idx * self.slow_axis.shape[1] + fast_idx
+            indexed_frame_slices = (jj,)
+            indexed_frame_slices += self.frame_slices
+            if self._is_spectro_scan and self.p.outer_index is not None:
+                indexed_frame_slices = (self.p.outer_index,) + indexed_frame_slices
+            slices.append(indexed_frame_slices)
+
+        self.load_multiprocessing(slices)
+
+        intensities = {}
+        positions = {}
+        weights = {}
+        for k,ii in enumerate(indices):
+            slow_idx, fast_idx = self.preview_indices[:,ii]
+            weights[ii], intensities[ii] = self.get_corrected_intensities(self.weights_array[k], self.intensities_array[k], ii, slices[k])
+            positions[ii] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
+        log(3, 'Data loaded successfully.')
+        return intensities, positions, weights
+    
+    def load_mapped_and_raster_scan(self, indices):
+
+        slices = []
+        for ii in indices:
+            index = self.preview_indices[:, ii]
+            indexed_frame_slices = tuple(index)
+            indexed_frame_slices += self.frame_slices
+            if self._is_spectro_scan and self.p.outer_index is not None:
+                indexed_frame_slices = (self.p.outer_index,) + indexed_frame_slices
+            slices.append(indexed_frame_slices)
+        
+        self.load_multiprocessing(slices)
+
+        intensities = {}
+        positions = {}
+        weights = {}
+        for k,ii in enumerate(indices):
+            slow_idx, fast_idx = self.preview_indices[:, ii]
+            weights[ii], intensities[ii] = self.get_corrected_intensities(self.weights_array[k], self.intensities_array[k], ii, slices[k])
+            positions[ii] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
+        log(3, 'Data loaded successfully.')
+        return intensities, positions, weights
+
+    def load_mapped_and_arbitrary_scan(self, indices):
+
+        slices = []
+        for ii in indices:
+            jj = self.preview_indices[ii]
+            indexed_frame_slices = (jj,)
+            indexed_frame_slices += self.frame_slices
+            if self._is_spectro_scan and self.p.outer_index is not None:
+                indexed_frame_slices = (self.p.outer_index,) + indexed_frame_slices
+            slices.append(indexed_frame_slices)
+
+        self.load_multiprocessing(slices)
+
+        intensities = {}
+        positions = {}
+        weights = {}
+        for k,ii in enumerate(indices):
+            jj = self.preview_indices[ii]
+            weights[ii], intensities[ii] = self.get_corrected_intensities(self.weights_array[k], self.intensities_array[k], ii, slices[k])
+            positions[ii] = np.array([self.slow_axis[jj] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[jj] * self.p.positions.fast_multiplier])
+        log(3, 'Data loaded successfully.')
+        return intensities, positions, weights
+
+    def get_corrected_intensities(self, weights, intensities, index, indexed_frame_slice):
+        '''
+        Corrects the intensities for normalisation and padding
+        '''
+
+        if self.normalisation is not None:
+            if self.normalisation_laid_out_like_positions:
+                scale =  self.normalisation[index]
+            else:
+                scale = np.squeeze(self.normalisation[indexed_frame_slice])
+            if np.abs(scale - self.normalisation_mean) < (self.p.normalisation.sigma * self.normalisation_std):
+                intensities *= 1 / (scale * self.normalisation_mean)
+
+        if self.p.padding:
+            intensities = np.pad(intensities, tuple(self.pad.reshape(2,2)), mode='constant')
+            weights = np.pad(weights, tuple(self.pad.reshape(2,2)), mode='constant')
+
+        return weights, intensities
