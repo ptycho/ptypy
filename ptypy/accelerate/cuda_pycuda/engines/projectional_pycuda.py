@@ -384,12 +384,16 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
                 pr_s.gpu = self.ISK.interpolate_shift(pr_s.gpu, shift)
 
                 # shift the object
-                ob_s = self.ob.storages[name]
+                ob_s = pr_s.views[0].pod.ob_view.storage
                 ob_s.gpu = self.ISK.interpolate_shift(ob_s.gpu, shift)
 
                 # shift the exit waves
-                for ex_s in self.ex.storages.values():
-                    ex_s.gpu = self.ISK.interpolate_shift(ex_s.gpu, shift)
+                for dID in self.di.S.keys():
+                    prep = self.diff_info[dID]
+                    pID, oID, eID = prep.poe_IDs
+                    if pID == name:
+                        self.ex.S[eID].gpu = self.ISK.interpolate_shift(
+                                self.ex.S[eID].gpu, shift)
 
                 log(4,'Probe recentered from %s to %s'
                             % (str(tuple(c1)), str(tuple(c2))))
