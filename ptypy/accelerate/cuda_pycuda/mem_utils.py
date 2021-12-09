@@ -490,3 +490,88 @@ class ManagedPool:
             ev.record(self.upstream)
         gpu = gpuarray.to_gpu_async(ary, allocator=self._allocater, stream=stream)
         self.dev_data[id] = gpu
+
+
+## unused
+
+class MemoryManager:
+
+    def __init__(self, fraction=0.7):
+        self.fraction = fraction
+        self.dmp = DeviceMemoryPool()
+        self.queue_in = cuda.Stream()
+        self.queue_out = cuda.Stream()
+        self.mem_avail = None
+        self.mem_total = None
+        self.get_free_memory()
+        self.on_device = {}
+        self.on_device_inv = {}
+        self.out_events = deque()
+        self.bytes = 0
+
+    def get_free_memory(self):
+        self.mem_avail, self.mem_total = cuda.mem_get_info()
+
+    def device_is_full(self, nbytes = 0):
+        return (nbytes + self.bytes) > self.mem_avail
+
+    def to_gpu(self, ar, ev=None):
+        """
+        Issues asynchronous copy to device. Waits for optional event ev
+        Emits event for other streams to synchronize with
+        """
+        stream = self.queue_in
+        id_cpu = id(ar)
+        gpu_ar = self.on_device.get(id_cpu)
+
+        if gpu_ar is None:
+            if ev is not None:
+                stream.wait_for_event(ev)
+            if self.device_is_full(ar.nbytes):
+                self.wait_for_freeing_events(ar.nbytes)
+
+            # TOD0: try /except with garbage collection to make sure there is space
+            gpu_ar = gpuarray.to_gpu_async(ar, allocator=self.dmp.allocate, stream=stream)
+
+            # keeps gpuarray alive
+            self.on_device[id_cpu] = gpu_ar
+
+            # for deleting later
+            self.on_device_inv[id(gpu_ar)] = ar
+
+            self.bytes += gpu_ar.mem_size * gpu_ar.dtype.itemsize
+
+
+        ev = cuda.Event()
+        ev.record(stream)
+        return ev, gpu_ar
+
+
+    def wait_for_freeing_events(self, nbytes):
+        """
+        Wait until at least nbytes have been copied back to the host. Or marked for deletion
+        """
+        freed = 0
+        if not self.out_events:
+            #print('Waiting for memory to be released on device failed as no release event was scheduled')
+            self.queue_out.synchronize()
+        while self.out_events and freed < nbytes:
+            ev, id_cpu, id_gpu = self.out_events.popleft()
+            gpu_ar = self.on_device.pop(id_cpu)
+            cpu_ar = self.on_device_inv.pop(id_gpu)
+            ev.synchronize()
+            freed += cpu_ar.nbytes
+            self.bytes -= gpu_ar.mem_size * gpu_ar.dtype.itemsize
+
+    def mark_release_from_gpu(self, gpu_ar, to_cpu=False, ev=None):
+        stream = self.queue_out
+        if ev is not None:
+            stream.wait_for_event(ev)
+        if to_cpu:
+            cpu_ar = self.on_device_inv[id(gpu_ar)]
+            gpu_ar.get_asynch(stream, cpu_ar)
+
+        ev_out = cuda.Event()
+        ev_out.record(stream)
+        self.out_events.append((ev_out, id(cpu_ar), id(gpu_ar)))
+        return ev_out

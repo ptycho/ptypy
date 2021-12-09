@@ -27,93 +27,14 @@ from .. import get_context
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PropagationKernel, PositionCorrectionKernel
 from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, TransposeKernel
 
+from ..mem_utils import make_pagelocked_paired_arrays as mppa
+from ..mem_utils import GpuDataManager2
 from ptypy.accelerate.base import address_manglers
 
 __all__ = ['ML_pycuda']
 
-
-class MemoryManager:
-
-    def __init__(self, fraction=0.7):
-        self.fraction = fraction
-        self.dmp = DeviceMemoryPool()
-        self.queue_in = cuda.Stream()
-        self.queue_out = cuda.Stream()
-        self.mem_avail = None
-        self.mem_total = None
-        self.get_free_memory()
-        self.on_device = {}
-        self.on_device_inv = {}
-        self.out_events = deque()
-        self.bytes = 0
-
-    def get_free_memory(self):
-        self.mem_avail, self.mem_total = cuda.mem_get_info()
-
-    def device_is_full(self, nbytes = 0):
-        return (nbytes + self.bytes) > self.mem_avail
-
-    def to_gpu(self, ar, ev=None):
-        """
-        Issues asynchronous copy to device. Waits for optional event ev
-        Emits event for other streams to synchronize with
-        """
-        stream = self.queue_in
-        id_cpu = id(ar)
-        gpu_ar = self.on_device.get(id_cpu)
-
-        if gpu_ar is None:
-            if ev is not None:
-                stream.wait_for_event(ev)
-            if self.device_is_full(ar.nbytes):
-                self.wait_for_freeing_events(ar.nbytes)
-
-            # TOD0: try /except with garbage collection to make sure there is space
-            gpu_ar = gpuarray.to_gpu_async(ar, allocator=self.dmp.allocate, stream=stream)
-
-            # keeps gpuarray alive
-            self.on_device[id_cpu] = gpu_ar
-
-            # for deleting later
-            self.on_device_inv[id(gpu_ar)] = ar
-
-            self.bytes += gpu_ar.mem_size * gpu_ar.dtype.itemsize
-
-
-        ev = cuda.Event()
-        ev.record(stream)
-        return ev, gpu_ar
-
-
-    def wait_for_freeing_events(self, nbytes):
-        """
-        Wait until at least nbytes have been copied back to the host. Or marked for deletion
-        """
-        freed = 0
-        if not self.out_events:
-            #print('Waiting for memory to be released on device failed as no release event was scheduled')
-            self.queue_out.synchronize()
-        while self.out_events and freed < nbytes:
-            ev, id_cpu, id_gpu = self.out_events.popleft()
-            gpu_ar = self.on_device.pop(id_cpu)
-            cpu_ar = self.on_device_inv.pop(id_gpu)
-            ev.synchronize()
-            freed += cpu_ar.nbytes
-            self.bytes -= gpu_ar.mem_size * gpu_ar.dtype.itemsize
-
-    def mark_release_from_gpu(self, gpu_ar, to_cpu=False, ev=None):
-        stream = self.queue_out
-        if ev is not None:
-            stream.wait_for_event(ev)
-        if to_cpu:
-            cpu_ar = self.on_device_inv[id(gpu_ar)]
-            gpu_ar.get_asynch(stream, cpu_ar)
-
-        ev_out = cuda.Event()
-        ev_out.record(stream)
-        self.out_events.append((ev_out, id(cpu_ar), id(gpu_ar)))
-        return ev_out
-
+MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
+#MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
 
 @register()
 class ML_pycuda(ML_serial):
@@ -229,6 +150,74 @@ class ML_pycuda(ML_serial):
                 kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
                 kern.PCK.allocate()
 
+        mag_mem = 0
+        for scan, kern in self.kernels.items():
+            mag_mem = max(kern.aux.nbytes // 2, mag_mem)
+        ma_mem = mag_mem
+        mem = cuda.mem_get_info()[0]
+        blk = ma_mem + mag_mem
+        fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
+        if not fit:
+            log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
+            self.context.pop()
+            self.context.detach()
+            raise SystemExit("ptypy has been exited.")
+
+        # TODO grow blocks dynamically
+        nma = min(fit, MAX_BLOCKS)
+        log(4, 'Free memory on device: %.2f GB' % (float(mem)/1e9))
+        log(4, 'PyCUDA max blocks fitting on GPU: ma_arrays={}'.format(nma))
+        # reset memory or create new
+        self.ma_data = GpuDataManager2(ma_mem, 0, nma, False)
+        self.I_data = GpuDataManager2(mag_mem, 0, nma, False)
+
+    def engine_prepare(self):
+
+        super().engine_prepare()
+        ## Serialize new data ##
+        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
+
+        # recursive copy to gpu for probe and object
+        for _cname, c in self.ptycho.containers.items():
+            if c.original != self.pr and c.original != self.ob:
+                continue
+            for _sname, s in c.S.items():
+                # convert data here
+                s.gpu = gpuarray.to_gpu(s.data)
+                s.cpu = cuda.pagelocked_empty(s.data.shape, s.data.dtype, order="C")
+                s.cpu[:] = s.data
+
+        for label, d in self.ptycho.new_data:
+            prep = self.diff_info[d.ID]
+            prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
+            prep.fic_gpu = gpuarray.ones_like(prep.err_phot_gpu)
+
+            if use_tiles:
+                prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
+
+            prep.addr_gpu = gpuarray.to_gpu(prep.addr)
+            if self.do_position_refinement:
+                prep.original_addr_gpu = gpuarray.to_gpu(prep.original_addr)
+                prep.error_state_gpu = gpuarray.empty_like(prep.err_phot_gpu)
+                prep.mangled_addr_gpu = prep.addr_gpu.copy()
+
+            # Todo: Which address to pick?
+            if use_tiles:
+                prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
+
+            prep.I = cuda.pagelocked_empty(d.data.shape, d.data.dtype, order="C", mem_flags=4)
+            prep.I[:] = d.data
+
+            # Todo: avoid that extra copy of data
+            if self.do_position_refinement:
+                ma = self.ma.S[d.ID].data.astype(np.float32)
+                prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
+                prep.ma[:] = ma
+
+            log(4, 'Free memory on device: %.2f GB' % (float(cuda.mem_get_info()[0])/1e9))
+            self.ma_data.add_data_block()
+            self.I_data.add_data_block()
+
     def _initialize_model(self):
 
         # Create noise model
@@ -315,49 +304,6 @@ class ML_pycuda(ML_serial):
         # copy all data back to cpu
         self._set_pr_ob_ref_for_data(dev='cpu', container=None, sync_copy=True)
         return err
-
-    def engine_prepare(self):
-
-        super().engine_prepare()
-        ## Serialize new data ##
-        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
-
-        # recursive copy to gpu for probe and object
-        for _cname, c in self.ptycho.containers.items():
-            if c.original != self.pr and c.original != self.ob:
-                continue
-            for _sname, s in c.S.items():
-                # convert data here
-                s.gpu = gpuarray.to_gpu(s.data)
-                s.cpu = cuda.pagelocked_empty(s.data.shape, s.data.dtype, order="C")
-                s.cpu[:] = s.data
-
-        for label, d in self.ptycho.new_data:
-            prep = self.diff_info[d.ID]
-            prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
-            prep.fic_gpu = gpuarray.ones_like(prep.err_phot_gpu)
-
-            if use_tiles:
-                prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
-
-            prep.addr_gpu = gpuarray.to_gpu(prep.addr)
-            if self.do_position_refinement:
-                prep.original_addr_gpu = gpuarray.to_gpu(prep.original_addr)
-                prep.error_state_gpu = gpuarray.empty_like(prep.err_phot_gpu)
-                prep.mangled_addr_gpu = prep.addr_gpu.copy()
-
-            # Todo: Which address to pick?
-            if use_tiles:
-                prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
-
-            prep.I = cuda.pagelocked_empty(d.data.shape, d.data.dtype, order="C", mem_flags=4)
-            prep.I[:] = d.data
-
-            # Todo: avoid that extra copy of data
-            if self.do_position_refinement:
-                ma = self.ma.S[d.ID].data.astype(np.float32)
-                prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
-                prep.ma[:] = ma
 
     def position_update(self):
         """ 
