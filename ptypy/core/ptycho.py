@@ -9,6 +9,7 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
+import json
 from . import paths
 from collections import OrderedDict
 
@@ -248,10 +249,11 @@ class Ptycho(Base):
       reconstruction.
 
     [io.benchmark]
-    default = False
-    type = bool
+    default = None
+    type = str
     help = Produce timings for benchmarking the performance of data loaders and engines
-    doc = Switch to time data loading, engine initialisation, etc. and save results in runtime dictionary
+    doc = Switch to get timings and save results to a json file in p.io.home
+        Choose ``'all'`` for timing data loading, engine_init, engine_prepare, engine_iterate and engine_finalize
 
     [scans]
     default = None
@@ -420,14 +422,14 @@ class Ptycho(Base):
         # Find run name
         self.runtime.run = self.paths.run(p.run)
 
-        # Benchmark into runtime
-        if self.p.io.benchmark:
-            self.runtime.benchmark = u.Param()
-            self.runtime.benchmark.data_load = 0
-            self.runtime.benchmark.engine_init = 0
-            self.runtime.benchmark.engine_prepare = 0
-            self.runtime.benchmark.engine_iterate = 0
-            self.runtime.benchmark.engine_finalize = 0
+        # Benchmark
+        if self.p.io.benchmark == 'all':
+            self.benchmark = u.Param()
+            self.benchmark.data_load = 0
+            self.benchmark.engine_init = 0
+            self.benchmark.engine_prepare = 0
+            self.benchmark.engine_iterate = 0
+            self.benchmark.engine_finalize = 0
 
     def init_communication(self):
         """
@@ -510,9 +512,9 @@ class Ptycho(Base):
         """
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs. Sets self.new_data
-        with LogTime(self.p.io.benchmark) as t:
+        with LogTime(self.p.io.benchmark == 'all') as t:
             self.new_data = self.model.new_data()
-        if self.p.io.benchmark and parallel.master: self.runtime.benchmark.data_load += t.duration
+        if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
         # Print stats
         parallel.barrier()
@@ -632,16 +634,16 @@ class Ptycho(Base):
 
             # Prepare the engine
             ilog_message('%s: initializing engine' %type(engine).__name__)
-            with LogTime(self.p.io.benchmark) as t:
+            with LogTime(self.p.io.benchmark == 'all') as t:
                 engine.initialize()
-            if self.p.io.benchmark and parallel.master: self.runtime.benchmark.engine_init += t.duration
+            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_init += t.duration
 
             # One .prepare() is always executed, as Ptycho may hold data
             ilog_message('%s: preparing engine' %type(engine).__name__)
             self.new_data = [(d.label, d) for d in self.diff.S.values()]
-            with LogTime(self.p.io.benchmark) as t:
+            with LogTime(self.p.io.benchmark == 'all') as t:
                 engine.prepare()
-            if self.p.io.benchmark and parallel.master: self.runtime.benchmark.engine_prepare += t.duration
+            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
             # Start the iteration loop
             ilog_streamer('%s: starting engine' %type(engine).__name__)
@@ -653,16 +655,16 @@ class Ptycho(Base):
                 parallel.barrier()
 
                 # Check for new data
-                with LogTime(self.p.io.benchmark) as t:
+                with LogTime(self.p.io.benchmark == 'all') as t:
                     self.new_data = self.model.new_data()
-                if self.p.io.benchmark and parallel.master: self.runtime.benchmark.data_load += t.duration
+                if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
                 # Last minute preparation before a contiguous block of
                 # iterations
                 if self.new_data:
-                    with LogTime(self.p.io.benchmark) as t:
+                    with LogTime(self.p.io.benchmark == 'all') as t:
                         engine.prepare()
-                    if self.p.io.benchmark and parallel.master: self.runtime.benchmark.engine_prepare += t.duration
+                    if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
                 auto_save = self.p.io.autosave
                 if auto_save.active and auto_save.interval > 0:
@@ -674,9 +676,9 @@ class Ptycho(Base):
                         logger.info(headerline())
 
                 # One iteration
-                with LogTime(self.p.io.benchmark) as t:
+                with LogTime(self.p.io.benchmark == 'all') as t:
                     engine.iterate()
-                if self.p.io.benchmark and parallel.master: self.runtime.benchmark.engine_iterate += t.duration
+                if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_iterate += t.duration
 
                 # Display runtime information and do saving
                 if parallel.master:
@@ -696,9 +698,9 @@ class Ptycho(Base):
             ilog_newline()
 
             # Done. Let the engine finish up
-            with LogTime(self.p.io.benchmark) as t:
+            with LogTime(self.p.io.benchmark == 'all') as t:
                 engine.finalize()
-            if self.p.io.benchmark and parallel.master: self.runtime.benchmark.engine_finalize += t.duration
+            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_finalize += t.duration
 
             # Save
             if self.p.io.rfile:
@@ -707,6 +709,15 @@ class Ptycho(Base):
                 pass
             # Time the initialization
             self.runtime.stop = time.asctime()
+
+            # Save benchmarks to json file
+            if (self.p.io.benchmark == 'all') and parallel.master:
+                try:
+                    with open(self.paths.home + "/benchmark.json", "w") as json_file:
+                        json.dump(self.benchmark, json_file)
+                    logger.info("Benchmarks have been written to %s" %self.paths.home + "/benchmark.json")
+                except Exception as e:
+                    logger.warning("Failed to write benchmarks to file: %s" %e)
 
         elif epars is not None:
             # A fresh set of engine parameters arrived.
