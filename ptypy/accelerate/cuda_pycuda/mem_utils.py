@@ -2,6 +2,7 @@ import numpy as np
 from pycuda import gpuarray
 import pycuda.driver as cuda
 from pycuda.tools import DeviceMemoryPool
+from collections import deque
 
 def make_pagelocked_paired_arrays(ar, flags=0):
     mem = cuda.pagelocked_empty(ar.shape, ar.dtype, order="C", mem_flags=flags)

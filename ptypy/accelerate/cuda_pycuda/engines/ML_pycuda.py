@@ -16,7 +16,6 @@ from pycuda import gpuarray
 import pycuda.driver as cuda
 import pycuda.cumath
 from pycuda.tools import DeviceMemoryPool
-from collections import deque
 
 from ptypy.engines import register
 from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
@@ -389,7 +388,7 @@ class ML_pycuda(ML_serial):
         """
         self.w_data = None
         self.I_data = None
-        
+
         for name, s in self.pr.S.items():
             s.data = s.gpu.get() # need this, otherwise getting segfault once context is detached
             # no longer need those
