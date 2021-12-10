@@ -254,6 +254,7 @@ class Ptycho(Base):
     help = Produce timings for benchmarking the performance of data loaders and engines
     doc = Switch to get timings and save results to a json file in p.io.home
         Choose ``'all'`` for timing data loading, engine_init, engine_prepare, engine_iterate and engine_finalize
+    userlevel = 2
 
     [scans]
     default = None
