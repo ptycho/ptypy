@@ -89,8 +89,9 @@ class ML_pycuda(ML_serial):
             self._dmp = None
             self.allocate = cuda.mem_alloc
 
-        self.queue_transfer = cuda.Stream()
-        
+        self.qu_htod = cuda.Stream()
+        self.qu_dtoh = cuda.Stream()
+
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
         self.GSK.tmp = None
         
@@ -168,7 +169,7 @@ class ML_pycuda(ML_serial):
         log(4, 'Free memory on device: %.2f GB' % (float(mem)/1e9))
         log(4, 'PyCUDA max blocks fitting on GPU: ma_arrays={}'.format(nma))
         # reset memory or create new
-        self.ma_data = GpuDataManager2(ma_mem, 0, nma, False)
+        self.w_data = GpuDataManager2(ma_mem, 0, nma, False)
         self.I_data = GpuDataManager2(mag_mem, 0, nma, False)
 
     def engine_prepare(self):
@@ -215,8 +216,10 @@ class ML_pycuda(ML_serial):
                 prep.ma[:] = ma
 
             log(4, 'Free memory on device: %.2f GB' % (float(cuda.mem_get_info()[0])/1e9))
-            self.ma_data.add_data_block()
+            self.w_data.add_data_block()
             self.I_data.add_data_block()
+
+        self.dID_list = list(self.di.S.keys())
 
     def _initialize_model(self):
 
@@ -336,7 +339,7 @@ class ML_pycuda(ML_serial):
                 error_state = prep.error_state_gpu
 
                 # # copy intensities and mask to GPU
-                stream = self.queue_transfer
+                stream = self.qu_htod
                 mag  = gpuarray.to_gpu_async(prep.I, allocator=self.allocate, stream=stream)
                 ma = gpuarray.to_gpu_async(prep.ma, allocator=self.allocate, stream=stream)
                 ev = cuda.Event()
@@ -382,8 +385,11 @@ class ML_pycuda(ML_serial):
 
     def engine_finalize(self):
         """
-        try deleting ever helper contianer
+        Clear all GPU data, pinned memory, etc
         """
+        self.w_data = None
+        self.I_data = None
+        
         for name, s in self.pr.S.items():
             s.data = s.gpu.get() # need this, otherwise getting segfault once context is detached
             # no longer need those
@@ -398,7 +404,9 @@ class ML_pycuda(ML_serial):
             prep.addr = prep.addr_gpu.get()
             prep.float_intens_coeff = prep.fic_gpu.get()
 
+
         #self.queue.synchronize()
+        self.context.pop()
         self.context.detach()
         super().engine_finalize()
 
@@ -449,6 +457,8 @@ class GaussianModel(BaseModelSerial):
         """
         ob_grad = self.engine.ob_grad_new
         pr_grad = self.engine.pr_grad_new
+        qu_htod = self.engine.qu_htod
+        queue = self.engine.queue
 
         self.engine._set_pr_ob_ref_for_data('gpu')
         ob_grad << 0.
@@ -458,7 +468,7 @@ class GaussianModel(BaseModelSerial):
         LL = np.array([0.])
         error_dct = {}
 
-        for dID in self.di.S.keys():
+        for dID in self.engine.dID_list:
             prep = self.engine.diff_info[dID]
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
@@ -484,15 +494,19 @@ class GaussianModel(BaseModelSerial):
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
 
-            # TODO streaming?
-            #w = gpuarray.to_gpu(prep.weights)
-            #I = gpuarray.to_gpu(prep.I)
-            stream = self.engine.queue_transfer
-            # TODO keep alive
-            w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.allocate, stream=stream)
-            I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.allocate, stream=stream)
-            ev = cuda.Event()
-            ev.record(stream)
+            # # TODO streaming?
+            # #w = gpuarray.to_gpu(prep.weights)
+            # #I = gpuarray.to_gpu(prep.I)
+            # stream = self.engine.queue_transfer
+            # # TODO keep alive
+            # w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.allocate, stream=stream)
+            # I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.allocate, stream=stream)
+            # ev = cuda.Event()
+            # ev.record(stream)
+
+            # Schedule w & I to device
+            ev_w, w, data_w = self.engine.w_data.to_gpu(prep.weights, dID, qu_htod)
+            ev, I, data_I = self.engine.I_data.to_gpu(prep.I, dID, qu_htod)
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
@@ -501,14 +515,17 @@ class GaussianModel(BaseModelSerial):
             FW(aux, aux)
             GDK.make_model(aux, addr)
 
-            GDK.queue.wait_for_event(ev)
+
+            queue.wait_for_event(ev)
 
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
 
             GDK.main(aux, addr, w, I)
-            ev = cuda.Event()
-            ev.record(GDK.queue)
+            data_w.record_done(queue, 'compute')
+            data_I.record_done(queue, 'compute')
+            #ev = cuda.Event()
+            #ev.record(GDK.queue)
 
             GDK.error_reduce(addr, err_phot)
 
@@ -522,7 +539,10 @@ class GaussianModel(BaseModelSerial):
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
             POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
 
-            GDK.queue.synchronize()
+            #GDK.queue.synchronize()
+
+        queue.synchronize()
+        self.engine.dID_list.reverse()
 
         # TODO we err_phot.sum, but not necessarily this error_dct until the end of contiguous iteration
         for dID, prep in self.engine.diff_info.items():
@@ -570,12 +590,14 @@ class GaussianModel(BaseModelSerial):
         in direction h
         """
         self.engine._set_pr_ob_ref_for_data('gpu')
+        qu_htod = self.engine.qu_htod
+        queue = self.engine.queue
 
         B = gpuarray.zeros((3,), dtype=np.float32) # does not accept np.longdouble
         Brenorm = 1. / self.LL[0] ** 2
 
         # Outer loop: through diffraction patterns
-        for dID in self.di.S.keys():
+        for dID in self.engine.dID_list:
             prep = self.engine.diff_info[dID]
 
             # find probe, object in exit ID in dependence of dID
@@ -596,14 +618,18 @@ class GaussianModel(BaseModelSerial):
             addr = prep.addr_gpu
             fic = prep.fic_gpu
 
-            # TODO streaming?
-            #w = gpuarray.to_gpu(prep.weights)
-            #I = gpuarray.to_gpu(prep.I)
-            stream = self.engine.queue_transfer
-            w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.allocate, stream=stream)
-            I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.allocate, stream=stream)
-            ev = cuda.Event()
-            ev.record(stream)
+            # # TODO streaming?
+            # #w = gpuarray.to_gpu(prep.weights)
+            # #I = gpuarray.to_gpu(prep.I)
+            # stream = self.engine.queue_transfer
+            # w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.allocate, stream=stream)
+            # I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.allocate, stream=stream)
+            # ev = cuda.Event()
+            # ev.record(stream)
+
+            # Schedule w & I to device
+            ev_w, w, data_w = self.engine.w_data.to_gpu(prep.weights, dID, qu_htod)
+            ev, I, data_I = self.engine.I_data.to_gpu(prep.I, dID, qu_htod)
 
             # local references
             ob = self.ob.S[oID].data
@@ -622,7 +648,7 @@ class GaussianModel(BaseModelSerial):
             FW(a,a)
             FW(b,b)
 
-            GDK.queue.wait_for_event(ev)
+            queue.wait_for_event(ev)
             GDK.make_a012(f, a, b, addr, I, fic)
 
             """
@@ -632,7 +658,12 @@ class GaussianModel(BaseModelSerial):
                 A2 *= self.float_intens_coeff[dname]
             """
             GDK.fill_b(addr, Brenorm, w, B)
-            GDK.queue.synchronize()
+            #GDK.queue.synchronize()
+            data_w.record_done(queue, 'compute')
+            data_I.record_done(queue, 'compute')
+
+        queue.synchronize()
+        self.engine.dID_list.reverse()
 
         B = B.get()
         parallel.allreduce(B)
