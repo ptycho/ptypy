@@ -29,7 +29,6 @@ from .classes import DEFAULT_ACCESSRULE
 from .classes import MODEL_PREFIX
 from ..utils import parallel
 from ..utils.descriptor import EvalDescriptor
-from ..utils.misc import LogTime
 from .. import defaults_tree
 
 # Please set these globally later
