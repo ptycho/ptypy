@@ -19,8 +19,8 @@ from ptypy.accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKern
 from ptypy.accelerate.base import array_utils as au
 
 
-### TODOS 
-# 
+### TODOS
+#
 # - The Propagator needs to be made somewhere else
 # - Get it running faster with MPI (partial sync)
 # - implement "batching" when processing frames to lower the pressure on memory
@@ -49,7 +49,7 @@ def gaussian_kernel(sigma, size=None, sigma_y=None, size_y=None):
 
 
 def serialize_array_access(diff_storage):
-    # Sort views according to layer in diffraction stack 
+    # Sort views according to layer in diffraction stack
     views = diff_storage.views
     dlayers = [view.dlayer for view in views]
     views = [views[i] for i in np.argsort(dlayers)]
@@ -112,7 +112,7 @@ class _ProjectionEngine_serial(_ProjectionEngine):
         ## gaussian filter
         # dummy kernel
         """
-        if not self.p.obj_smooth_std: 
+        if not self.p.obj_smooth_std:
             gauss_kernel = gaussian_kernel(1,1).astype(np.float32)
         else:
             gauss_kernel = gaussian_kernel(self.p.obj_smooth_std,self.p.obj_smooth_std).astype(np.float32)
@@ -319,6 +319,10 @@ class _ProjectionEngine_serial(_ProjectionEngine):
 
             sync = (self.curiter % 1 == 0)
             self.overlap_update(MPI=True)
+
+            # Recenter the probe
+            self.center_probe()
+
             parallel.barrier()
 
             self.position_update()
@@ -329,7 +333,7 @@ class _ProjectionEngine_serial(_ProjectionEngine):
         return error
 
     def position_update(self):
-        """ 
+        """
         Position refinement
         """
         if not self.do_position_refinement:
@@ -340,7 +344,7 @@ class _ProjectionEngine_serial(_ProjectionEngine):
         # Update positions
         if do_update_pos:
             """
-            Iterates through all positions and refines them by a given algorithm. 
+            Iterates through all positions and refines them by a given algorithm.
             """
             log(4, "----------- START POS REF -------------")
             for dID in self.di.S.keys():
@@ -366,7 +370,7 @@ class _ProjectionEngine_serial(_ProjectionEngine):
                 max_oby = ob.shape[-2] - aux.shape[-2] - 1
                 max_obx = ob.shape[-1] - aux.shape[-1] - 1
 
-                # We need to re-calculate the current error 
+                # We need to re-calculate the current error
                 PCK.build_aux(aux, addr, ob, pr)
                 aux[:] = FW(aux)
                 if self.p.position_refinement.metric == "fourier":
@@ -421,6 +425,7 @@ class _ProjectionEngine_serial(_ProjectionEngine):
             # stop iteration if probe change is small
             if change < self.p.overlap_converge_factor: break
 
+
     ## object update
     def object_update(self, MPI=False):
         t1 = time.time()
@@ -428,14 +433,14 @@ class _ProjectionEngine_serial(_ProjectionEngine):
         for oID, ob in self.ob.storages.items():
             obn = self.ob_nrm.S[oID]
             cfact = self.p.object_inertia * self.mean_power
-            
+
             if self.p.obj_smooth_std is not None:
                 log(4, 'Smoothing object, cfact is %.2f' % cfact)
                 smooth_mfs = [self.p.obj_smooth_std, self.p.obj_smooth_std]
                 ob.data = cfact * au.complex_gaussian_filter(ob.data, smooth_mfs)
             else:
                 ob.data *= cfact
-            
+
             obn.data[:] = cfact
 
         # storage for-loop
@@ -560,7 +565,7 @@ class _ProjectionEngine_serial(_ProjectionEngine):
                 for i,view in enumerate(d.views):
                     for j,(pname, pod) in enumerate(view.pods.items()):
                         delta = (prep.addr[i][j][1][1:] - prep.original_addr[i][j][1][1:]) * res
-                        pod.ob_view.coord += delta 
+                        pod.ob_view.coord += delta
                         pod.ob_view.storage.update_views(pod.ob_view)
             self.ptycho.record_positions = True
 

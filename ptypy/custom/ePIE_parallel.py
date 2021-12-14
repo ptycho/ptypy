@@ -143,7 +143,7 @@ class EPIEParallel(BaseEngine):
         # Instance attributes
         self.ob_nodecover = None
         self.mean_power = None
-        
+
         self.ptycho.citations.add_article(
             title='An improved ptychographical phase retrieval algorithm for diffractive imaging',
             author='Maiden A. and Rodenburg J.',
@@ -190,7 +190,7 @@ class EPIEParallel(BaseEngine):
             mean_power += s.mean_power
         self.mean_power = mean_power / len(self.di.storages)
 
-        
+
         # DEBUGGING: show the actual domain decomposition
         # if self.curiter == 0:
         #     import matplotlib.pyplot as plt
@@ -263,7 +263,7 @@ class EPIEParallel(BaseEngine):
                 # scale probe such that its mean power equals the mean power of the diffraction data
                 # This stabilizes the ePIE algorithm and prevents the probe from growing too large.
                 pod.probe *= np.sqrt(self.mean_power / u.abs2(pod.probe).mean())
-                
+
                 # Object update:
                 logger.debug(pre_str + '----- ePIE object update -----')
                 pod.object += (self.p.alpha
@@ -466,14 +466,25 @@ class EPIEParallel(BaseEngine):
         Stolen in its entirety from the DM engine.
         """
         if self.p.probe_center_tol is not None:
-            for name, s in self.pr.S.items():
-                c1 = u.mass_center(u.abs2(s.data).sum(0))
+            for name, pr_s in self.pr.storages.items():
+                c1 = u.mass_center(u.abs2(pr_s.data).sum(0))
+                c2 = np.asarray(pr_s.shape[-2:]) // 2
                 # fft convention should however use geometry instead
-                c2 = np.asarray(s.shape[-2:]) // 2
                 if u.norm(c1 - c2) < self.p.probe_center_tol:
                     break
                 # SC: possible BUG here, wrong input parameter
-                s.data[:] = u.shift_zoom(
-                    s.data, (1.,) * 3, (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+                pr_s.data[:] = u.shift_zoom(pr_s.data, (1.,)*3,
+                        (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+
+                # shift the object
+                ob_s = pr_s.views[0].pod.ob_view.storage
+                ob_s.data[:] = u.shift_zoom(ob_s.data, (1.,)*3,
+                        (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+
+                # shift the exit waves, loop through different exit wave views
+                for pv in pr_s.views:
+                    pv.pod.exit = u.shift_zoom(pv.pod.exit, (1.,)*2,
+                            (c1[0], c1[1]), (c2[0], c2[1]))
+
                 logger.info('Probe recentered from %s to %s' %
                             (str(tuple(c1)), str(tuple(c2))))
