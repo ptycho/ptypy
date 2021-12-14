@@ -634,20 +634,20 @@ class Ptycho(Base):
                 self.runtime.last_plot = 0
 
             # Prepare the engine
-            ilog_message('%s: initializing engine' %type(engine).__name__)
+            ilog_message('%s: initializing engine' %engine.p.name)
             with LogTime(self.p.io.benchmark == 'all') as t:
                 engine.initialize()
             if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_init += t.duration
 
             # One .prepare() is always executed, as Ptycho may hold data
-            ilog_message('%s: preparing engine' %type(engine).__name__)
+            ilog_message('%s: preparing engine' %engine.p.name)
             self.new_data = [(d.label, d) for d in self.diff.S.values()]
             with LogTime(self.p.io.benchmark == 'all') as t:
                 engine.prepare()
             if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
             # Start the iteration loop
-            ilog_streamer('%s: starting engine' %type(engine).__name__)
+            ilog_streamer('%s: starting engine' %engine.p.name)
             while not engine.finished:
                 # Check for client requests
                 if parallel.master and self.interactor is not None:
