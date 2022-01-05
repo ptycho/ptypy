@@ -462,6 +462,12 @@ class NanomaxStepscanSep2019(PtyScan):
     help = Relative rotation angle between the motor x and y axes and the detector pixel rows and columns in degree
     doc = If the Detector is mounted rotated around the beam axis relative to the scanning motors, use this angle to rotate the motor position into the detector frame of reference. The rotation angle is in mathematical positive sense from the motors to the detector pixel grid.
 
+    [xyAxisSkewOffset]
+    default = 0.0
+    type = float
+    help = Relative rotation angle beyond the expected 90 degrees between the motor x and y axes in degree
+    doc = If for example the scanner is damaged and x and y end up not beeing perfectly under 90 degrees, this value can can be used to correct for that.
+
     [detector]
     default = 'pilatus'
     type = str
@@ -495,7 +501,7 @@ class NanomaxStepscanSep2019(PtyScan):
             yFlipper = -1
             logger.warning("note: y motor is specified as flipped")
 
-        # if the x axis is tilted, take that into account.
+        # if the x/y axis is tilted with respect to the beam axis, take that into account.
         xCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
         yCosFactor = np.cos(self.info.yMotorAngle / 180.0 * np.pi)
         logger.info("x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
@@ -531,12 +537,25 @@ class NanomaxStepscanSep2019(PtyScan):
         x = np.concatenate(x)
         y = np.concatenate(y)   
 
+        chi_rad_x = 0
+        chi_rad_y = 0
         # if the detector and motor frame of reference are roated around the beam axis
         if self.info.zDetectorAngle != 0:
-            chi_rad = self.info.zDetectorAngle / 180.0 * np.pi
-            x, y    = np.cos(chi_rad)*x-np.sin(chi_rad)*y, np.sin(chi_rad)*x+np.cos(chi_rad)*y
+            chi_rad_x = self.info.zDetectorAngle / 180.0 * np.pi
+            chi_rad_y = 1.*chi_rad_x
             logger.info("x and y motor positions were roated by %.4f degree to align with the detector pixel grid" % (self.info.zDetectorAngle))
+        # if x and y are not under 90 degrees to each other
+        if self.info.xyAxisSkewOffset != 0:
+            chi_rad_x += -0.5 * self.info.xyAxisSkewOffset / 180.0 * np.pi
+            chi_rad_y += +0.5 * self.info.xyAxisSkewOffset / 180.0 * np.pi
+            logger.info("x and y motor positions were skewed by %.4f degreeto each other" % (self.info.xyAxisSkewOffset))
+        x, y = np.cos(chi_rad_x)*x-np.sin(chi_rad_y)*y, np.sin(chi_rad_x)*x+np.cos(chi_rad_y)*y
+            
+        # set minimum to zero so ptypy can work out the proper object size
+        x -= np.min(x)
+        y -= np.min(y)
 
+        # put the two arrays together and express in [m]
         positions = -np.vstack((y, x)).T * 1e-6
         return positions
 
