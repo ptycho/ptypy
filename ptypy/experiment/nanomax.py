@@ -700,6 +700,12 @@ class NanomaxContrast(NanomaxStepscanSep2019):
     type = str
     help =
 
+    [energy]
+    default = None
+    type = float
+    help = photon energy in keV, if None it will be read from the scan file
+    doc =
+
     [cropOnLoad]
     default = True
     type = bool
@@ -782,10 +788,15 @@ class NanomaxContrast(NanomaxStepscanSep2019):
                 self.info.cropOnLoad_x_lower = 0            
             # no need to have something similar for too large upper indices due to the way python slices arrays
         
+        # set the photon energy
+        if self.info.energy == None:	
+            with h5py.File(fullfilename, 'r') as fp:
+                self.meta.energy = fp['entry/snapshot/energy'][:] * 1e-3
+        else:
+            self.meta.energy = self.info.energy
 
         # actually loading the detector frames
         with h5py.File(fullfilename, 'r') as fp:
-            self.meta.energy = fp['entry/snapshot/energy'][:] * 1e-3
             for ind in indices:
                 # load only a cropped bit of the full frame
                 if self.info.cropOnLoad:
