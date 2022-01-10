@@ -548,7 +548,7 @@ class NanomaxStepscanSep2019(PtyScan):
         if self.info.xyAxisSkewOffset != 0:
             chi_rad_x += -0.5 * self.info.xyAxisSkewOffset / 180.0 * np.pi
             chi_rad_y += +0.5 * self.info.xyAxisSkewOffset / 180.0 * np.pi
-            logger.info("x and y motor positions were skewed by %.4f degreeto each other" % (self.info.xyAxisSkewOffset))
+            logger.info("x and y motor positions were skewed by %.4f degree to each other" % (self.info.xyAxisSkewOffset))
         x, y = np.cos(chi_rad_x)*x-np.sin(chi_rad_y)*y, np.sin(chi_rad_x)*x+np.cos(chi_rad_y)*y
             
         # set minimum to zero so ptypy can work out the proper object size
@@ -795,17 +795,20 @@ class NanomaxContrast(NanomaxStepscanSep2019):
             self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(cy)-d//2, int(cx)-d//2
             self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower+d, self.info.cropOnLoad_x_lower+d
 
-            # the center needs to be redefined for the cropped frames
-            self.info.center = (d//2,d//2)
+            # the (temporary) center needs to be redefined for the cropped frames
+            tmp_center_y, tmp_center_x = d//2, d//2
 
             # if the lower crop indices are negative, set them zero
             if self.info.cropOnLoad_y_lower<0:
-                self.info.center[0] += self.info.cropOnLoad_y_lower
+                tmp_center_y += self.info.cropOnLoad_y_lower
                 self.info.cropOnLoad_y_lower = 0
             if self.info.cropOnLoad_x_lower<0:
-                self.info.center[1] += self.info.cropOnLoad_x_lower
-                self.info.cropOnLoad_x_lower = 0            
+                tmp_center_x += self.info.cropOnLoad_x_lower
+                self.info.cropOnLoad_x_lower = 0    
             # no need to have something similar for too large upper indices due to the way python slices arrays
+
+            # now fix the new center
+            self.info.center = (tmp_center_y, tmp_center_x)
         
         # set the photon energy
         if self.info.energy == None:	
