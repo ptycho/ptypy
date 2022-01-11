@@ -857,6 +857,9 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         if self.info.maskfile:
             with h5py.File(self.info.maskfile, 'r') as hf:
                 mask2 = np.array(hf.get('mask'))
+                if self.info.cropOnLoad:
+                    mask2 = mask2[self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, 
+                                  self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
             logger.info("loaded additional mask, %u x %u, sum %u, so %u masked pixels" %
                         (mask2.shape + (np.sum(mask2), np.prod(mask2.shape)-np.sum(mask2))))
             mask = mask * mask2
