@@ -1,18 +1,23 @@
-
-import ptypy
+"""
+This script is a test for ptychographic reconstruction in the absence
+of actual data. It uses a simulated Au Siemens star pattern under  
+experimental farfield conditions in the hard X-ray regime.
+"""
 from ptypy.core import Ptycho
 from ptypy import utils as u
-import numpy as np
+
+import tempfile
+tmpdir = tempfile.gettempdir()
 
 ### PTYCHO PARAMETERS
 p = u.Param()
-p.verbose_level = 3
+p.verbose_level = "info"
 p.run = None
 
 p.data_type = "single"
 p.run = None
 p.io = u.Param()
-p.io.home = "/tmp/ptypy/"
+p.io.home = "/".join([tmpdir, "ptypy"])
 
 p.io.autoplot =  u.Param()
 p.io.autoplot.layout ='nearfield'
@@ -20,9 +25,9 @@ p.io.autoplot.layout ='nearfield'
 # Simulation parameters
 sim = u.Param()
 sim.energy = 9.7
-sim.distance = 8.46e-2
-sim.psize = 100e-9
-sim.shape = 1024
+sim.distance = 7
+sim.psize = 55e-6
+sim.shape = 512
 sim.xy = u.Param()
 sim.xy.override = u.parallel.MPIrand_uniform(0.0,10e-6,(20,2))
 #sim.xy.positions = np.random.normal(0.0,3e-6,(20,2))
@@ -59,7 +64,7 @@ sim.plot = False
 # Scan model and initial value parameters
 p.scans = u.Param()
 p.scans.scan00 = u.Param()
-p.scans.scan00.name = 'Full'
+p.scans.scan00.name = 'BlockFull'
 
 p.scans.scan00.coherence = u.Param()
 p.scans.scan00.coherence.num_probe_modes = 1
@@ -100,9 +105,9 @@ p.engines.engine00.overlap_converge_factor = 0.5
 p.engines.engine00.overlap_max_iterations = 100
 p.engines.engine00.fourier_relax_factor = 0.05
 
-#p.engines.engine01 = u.Param()
-#p.engines.engine01.name = 'ML'
-#p.engines.engine01.numiter = 50
+p.engines.engine01 = u.Param()
+p.engines.engine01.name = 'ML'
+p.engines.engine01.numiter = 50
 
 P = Ptycho(p,level=5)
 

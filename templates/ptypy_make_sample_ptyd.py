@@ -2,13 +2,11 @@
 This script creates a sample *.ptyd data file using the built-in
 test Scan `ptypy.core.data.MoonFlowerScan`
 """
-import sys
 import time
-import ptypy
 from ptypy import utils as u
 from ptypy.core.data import MoonFlowerScan
 # for verbose output
-u.verbose.set_level(3)
+u.verbose.set_level("info")
 
 # create data parameter branch
 data = u.Param()

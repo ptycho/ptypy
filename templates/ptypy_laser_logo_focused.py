@@ -1,20 +1,27 @@
-import ptypy
+"""
+This script is a test for ptychographic reconstruction in the absence
+of actual data. It uses a simulated Au Siemens star pattern under  
+experimental farfield conditions and with a focused optical laser beam.
+"""
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import ptypy.simulations as sim
-import numpy as np
 
+import pathlib
+import numpy as np
+import tempfile
+tmpdir = tempfile.gettempdir()
 
 ### PTYCHO PARAMETERS
 p = u.Param()
-p.verbose_level = 3
+p.verbose_level = "info"
 p.data_type = "single"
 
 p.run = None
 p.io = u.Param()
-p.io.home = "/tmp/ptypy/"
-p.io.autosave = None
-p.io.autoplot = u.Param()
+p.io.home = "/".join([tmpdir, "ptypy"])
+p.io.autosave = u.Param(active=False)
+p.io.autoplot = u.Param(active=True)
 p.io.autoplot.layout='minimal'
 
 # Simulation parameters
@@ -43,9 +50,9 @@ sim.illumination.propagation.focussed = None
 sim.illumination.propagation.parallel = 0.03
 sim.illumination.propagation.spot_size = None
 
-ptypy_path = ptypy.__file__.strip('ptypy.__init__.py')
+imgfile = "/".join([str(pathlib.Path(__file__).parent.resolve()), '../resources/ptypy_logo_1M.png'])
 sim.sample = u.Param()
-sim.sample.model = -u.rgb2complex(u.imload('%s/resources/ptypy_logo_1M.png' % ptypy_path)[::-1,:,:-1])
+sim.sample.model = -u.rgb2complex(u.imload(imgfile)[::-1,:,:-1])
 sim.sample.process = u.Param()
 sim.sample.process.offset = (0,0)
 sim.sample.process.zoom = 0.5

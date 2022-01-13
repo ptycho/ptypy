@@ -1,19 +1,24 @@
-
-import ptypy
+"""
+This script is a test for ptychographic reconstruction in the absence
+of actual data. It uses a simulated Au Siemens star pattern under  
+experimental nearfield conditions in the hard X-ray regime.
+"""
 from ptypy.core import Ptycho
 from ptypy import utils as u
-import numpy as np
+
+import tempfile
+tmpdir = tempfile.gettempdir()
 
 ### PTYCHO PARAMETERS
 p = u.Param()
-p.verbose_level = 3
+p.verbose_level = "info"
 p.run = None
 p.frames_per_block = 20
 
 p.data_type = "single"
 p.run = None
 p.io = u.Param()
-p.io.home = "/tmp/ptypy/"
+p.io.home = "/".join([tmpdir, "ptypy"])
 
 p.io.autoplot =  u.Param()
 p.io.autoplot.layout ='nearfield'
@@ -60,7 +65,7 @@ sim.plot = False
 # Scan model and initial value parameters
 p.scans = u.Param()
 p.scans.scan00 = u.Param()
-p.scans.scan00.name = 'Full'
+p.scans.scan00.name = 'BlockFull'
 p.scans.scan00.propagation = "nearfield"
 
 p.scans.scan00.coherence = u.Param()
@@ -102,9 +107,9 @@ p.engines.engine00.overlap_converge_factor = 0.5
 p.engines.engine00.overlap_max_iterations = 100
 p.engines.engine00.fourier_relax_factor = 0.05
 
-#p.engines.engine01 = u.Param()
-#p.engines.engine01.name = 'ML'
-#p.engines.engine01.numiter = 50
+p.engines.engine01 = u.Param()
+p.engines.engine01.name = 'ML'
+p.engines.engine01.numiter = 50
 
 P = Ptycho(p,level=5)
 
