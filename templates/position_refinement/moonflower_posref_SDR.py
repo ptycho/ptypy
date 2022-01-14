@@ -3,18 +3,21 @@ This script is a test for ptychographic reconstruction in the absence
 of actual data. It uses the test Scan class
 `ptypy.core.data.MoonFlowerScan` to provide "data".
 """
-
 import numpy as np
 from ptypy.core import Ptycho
 from ptypy import utils as u
+
+import tempfile
+tmpdir = tempfile.gettempdir()
+
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 3
+p.verbose_level = "info"
 
 # set home path
 p.io = u.Param()
-p.io.home = "/tmp/ptypy/"
+p.io.home = "/".join([tmpdir, "ptypy"])
 p.io.autosave = u.Param(active=False)
 p.io.interaction = u.Param(active=False)
 
@@ -23,7 +26,7 @@ p.scans = u.Param()
 p.scans.MF = u.Param()
 # now you have to specify which ScanModel to use with scans.XX.name,
 # just as you have to give 'name' for engines and PtyScan subclasses.
-p.scans.MF.name = 'Full'
+p.scans.MF.name = 'BlockFull'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
@@ -75,11 +78,26 @@ for pname, pod in P.pods.items():
     coords_start.append(np.copy(pod.ob_view.coord))
     #pod.diff *= np.random.uniform(0.1,1)
     a += 4.
+coords = np.array(coords)
+coords_start = np.array(coords_start)
 
-np.savetxt("positions_theory.txt", coords)
-np.savetxt("positions_start.txt", coords_start)
 P.obj.reformat()
 
 # Run
 P.run()
 P.finalize()
+
+coords_new = []
+for pname, pod in P.pods.items():
+    coords_new.append(np.copy(pod.ob_view.coord))
+coords_new = np.array(coords_new)
+
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10,10), dpi=60)
+plt.title("RMSE = %.2f um" %(np.sqrt(np.sum((coords_new-coords)**2,axis=1)).mean()*1e6))
+plt.plot(coords[:,0], coords[:,1], marker='.', color='k', lw=0, label='original')
+plt.plot(coords_start[:,0], coords_start[:,1], marker='x', color='r', lw=0, label='start')
+plt.plot(coords_new[:,0], coords_new[:,1], marker='.', color='r', lw=0, label='end')
+plt.legend()
+plt.savefig("/".join([tmpdir, "ptypy", "posref_eval_sdr.pdf"]), bbox_inches='tight')
+plt.show()

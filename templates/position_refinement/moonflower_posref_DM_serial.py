@@ -3,19 +3,25 @@ This script is a test for ptychographic reconstruction in the absence
 of actual data. It uses the test Scan class
 `ptypy.core.data.MoonFlowerScan` to provide "data".
 """
-
 import numpy as np
 from ptypy.core import Ptycho
 from ptypy import utils as u
+import ptypy
+ptypy.load_gpu_engines(arch="serial")
+
+import tempfile
+tmpdir = tempfile.gettempdir()
+
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 3
-
+p.verbose_level = "info"
+p.frames_per_block = 100
 # set home path
 p.io = u.Param()
-p.io.home = "/tmp/ptypy/"
+p.io.home =  "/".join([tmpdir, "ptypy"])
 p.io.autosave = u.Param(active=False)
+p.io.autoplot = u.Param(active=False)
 p.io.interaction = u.Param(active=False)
 
 # max 200 frames (128x128px) of diffraction data
@@ -23,24 +29,27 @@ p.scans = u.Param()
 p.scans.MF = u.Param()
 # now you have to specify which ScanModel to use with scans.XX.name,
 # just as you have to give 'name' for engines and PtyScan subclasses.
-p.scans.MF.name = 'Full'
+p.scans.MF.name = 'BlockFull' # or 'Full'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
 p.scans.MF.data.num_frames = 200
 p.scans.MF.data.save = None
 
+p.scans.MF.illumination = u.Param(diversity=None)
+p.scans.MF.coherence = u.Param(num_probe_modes=1)
 # position distance in fraction of illumination frame
 p.scans.MF.data.density = 0.2
 # total number of photon in empty beam
 p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
 p.scans.MF.data.psf = 0.
+#p.scans.MF.data.add_poisson_noise = False
 
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM'
+p.engines.engine00.name = 'DM_serial'
 p.engines.engine00.probe_support = 1
 p.engines.engine00.numiter = 1000
 p.engines.engine00.numiter_contiguous = 10
@@ -57,7 +66,7 @@ p.engines.engine00.position_refinement.record = True
 # prepare and run
 P = Ptycho(p, level=4)
 
-# Mess up the positions in a predictible way (for MPI)
+# Mess up the positions
 a = 0.
 
 coords = []
@@ -72,13 +81,29 @@ for pname, pod in P.pods.items():
     new_coord = before + perturbation # make sure integer number of pixels shift
     pod.ob_view.coord = new_coord
     coords_start.append(np.copy(pod.ob_view.coord))
-    #pod.diff *= np.random.uniform(0.1,1)
+    #pod.diff *= np.random.uniform(0.1,1)y
     a += 4.
+coords = np.array(coords)
+coords_start = np.array(coords_start)
 
-#np.savetxt("positions_theory.txt", coords)
-#np.savetxt("positions_start.txt", coords_start)
+# update the object storage
 P.obj.reformat()
 
 # Run
 P.run()
 P.finalize()
+
+coords_new = []
+for pname, pod in P.pods.items():
+    coords_new.append(np.copy(pod.ob_view.coord))
+coords_new = np.array(coords_new)
+
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10,10), dpi=60)
+plt.title("RMSE = %.2f um" %(np.sqrt(np.sum((coords_new-coords)**2,axis=1)).mean()*1e6))
+plt.plot(coords[:,0], coords[:,1], marker='.', color='k', lw=0, label='original')
+plt.plot(coords_start[:,0], coords_start[:,1], marker='x', color='r', lw=0, label='start')
+plt.plot(coords_new[:,0], coords_new[:,1], marker='.', color='r', lw=0, label='end')
+plt.legend()
+plt.savefig("/".join([tmpdir, "ptypy", "posref_eval_dm_serial.pdf"]), bbox_inches='tight')
+plt.show()
