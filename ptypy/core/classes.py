@@ -1546,7 +1546,7 @@ class Container(Base):
     """
     _PREFIX = CONTAINER_PREFIX
 
-    def __init__(self, owner=None, ID=None, data_type='complex', data_dims=2, scaling="same"):
+    def __init__(self, owner=None, ID=None, data_type='complex', data_dims=2, distribution="cloned"):
         """
         Parameters
         ----------
@@ -1563,8 +1563,8 @@ class Container(Base):
         data_dims : int
             dimension of data, can be 2 or 3
 
-        scaling : str
-            Indicates if the data is the "same" in all MPI processes or "distributed"
+        distribution : str
+            Indicates if the data is "cloned" in all MPI processes or "scattered"
 
         """
 
@@ -1582,7 +1582,7 @@ class Container(Base):
         self.original = self
 
         # boolean parameter for distributed containers
-        self.distributed = (scaling == "distributed")
+        self.distributed = (distribution == "scattered")
 
     @property
     def copies(self):
