@@ -65,6 +65,7 @@ p.engines.engine00.position_refinement.nshifts = 32
 p.engines.engine00.position_refinement.amplitude = 5e-7
 p.engines.engine00.position_refinement.max_shift = 1e-6
 p.engines.engine00.position_refinement.method = "GridSearch"
+p.engines.engine00.position_refinement.metric = "photon"
 p.engines.engine00.position_refinement.record = True
 
 # prepare and run

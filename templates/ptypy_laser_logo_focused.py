@@ -68,7 +68,7 @@ sim.detector = u.Param(dtype=np.uint32,full_well=2**32-1,psf=None)
 # Scan model and initial value parameters
 p.scans = u.Param()
 p.scans.ptypy = u.Param()
-p.scans.ptypy.name = 'Full'
+p.scans.ptypy.name = 'BlockFull'
 
 p.scans.ptypy.coherence = u.Param()
 p.scans.ptypy.coherence.num_probe_modes=1
@@ -93,5 +93,5 @@ p.engines.engine00.name = 'DM'
 p.engines.engine00.numiter = 40
 p.engines.engine00.fourier_relax_factor = 0.05
 
-u.verbose.set_level(3)
+u.verbose.set_level("info")
 P = Ptycho(p,level=5)

@@ -71,7 +71,7 @@ sim.plot = False
 # Scan model and initial value parameters
 p.scans = u.Param()
 p.scans.scan00 = u.Param()
-p.scans.scan00.name = 'Full'
+p.scans.scan00.name = 'BlockFull'
 
 p.scans.scan00.coherence = u.Param()
 p.scans.scan00.coherence.num_probe_modes = 4
@@ -114,5 +114,5 @@ p.engines.engine00.overlap_converge_factor = 0.05
 p.engines.engine00.overlap_max_iterations = 100
 p.engines.engine00.obj_smooth_std = 5
 
-u.verbose.set_level(3)
+u.verbose.set_level("info")
 P = Ptycho(p,level=5)
