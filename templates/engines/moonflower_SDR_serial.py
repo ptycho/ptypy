@@ -45,7 +45,7 @@ p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
 p.scans.MF.data.psf = 0.0
 p.scans.MF.coherence = u.Param()
-p.scans.MF.coherence.num_probe_modes = 3
+p.scans.MF.coherence.num_probe_modes = 1
 
 # attach a reconstrucion engine
 p.engines = u.Param()

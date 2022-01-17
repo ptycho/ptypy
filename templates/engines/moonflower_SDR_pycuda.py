@@ -45,15 +45,16 @@ p.scans.MF.data.photons = 1e8
 # Gaussian FWHM of possible detector blurring
 p.scans.MF.data.psf = 0.0
 p.scans.MF.coherence = u.Param()
-p.scans.MF.coherence.num_probe_modes = 3
+p.scans.MF.coherence.num_probe_modes = 1
 
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'SDR_pycuda'
-p.engines.engine00.numiter = 100
-p.engines.engine00.alpha = 0.5
+p.engines.engine00.numiter = 500
+p.engines.engine00.sigma = 0.5
 p.engines.engine00.tau = 0.1
+p.engines.engine00.probe_update_start = 2
 
 # prepare and run
 P = Ptycho(p,level=5)

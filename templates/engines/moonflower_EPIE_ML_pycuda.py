@@ -19,13 +19,9 @@ p.verbose_level = "info"
 # set home path
 p.io = u.Param()
 p.io.home =  "/".join([tmpdir, "ptypy"])
-
-# saving intermediate results
 p.io.autosave = u.Param(active=False)
-
-# opens plotting GUI if interaction set to active)
-p.io.autoplot = u.Param(active=True)
-p.io.interaction = u.Param(active=True)
+p.io.autoplot = u.Param(active=False)
+p.io.interaction = u.Param(active=False)
 
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
