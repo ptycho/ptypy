@@ -3,28 +3,32 @@ This script is a test for ptychographic reconstruction in the absence
 of actual data. It uses the test Scan class
 `ptypy.core.data.MoonFlowerScan` to provide "data".
 """
-#import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
-#import numpy
-#numpy.seterr(divide='raise', invalid='raise')
+
+import tempfile
+tmpdir = tempfile.gettempdir()
 
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 4
+p.verbose_level = "info"
 
 # set home path
 p.io = u.Param()
-p.io.home = "/tmp/ptypy/"
-p.io.autosave = None
-p.io.autoplot = u.Param()
-p.io.autoplot.active = True
+p.io.home =  "/".join([tmpdir, "ptypy"])
+
+# saving intermediate results
+p.io.autosave = u.Param(active=False)
+
+# opens plotting GUI if interaction set to active)
+p.io.autoplot = u.Param(active=True)
+p.io.interaction = u.Param(active=True)
 
 # max 100 frames (128x128px) of diffraction data
 p.scans = u.Param()
 p.scans.MF = u.Param()
-p.scans.MF.name = 'Full'
+p.scans.MF.name = 'BlockFull'
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
@@ -60,5 +64,6 @@ p.engines.engine01.smooth_gradient = 20.
 p.engines.engine01.smooth_gradient_decay = 1/50.
 p.engines.engine01.floating_intensities = False
 p.engines.engine01.numiter = 300
+
 # prepare and run
 P = Ptycho(p, level=5)
