@@ -12,11 +12,10 @@ import numpy as np
 from functools import wraps
 from collections import OrderedDict
 from collections import namedtuple
-from time import perf_counter
 
 __all__ = ['str2int', 'str2range', 'complex_overload', 'expect2',
            'expect3', 'keV2m', 'keV2nm', 'nm2keV', 'clean_path',
-           'unique_path', 'Table', 'all_subclasses', 'expectN', 'isstr', 'LogTime']
+           'unique_path', 'Table', 'all_subclasses', 'expectN', 'isstr']
 
 
 def all_subclasses(cls, names=False):
@@ -330,11 +329,3 @@ def clean_path(filename):
     if not os.path.exists(base):
         os.makedirs(base)
     return filename
-
-class LogTime:
-    def __enter__(self):
-        self.time = perf_counter()
-        return self
-    def __exit__(self, type, value, traceback):
-        self.time = perf_counter() - self.time
-        self.readout = f'{self.time:.3f} seconds'

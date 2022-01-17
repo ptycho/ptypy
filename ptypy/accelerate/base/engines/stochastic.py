@@ -90,6 +90,7 @@ class _StochasticEngineSerial(_StochasticEngine):
         for label, scan in self.ptycho.model.scans.items():
 
             kern = u.Param()
+            kern.scanmodel = type(scan).__name__
             self.kernels[label] = kern
 
             # TODO: needs to be adapted for broad bandwidth
@@ -150,7 +151,7 @@ class _StochasticEngineSerial(_StochasticEngine):
             prep.err_phot = np.zeros_like(prep.ma_sum)
             prep.err_fourier = np.zeros_like(prep.ma_sum)
             prep.err_exit = np.zeros_like(prep.ma_sum)
-            
+
         # Unfortunately this needs to be done for all pods, since
         # the shape of the probe / object was modified.
         # TODO: possible scaling issue, remove the need for padding
@@ -182,7 +183,7 @@ class _StochasticEngineSerial(_StochasticEngine):
         """
         Compute one iteration.
         """
-        for it in range(num):   
+        for it in range(num):
 
             error_dct = {}
 
@@ -296,11 +297,15 @@ class _StochasticEngineSerial(_StochasticEngine):
                         FUK.log_likelihood(aux, addr, mag, ma, err_phot)
                         self.benchmark.F_LLerror += time.time() - t1
 
+
                 # update errors
-                errs = np.ascontiguousarray(np.vstack([np.hstack(prep.err_fourier), 
-                                                       np.hstack(prep.err_phot), 
+                errs = np.ascontiguousarray(np.vstack([np.hstack(prep.err_fourier),
+                                                       np.hstack(prep.err_phot),
                                                        np.hstack(prep.err_exit)]).T)
                 error_dct.update(zip(prep.view_IDs, errs))
+
+            # Re-center the probe
+            self.center_probe()
 
             self.curiter += 1
 
@@ -319,7 +324,7 @@ class _StochasticEngineSerial(_StochasticEngine):
         # Update positions
         if do_update_pos:
             """
-            Iterates through all positions and refines them by a given algorithm. 
+            Iterates through all positions and refines them by a given algorithm.
             """
             #log(4, "----------- START POS REF -------------")
             pID, oID, eID = prep.poe_IDs
@@ -342,7 +347,7 @@ class _StochasticEngineSerial(_StochasticEngine):
             max_oby = ob.shape[-2] - aux.shape[-2] - 1
             max_obx = ob.shape[-1] - aux.shape[-1] - 1
 
-            # We first need to calculate the current error 
+            # We first need to calculate the current error
             PCK.build_aux(aux, addr, ob, pr)
             aux[:] = FW(aux)
             if self.p.position_refinement.metric == "fourier":
@@ -400,7 +405,7 @@ class _StochasticEngineSerial(_StochasticEngine):
                 for i,view in enumerate(d.views):
                     for j,(pname, pod) in enumerate(view.pods.items()):
                         delta = (prep.original_addr[i][j][1][1:] - prep.addr[i][j][1][1:]) * res
-                        pod.ob_view.coord += delta 
+                        pod.ob_view.coord += delta
                         pod.ob_view.storage.update_views(pod.ob_view)
 
 

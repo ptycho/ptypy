@@ -514,7 +514,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
         super().engine_finalize(benchmark)
 
 
-@register()
+@register(name="DM_pycuda")
 class DM_pycuda_stream(_ProjectionEngine_pycuda_stream, DMMixin):
     """
     A full-fledged Difference Map engine accelerated with pycuda.
@@ -535,7 +535,7 @@ class DM_pycuda_stream(_ProjectionEngine_pycuda_stream, DMMixin):
         ptycho_parent.citations.add_article(**self.article)
 
 
-@register()
+@register(name="RAAR_pycuda")
 class RAAR_pycuda_stream(_ProjectionEngine_pycuda_stream, RAARMixin):
     """
     A RAAR engine in accelerated with pycuda.

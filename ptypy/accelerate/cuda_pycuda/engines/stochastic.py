@@ -21,8 +21,11 @@ from ptypy.engines.stochastic import EPIEMixin, SDRMixin
 from ptypy.accelerate.base.engines.stochastic import _StochasticEngineSerial
 from ptypy.accelerate.base import address_manglers
 from .. import get_context
-from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel, PropagationKernel
-from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel, TransposeKernel, MaxAbs2Kernel
+from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel,\
+        PositionCorrectionKernel, PropagationKernel
+from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel,\
+        TransposeKernel, MaxAbs2Kernel, MassCenterKernel, Abs2SumKernel,\
+        InterpolatedShiftKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..mem_utils import GpuDataManager2
 
@@ -60,12 +63,22 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         self.ma_data = None
         self.mag_data = None
         self.ex_data = None
-    
+
     def engine_initialize(self):
         """
         Prepare for reconstruction.
         """
         self.context, self.queue = get_context(new_context=True, new_queue=True)
+
+        # initialise kernels for centring probe if required
+        if self.p.probe_center_tol is not None:
+            # mass center kernel
+            self.MCK = MassCenterKernel(queue=self.queue)
+            # absolute sum kernel
+            self.A2SK = Abs2SumKernel(dtype=self.pr.dtype, queue=self.queue)
+            # interpolated shift kernel
+            self.ISK = InterpolatedShiftKernel(queue=self.queue)
+
         super().engine_initialize()
         self.qu_htod = cuda.Stream()
         self.qu_dtoh = cuda.Stream()
@@ -80,6 +93,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         for label, scan in self.ptycho.model.scans.items():
 
             kern = u.Param()
+            kern.scanmodel = type(scan).__name__
             self.kernels[label] = kern
             # TODO: needs to be adapted for broad bandwidth
             geo = scan.geometries[0]
@@ -131,11 +145,14 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                 log(4, "Setting up position correction")
                 kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
                 kern.PCK.allocate()
-        
+
         ex_mem = 0
         mag_mem = 0
         for scan, kern in self.kernels.items():
-            ex_mem = max(kern.aux.nbytes * fpc, ex_mem)
+            if kern.scanmodel in ("GradFull", "BlockGradFull"):
+                ex_mem = max(kern.aux.nbytes * 1, ex_mem)
+            else:
+                ex_mem = max(kern.aux.nbytes * fpc, ex_mem)
             mag_mem = max(kern.FUK.gpu.fdev.nbytes * fpc, mag_mem)
         ma_mem = mag_mem
         mem = cuda.mem_get_info()[0]
@@ -207,7 +224,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         self.dID_list = list(self.di.S.keys())
         error = {}
         for it in range(num):
-            
+
             for iblock, dID in enumerate(self.dID_list):
 
                 # find probe, object and exit ID in dependence of dID
@@ -221,7 +238,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                 POK = kern.POK
                 MAK = kern.MAK
                 PROP = kern.PROP
-                
+
                 # get aux buffer
                 aux = kern.aux
 
@@ -321,6 +338,9 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
             # swap direction
             self.dID_list.reverse()
 
+            # Re-center probe
+            self.center_probe()
+
             self.curiter += 1
             self.ex_data.syncback = False
 
@@ -369,7 +389,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
             mangled_addr = prep.mangled_addr_gpu[i,None]
             err_fourier = prep.err_fourier_gpu[i,None]
             error_state = prep.error_state_gpu[i,None]
-            
+
             PCK = kern.PCK
             PROP = kern.PROP
 
@@ -377,12 +397,12 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
             max_oby = ob.shape[-2] - aux.shape[-2] - 1
             max_obx = ob.shape[-1] - aux.shape[-1] - 1
 
-            # We need to re-calculate the current error 
+            # We need to re-calculate the current error
             PCK.build_aux(aux, addr, ob, pr)
             PROP.fw(aux, aux)
             #self.queue.wait_for_event(ev_mag)
             #self.queue.wait_for_event(ev_ma)
-            
+
             if self.p.position_refinement.metric == "fourier":
                 PCK.fourier_error(aux, addr, mag, ma, ma_sum)
                 PCK.error_reduce(addr, err_fourier)
@@ -393,7 +413,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                                     size=err_fourier.nbytes, stream=self.queue)
 
             PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
-                            
+
             #log(4, 'Position refinement trial: iteration %s' % (self.curiter))
             for i in range(PCK.mangler.nshifts):
                 PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
@@ -405,10 +425,42 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                 if self.p.position_refinement.metric == "photon":
                     PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
                 PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
-            
+
             cuda.memcpy_dtod_async(dest=err_fourier.ptr,
                                     src=error_state.ptr,
                                     size=err_fourier.nbytes, stream=self.queue)
+
+
+    def center_probe(self):
+        if self.p.probe_center_tol is not None:
+            for name, pr_s in self.pr.storages.items():
+                psum_d = self.A2SK.abs2sum(pr_s.gpu)
+                c1 = self.MCK.mass_center(psum_d).get()
+                c2 = (np.asarray(pr_s.shape[-2:]) // 2).astype(c1.dtype)
+
+                shift = c2 - c1
+                # exit if the current center of mass is within the tolerance
+                if u.norm(shift) < self.p.probe_center_tol:
+                    break
+
+                # shift the probe
+                pr_s.gpu = self.ISK.interpolate_shift(pr_s.gpu, shift)
+
+                # shift the object
+                ob_s = pr_s.views[0].pod.ob_view.storage
+                ob_s.gpu = self.ISK.interpolate_shift(ob_s.gpu, shift)
+
+                # shift the exit waves
+                for dID in self.di.S.keys():
+                    prep = self.diff_info[dID]
+                    pID, oID, eID = prep.poe_IDs
+                    if pID == name:
+                        prep.ex_full = self.ISK.interpolate_shift(prep.ex_full,
+                                shift)
+
+                log(4,'Probe recentered from %s to %s'
+                            % (str(tuple(c1)), str(tuple(c2))))
+
 
     def engine_finalize(self):
         """
@@ -425,7 +477,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         for dID, prep in self.diff_info.items():
             prep.addr = prep.addr_gpu.get()
 
-        # copy data to cpu 
+        # copy data to cpu
         # this kills the pagelock memory (otherwise we get segfaults in h5py)
         for name, s in self.pr.S.items():
             s.data = np.copy(s.data)

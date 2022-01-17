@@ -116,7 +116,7 @@ class BaseEngine(object):
         """
         logger.info('\n' +
                     headerline('Starting %s-algorithm.'
-                               % str(type(self).__name__), 'l', '=') + '\n')
+                               % (self.p.name), 'l', '=') + '\n')
         logger.info('Parameter set:')
         logger.info(u.verbose.report(self.p, noheader=True).strip())
         logger.info(headerline('', 'l', '='))
@@ -139,6 +139,17 @@ class BaseEngine(object):
         self._probe_fourier_support = {}
         # Call engine specific initialization
         # TODO: Maybe child classes should be calling this?
+
+        # # Make sure all the pods are supported
+        # for label_, pod_ in self.pods.items():
+        #     if not pod_.model.__class__ in self.SUPPORTED_MODELS:
+        #         raise Exception('Model %s not supported by engine' % pod_.model.__class__)
+
+        # Make sure all scan models are supported
+        for model in self.ptycho.model.scans.values():
+            if not model.__class__ in self.SUPPORTED_MODELS:
+                raise Exception('Model %s not supported by engine %s' % (model.__class__,self.p.name))
+
         self.engine_initialize()
 
     def prepare(self):
@@ -146,11 +157,6 @@ class BaseEngine(object):
         Last-minute preparation before iterating.
         """
         self.finished = False
-
-        # Make sure all the pods are supported
-        for label_, pod_ in self.pods.items():
-            if not pod_.model.__class__ in self.SUPPORTED_MODELS:
-                raise Exception('Model %s not supported by engine' % pod_.model.__class__)
 
         # Calculate probe support
         # an individual support for each storage is calculated in saved
@@ -230,7 +236,7 @@ class BaseEngine(object):
 
             logger.warning("""Engine %s did not increase iteration counter
             `self.curiter` internally. Accessing this attribute in that
-            engine is inaccurate""" % self.__class__.__name__)
+            engine is inaccurate""" % self.p.name)
 
             self.curiter += niter_contiguous
 
@@ -238,7 +244,7 @@ class BaseEngine(object):
 
             logger.error("""Engine %s increased iteration counter
             `self.curiter` by %d instead of %d. This may lead to
-            unexpected behaviour""" % (self.__class__.__name__,
+            unexpected behaviour""" % (self.p.name,
             self.curiter-it, niter_contiguous))
 
         else:
@@ -264,7 +270,7 @@ class BaseEngine(object):
             iteration=self.curiter,
             iterations=self.alliter,
             numiter=self.numiter,
-            engine=type(self).__name__,
+            engine=self.p.name,
             duration=time.time() - self.t,
             error=error
         )

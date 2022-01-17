@@ -9,11 +9,12 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
+import json
 from . import paths
 from collections import OrderedDict
 
 from .. import utils as u
-from ..utils.verbose import logger, _, report, headerline, log
+from ..utils.verbose import logger, _, report, headerline, log, LogTime
 from ..utils.verbose import ilog_message, ilog_streamer, ilog_newline
 from ..utils import parallel
 from .. import engines
@@ -247,6 +248,14 @@ class Ptycho(Base):
     doc = Switch to request the production of a movie from the dumped plots at the end of the
       reconstruction.
 
+    [io.benchmark]
+    default = None
+    type = str
+    help = Produce timings for benchmarking the performance of data loaders and engines
+    doc = Switch to get timings and save results to a json file in p.io.home
+        Choose ``'all'`` for timing data loading, engine_init, engine_prepare, engine_iterate and engine_finalize
+    userlevel = 2
+
     [scans]
     default = None
     type = Param
@@ -414,6 +423,15 @@ class Ptycho(Base):
         # Find run name
         self.runtime.run = self.paths.run(p.run)
 
+        # Benchmark
+        if self.p.io.benchmark == 'all':
+            self.benchmark = u.Param()
+            self.benchmark.data_load = 0
+            self.benchmark.engine_init = 0
+            self.benchmark.engine_prepare = 0
+            self.benchmark.engine_iterate = 0
+            self.benchmark.engine_finalize = 0
+
     def init_communication(self):
         """
         Called on __init__ if ``level >= 3``.
@@ -495,7 +513,9 @@ class Ptycho(Base):
         """
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs. Sets self.new_data
-        self.new_data = self.model.new_data()
+        with LogTime(self.p.io.benchmark == 'all') as t:
+            self.new_data = self.model.new_data()
+        if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
         # Print stats
         parallel.barrier()
@@ -614,16 +634,20 @@ class Ptycho(Base):
                 self.runtime.last_plot = 0
 
             # Prepare the engine
-            ilog_message('%s: initializing engine' %type(engine).__name__)
-            engine.initialize()
+            ilog_message('%s: initializing engine' %engine.p.name)
+            with LogTime(self.p.io.benchmark == 'all') as t:
+                engine.initialize()
+            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_init += t.duration
 
             # One .prepare() is always executed, as Ptycho may hold data
-            ilog_message('%s: preparing engine' %type(engine).__name__)
+            ilog_message('%s: preparing engine' %engine.p.name)
             self.new_data = [(d.label, d) for d in self.diff.S.values()]
-            engine.prepare()
+            with LogTime(self.p.io.benchmark == 'all') as t:
+                engine.prepare()
+            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
             # Start the iteration loop
-            ilog_streamer('%s: starting engine' %type(engine).__name__)
+            ilog_streamer('%s: starting engine' %engine.p.name)
             while not engine.finished:
                 # Check for client requests
                 if parallel.master and self.interactor is not None:
@@ -632,12 +656,16 @@ class Ptycho(Base):
                 parallel.barrier()
 
                 # Check for new data
-                self.new_data = self.model.new_data()
+                with LogTime(self.p.io.benchmark == 'all') as t:
+                    self.new_data = self.model.new_data()
+                if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
                 # Last minute preparation before a contiguous block of
                 # iterations
                 if self.new_data:
-                    engine.prepare()
+                    with LogTime(self.p.io.benchmark == 'all') as t:
+                        engine.prepare()
+                    if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
                 auto_save = self.p.io.autosave
                 if auto_save.active and auto_save.interval > 0:
@@ -649,7 +677,9 @@ class Ptycho(Base):
                         logger.info(headerline())
 
                 # One iteration
-                engine.iterate()
+                with LogTime(self.p.io.benchmark == 'all') as t:
+                    engine.iterate()
+                if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_iterate += t.duration
 
                 # Display runtime information and do saving
                 if parallel.master:
@@ -669,7 +699,9 @@ class Ptycho(Base):
             ilog_newline()
 
             # Done. Let the engine finish up
-            engine.finalize()
+            with LogTime(self.p.io.benchmark == 'all') as t:
+                engine.finalize()
+            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_finalize += t.duration
 
             # Save
             if self.p.io.rfile:
@@ -678,6 +710,15 @@ class Ptycho(Base):
                 pass
             # Time the initialization
             self.runtime.stop = time.asctime()
+
+            # Save benchmarks to json file
+            if (self.p.io.benchmark == 'all') and parallel.master:
+                try:
+                    with open(self.paths.home + "/benchmark.json", "w") as json_file:
+                        json.dump(self.benchmark, json_file)
+                    logger.info("Benchmarks have been written to %s" %self.paths.home + "/benchmark.json")
+                except Exception as e:
+                    logger.warning("Failed to write benchmarks to file: %s" %e)
 
         elif epars is not None:
             # A fresh set of engine parameters arrived.
