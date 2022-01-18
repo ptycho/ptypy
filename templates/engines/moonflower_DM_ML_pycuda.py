@@ -58,9 +58,9 @@ p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'ML_pycuda'
 p.engines.engine01.numiter = 20
 p.engines.engine01.numiter_contiguous = 5
-p.engines.engine01.reg_del2 = True                      # Whether to use a Gaussian prior (smoothing) regularizer
-p.engines.engine01.reg_del2_amplitude = 1.             # Amplitude of the Gaussian prior if used
-p.engines.engine01.floating_intensities = True
+p.engines.engine01.reg_del2 = False
+p.engines.engine01.reg_del2_amplitude = 1.
+p.engines.engine01.floating_intensities = False
 p.engines.engine01.probe_support = 0.5
 
 # prepare and run

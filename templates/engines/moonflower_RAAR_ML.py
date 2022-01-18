@@ -50,17 +50,18 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM'
+p.engines.engine00.name = 'RAAR'
 p.engines.engine00.numiter = 60
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.probe_support = 0.5
+p.engines.engine00.beta = 0.9
 
 # attach a reconstrucion engine
 p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'ML'
 p.engines.engine01.numiter = 20
 p.engines.engine01.numiter_contiguous = 5
-p.engines.engine01.reg_del2 = False
+p.engines.engine01.reg_del2 = False 
 p.engines.engine01.reg_del2_amplitude = 1. 
 p.engines.engine01.floating_intensities = False
 p.engines.engine01.probe_support = 0.5
