@@ -25,9 +25,9 @@ p.io.autoplot.layout ='nearfield'
 # Simulation parameters
 sim = u.Param()
 sim.energy = 9.7
-sim.distance = 7
-sim.psize = 55e-6
-sim.shape = 512
+sim.distance = 8.46e-2
+sim.psize = 100e-9
+sim.shape = 1024
 sim.xy = u.Param()
 sim.xy.override = u.parallel.MPIrand_uniform(0.0,10e-6,(20,2))
 #sim.xy.positions = np.random.normal(0.0,3e-6,(20,2))
