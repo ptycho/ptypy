@@ -1,21 +1,30 @@
-import numpy as np
-import ptypy
+"""
+This script is a test for ptychographic reconstruction in the absence
+of actual data. It uses a simulated Au Siemens star pattern under  
+experimental farfield conditions and with a focused beam in the hard X-ray regime.
+"""
 from ptypy.core import Ptycho
 from ptypy import utils as u
+import ptypy
+ptypy.load_gpu_engines(arch="cuda")
+
+import numpy as np
+import tempfile
+tmpdir = tempfile.gettempdir()
+
 p = u.Param()
 
 ### PTYCHO PARAMETERS
-p.verbose_level = 3
+p.verbose_level = "info"
 
 p.data_type = "single"
 p.run = None
 
 p.io = u.Param()
-p.io.home = "/tmp/ptypy/"
-p.io.autoplot = u.Param()
-p.io.autoplot.layout='weak'
-p.io.autosave = None
-p.io.interaction = u.Param()
+p.io.home = "/".join([tmpdir, "ptypy"])
+p.io.autosave = u.Param(active=False)
+p.io.autoplot = u.Param(active=False, layout="weak")
+p.io.interaction = u.Param(active=False)
 
 # Simulation parameters
 sim = u.Param()
@@ -63,7 +72,7 @@ sim.plot = False
 # Scan model and initial value parameters
 p.scans = u.Param()
 p.scans.scan00 = u.Param()
-p.scans.scan00.name = 'Full'
+p.scans.scan00.name = 'BlockFull'
 
 p.scans.scan00.coherence = u.Param()
 p.scans.scan00.coherence.num_probe_modes = 4
@@ -91,7 +100,7 @@ p.scans.scan00.data.save = None
 # Reconstruction parameters
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM'
+p.engines.engine00.name = 'DM_pycuda'
 p.engines.engine00.numiter = 150
 p.engines.engine00.fourier_relax_factor = 0.05
 p.engines.engine00.numiter_contiguous = 1
@@ -106,5 +115,5 @@ p.engines.engine00.overlap_converge_factor = 0.05
 p.engines.engine00.overlap_max_iterations = 100
 p.engines.engine00.obj_smooth_std = 5
 
-u.verbose.set_level(3)
+u.verbose.set_level("info")
 P = Ptycho(p,level=5)
