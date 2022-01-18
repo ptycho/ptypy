@@ -453,7 +453,7 @@ class Storage(Base):
         self.model_initialized = False
 
         # MPI flag: is the storage distributed across nodes or are all nodes holding the same copy?
-        self.distributed = container.distributed
+        self._is_scattered = container._is_scattered
 
         # Instance attributes
         # self._psize = None
@@ -653,16 +653,16 @@ class Storage(Base):
             if v.layer not in layers:
                 layers.append(v.layer)
 
-        # Check if storage is distributed
-        # A storage is "distributed" if and only if layer maps are different across nodes.
+        # Check if storage is scattered
+        # A storage is "scattered" if and only if layer maps are different across nodes.
         new_layermap = sorted(layers)
 
         # Update boundaries
-        if not self.distributed and u.parallel.MPIenabled:
+        if not self._is_scattered and u.parallel.MPIenabled:
             dlow_fov[:]  = u.parallel.comm.allreduce(dlow_fov,  u.parallel.MPI.MIN)
             dhigh_fov[:] = u.parallel.comm.allreduce(dhigh_fov, u.parallel.MPI.MAX)
 
-        # Return if no views, it is important that this only happens after self.distributed is updated 
+        # Return if no views, it is important that this only happens after self._is_scattered is updated 
         if not views:
             return self
 
@@ -848,7 +848,7 @@ class Storage(Base):
         ptypy.utils.parallel.allreduce
         Container.allreduce
         """
-        if not self.distributed:
+        if not self._is_scattered:
             u.parallel.allreduce(self.data, op=op)
 
     def zoom_to_psize(self, new_psize, **kwargs):
@@ -1582,7 +1582,7 @@ class Container(Base):
         self.original = self
 
         # boolean parameter for distributed containers
-        self.distributed = (distribution == "scattered")
+        self._is_scattered = (distribution == "scattered")
 
     @property
     def copies(self):
