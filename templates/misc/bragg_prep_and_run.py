@@ -1,16 +1,17 @@
 """
 Simulates and then inverts 3d Bragg ptycho data.
 """
-
 from ptypy.core import Ptycho
 from ptypy import utils as u
+import ptypy
+ptypy.load_ptyscan_module("Bragg3dSim")
 import tempfile
 
 p = u.Param()
 p.run = 'Si110_stripes'
 
 # for verbose output
-p.verbose_level = 3
+p.verbose_level = "info"
 
 # use special plot layout for 3d data
 p.io = u.Param()

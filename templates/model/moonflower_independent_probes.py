@@ -1,23 +1,23 @@
 # A simulation template to test and demonstrate the "OPR" version of Difference map.
 # Note that it is better to use "ptypy.plotclient --layout minimal" otherwise 92 probes will be plotted.
-
 from ptypy import utils as u
 from ptypy.core import Ptycho
 import numpy as np
 from ptypy.custom import DMOPR, MLOPR
 
+import tempfile
+tmpdir = tempfile.gettempdir()
+
 p = u.Param()
-p.verbose_level = 4
+p.verbose_level = "debug"
 p.data_type = "single"
 p.run = 'test_indep_probes'
 p.io = u.Param()
-p.io.home = "/tmp/ptypy/"
+p.io.home ="/".join([tmpdir, "ptypy"])
 p.io.autosave = u.Param()
 p.io.autosave.interval = 200
-p.io.autoplot = u.Param()
-p.io.autoplot.active = False
-p.io.interaction = u.Param()
-p.io.interaction.active = True
+p.io.autoplot = u.Param(active=True)
+p.io.interaction = u.Param(active=True)
 
 p.scans = u.Param()
 p.scans.MF = u.Param()

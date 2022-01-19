@@ -2,18 +2,23 @@
 Loads data from a zmq stream published by Contrast at NanoMAX,
 https://github.com/alexbjorling/contrast
 """
-
 from ptypy.core import Ptycho
 from ptypy import utils as u
+import ptypy
+ptypy.load_ptyscan_module("nanomax_streaming")
+
+import tempfile
+tmpdir = tempfile.gettempdir()
+
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 3
+p.verbose_level = "info"
 
 # set home path
 p.io = u.Param()
-p.io.home = "/tmp/ptypy/"
-p.io.autosave = None
+p.io.home = "/".join([tmpdir, "ptypy"])
+p.io.autosave = u.Param(active=False)
 
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()

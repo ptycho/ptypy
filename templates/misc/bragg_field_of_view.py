@@ -2,16 +2,17 @@
 Example script which uses the 3d Bragg ptycho code to calculate and
 plot the 3d field of view as compared to the incoming probe.
 """
-
 from ptypy.core import Ptycho
 from ptypy import utils as u
+import ptypy
+ptypy.load_ptyscan_module("Bragg3dSim")
 import matplotlib.pyplot as plt
 import numpy as np
 
 # Set up a parameter tree
 p = u.Param()
 
-p.verbose_level = 3
+p.verbose_level = "info"
 
 # illumination for data simulation and pods
 illumination = u.Param()
