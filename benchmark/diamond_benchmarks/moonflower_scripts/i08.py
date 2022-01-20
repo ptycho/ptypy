@@ -3,9 +3,10 @@ This script is a test for ptychographic reconstruction in the absence
 of actual data. It uses the test Scan class
 `ptypy.core.data.MoonFlowerScan` to provide "data".
 """
-
 from ptypy.core import Ptycho
 from ptypy import utils as u
+import ptypy
+ptypy.load_gpu_engines("cuda")
 import time
 
 import os
@@ -18,12 +19,12 @@ Path(tmpdir).mkdir(parents=True, exist_ok=True)
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 3
+p.verbose_level = "info"
 p.frames_per_block = 500
 # set home path
 p.io = u.Param()
 p.io.home = tmpdir
-p.io.autosave = u.Param(active=False) # active=True, interval=50000)
+p.io.autosave = u.Param(active=False)
 p.io.autoplot = u.Param(active=False)
 p.io.interaction = u.Param()
 p.io.interaction.server = u.Param(active=False)
@@ -33,7 +34,7 @@ p.scans = u.Param()
 p.scans.I08 = u.Param()
 # now you have to specify which ScanModel to use with scans.XX.name,
 # just as you have to give 'name' for engines and PtyScan subclasses.
-p.scans.I08.name = 'BlockFull' # or 'Full'
+p.scans.I08.name = 'BlockFull'
 p.scans.I08.data= u.Param()
 p.scans.I08.data.name = 'MoonFlowerScan'
 p.scans.I08.data.shape = 128
@@ -56,7 +57,7 @@ p.scans.I08.data.psf = 1.5
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_pycuda_streams'
+p.engines.engine00.name = 'DM_pycuda'
 p.engines.engine00.numiter = 1000
 p.engines.engine00.numiter_contiguous = 20
 p.engines.engine00.probe_update_start = 1
