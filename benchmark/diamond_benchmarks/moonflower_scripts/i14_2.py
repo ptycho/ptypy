@@ -6,9 +6,9 @@ of actual data. It uses the test Scan class
 
 from ptypy.core import Ptycho
 from ptypy import utils as u
+import ptypy
+ptypy.load_gpu_engines("cuda")
 import time
-from ptypy.accelerate.cuda_pycuda.engines.DM_pycuda_stream import DM_pycuda_stream
-from ptypy.accelerate.cuda_pycuda.engines.DM_pycuda_streams import DM_pycuda_streams
 
 import os
 import getpass
@@ -20,7 +20,7 @@ Path(tmpdir).mkdir(parents=True, exist_ok=True)
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 3
+p.verbose_level = "info"
 p.frames_per_block = 1000
 # set home path
 p.io = u.Param()
@@ -35,7 +35,7 @@ p.scans = u.Param()
 p.scans.i14_2 = u.Param()
 # now you have to specify which ScanModel to use with scans.XX.name,
 # just as you have to give 'name' for engines and PtyScan subclasses.
-p.scans.i14_2.name = 'BlockFull' # or 'Full'
+p.scans.i14_2.name = 'BlockFull'
 p.scans.i14_2.data= u.Param()
 p.scans.i14_2.data.name = 'MoonFlowerScan'
 p.scans.i14_2.data.shape = 128
@@ -58,7 +58,7 @@ p.scans.i14_2.data.psf = 0.4
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_pycuda_streams'
+p.engines.engine00.name = 'DM_pycuda'
 p.engines.engine00.numiter = 1000
 p.engines.engine00.numiter_contiguous = 20
 p.engines.engine00.probe_update_start = 1

@@ -12,14 +12,15 @@ import numpy as np
 import time
 import pyopencl as cl
 
-from .. import utils as u
-from ..utils.verbose import logger, log
-from ..utils import parallel
-from . import BaseEngine, register, DM_serial, DM
+from ptypy import utils as u
+from ptypy.utils.verbose import logger, log
+from ptypy.utils import parallel
+from ptypy.engines import BaseEngine, register
+from ptypy.accelerate.base.engines import projectional_serial
 
 from pyopencl import array as cla
-from ..accelerate import ocl as gpu
-from ..accelerate.ocl.ocl_kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel
+from ptypy.accelerate.ocl_pyopencl.ocl_kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel
+from ptypy.accelerate import ocl_pyopencl as gpu
 
 ### TODOS
 # 
@@ -36,12 +37,12 @@ __all__ = ['DM_ocl']
 
 parallel = u.parallel
 
-serialize_array_access = DM_serial.serialize_array_access
-gaussian_kernel = DM_serial.gaussian_kernel
+serialize_array_access = projectional_serial.serialize_array_access
+gaussian_kernel = projectional_serial.gaussian_kernel
 
 
 @register()
-class DM_ocl(DM_serial.DM_serial):
+class DM_ocl(projectional_serial.DM_serial):
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -91,8 +92,7 @@ class DM_ocl(DM_serial.DM_serial):
             geo = scan.geometries[0]
 
             # Get info to shape buffer arrays
-            # TODO: make this part of the engine rather than scan
-            fpc = self.ptycho.frames_per_block
+            fpc = scan.max_frames_per_block
 
             # TODO : make this more foolproof
             try:
@@ -116,7 +116,7 @@ class DM_ocl(DM_serial.DM_serial):
             kern.AWK = AuxiliaryWaveKernel()
             kern.AWK.allocate()
 
-            from ptypy.accelerate.ocl.ocl_fft import FFT_2D_ocl_reikna as FFT
+            from ptypy.accelerate.ocl_pyopencl.ocl_fft import FFT_2D_ocl_reikna as FFT
             kern.FW = FFT(self.queue, aux,
                           pre_fft=geo.propagator.pre_fft,
                           post_fft=geo.propagator.post_fft,

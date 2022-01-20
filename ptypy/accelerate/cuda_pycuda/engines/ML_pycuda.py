@@ -186,17 +186,14 @@ class ML_pycuda(ML_serial):
         for label, scan in self.ptycho.model.scans.items():
 
             kern = u.Param()
+            kern.scanmodel = type(scan).__name__
             self.kernels[label] = kern
 
             # TODO: needs to be adapted for broad bandwidth
             geo = scan.geometries[0]
 
             # Get info to shape buffer arrays
-            # TODO: make this part of the engine rather than scan
-            fpc = self.ptycho.frames_per_block
-
-            # When using MPI, the nr. of frames per block is smaller
-            fpc = fpc // parallel.size
+            fpc = scan.max_frames_per_block
 
             # TODO : make this more foolproof
             try:

@@ -329,4 +329,3 @@ def clean_path(filename):
     if not os.path.exists(base):
         os.makedirs(base)
     return filename
-

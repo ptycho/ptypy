@@ -15,7 +15,7 @@ from ..utils import parallel
 from .utils import projection_update_generalized, log_likelihood
 from .base import PositionCorrectionEngine
 from . import register
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull
 
 __all__ = ['EPIE', 'SDR']
 
@@ -26,7 +26,7 @@ class _StochasticEngine(PositionCorrectionEngine):
     Defaults:
 
     [probe_update_start]
-    default = 2
+    default = 0
     type = int
     lowlim = 0
     help = Number of iterations before probe update starts
@@ -37,19 +37,12 @@ class _StochasticEngine(PositionCorrectionEngine):
     lowlim = 0.0
     help = Pixel radius around optical axes that the probe mass center must reside in
 
-    [clip_object]
-    default = None
-    type = tuple
-    help = Clip object amplitude into this interval
-
     [compute_log_likelihood]
     default = True
     type = bool
     help = A switch for computing the log-likelihood error (this can impact the performance of the engine)
 
     """
-
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -72,6 +65,9 @@ class _StochasticEngine(PositionCorrectionEngine):
         self._ob_a = 0.0
         self._ob_b = 1.0
 
+        # By default the object norm is based on the local object
+        self._object_norm_is_global = False
+
     def engine_prepare(self):
         """
         Last minute initialization.
@@ -87,7 +83,7 @@ class _StochasticEngine(PositionCorrectionEngine):
         vieworder.sort()
         rng = np.random.default_rng()
 
-        for it in range(num):   
+        for it in range(num):
 
             error_dct = {}
             rng.shuffle(vieworder)
@@ -102,7 +98,7 @@ class _StochasticEngine(PositionCorrectionEngine):
 
                 # Fourier update
                 error_dct[name] = self.fourier_update(view)
-                
+
                 # A copy of the old exit wave
                 exit_wave = {}
                 for name, pod in view.pods.items():
@@ -113,6 +109,9 @@ class _StochasticEngine(PositionCorrectionEngine):
 
                 # Probe update
                 self.probe_update(view, exit_wave)
+
+            # Recenter the probe
+            self.center_probe()
 
             self.curiter += 1
 
@@ -130,7 +129,7 @@ class _StochasticEngine(PositionCorrectionEngine):
         # Update positions
         if do_update_pos:
             """
-            refines position of current view by a given algorithm. 
+            refines position of current view by a given algorithm.
             """
             self.position_refinement.update_constraints(self.curiter) # this stays here
 
@@ -147,7 +146,7 @@ class _StochasticEngine(PositionCorrectionEngine):
         view : View
         View to diffraction data
         """
-        #return basic_fourier_update(view, alpha=self._alpha, tau=self._tau, 
+        #return basic_fourier_update(view, alpha=self._alpha, tau=self._tau,
         #                            LL_error=self.p.compute_log_likelihood)
 
         err_fmag, err_exit = projection_update_generalized(view, self._a, self._b, self._c)
@@ -186,6 +185,31 @@ class _StochasticEngine(PositionCorrectionEngine):
         if self.p.probe_update_start > self.curiter:
             return
         self._generic_probe_update(view, exit_wave, a=self._pr_a, b=self._pr_b)
+
+    def center_probe(self):
+        if self.p.probe_center_tol is not None:
+            for name, pr_s in self.pr.storages.items():
+                c1 = u.mass_center(u.abs2(pr_s.data).sum(0))
+                c2 = np.asarray(pr_s.shape[-2:]) // 2
+                # fft convention should however use geometry instead
+                if u.norm(c1 - c2) < self.p.probe_center_tol:
+                    break
+                # SC: possible BUG here, wrong input parameter
+                pr_s.data[:] = u.shift_zoom(pr_s.data, (1.,)*3,
+                        (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+
+                # shift the object
+                ob_s = pr_s.views[0].pod.ob_view.storage
+                ob_s.data[:] = u.shift_zoom(ob_s.data, (1.,)*3,
+                        (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+
+                # shift the exit waves, loop through different exit wave views
+                for pv in pr_s.views:
+                    pv.pod.exit = u.shift_zoom(pv.pod.exit, (1.,)*2,
+                            (c1[0], c1[1]), (c2[0], c2[1]))
+
+                log(4,'Probe recentered from %s to %s'
+                            % (str(tuple(c1)), str(tuple(c2))))
 
     def _generic_object_update(self, view, exit_wave, a=0., b=1.):
         """
@@ -246,10 +270,16 @@ class _StochasticEngine(PositionCorrectionEngine):
             O_{norm} = (1 - a) * ||O^{j}||_{max}^2 + a * |O^{j}|^2
 
         """
-        object_power = 0
-        for name, pod in view.pods.items():
-            object_power += u.abs2(pod.object)
-        object_norm = (1 - a) * np.max(object_power) + a * object_power
+        # Calculate the object norm based on the global object
+        # This only works if a = 0.
+        if self._object_norm_is_global and a == 0:
+            object_norm = np.max(u.abs2(view.pod.ob_view.storage.data).sum(axis=0))
+        # Calculate the object norm based on the local object
+        else:
+            object_power = 0
+            for name, pod in view.pods.items():
+                object_power += u.abs2(pod.object)
+            object_norm = (1 - a) * np.max(object_power) + a * object_power
         for name, pod in view.pods.items():
             pod.probe += (a + b) * np.conj(pod.object) * (pod.exit - exit_wave[name]) / object_norm
 
@@ -269,7 +299,14 @@ class EPIEMixin:
     lowlim = 0.0
     help = Parameter for adjusting the step size of the probe update
 
+    [object_norm_is_global]
+    default = False
+    type = bool
+    help = Calculate the object norm based on the global object instead of the local object
+
     """
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
+
     def __init__(self, alpha, beta):
         # EPIE adjustment parameters
         self._a = 0
@@ -279,6 +316,7 @@ class EPIEMixin:
         self._ob_a = 0.0
         self._pr_b = alpha
         self._ob_b = beta
+        self._object_norm_is_global = self.p.object_norm_is_global
         self.article = dict(
             title='An improved ptychographical phase retrieval algorithm for diffractive imaging',
             author='Maiden A. and Rodenburg J.',
@@ -336,6 +374,8 @@ class SDRMixin:
     help = Parameter for adjusting the step size of the object update
 
     """
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
+
     def __init__(self, sigma, tau, beta_probe, beta_object):
         # SDR Adjustment parameters
         self._sigma = sigma
@@ -361,7 +401,7 @@ class SDRMixin:
         self._a = 1 - self._tau * (1 + self._sigma)
         self._b = self._tau
         self._c = 1 + self._sigma
-        
+
     @property
     def sigma(self):
         return self._sigma
@@ -410,7 +450,6 @@ class EPIE(_StochasticEngine, EPIEMixin):
     doc =
 
     """
-
     def __init__(self, ptycho_parent, pars=None):
         _StochasticEngine.__init__(self, ptycho_parent, pars)
         EPIEMixin.__init__(self, self.p.alpha, self.p.beta)
@@ -431,7 +470,6 @@ class SDR(_StochasticEngine, SDRMixin):
     doc =
 
     """
-
     def __init__(self, ptycho_parent, pars=None):
         _StochasticEngine.__init__(self, ptycho_parent, pars)
         SDRMixin.__init__(self, self.p.sigma, self.p.tau, self.p.beta_probe, self.p.beta_object)
