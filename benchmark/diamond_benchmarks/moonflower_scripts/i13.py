@@ -3,9 +3,10 @@ This script is a test for ptychographic reconstruction in the absence
 of actual data. It uses the test Scan class
 `ptypy.core.data.MoonFlowerScan` to provide "data".
 """
-
 from ptypy.core import Ptycho
 from ptypy import utils as u
+import ptypy
+ptypy.load_gpu_engines("cuda")
 import time
 
 import os
@@ -18,7 +19,7 @@ Path(tmpdir).mkdir(parents=True, exist_ok=True)
 p = u.Param()
 
 # for verbose output
-p.verbose_level = 3
+p.verbose_level = "info"
 p.frames_per_block = 100
 # set home path
 p.io = u.Param()

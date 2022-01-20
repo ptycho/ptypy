@@ -3,8 +3,7 @@ import numpy as np
 import pycuda.driver as cuda
 from pycuda import gpuarray
 from pycuda.tools import make_default_context
-from ptypy.accelerate.py_cuda.kernels import PoUpdateKernel as POK
-import time
+from ptypy.accelerate.cuda_pycuda.kernels import PoUpdateKernel as POK
 import gc
 
 cuda.init()
