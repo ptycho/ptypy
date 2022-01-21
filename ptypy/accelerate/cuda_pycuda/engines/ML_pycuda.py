@@ -327,7 +327,7 @@ class ML_pycuda(ML_serial):
             Iterates through all positions and refines them by a given algorithm.
             """
             log(4, "----------- START POS REF -------------")
-            for dID in self.di.S.keys():
+            for dID in self.dID_list:
 
                 prep = self.diff_info[dID]
                 pID, oID, eID = prep.poe_IDs
@@ -389,6 +389,8 @@ class ML_pycuda(ML_serial):
                     s1 = addr.shape[0] * addr.shape[1]
                     s2 = addr.shape[2] * addr.shape[3]
                     TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+
+            self.dID_list.reverse()
 
     def support_constraint(self, storage=None):
         """
