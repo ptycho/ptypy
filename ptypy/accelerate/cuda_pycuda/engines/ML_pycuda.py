@@ -377,7 +377,7 @@ class ML_pycuda(ML_serial):
                     PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
                     PCK.build_aux(aux, mangled_addr, ob, pr)
                     PROP.fw(aux, aux)
-                    PCK.log_likelihood(aux, mangled_addr, I, w, err_phot)
+                    PCK.log_likelihood_ml(aux, mangled_addr, I, w, err_phot)
                     PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_phot)
 
                 data_w.record_done(self.queue, 'compute')
