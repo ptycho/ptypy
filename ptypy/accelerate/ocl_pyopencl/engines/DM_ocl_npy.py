@@ -13,13 +13,13 @@ import numpy as np
 import time
 import pyopencl as cl
 
-from .. import utils as u
-from ..utils.verbose import logger, log
-from ..utils import parallel
-from . import BaseEngine, register, DM_serial, DM
+from ptypy import utils as u
+from ptypy.utils.verbose import logger, log
+from ptypy.utils import parallel
+from ptypy.engines import BaseEngine, register, projectional
+from ptypy.accelerate import ocl_pyopencl as gpu
 
 from pyopencl import array as cla
-from ..accelerate import ocl as gpu
 
 ### TODOS
 # 
@@ -100,7 +100,7 @@ def serialize_array_access(diff_storage):
 
 
 @register()
-class DM_ocl_npy(DM.DM):
+class DM_ocl_npy(projectional.DM):
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -218,23 +218,23 @@ class DM_ocl_npy(DM.DM):
             self.queue.finish()
 
             ## setup kernels
-            from ptypy.accelerate.ocl.ocl_kernels import Fourier_update_kernel as FUK
+            from ptypy.accelerate.ocl_pyopencl.ocl_kernels import Fourier_update_kernel as FUK
             prep.fourier_kernel = FUK(self.queue, nmodes=all_modes, pbound=self.pbound[dID])
             mask = self.ma.S[dID].data.astype(np.float32)
             prep.fourier_kernel.configure(diffs.data, mask, aux)
 
-            from ptypy.accelerate.ocl.ocl_kernels import Auxiliary_wave_kernel as AWK
+            from ptypy.accelerate.ocl_pyopencl.ocl_kernels import Auxiliary_wave_kernel as AWK
             prep.aux_ex_kernel = AWK(self.queue)
             prep.aux_ex_kernel.configure(ob.data, addr, self.p.alpha)
 
-            from ptypy.accelerate.ocl.ocl_kernels import PO_update_kernel as PUK
+            from ptypy.accelerate.ocl_pyopencl.ocl_kernels import PO_update_kernel as PUK
             prep.po_kernel = PUK(self.queue)
             prep.po_kernel.configure(ob.data, pr.data, addr)
 
             geo = mpod.geometry
             # you cannot use gpyfft multiple times due to
             if not hasattr(geo, 'transform'):
-                from ptypy.accelerate.ocl.ocl_fft import FFT_2D_ocl_reikna as FFT
+                from ptypy.accelerate.ocl_pyopencl.ocl_fft import FFT_2D_ocl_reikna as FFT
 
                 geo.transform = FFT(self.queue, aux,
                                     pre_fft=geo.propagator.pre_fft,

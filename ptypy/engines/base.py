@@ -116,7 +116,7 @@ class BaseEngine(object):
         """
         logger.info('\n' +
                     headerline('Starting %s-algorithm.'
-                               % str(type(self).__name__), 'l', '=') + '\n')
+                               % (self.p.name), 'l', '=') + '\n')
         logger.info('Parameter set:')
         logger.info(u.verbose.report(self.p, noheader=True).strip())
         logger.info(headerline('', 'l', '='))
@@ -236,7 +236,7 @@ class BaseEngine(object):
 
             logger.warning("""Engine %s did not increase iteration counter
             `self.curiter` internally. Accessing this attribute in that
-            engine is inaccurate""" % self.__class__.__name__)
+            engine is inaccurate""" % self.p.name)
 
             self.curiter += niter_contiguous
 
@@ -244,7 +244,7 @@ class BaseEngine(object):
 
             logger.error("""Engine %s increased iteration counter
             `self.curiter` by %d instead of %d. This may lead to
-            unexpected behaviour""" % (self.__class__.__name__,
+            unexpected behaviour""" % (self.p.name,
             self.curiter-it, niter_contiguous))
 
         else:
@@ -270,7 +270,7 @@ class BaseEngine(object):
             iteration=self.curiter,
             iterations=self.alliter,
             numiter=self.numiter,
-            engine=type(self).__name__,
+            engine=self.p.name,
             duration=time.time() - self.t,
             error=error
         )
