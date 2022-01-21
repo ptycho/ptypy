@@ -459,7 +459,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
 
         return np.sqrt(change)
 
-    def engine_finalize(self, benchmark=False):
+    def engine_finalize(self):
         """
         Clear all GPU data, pinned memory, etc
         """
@@ -467,11 +467,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
         self.ma_data = None
         self.mag_data = None
 
-        # copy data to cpu
-        for name, s in self.pr.S.items():
-            s.data = np.copy(s.data)  # is this the same as s.data.get()?
-
-        super().engine_finalize(benchmark)
+        super().engine_finalize()
 
 
 @register(name="DM_pycuda")
