@@ -343,10 +343,13 @@ class ML_pycuda(ML_serial):
 
                 # # copy intensities and mask to GPU
                 stream = self.qu_htod
-                mag  = gpuarray.to_gpu_async(prep.I, allocator=self.allocate, stream=stream)
-                ma = gpuarray.to_gpu_async(prep.ma, allocator=self.allocate, stream=stream)
-                ev = cuda.Event()
-                ev.record(stream)
+                #mag  = gpuarray.to_gpu_async(prep.I, allocator=self.allocate, stream=stream)
+                #ma = gpuarray.to_gpu_async(prep.ma, allocator=self.allocate, stream=stream)
+                #ev = cuda.Event()
+                #ev.record(stream)
+
+                ev_w, w, data_w = self.w_data.to_gpu(prep.weights, dID, self.qu_htod)
+                ev, I, data_I = self.I_data.to_gpu(prep.I, dID, self.qu_htod)
 
                 PCK = kern.PCK
                 TK  = kern.TK
@@ -360,9 +363,9 @@ class ML_pycuda(ML_serial):
                 PCK.build_aux(aux, addr, ob, pr)
                 PROP.fw(aux, aux)
                 PCK.queue.wait_for_event(ev)
-                # mag & ma now on device
-                pycuda.cumath.sqrt(mag, out=mag, stream=PCK.queue) # for position refinement, we need the magnitude
-                PCK.log_likelihood(aux, addr, mag, ma, err_phot)
+                # w & I now on device
+                #pycuda.cumath.sqrt(mag, out=mag, stream=PCK.queue) # for position refinement, we need the magnitude
+                PCK.log_likelihood_ml(aux, addr, I, w, err_phot)
                 cuda.memcpy_dtod(dest=error_state.ptr,
                                     src=err_phot.ptr,
                                     size=err_phot.nbytes)
@@ -374,9 +377,11 @@ class ML_pycuda(ML_serial):
                     PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
                     PCK.build_aux(aux, mangled_addr, ob, pr)
                     PROP.fw(aux, aux)
-                    PCK.log_likelihood(aux, mangled_addr, mag, ma, err_phot)
+                    PCK.log_likelihood(aux, mangled_addr, I, w, err_phot)
                     PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_phot)
-                
+
+                data_w.record_done(self.queue, 'compute')
+                data_I.record_done(self.queue, 'compute')
                 cuda.memcpy_dtod(dest=err_phot.ptr,
                                  src=error_state.ptr,
                                  size=err_phot.nbytes)
