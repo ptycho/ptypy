@@ -2,13 +2,12 @@ name: ptypy_pycuda
 channels:
   - conda-forge
 dependencies:
-  - python=3.7
+  - python=3.9
   - numpy
   - scipy
   - matplotlib
   - h5py
   - pyzmq
-  - pep8
   - openmpi
   - mpi4py
   - pillow
@@ -16,12 +15,11 @@ dependencies:
   - cmake>=3.8.0
   - pybind11
   - reikna
+  - compilers
+  - pycuda
+  - cudatoolkit-dev
   - pip
   - pip:
-    - pytest-cov
-    - coveralls
-    - fabio
-    - pycuda
     - scikit-cuda
 
 
