@@ -27,8 +27,7 @@ from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, TransposeKernel
 
-from ..mem_utils import make_pagelocked_paired_arrays as mppa
-from ..mem_utils import GpuDataManager2
+from ..mem_utils import GpuDataManager
 from ptypy.accelerate.base import address_manglers
 
 __all__ = ['ML_pycuda']
@@ -173,8 +172,8 @@ class ML_pycuda(ML_serial):
         log(4, 'Free memory on device: %.2f GB' % (float(mem)/1e9))
         log(4, 'PyCUDA max blocks fitting on GPU: ma_arrays={}'.format(nma))
         # reset memory or create new
-        self.w_data = GpuDataManager2(ma_mem, 0, nma, False)
-        self.I_data = GpuDataManager2(mag_mem, 0, nma, False)
+        self.w_data = GpuDataManager(ma_mem, 0, nma, False)
+        self.I_data = GpuDataManager(mag_mem, 0, nma, False)
 
     def engine_prepare(self):
 
@@ -279,17 +278,7 @@ class ML_pycuda(ML_serial):
         if self.p.probe_update_start <= self.curiter:
             # Apply probe support if needed
             for name, s in new_pr_grad.storages.items():
-
-                # DtoH copies
-                #s.gpu.get(s.cpu)
-                #self._set_pr_ob_ref_for_data('cpu')
-
                 self.support_constraint(s)
-
-                # HtoD cause we continue on gpu
-                #s.gpu.set(s.cpu)
-                #self._set_pr_ob_ref_for_data('gpu')
-
         else:
             new_pr_grad.fill(0.)
 
@@ -341,13 +330,7 @@ class ML_pycuda(ML_serial):
                 err_phot = prep.err_phot_gpu
                 error_state = prep.error_state_gpu
 
-                # # copy intensities and mask to GPU
-                stream = self.qu_htod
-                #mag  = gpuarray.to_gpu_async(prep.I, allocator=self.allocate, stream=stream)
-                #ma = gpuarray.to_gpu_async(prep.ma, allocator=self.allocate, stream=stream)
-                #ev = cuda.Event()
-                #ev.record(stream)
-
+                # copy intensities and weights to GPU
                 ev_w, w, data_w = self.w_data.to_gpu(prep.weights, dID, self.qu_htod)
                 ev, I, data_I = self.I_data.to_gpu(prep.I, dID, self.qu_htod)
 
@@ -364,7 +347,6 @@ class ML_pycuda(ML_serial):
                 PROP.fw(aux, aux)
                 PCK.queue.wait_for_event(ev)
                 # w & I now on device
-                #pycuda.cumath.sqrt(mag, out=mag, stream=PCK.queue) # for position refinement, we need the magnitude
                 PCK.log_likelihood_ml(aux, addr, I, w, err_phot)
                 cuda.memcpy_dtod(dest=error_state.ptr,
                                     src=err_phot.ptr,
@@ -528,16 +510,6 @@ class GaussianModel(BaseModelSerial):
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
 
-            # # TODO streaming?
-            # #w = gpuarray.to_gpu(prep.weights)
-            # #I = gpuarray.to_gpu(prep.I)
-            # stream = self.engine.queue_transfer
-            # # TODO keep alive
-            # w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.allocate, stream=stream)
-            # I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.allocate, stream=stream)
-            # ev = cuda.Event()
-            # ev.record(stream)
-
             # Schedule w & I to device
             ev_w, w, data_w = self.engine.w_data.to_gpu(prep.weights, dID, qu_htod)
             ev, I, data_I = self.engine.I_data.to_gpu(prep.I, dID, qu_htod)
@@ -549,7 +521,6 @@ class GaussianModel(BaseModelSerial):
             FW(aux, aux)
             GDK.make_model(aux, addr)
 
-
             queue.wait_for_event(ev)
 
             if self.p.floating_intensities:
@@ -558,8 +529,6 @@ class GaussianModel(BaseModelSerial):
             GDK.main(aux, addr, w, I)
             data_w.record_done(queue, 'compute')
             data_I.record_done(queue, 'compute')
-            #ev = cuda.Event()
-            #ev.record(GDK.queue)
 
             GDK.error_reduce(addr, err_phot)
 
@@ -572,8 +541,6 @@ class GaussianModel(BaseModelSerial):
             use_atomics = self.p.probe_update_cuda_atomics
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
             POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
-
-            #GDK.queue.synchronize()
 
         queue.synchronize()
         self.engine.dID_list.reverse()
@@ -652,15 +619,6 @@ class GaussianModel(BaseModelSerial):
             addr = prep.addr_gpu
             fic = prep.fic_gpu
 
-            # # TODO streaming?
-            # #w = gpuarray.to_gpu(prep.weights)
-            # #I = gpuarray.to_gpu(prep.I)
-            # stream = self.engine.queue_transfer
-            # w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.allocate, stream=stream)
-            # I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.allocate, stream=stream)
-            # ev = cuda.Event()
-            # ev.record(stream)
-
             # Schedule w & I to device
             ev_w, w, data_w = self.engine.w_data.to_gpu(prep.weights, dID, qu_htod)
             ev, I, data_I = self.engine.I_data.to_gpu(prep.I, dID, qu_htod)
@@ -683,16 +641,10 @@ class GaussianModel(BaseModelSerial):
             FW(b,b)
 
             queue.wait_for_event(ev)
-            GDK.make_a012(f, a, b, addr, I, fic)
 
-            """
-            if self.p.floating_intensities:
-                A0 *= self.float_intens_coeff[dname]
-                A1 *= self.float_intens_coeff[dname]
-                A2 *= self.float_intens_coeff[dname]
-            """
+            GDK.make_a012(f, a, b, addr, I, fic)
             GDK.fill_b(addr, Brenorm, w, B)
-            #GDK.queue.synchronize()
+
             data_w.record_done(queue, 'compute')
             data_I.record_done(queue, 'compute')
 

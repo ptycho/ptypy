@@ -103,116 +103,6 @@ class GpuData:
         self.gpuraw = None
 
 
-class GpuDataManager:
-    """
-    Manages a set of GpuData instances, to keep several blocks on device.
-
-    Note that the syncback property is used so that during fourier updates,
-    the exit wave array is synced bck to cpu (it is updated),
-    while during probe update, it's not.
-    """
-
-    def __init__(self, nbytes, num, syncback=False):
-        """
-        Create an instance of GpuDataManager.
-        Parameters are the same as for GpuData, and num is the number of
-        GpuData instances to create (blocks on device).
-        """
-        self.data = [GpuData(nbytes, syncback) for _ in range(num)]
-
-    @property
-    def syncback(self):
-        """
-        Get if syncback of data to CPU on swapout is enabled.
-        """
-        return self.data[0].syncback
-
-    @syncback.setter
-    def syncback(self, whether):
-        """
-        Adjust the syncback setting
-        """
-        for d in self.data:
-            d.syncback = whether
-
-    @property
-    def nbytes(self):
-        """
-        Get the number of bytes in each block
-        """
-        return self.data[0].nbytes
-
-    @property
-    def memory(self):
-        """
-        Get all memory occupied by all blocks
-        """
-        m = 0
-        for d in self.data:
-            m += d.nbytes_buffer
-        return m
-
-    def __len__(self):
-        return len(self.data)
-
-    def reset(self, nbytes, num):
-        """
-        Reset this object as if these parameters were given to the constructor.
-        The syncback property is untouched.
-        """
-        sync = self.syncback
-        # remove if too many, explictly freeing memory
-        for i in range(num, len(self.data)):
-            self.data[i].free()
-        # cut short if too many
-        self.data = self.data[:num]
-        # reset existing
-        for d in self.data:
-            d.resize(nbytes)
-        # append new ones
-        for i in range(len(self.data), num):
-            self.data.append(GpuData(nbytes, sync))
-
-    def free(self):
-        """
-        Explicitly clear all data blocks - same as resetting to 0 blocks
-        """
-        self.reset(0, 0)
-
-
-    def to_gpu(self, cpu, id, stream):
-        """
-        Transfer a block to the GPU, given its ID and CPU data array
-        """
-        idx = 0
-        for x in self.data:
-            if x.gpuId == id:
-                break
-            idx += 1
-        if idx == len(self.data):
-            idx = 0
-        else:
-            pass
-        m = self.data.pop(idx)
-        self.data.append(m)
-        return m.to_gpu(cpu, id, stream)
-
-    def record_done(self, id, stream):
-        for x in self.data:
-            if x.gpuId == id:
-                x.record_done(stream)
-                return
-        raise Exception('recording done for id not in pool')
-
-
-    def sync_to_cpu(self, stream):
-        """
-        Sync back all data to CPU
-        """
-        for x in self.data:
-            x.from_gpu(stream)
-
-
 class GpuData2(GpuData):
     """
     Manages one block of GPU data with corresponding CPU data.
@@ -247,7 +137,9 @@ class GpuData2(GpuData):
         if self.gpuId != ident:
             if self.ev_done is not None:
                 stream.wait_for_event(self.ev_done)
-            # safety measure. this is asynchronous, but it should still work
+            # Safety measure. This is asynchronous, but it should still work
+            # Essentially we want to copy the data held in gpu array back to its CPU
+            # handle before the buffer can be reused.
             if self.done_what != 'dtoh' and self.syncback:
                 # uploads on the download stream, easy to spot in nsight-sys
                 self.from_gpu(stream)
@@ -274,7 +166,7 @@ class GpuData2(GpuData):
         else:
             return None
 
-class GpuDataManager2:
+class GpuDataManager:
     """
     Manages a set of GpuData instances, to keep several blocks on device.
 
@@ -401,51 +293,7 @@ class GpuDataManager2:
         for x in self.data:
             x.from_gpu(stream)
 
-class EvData:
-
-    def __init__(self):
-        self.ev_download = None
-        self.ev_upload = None
-        self.ev_cycle = None
-        self.ev_compute = None
-
-    def record_download(self, stream):
-        ev = cuda.Event()
-        ev.record(stream)
-        self.ev_download = ev
-        return ev
-
-    def record_upload(self, stream):
-        ev = cuda.Event()
-        ev.record(stream)
-        self.ev_upload = ev
-        return ev
-
-    def record_compute(self, stream):
-        ev = cuda.Event()
-        ev.record(stream)
-        self.ev_cycle = ev
-        return ev
-
-    def record_cycle(self, stream):
-        ev = cuda.Event()
-        ev.record(stream)
-        self.ev_compute = ev
-        return ev
-
-    @property
-    def is_on_dev(self):
-        ev_d = self.ev_download
-        ev_u = self.ev_upload
-        if ev_d is not None and ev_d.query():
-            if ev_u is None:
-                return True
-            else:
-                if ev_u.query():
-                    # upload event has happened
-                    if ev_d.time_since(ev_u) > 0:
-                        return True
-        return False
+## looks useful, but probably unused
 
 class ManagedPool:
 
