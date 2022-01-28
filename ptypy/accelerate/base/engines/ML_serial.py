@@ -297,8 +297,8 @@ class ML_serial(ML):
                 addr = prep.addr
                 original_addr = prep.original_addr
                 mangled_addr = addr.copy()
-                ma = prep.ma
-                mag = np.sqrt(prep.I)
+                w = prep.weights
+                I = prep.I
                 err_phot = prep.err_phot
 
                 PCK = kern.PCK
@@ -311,7 +311,7 @@ class ML_serial(ML):
                 # We need to re-calculate the current error 
                 PCK.build_aux(aux, addr, ob, pr)
                 aux[:] = FW(aux)
-                PCK.log_likelihood(aux, addr, mag, ma, err_phot)
+                PCK.log_likelihood_ml(aux, addr, I, w, err_phot)
                 error_state = np.zeros_like(err_phot)
                 error_state[:] = err_phot
                 PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
@@ -321,7 +321,7 @@ class ML_serial(ML):
                     PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
                     PCK.build_aux(aux, mangled_addr, ob, pr)
                     aux[:] = FW(aux)
-                    PCK.log_likelihood(aux, mangled_addr, mag, ma, err_phot)
+                    PCK.log_likelihood_ml(aux, mangled_addr, I, w, err_phot)
                     PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_phot)
 
                 prep.err_phot = error_state

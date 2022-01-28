@@ -787,6 +787,24 @@ class PositionCorrectionKernel(BaseKernel):
         err_sum[:] = ((mask * (LL - I)**2 / (I + 1.)).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
         return
 
+    def log_likelihood_ml(self, b_aux, addr, I, weights, err_sum):
+        # reference shape (write-to shape)
+        sh = self.fshape
+        # stopper
+        maxz = I.shape[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * self.nmodes]
+
+        # build model from complex fourier magnitudes, summing up
+        # all modes incoherently
+        tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
+        LL = (np.abs(tf) ** 2).sum(1)
+
+        # Calculate log likelihood error
+        err_sum[:] = ((weights * (LL - I)**2).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
+        return
+
     def update_addr_and_error_state(self, addr, error_state, mangled_addr, err_sum):
         """
         updates the addresses and err state vector corresponding to the smallest error. I think this can be done on the cpu
