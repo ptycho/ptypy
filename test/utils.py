@@ -42,51 +42,39 @@ def PtyscanTestRunner(ptyscan_instance, data_params, save_type='append', auto_fr
         return out_dict
 
 
-def EngineTestRunner(engine_params,propagator='farfield',output_path='./', output_file=None):
+def EngineTestRunner(engine_params,propagator='farfield',output_path='./', output_file=None,
+                    autosave=True, scanmodel="Full", verbose_level="info", init_correct_probe=False):
 
 
     p = u.Param()
-    p.verbose_level = 3
+    p.verbose_level = verbose_level
     p.io = u.Param()
-    p.io.interaction = u.Param()
-    p.io.interaction.active = False
     p.io.home = output_path
     p.io.rfile = "%s.ptyr" % output_file
-    p.io.autosave = u.Param(active=True)
+    p.io.interaction = u.Param()
+    p.io.interaction.active = False
+    p.io.autosave = u.Param(active=autosave)
     p.io.autoplot = u.Param(active=False)
-    p.ipython_kernel = False
     p.scans = u.Param()
     p.scans.MF = u.Param()
-    p.scans.MF.name = 'Full'
+    p.scans.MF.name = scanmodel
     p.scans.MF.propagation = propagator
     p.scans.MF.data = u.Param()
     p.scans.MF.data.name = 'MoonFlowerScan'
-    p.scans.MF.data.positions_theory = None
-    p.scans.MF.data.auto_center = None
-    p.scans.MF.data.min_frames = 1
-    p.scans.MF.data.orientation = None
-    p.scans.MF.data.num_frames = 100
-    p.scans.MF.data.energy = 6.2
+    p.scans.MF.data.num_frames = 200
     p.scans.MF.data.shape = 64
-    p.scans.MF.data.chunk_format = '.chunk%02d'
-    p.scans.MF.data.rebin = None
-    p.scans.MF.data.experimentID = None
-    p.scans.MF.data.label = None
-    p.scans.MF.data.version = 0.1
-    p.scans.MF.data.dfile = "%s.ptyd" % output_file
-    p.scans.MF.data.psize = 0.000172
-    p.scans.MF.data.load_parallel = None
-    p.scans.MF.data.distance = 7.0
     p.scans.MF.data.save = None
-    p.scans.MF.data.center = 'fftshift'
-    p.scans.MF.data.photons = 100000000.0
+    p.scans.MF.data.photons = 1e8
     p.scans.MF.data.psf = 0.0
     p.scans.MF.data.density = 0.2
     p.scans.MF.data.add_poisson_noise = False
     p.scans.MF.coherence = u.Param()
-    p.scans.MF.coherence.num_probe_modes = 1 # currently breaks when this is =2
+    p.scans.MF.coherence.num_probe_modes = 1
     p.engines = u.Param()
     p.engines.engine00 = engine_params
-    P = Ptycho(p, level=5)
+    P = Ptycho(p, level=4)
+    if init_correct_probe:
+        P.probe.S['SMFG00'].data[0] = P.model.scans['MF'].ptyscan.pr
+    P.run()
     return P
 
