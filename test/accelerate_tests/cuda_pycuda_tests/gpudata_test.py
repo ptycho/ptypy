@@ -6,11 +6,8 @@ import numpy as np
 from . import PyCudaTest, have_pycuda
 
 if have_pycuda():
-    from pycuda import gpuarray
     import pycuda.driver as cuda
     from pycuda.compiler import SourceModule
-    from pycuda.tools import DeviceMemoryPool
-    from ptypy.accelerate.cuda_pycuda.engines.projectional_pycuda_streams import GpuStreamData
     from ptypy.accelerate.cuda_pycuda.mem_utils import GpuData, GpuDataManager
 
 class GpuDataTest(PyCudaTest):
