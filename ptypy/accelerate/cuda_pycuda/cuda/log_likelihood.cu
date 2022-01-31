@@ -105,3 +105,49 @@ extern "C" __global__ void
         MATH_TYPE(fmask[a * B + b]) * (acc - I) * (acc - I) / (I + 1) / norm;
   }
 }
+
+// ML variant which uses weights and intensity directly.
+// Based of log_likelihood
+extern "C" __global__ void __launch_bounds__(1024, 2)
+    log_likelihood_ml(int nmodes,
+                   complex<OUT_TYPE> *aux,
+                   const IN_TYPE *weights,
+                   const IN_TYPE *I,
+                   const int *addr,
+                   IN_TYPE *llerr,
+                   int A,
+                   int B)
+{
+  int tx = threadIdx.x;
+  int ty = threadIdx.y;
+  int addr_stride = 15;
+
+  const int *ea = addr + 6 + (blockIdx.x * nmodes) * addr_stride;
+  const int *da = addr + 9 + (blockIdx.x * nmodes) * addr_stride;
+  const int *ma = addr + 12 + (blockIdx.x * nmodes) * addr_stride;
+
+  aux += ea[0] * A * B;
+  weights += da[0] * A * B;
+  I += ma[0] * A * B;
+  llerr += da[0] * A * B;
+  MATH_TYPE norm = A * B;
+
+  for (int a = ty; a < A; a += blockDim.y)
+  {
+    for (int b = tx; b < B; b += blockDim.x)
+    {
+      MATH_TYPE acc = 0.0;
+      MATH_TYPE i = I[a * B + b];
+      for (int idx = 0; idx < nmodes; ++idx)
+      {
+        complex<MATH_TYPE> t_aux = aux[a * B + b + idx * A * B];
+        MATH_TYPE abs_exit_wave = abs(t_aux);
+        acc += abs_exit_wave *
+               abs_exit_wave;  // if we do this manually (real*real +imag*imag)
+                               // we get differences to numpy due to rounding
+      }
+      llerr[a * B + b] =
+          MATH_TYPE(weights[a * B + b]) * (acc - i) * (acc - i) / norm;
+    }
+  }
+}

@@ -498,7 +498,7 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
 
     def support_constraint(self, storage=None):
         """
-        Enforces 2D support contraint on probe.
+        Enforces 2D support constraint on probe.
         """
         if storage is None:
             for s in self.pr.storages.values():
@@ -529,7 +529,7 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
             cmin, cmax = self.p.clip_object
             self.CMK.clip_magnitudes_to_range(ob, cmin, cmax)
 
-    def engine_finalize(self, benchmark=False):
+    def engine_finalize(self):
         """
         clear GPU data and destroy context.
         """
@@ -557,7 +557,9 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
 
         self.context.pop()
         self.context.detach()
-        super().engine_finalize(benchmark)
+
+        # we don't need the  "benchmarking" in DM_serial
+        super().engine_finalize(benchmark=False)
 
 
 @register(name="DM_pycuda_nostream")
