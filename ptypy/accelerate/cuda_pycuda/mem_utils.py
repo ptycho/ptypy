@@ -266,7 +266,7 @@ class GpuDataManager:
         self.reset(0, 0)
 
 
-    def to_gpu(self, cpu, id, stream, pop_id=None):
+    def to_gpu(self, cpu, id, stream, pop_id="none"):
         """
         Transfer a block to the GPU, given its ID and CPU data array
         """
