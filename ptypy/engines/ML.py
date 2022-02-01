@@ -493,7 +493,13 @@ class GaussianModel(BaseModel):
                                                 / (w * Imodel**2).sum())
                 Imodel *= self.float_intens_coeff[dname]
 
+            if dname == "V0000":
+                self.engine.debug = Imodel
+
             DI = Imodel - I
+
+            # if dname == "V0000":
+            #     self.engine.debug = (w * DI**2)
 
             # Second pod loop: gradients computation
             LLL = np.sum((w * DI**2).astype(np.float64))
@@ -501,12 +507,18 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
+                # if dname == "V0000":
+                #     self.engine.debug = xi
                 self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
                 self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
             LL += LLL
+
+        #self.engine.debug = self.ob_grad.S["SMFG00"].data[0]
+        #elf.engine.debug = np.copy(self.pr_grad.S["SMFG00"].data[0])
+
 
         # MPI reduction of gradients
         self.ob_grad.allreduce()
@@ -519,7 +531,7 @@ class GaussianModel(BaseModel):
                 self.ob_grad.storages[name].data += self.regularizer.grad(
                     s.data)
                 LL += self.regularizer.LL
-
+        # self.engine.debug = self.ob_grad.S["SMFG00"].data[0]
         self.LL = LL / self.tot_measpts
 
         return error_dct

@@ -444,12 +444,16 @@ class GaussianModel(BaseModelSerial):
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
             GDK.main(aux, addr, w, I)
+            self.engine.debug = np.copy(GDK.npy.Imodel[0])
+            # self.engine.debug = np.copy(GDK.npy.LLerr[0])
             GDK.error_reduce(addr, err_phot)
-
             aux[:] = BW(aux)
+            #self.engine.debug = np.copy(aux[0])
 
             POK.ob_update_ML(addr, obg, pr, aux)
             POK.pr_update_ML(addr, prg, ob, aux)
+            #self.engine.debug = np.copy(obg[0])
+            #self.engine.debug = np.copy(prg[0])
 
         for dID, prep in self.engine.diff_info.items():
             err_phot = prep.err_phot
@@ -471,6 +475,7 @@ class GaussianModel(BaseModelSerial):
                 ob_grad.storages[name].data += self.regularizer.grad(s.data)
                 LL += self.regularizer.LL
 
+        # self.engine.debug = ob_grad.S["SMFG00"].data[0]
         self.LL = LL / self.tot_measpts
         return error_dct
 
