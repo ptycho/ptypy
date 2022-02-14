@@ -227,6 +227,7 @@ class GradientDescentKernel(BaseKernel):
         self.fshape = (ash[0] // nmodes, ash[1], ash[2])
         self.ctype = aux.dtype
         self.ftype = np.float32 if self.ctype == np.complex64 else np.float64
+        # self.ftype = np.float64
 
         self.npy.LLden  = None
         self.npy.LLerr = None
@@ -250,9 +251,12 @@ class GradientDescentKernel(BaseKernel):
         shape of the diffraction stack.
         """
         # temporary buffer arrays
-        self.npy.LLden = np.zeros(self.fshape, dtype=self.ftype)
-        self.npy.LLerr = np.zeros(self.fshape, dtype=self.ftype)
-        self.npy.Imodel = np.zeros(self.fshape, dtype=self.ftype)
+        # self.npy.LLden = np.zeros(self.fshape, dtype=self.ftype)
+        # self.npy.LLerr = np.zeros(self.fshape, dtype=self.ftype)
+        # self.npy.Imodel = np.zeros(self.fshape, dtype=self.ftype)
+        self.npy.LLden = np.zeros(self.fshape, dtype=np.longdouble)
+        self.npy.LLerr = np.zeros(self.fshape, dtype=np.longdouble)
+        self.npy.Imodel = np.zeros(self.fshape, dtype=np.longdouble)
 
         self.npy.fic_tmp = np.ones((self.fshape[0],), dtype=self.ftype)
 
@@ -267,7 +271,7 @@ class GradientDescentKernel(BaseKernel):
 
         ## Actual math ## (subset of FUK.fourier_error)
         tf = aux.reshape(sh[0], self.nmodes, sh[1], sh[2])
-        Imodel[:] = (np.abs(tf) ** 2).sum(1)
+        Imodel[:] = ((tf * tf.conj()).real).sum(1)
 
     def make_a012(self, b_f, b_a, b_b, addr, I, fic):
 
@@ -289,15 +293,18 @@ class GradientDescentKernel(BaseKernel):
         ## Actual math ## (subset of FUK.fourier_error)
         fc = fic.reshape((maxz,1,1))
         A0.fill(0.)
-        tf = np.abs(f).astype(self.ftype) ** 2
-        A0[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc - I
+        tf = np.real(f * f.conj()).astype(self.ftype)
+        #A0[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc - I
+        A0[:maxz] = np.double(tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc) - I
+
+        print(A0.max(), I.max())
 
         A1.fill(0.)
         tf = 2. * np.real(f * a.conj())
         A1[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc
 
         A2.fill(0.)
-        tf = 2. * np.real(f * b.conj()) + np.abs(a) ** 2
+        tf = 2. * np.real(f * b.conj()) + np.real(a * a.conj())
         A2[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc
         return
 
@@ -316,9 +323,9 @@ class GradientDescentKernel(BaseKernel):
 
         # maybe two kernel calls?
 
-        B[0] += np.dot(w.flat, (A0 ** 2).flat) * Brenorm
-        B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
-        B[2] += np.dot(w.flat, (A1 ** 2 + 2 * A0 * A2).flat) * Brenorm
+        B[0] += np.dot(w.flat, (Brenorm * A0 ** 2).flat) #* Brenorm
+        B[1] += np.dot(w.flat, (Brenorm * 2 * A0 * A1).flat) #* Brenorm
+        B[2] += np.dot(w.flat, (Brenorm * A1 ** 2 + Brenorm * 2 * A0 * A2).flat) #* Brenorm
         return
 
     def error_reduce(self, addr, err_sum):
@@ -375,11 +382,14 @@ class GradientDescentKernel(BaseKernel):
         ish = aux.shape
 
         ## math ##
-        DI = Imodel - I
+        DI = np.double(Imodel) - I
         tmp = w * DI
         err[:] = tmp * DI
 
-        aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * tmp[:, np.newaxis, :, :]).reshape(ish)
+        print(tmp.shape, I.shape, aux.shape)
+        print(aux.dtype, tmp.dtype)
+        # aux[:] = aux * tmp
+        aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * np.double(tmp[:, np.newaxis, :, :])).reshape(ish)
         return
 
 

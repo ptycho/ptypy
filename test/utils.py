@@ -47,6 +47,7 @@ def EngineTestRunner(engine_params,propagator='farfield',output_path='./', outpu
 
 
     p = u.Param()
+    # p.data_type = "double"
     p.verbose_level = verbose_level
     p.io = u.Param()
     p.io.home = output_path

@@ -234,6 +234,8 @@ class ML(PositionCorrectionEngine):
             if self.p.scale_precond:
                 cn2_new_pr_grad = Cnorm2(new_pr_grad)
                 cn2_new_ob_grad = Cnorm2(new_ob_grad)
+                self.debug = np.copy(cn2_new_ob_grad / cn2_new_pr_grad)
+                # self.debug = np.copy(cn2_new_pr_grad)
                 if cn2_new_pr_grad > 1e-5:
                     scale_p_o = (self.p.scale_probe_object * cn2_new_ob_grad 
                                  / cn2_new_pr_grad)
@@ -247,6 +249,10 @@ class ML(PositionCorrectionEngine):
                 logger.debug('Scale P/O: %6.3g' % scale_p_o)
             else:
                 self.scale_p_o = self.p.scale_probe_object
+
+            # self.debug = np.copy(new_ob_grad.S["SMFG00"].data[0])
+            # self.debug = np.copy(new_pr_grad.S["SMFG00"].data[0])
+
 
             ############################
             # Compute next conjugate
@@ -264,13 +270,19 @@ class ML(PositionCorrectionEngine):
 
                 bt = max(0, bt_num/bt_denom)
 
-            # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
+            # print(self.curiter, bt)
+            # logger.info('Polak-Ribiere coefficient: %f ' % bt)
 
             self.ob_grad << new_ob_grad
             self.pr_grad << new_pr_grad
 
+            # self.debug = np.copy(self.ob_grad.S["SMFG00"].data[0])
+            # self.debug = np.copy(self.pr_grad.S["SMFG00"].data[0])
+
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
+
+            # self.debug = np.copy(self.ob_h.S["SMFG00"].data[0])
 
             # Smoothing preconditioner
             if self.smooth_gradient:
@@ -278,15 +290,22 @@ class ML(PositionCorrectionEngine):
                     s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
             else:
                 self.ob_h -= self.ob_grad
+            # self.debug = np.copy(self.ob_h.S["SMFG00"].data[0])
+
             self.pr_h *= bt / self.tmin
+            # self.debug = np.copy(self.pr_h.S["SMFG00"].data[0])
             self.pr_grad *= self.scale_p_o
+            # self.debug = np.copy(self.pr_grad.S["SMFG00"].data[0])
             self.pr_h -= self.pr_grad
+            # self.debug = np.copy(self.pr_h.S["SMFG00"].data[0])
 
             # In principle, the way things are now programmed this part
             # could be iterated over in a real Newton-Raphson style.
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
+
+            # self.debug = B
             #print(B, Cnorm2(self.ob_h), Cnorm2(self.ob_grad), Cnorm2(self.pr_h), Cnorm2(self.pr_grad))
             if np.isinf(B).any() or np.isnan(B).any():
                 logger.warning(
@@ -294,12 +313,22 @@ class ML(PositionCorrectionEngine):
                 B[np.isinf(B)] = 0.
                 B[np.isnan(B)] = 0.
 
-            self.tmin = -.5 * B[1] / B[2]
+            self.tmin = np.double(-.5 * B[1] / B[2])
+            print(B, B.dtype)
+            print(self.tmin, self.tmin.dtype)
+            # self.debug = self.tmin
+            # self.debug = np.copy(self.ob_h.S["SMFG00"].data[0])
             self.ob_h *= self.tmin
+            # self.debug = np.copy(self.ob_h.S["SMFG00"].data[0])
             self.pr_h *= self.tmin
             self.ob += self.ob_h
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
+
+            # self.debug = np.copy(self.ob_h.S["SMFG00"].data[0])
+            # self.debug = np.copy(self.pr_h.S["SMFG00"].data[0])
+            # self.debug = np.copy(self.ob.S["SMFG00"].data[0])
+            # self.debug = np.copy(self.pr.S["SMFG00"].data[0])
 
             # Position correction
             self.position_update()
@@ -480,12 +509,26 @@ class GaussianModel(BaseModel):
             Imodel = np.zeros_like(I)
             f = {}
 
+            # if dname == "V0000":
+            #     self.engine.debug = I
+
             # First pod loop: compute total intensity
             for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
+                # if dname == "V0000":
+                #     self.engine.debug = pod.probe * pod.object
+                #     # self.engine.debug = pod.fw(pod.probe * pod.object)
                 f[name] = pod.fw(pod.probe * pod.object)
                 Imodel += pod.downsample(u.abs2(f[name]))
+
+                # if dname == "V0000":
+                #     # self.engine.debug = pod.probe * pod.object
+                    # self.engine.debug = f[name]
+                    # self.engine.debug = u.abs2(f[name])
+
+            # if dname == "V0000":
+            #     self.engine.debug = Imodel
 
             # Floating intensity option
             if self.p.floating_intensities:
@@ -493,13 +536,11 @@ class GaussianModel(BaseModel):
                                                 / (w * Imodel**2).sum())
                 Imodel *= self.float_intens_coeff[dname]
 
-            if dname == "V0000":
-                self.engine.debug = Imodel
-
-            DI = Imodel - I
+            DI = np.double(Imodel) - I
 
             # if dname == "V0000":
-            #     self.engine.debug = (w * DI**2)
+                # self.engine.debug = DI
+                # self.engine.debug = (w * DI**2)
 
             # Second pod loop: gradients computation
             LLL = np.sum((w * DI**2).astype(np.float64))
@@ -507,8 +548,12 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
-                # if dname == "V0000":
-                #     self.engine.debug = xi
+                if dname == "V0000":
+                    print(f[name].dtype, pod.upsample(w*DI).dtype)
+                    # self.engine.debug = f[name]
+                    # self.engine.debug = pod.upsample(w*DI)
+                    self.engine.debug = np.double(pod.upsample(w*DI)) * f[name]
+                    # self.engine.debug = xi
                 self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
                 self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 
@@ -516,8 +561,8 @@ class GaussianModel(BaseModel):
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
             LL += LLL
 
-        #self.engine.debug = self.ob_grad.S["SMFG00"].data[0]
-        #elf.engine.debug = np.copy(self.pr_grad.S["SMFG00"].data[0])
+        # self.engine.debug = self.ob_grad.S["SMFG00"].data[0]
+        # self.engine.debug = np.copy(self.pr_grad.S["SMFG00"].data[0])
 
 
         # MPI reduction of gradients
@@ -545,6 +590,8 @@ class GaussianModel(BaseModel):
         B = np.zeros((3,), dtype=np.longdouble)
         Brenorm = 1. / self.LL[0]**2
 
+        # self.engine.debug = []
+
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
             if not diff_view.active:
@@ -565,6 +612,10 @@ class GaussianModel(BaseModel):
                 a = pod.fw(pod.probe * ob_h[pod.ob_view]
                            + pr_h[pod.pr_view] * pod.object)
                 b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
+                # if dname == "V0000":
+                    #self.engine.debug = f
+                    # self.engine.debug = a
+                    # self.engine.debug = b
 
                 if A0 is None:
                     A0 = u.abs2(f).astype(np.longdouble)
@@ -581,12 +632,28 @@ class GaussianModel(BaseModel):
                 A1 *= self.float_intens_coeff[dname]
                 A2 *= self.float_intens_coeff[dname]
 
-            A0 -= pod.upsample(I)
+            A0 = np.double(A0) - pod.upsample(I)
+            #A0 -= pod.upsample(I)
             w = pod.upsample(w)
-            
-            B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
-            B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
-            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
+
+            # self.engine.debug.append(np.copy(A0))
+            # self.engine.debug.append(np.copy(pod.upsample(I)))
+
+            # if dname == "V0000":
+                # self.engine.debug = pod.upsample(I)
+                # self.engine.debug = np.copy(A0)
+                # self.engine.debug = A1
+                # self.engine.debug = A2
+                # self.engine.debug = w
+            # self.engine.debug.append(np.copy(A0))
+            # self.engine.debug.append(np.copy(A1))
+            # self.engine.debug.append(np.copy(A2))
+
+            B[0] += np.dot(w.flat, (Brenorm * A0**2).flat) #* Brenorm
+            B[1] += np.dot(w.flat, (Brenorm * 2 * A0 * A1).flat) #* Brenorm
+            B[2] += np.dot(w.flat, (Brenorm * A1**2 + Brenorm * 2*A0*A2).flat) #* Brenorm
+
+        # self.engine.debug = np.array(self.engine.debug)
 
         parallel.allreduce(B)
 
