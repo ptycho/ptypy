@@ -557,6 +557,7 @@ class GaussianModel(BaseModelSerial):
 
             GDK.queue.wait_for_event(ev)
 
+            self.engine.debug = np.copy(GDK.gpu.Imodel.get()[0])
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
 

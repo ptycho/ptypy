@@ -649,7 +649,7 @@ class GaussianModel(BaseModel):
             # self.engine.debug.append(np.copy(A1))
             # self.engine.debug.append(np.copy(A2))
 
-            B[0] += np.dot(w.flat, (Brenorm * A0**2).flat) #* Brenorm
+            B[0] += np.dot(w.flat, (Brenorm *A0**2).flat) #* Brenorm
             B[1] += np.dot(w.flat, (Brenorm * 2 * A0 * A1).flat) #* Brenorm
             B[2] += np.dot(w.flat, (Brenorm * A1**2 + Brenorm * 2*A0*A2).flat) #* Brenorm
 

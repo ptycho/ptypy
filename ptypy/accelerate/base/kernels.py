@@ -382,7 +382,7 @@ class GradientDescentKernel(BaseKernel):
         err[:] = tmp * DI
 
         # aux[:] = aux * tmp
-        aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * np.double(tmp[:, np.newaxis, :, :])).reshape(ish)
+        aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * tmp[:, np.newaxis, :, :]).reshape(ish)
         return
 
 

@@ -477,7 +477,7 @@ class GaussianModel(BaseModelSerial):
             # self.engine.debug = np.copy((aux[0] * aux[0].conj()).real)
 
             GDK.make_model(aux, addr)
-            # self.engine.debug = np.copy(GDK.npy.Imodel[0])
+            self.engine.debug = np.copy(GDK.npy.Imodel[0])
 
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
