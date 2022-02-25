@@ -251,7 +251,7 @@ class ML_serial(ML):
                 B[np.isinf(B)] = 0.
                 B[np.isnan(B)] = 0.
 
-            self.tmin = np.double(-.5 * B[1] / B[2])
+            self.tmin = dt(-.5 * B[1] / B[2])
             self.ob_h *= self.tmin
             self.pr_h *= self.tmin
             self.ob += self.ob_h
