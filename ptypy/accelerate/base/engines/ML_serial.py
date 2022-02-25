@@ -269,8 +269,8 @@ class ML_serial(ML):
                 B[np.isnan(B)] = 0.
 
             self.tmin = np.double(-.5 * B[1] / B[2])
-            print(B, B.dtype)
-            print(self.tmin, self.tmin.dtype)
+            # print(B, B.dtype)
+            # print(self.tmin, self.tmin.dtype)
             # self.debug = self.tmin
             # self.debug = np.copy(self.ob_h.S["SMFG00"].data[0])
             self.ob_h *= self.tmin

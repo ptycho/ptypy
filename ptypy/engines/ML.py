@@ -234,7 +234,7 @@ class ML(PositionCorrectionEngine):
             if self.p.scale_precond:
                 cn2_new_pr_grad = Cnorm2(new_pr_grad)
                 cn2_new_ob_grad = Cnorm2(new_ob_grad)
-                self.debug = np.copy(cn2_new_ob_grad / cn2_new_pr_grad)
+                # self.debug = np.copy(cn2_new_ob_grad / cn2_new_pr_grad)
                 # self.debug = np.copy(cn2_new_pr_grad)
                 if cn2_new_pr_grad > 1e-5:
                     scale_p_o = (self.p.scale_probe_object * cn2_new_ob_grad 
@@ -314,8 +314,8 @@ class ML(PositionCorrectionEngine):
                 B[np.isnan(B)] = 0.
 
             self.tmin = np.double(-.5 * B[1] / B[2])
-            print(B, B.dtype)
-            print(self.tmin, self.tmin.dtype)
+            # print(B, B.dtype)
+            # print(self.tmin, self.tmin.dtype)
             # self.debug = self.tmin
             # self.debug = np.copy(self.ob_h.S["SMFG00"].data[0])
             self.ob_h *= self.tmin
@@ -548,11 +548,11 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
-                if dname == "V0000":
-                    print(f[name].dtype, pod.upsample(w*DI).dtype)
+                # if dname == "V0000":
+                    # print(f[name].dtype, pod.upsample(w*DI).dtype)
                     # self.engine.debug = f[name]
                     # self.engine.debug = pod.upsample(w*DI)
-                    self.engine.debug = np.double(pod.upsample(w*DI)) * f[name]
+                    # self.engine.debug = np.double(pod.upsample(w*DI)) * f[name]
                     # self.engine.debug = xi
                 self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
                 self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()

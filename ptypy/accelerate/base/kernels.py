@@ -227,7 +227,7 @@ class GradientDescentKernel(BaseKernel):
         self.fshape = (ash[0] // nmodes, ash[1], ash[2])
         self.ctype = aux.dtype
         self.ftype = np.float32 if self.ctype == np.complex64 else np.float64
-        # self.ftype = np.float64
+        self.ftype = np.float64
 
         self.npy.LLden  = None
         self.npy.LLerr = None
@@ -251,12 +251,9 @@ class GradientDescentKernel(BaseKernel):
         shape of the diffraction stack.
         """
         # temporary buffer arrays
-        # self.npy.LLden = np.zeros(self.fshape, dtype=self.ftype)
-        # self.npy.LLerr = np.zeros(self.fshape, dtype=self.ftype)
-        # self.npy.Imodel = np.zeros(self.fshape, dtype=self.ftype)
-        self.npy.LLden = np.zeros(self.fshape, dtype=np.longdouble)
-        self.npy.LLerr = np.zeros(self.fshape, dtype=np.longdouble)
-        self.npy.Imodel = np.zeros(self.fshape, dtype=np.longdouble)
+        self.npy.LLden = np.zeros(self.fshape, dtype=self.ftype)
+        self.npy.LLerr = np.zeros(self.fshape, dtype=self.ftype)
+        self.npy.Imodel = np.zeros(self.fshape, dtype=self.ftype)
 
         self.npy.fic_tmp = np.ones((self.fshape[0],), dtype=self.ftype)
 
@@ -296,8 +293,6 @@ class GradientDescentKernel(BaseKernel):
         tf = np.real(f * f.conj()).astype(self.ftype)
         #A0[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc - I
         A0[:maxz] = np.double(tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc) - I
-
-        print(A0.max(), I.max())
 
         A1.fill(0.)
         tf = 2. * np.real(f * a.conj())
@@ -386,8 +381,6 @@ class GradientDescentKernel(BaseKernel):
         tmp = w * DI
         err[:] = tmp * DI
 
-        print(tmp.shape, I.shape, aux.shape)
-        print(aux.dtype, tmp.dtype)
         # aux[:] = aux * tmp
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * np.double(tmp[:, np.newaxis, :, :])).reshape(ish)
         return
