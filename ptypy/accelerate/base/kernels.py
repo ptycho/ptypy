@@ -227,7 +227,6 @@ class GradientDescentKernel(BaseKernel):
         self.fshape = (ash[0] // nmodes, ash[1], ash[2])
         self.ctype = aux.dtype
         self.ftype = np.float32 if self.ctype == np.complex64 else np.float64
-        self.ftype = np.float64
 
         self.npy.LLden  = None
         self.npy.LLerr = None
@@ -318,9 +317,9 @@ class GradientDescentKernel(BaseKernel):
 
         # maybe two kernel calls?
 
-        B[0] += np.dot(w.flat, (Brenorm * A0 ** 2).flat) #* Brenorm
-        B[1] += np.dot(w.flat, (Brenorm * 2 * A0 * A1).flat) #* Brenorm
-        B[2] += np.dot(w.flat, (Brenorm * A1 ** 2 + Brenorm * 2 * A0 * A2).flat) #* Brenorm
+        B[0] += np.dot(w.flat, (Brenorm * A0 ** 2).flat)
+        B[1] += np.dot(w.flat, (Brenorm * 2 * A0 * A1).flat)
+        B[2] += np.dot(w.flat, (Brenorm * A1 ** 2 + Brenorm * 2 * A0 * A2).flat)
         return
 
     def error_reduce(self, addr, err_sum):

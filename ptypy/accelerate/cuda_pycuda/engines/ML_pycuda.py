@@ -210,7 +210,7 @@ class ML_pycuda(ML_serial):
             kern.b = gpuarray.zeros(ash, dtype=np.complex64)
 
             # setup kernels, one for each SCAN.
-            kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue)
+            kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue, math_type="double")
             kern.GDK.allocate()
 
             kern.POK = PoUpdateKernel(queue_thread=self.queue)
@@ -557,7 +557,6 @@ class GaussianModel(BaseModelSerial):
 
             GDK.queue.wait_for_event(ev)
 
-            self.engine.debug = np.copy(GDK.gpu.Imodel.get()[0])
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
 

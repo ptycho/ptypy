@@ -193,8 +193,6 @@ class ML_serial(ML):
 
             # probe/object rescaling
             if self.p.scale_precond:
-                # self.debug = np.copy(cn2_new_ob_grad / cn2_new_pr_grad)
-                # self.debug = np.copy(cn2_new_pr_grad)
                 if cn2_new_pr_grad > 1e-5:
                     scale_p_o = (self.p.scale_probe_object * cn2_new_ob_grad
                                  / cn2_new_pr_grad)
@@ -209,10 +207,6 @@ class ML_serial(ML):
             else:
                 self.scale_p_o = self.p.scale_probe_object
 
-            # self.debug = np.copy(self.ob_grad_new.S["SMFG00"].data[0])
-            # self.debug = np.copy(self.pr_grad_new.S["SMFG00"].data[0])
-
-
             ############################
             # Compute next conjugate
             ############################
@@ -225,20 +219,14 @@ class ML_serial(ML):
 
                 bt = max(0, bt_num / bt_denom)
 
-            # print(self.curiter, bt)
             # logger.info('Polak-Ribiere coefficient: %f ' % bt)
 
             self.cn2_ob_grad = cn2_new_ob_grad
             self.cn2_pr_grad = cn2_new_pr_grad
 
-            # self.debug = np.copy(self.ob_grad.S["SMFG00"].data[0])
-            # self.debug = np.copy(self.pr_grad.S["SMFG00"].data[0])
-
             dt = self.ptycho.FType
             # 3. Next conjugate
             self.ob_h *= dt(bt / self.tmin)
-
-            # self.debug = np.copy(self.ob_h.S["SMFG00"].data[0])
 
             # Smoothing preconditioner
             if self.smooth_gradient:
@@ -246,14 +234,10 @@ class ML_serial(ML):
                     s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
             else:
                 self.ob_h -= self.ob_grad
-            # self.debug = np.copy(self.ob_h.S["SMFG00"].data[0])
 
             self.pr_h *= dt(bt / self.tmin)
-            # self.debug = np.copy(self.pr_h.S["SMFG00"].data[0])
             self.pr_grad *= dt(self.scale_p_o)
-            # self.debug = np.copy(self.pr_grad.S["SMFG00"].data[0])
             self.pr_h -= self.pr_grad
-            # self.debug = np.copy(self.pr_h.S["SMFG00"].data[0])
 
             # In principle, the way things are now programmed this part
             # could be iterated over in a real Newton-Raphson style.
@@ -261,7 +245,6 @@ class ML_serial(ML):
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
 
-            # self.debug = B
             if np.isinf(B).any() or np.isnan(B).any():
                 logger.warning(
                     'Warning! inf or nan found! Trying to continue...')
@@ -269,22 +252,11 @@ class ML_serial(ML):
                 B[np.isnan(B)] = 0.
 
             self.tmin = np.double(-.5 * B[1] / B[2])
-            # print(B, B.dtype)
-            # print(self.tmin, self.tmin.dtype)
-            # self.debug = self.tmin
-            # self.debug = np.copy(self.ob_h.S["SMFG00"].data[0])
             self.ob_h *= self.tmin
-            # self.debug = np.copy(self.ob_h.S["SMFG00"].data[0])
             self.pr_h *= self.tmin
             self.ob += self.ob_h
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
-
-            # self.debug = np.copy(self.ob_h.S["SMFG00"].data[0])
-            # self.debug = np.copy(self.pr_h.S["SMFG00"].data[0])
-            # self.debug = np.copy(self.ob.S["SMFG00"].data[0])
-            # self.debug = np.copy(self.pr.S["SMFG00"].data[0])
-
 
             # Refine the scan positions
             self.position_update()
@@ -462,38 +434,23 @@ class GaussianModel(BaseModelSerial):
             prg = pr_grad.S[pID].data
             I = prep.I
 
-            # self.engine.debug = np.copy(I[0])
-
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
 
-            # self.engine.debug = np.copy(aux[0])
-            # FW2 = self.engine.di.views["V0000"].pods["P0000"].fw
-            # self.engine.debug = FW2(np.copy(aux[0]))
-
             # forward prop
             aux[:] = FW(aux)
-            # self.engine.debug = np.copy(aux[0])
-            # self.engine.debug = np.copy((aux[0] * aux[0].conj()).real)
 
             GDK.make_model(aux, addr)
-            self.engine.debug = np.copy(GDK.npy.Imodel[0])
 
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
-            # self.engine.debug = np.copy(np.double(GDK.npy.Imodel[0])) - I[0]
-            # self.engine.debug = np.copy(aux[0])
+
             GDK.main(aux, addr, w, I)
-            # self.engine.debug = np.copy(GDK.npy.LLerr[0])
-            self.engine.debug = np.copy(aux[0])
             GDK.error_reduce(addr, err_phot)
             aux[:] = BW(aux)
-            # self.engine.debug = np.copy(aux[0])
 
             POK.ob_update_ML(addr, obg, pr, aux)
             POK.pr_update_ML(addr, prg, ob, aux)
-            # self.engine.debug = np.copy(obg[0])
-            # self.engine.debug = np.copy(prg[0])
 
         for dID, prep in self.engine.diff_info.items():
             err_phot = prep.err_phot
@@ -515,7 +472,6 @@ class GaussianModel(BaseModelSerial):
                 ob_grad.storages[name].data += self.regularizer.grad(s.data)
                 LL += self.regularizer.LL
 
-        # self.engine.debug = ob_grad.S["SMFG00"].data[0]
         self.LL = LL / self.tot_measpts
         return error_dct
 
@@ -569,17 +525,7 @@ class GaussianModel(BaseModelSerial):
             a[:] = FW(a)
             b[:] = FW(b)
 
-            # self.engine.debug = np.copy(f[0])
-            # self.engine.debug = np.copy(a[0])
-            # self.engine.debug = np.copy(b[0])
-
             GDK.make_a012(f, a, b, addr, I, fic)
-
-            # self.engine.debug = np.copy(I)
-            # self.engine.debug = np.copy(GDK.npy.Imodel)
-            # self.engine.debug = np.copy(GDK.npy.LLerr)
-            # self.engine.debug = np.copy(GDK.npy.LLden)
-            # self.engine.debug = np.copy(w[0])
             GDK.fill_b(addr, Brenorm, w, B)
 
         parallel.allreduce(B)
