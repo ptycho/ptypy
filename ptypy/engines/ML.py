@@ -269,6 +269,7 @@ class ML(PositionCorrectionEngine):
             self.ob_grad << new_ob_grad
             self.pr_grad << new_pr_grad
 
+            dt = self.ptycho.FType
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
 
@@ -295,7 +296,7 @@ class ML(PositionCorrectionEngine):
                 B[np.isinf(B)] = 0.
                 B[np.isnan(B)] = 0.
 
-            self.tmin = np.double(-.5 * B[1] / B[2])
+            self.tmin = dt(-.5 * B[1] / B[2])
             self.ob_h *= self.tmin
             self.pr_h *= self.tmin
             self.ob += self.ob_h

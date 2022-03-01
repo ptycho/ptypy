@@ -81,28 +81,28 @@ class MLSerialTest(unittest.TestCase):
         for eng in ["ML", "ML_serial"]:
             engine_params = u.Param()
             engine_params.name = eng
-            engine_params.numiter = 200
+            engine_params.numiter = 100
             engine_params.floating_intensities = False
             engine_params.reg_del2 = False
             engine_params.reg_del2_amplitude = 1.
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=True, debug=False)
+        self.check_engine_output(out, plotting=False, debug=False)
 
     def test_ML_serial_regularizer(self):
         out = []
         for eng in ["ML", "ML_serial"]:
             engine_params = u.Param()
             engine_params.name = eng
-            engine_params.numiter = 200
+            engine_params.numiter = 100
             engine_params.floating_intensities = False
             engine_params.reg_del2 = True
             engine_params.reg_del2_amplitude = 1.
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=True, debug=False)
+        self.check_engine_output(out, plotting=False, debug=False)
 
 
     def test_ML_serial_preconditioner(self):
@@ -110,7 +110,7 @@ class MLSerialTest(unittest.TestCase):
         for eng in ["ML", "ML_serial"]:
             engine_params = u.Param()
             engine_params.name = eng
-            engine_params.numiter = 200
+            engine_params.numiter = 100
             engine_params.floating_intensities = False
             engine_params.reg_del2 = False
             engine_params.reg_del2_amplitude = 1.
@@ -125,7 +125,7 @@ class MLSerialTest(unittest.TestCase):
         for eng in ["ML", "ML_serial"]:
             engine_params = u.Param()
             engine_params.name = eng
-            engine_params.numiter = 200
+            engine_params.numiter = 100
             engine_params.floating_intensities = True
             engine_params.reg_del2 = False
             engine_params.reg_del2_amplitude = 1.
@@ -139,12 +139,12 @@ class MLSerialTest(unittest.TestCase):
         for eng in ["ML", "ML_serial"]:
             engine_params = u.Param()
             engine_params.name = eng
-            engine_params.numiter = 200
+            engine_params.numiter = 100
             engine_params.floating_intensities = False
             engine_params.reg_del2 = False
             engine_params.reg_del2_amplitude = 1.
             engine_params.smooth_gradient = 20
-            engine_params.smooth_gradient_decay = 1/20.
+            engine_params.smooth_gradient_decay = 1/10.
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
@@ -155,12 +155,12 @@ class MLSerialTest(unittest.TestCase):
         for eng in ["ML", "ML_serial"]:
             engine_params = u.Param()
             engine_params.name = eng
-            engine_params.numiter = 200
+            engine_params.numiter = 100
             engine_params.floating_intensities = True
             engine_params.reg_del2 = True
             engine_params.reg_del2_amplitude = 1.
             engine_params.smooth_gradient = 20
-            engine_params.smooth_gradient_decay = 1/20.
+            engine_params.smooth_gradient_decay = 1/10.
             engine_params.scale_precond = True
             engine_params.scale_probe_object = 1e-6
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,

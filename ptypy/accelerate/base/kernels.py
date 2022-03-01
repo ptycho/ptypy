@@ -290,7 +290,6 @@ class GradientDescentKernel(BaseKernel):
         fc = fic.reshape((maxz,1,1))
         A0.fill(0.)
         tf = np.real(f * f.conj()).astype(self.ftype)
-        #A0[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc - I
         A0[:maxz] = np.double(tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc) - I
 
         A1.fill(0.)

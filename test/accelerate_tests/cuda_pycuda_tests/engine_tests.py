@@ -31,6 +31,8 @@ class MLPycudaTest(unittest.TestCase):
         crop = 42
         OBJ_ML_serial, OBJ_ML_pycuda = P_ML_serial.obj.S["SMFG00"].data[0,crop:-crop,crop:-crop], P_ML_pycuda.obj.S["SMFG00"].data[0,crop:-crop,crop:-crop]
         PRB_ML_serial, PRB_ML_pycuda = P_ML_serial.probe.S["SMFG00"].data[0], P_ML_pycuda.probe.S["SMFG00"].data[0]
+        MED_ML_serial = np.median(np.angle(OBJ_ML_serial))
+        MED_ML_pycuda = np.median(np.angle(OBJ_ML_pycuda))
         eng_ML_serial = P_ML_serial.engines["engine00"]
         eng_ML_pycuda = P_ML_pycuda.engines["engine00"]
         if debug:
@@ -49,11 +51,11 @@ class MLPycudaTest(unittest.TestCase):
             plt.legend()
             plt.show()
             plt.figure("Phase ML serial")
-            plt.imshow(np.angle(OBJ_ML_serial))
+            plt.imshow(np.angle(OBJ_ML_serial*np.exp(-1j*MED_ML_serial)))
             plt.figure("Ampltitude ML serial")
             plt.imshow(np.abs(OBJ_ML_serial))
             plt.figure("Phase ML pycuda")
-            plt.imshow(np.angle(OBJ_ML_pycuda))
+            plt.imshow(np.angle(OBJ_ML_pycuda*np.exp(-1j*MED_ML_pycuda)))
             plt.figure("Amplitude ML pycuda")
             plt.imshow(np.abs(OBJ_ML_pycuda))
             plt.figure("Phase difference")
@@ -87,7 +89,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=False, debug=False)
+        self.check_engine_output(out, plotting=True, debug=False)
 
     def test_ML_pycuda_regularizer(self):
         out = []
@@ -101,7 +103,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=False, debug=False)
+        self.check_engine_output(out, plotting=True, debug=False)
 
     def test_ML_pycuda_preconditioner(self):
         out = []
@@ -116,7 +118,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.scale_probe_object = 1e-6
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=False, debug=False)
+        self.check_engine_output(out, plotting=True, debug=False)
 
     def test_ML_pycuda_floating(self):
         out = []
@@ -130,7 +132,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=False, debug=False)
+        self.check_engine_output(out, plotting=True, debug=False)
 
     def test_ML_pycuda_smoothing_regularizer(self):
         out = []
@@ -142,11 +144,11 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.reg_del2 = False
             engine_params.reg_del2_amplitude = 1.
             engine_params.smooth_gradient = 20
-            engine_params.smooth_gradient_decay = 1/20.
+            engine_params.smooth_gradient_decay = 1/10.
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=False, debug=False)
+        self.check_engine_output(out, plotting=True, debug=False)
 
     def test_ML_pycuda_all(self):
         out = []
@@ -154,16 +156,16 @@ class MLPycudaTest(unittest.TestCase):
             engine_params = u.Param()
             engine_params.name = eng
             engine_params.numiter = 100
-            engine_params.floating_intensities = True
+            engine_params.floating_intensities = False
             engine_params.reg_del2 = True
             engine_params.reg_del2_amplitude = 1.
             engine_params.smooth_gradient = 20
-            engine_params.smooth_gradient_decay = 1/20.
+            engine_params.smooth_gradient_decay = 1/10.
             engine_params.scale_precond = True
             engine_params.scale_probe_object = 1e-6
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=False, debug=False)
+        self.check_engine_output(out, plotting=True, debug=False)
 
 if __name__ == "__main__":
     unittest.main()
