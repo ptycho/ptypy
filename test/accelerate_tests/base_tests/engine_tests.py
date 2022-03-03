@@ -68,9 +68,9 @@ class MLSerialTest(unittest.TestCase):
         RMSE_ob = (np.mean(np.abs(OBJ_ML_serial - OBJ_ML)**2))
         RMSE_pr = (np.mean(np.abs(PRB_ML_serial - PRB_ML)**2))
         # RMSE_LL = (np.mean(np.abs(LL_ML_serial - LL_ML)**2))
-        np.testing.assert_allclose(RMSE_ob, 0.0, atol=1e-3, 
+        np.testing.assert_allclose(RMSE_ob, 0.0, atol=1e-2, 
                                     err_msg="The object arrays are not matching as expected")
-        np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-3, 
+        np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-2, 
                                     err_msg="The object arrays are not matching as expected")
         # np.testing.assert_allclose(RMSE_LL, 0.0, atol=1e-7,
         #                             err_msg="The log-likelihood errors are not matching as expected")
@@ -156,7 +156,7 @@ class MLSerialTest(unittest.TestCase):
             engine_params = u.Param()
             engine_params.name = eng
             engine_params.numiter = 100
-            engine_params.floating_intensities = True
+            engine_params.floating_intensities = False
             engine_params.reg_del2 = True
             engine_params.reg_del2_amplitude = 1.
             engine_params.smooth_gradient = 20

@@ -23,14 +23,15 @@ class MLPycudaTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.outpath)
 
-    def check_engine_output(self, output, plotting=False, debug=False):
+    def check_engine_output(self, output, plotting=False, debug=False, scan="MF"):
+        key = "S%sG00" %scan
         P_ML_serial, P_ML_pycuda = output
         numiter = len(P_ML_serial.runtime["iter_info"])
         LL_ML_serial = np.array([P_ML_serial.runtime["iter_info"][i]["error"][1] for i in range(numiter)])
         LL_ML_pycuda = np.array([P_ML_pycuda.runtime["iter_info"][i]["error"][1] for i in range(numiter)])
         crop = 42
-        OBJ_ML_serial, OBJ_ML_pycuda = P_ML_serial.obj.S["SMFG00"].data[0,crop:-crop,crop:-crop], P_ML_pycuda.obj.S["SMFG00"].data[0,crop:-crop,crop:-crop]
-        PRB_ML_serial, PRB_ML_pycuda = P_ML_serial.probe.S["SMFG00"].data[0], P_ML_pycuda.probe.S["SMFG00"].data[0]
+        OBJ_ML_serial, OBJ_ML_pycuda = P_ML_serial.obj.S[key].data[0,crop:-crop,crop:-crop], P_ML_pycuda.obj.S[key].data[0,crop:-crop,crop:-crop]
+        PRB_ML_serial, PRB_ML_pycuda = P_ML_serial.probe.S[key].data[0], P_ML_pycuda.probe.S[key].data[0]
         MED_ML_serial = np.median(np.angle(OBJ_ML_serial))
         MED_ML_pycuda = np.median(np.angle(OBJ_ML_pycuda))
         eng_ML_serial = P_ML_serial.engines["engine00"]
@@ -70,9 +71,9 @@ class MLPycudaTest(unittest.TestCase):
         RMSE_ob = (np.mean(np.abs(OBJ_ML_pycuda - OBJ_ML_serial)**2))
         RMSE_pr = (np.mean(np.abs(PRB_ML_pycuda - PRB_ML_serial)**2))
         # RMSE_LL = (np.mean(np.abs(LL_ML_serial - LL_ML)**2))
-        np.testing.assert_allclose(RMSE_ob, 0.0, atol=1e-3, 
+        np.testing.assert_allclose(RMSE_ob, 0.0, atol=1e-2, 
                                     err_msg="The object arrays are not matching as expected")
-        np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-3, 
+        np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-2, 
                                     err_msg="The object arrays are not matching as expected")
         # np.testing.assert_allclose(RMSE_LL, 0.0, atol=1e-7,
         #                             err_msg="The log-likelihood errors are not matching as expected")
@@ -89,7 +90,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=True, debug=False)
+        self.check_engine_output(out, plotting=False, debug=False)
 
     def test_ML_pycuda_regularizer(self):
         out = []
@@ -103,7 +104,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=True, debug=False)
+        self.check_engine_output(out, plotting=False, debug=False)
 
     def test_ML_pycuda_preconditioner(self):
         out = []
@@ -118,7 +119,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.scale_probe_object = 1e-6
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=True, debug=False)
+        self.check_engine_output(out, plotting=False, debug=False)
 
     def test_ML_pycuda_floating(self):
         out = []
@@ -132,14 +133,14 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=True, debug=False)
+        self.check_engine_output(out, plotting=False, debug=False)
 
     def test_ML_pycuda_smoothing_regularizer(self):
         out = []
         for eng in ["ML_serial", "ML_pycuda"]:
             engine_params = u.Param()
             engine_params.name = eng
-            engine_params.numiter = 100
+            engine_params.numiter = 200
             engine_params.floating_intensities = False
             engine_params.reg_del2 = False
             engine_params.reg_del2_amplitude = 1.
@@ -148,7 +149,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=True, debug=False)
+        self.check_engine_output(out, plotting=False, debug=False)
 
     def test_ML_pycuda_all(self):
         out = []
@@ -164,8 +165,8 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.scale_precond = True
             engine_params.scale_probe_object = 1e-6
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=True, debug=False)
+                                           scanmodel="BlockFull", autosave=False, verbose_level="info"))
+        self.check_engine_output(out, plotting=False, debug=False)
 
 if __name__ == "__main__":
     unittest.main()
