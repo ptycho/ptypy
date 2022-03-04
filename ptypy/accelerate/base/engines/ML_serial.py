@@ -218,8 +218,8 @@ class ML_serial(ML):
                 bt_denom = self.scale_p_o * self.cn2_pr_grad + self.cn2_ob_grad
 
                 bt = max(0, bt_num / bt_denom)
-                #print(it, bt, bt_num, bt_denom)
-            # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
+
+            # logger.info('Polak-Ribiere coefficient: %f ' % bt)
 
             self.cn2_ob_grad = cn2_new_ob_grad
             self.cn2_pr_grad = cn2_new_pr_grad
@@ -441,11 +441,12 @@ class GaussianModel(BaseModelSerial):
             aux[:] = FW(aux)
 
             GDK.make_model(aux, addr)
+
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
+
             GDK.main(aux, addr, w, I)
             GDK.error_reduce(addr, err_phot)
-
             aux[:] = BW(aux)
 
             POK.ob_update_ML(addr, obg, pr, aux)

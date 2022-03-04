@@ -26,9 +26,9 @@ extern "C" __global__ void fill_b(const IN_TYPE* A0,
     MATH_TYPE t_a1 = A1[ix];
     MATH_TYPE t_a2 = A2[ix];
     MATH_TYPE t_w = w[ix];
-    smem[0][tx] = t_w * t_a0 * t_a0;
-    smem[1][tx] = t_w * MATH_TYPE(2) * t_a0 * t_a1;
-    smem[2][tx] = t_w * (t_a1 * t_a1 + MATH_TYPE(2) * t_a0 * t_a2);
+    smem[0][tx] = t_w * MATH_TYPE(Brenorm) * t_a0 * t_a0;
+    smem[1][tx] = t_w * MATH_TYPE(Brenorm) * MATH_TYPE(2) * t_a0 * t_a1;
+    smem[2][tx] = t_w * (MATH_TYPE(Brenorm) * t_a1 * t_a1 + MATH_TYPE(Brenorm) * MATH_TYPE(2) * t_a0 * t_a2);
   }
   else
   {
@@ -55,9 +55,9 @@ extern "C" __global__ void fill_b(const IN_TYPE* A0,
 
   if (tx == 0)
   {
-    out[blockIdx.x * 3 + 0] = MATH_TYPE(smem[0][0]) * MATH_TYPE(Brenorm);
-    out[blockIdx.x * 3 + 1] = MATH_TYPE(smem[1][0]) * MATH_TYPE(Brenorm);
-    out[blockIdx.x * 3 + 2] = MATH_TYPE(smem[2][0]) * MATH_TYPE(Brenorm);
+    out[blockIdx.x * 3 + 0] = MATH_TYPE(smem[0][0]);
+    out[blockIdx.x * 3 + 1] = MATH_TYPE(smem[1][0]);
+    out[blockIdx.x * 3 + 2] = MATH_TYPE(smem[2][0]);
   }
 }
 

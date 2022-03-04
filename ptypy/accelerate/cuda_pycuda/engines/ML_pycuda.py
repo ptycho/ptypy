@@ -135,7 +135,7 @@ class ML_pycuda(ML_serial):
             kern.b = gpuarray.zeros(ash, dtype=np.complex64)
 
             # setup kernels, one for each SCAN.
-            kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue)
+            kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue, math_type="double")
             kern.GDK.allocate()
 
             kern.POK = PoUpdateKernel(queue_thread=self.queue)
