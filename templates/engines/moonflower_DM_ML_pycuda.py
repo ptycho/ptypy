@@ -52,7 +52,6 @@ p.engines.engine00.name = 'DM_pycuda'
 p.engines.engine00.numiter = 60
 p.engines.engine00.numiter_contiguous = 10
 p.engines.engine00.probe_support = 0.5
-p.engines.engine00.fft_lib = "cuda"
 
 # attach a reconstrucion engine
 p.engines.engine01 = u.Param()
