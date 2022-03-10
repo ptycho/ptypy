@@ -3,7 +3,7 @@ import unittest
 from test.accelerate_tests.cuda_pycuda_tests import PyCudaTest, have_pycuda
 
 if have_pycuda():
-    from ptypy.filtered_cufft import FilteredFFT
+    from filtered_cufft import FilteredFFT
 
 class CuFFTInitTest(PyCudaTest):
 
