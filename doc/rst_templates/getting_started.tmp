@@ -14,11 +14,10 @@ General installation instructions
 
 Being a python package, |ptypy|_ depends on a number of other
 packages which are listed below.
-Once its dependecies are met, ptypy should work *out-of-the-box*.
+Once its dependencies are met, ptypy should work *out-of-the-box*.
 
 .. note:: 
-   |ptypy| is developed for Python 2.7.x and is currently incompatible
-   with Python 3.x. Python 3 support is planned in future releases.
+   |ptypy| is developed for Python>3.7
           
 
 Essential packages
@@ -308,7 +307,7 @@ that where auto-generated with the following calls::
 And here is a quick view of the first one with much documentation
 (only the first 50 lines).
 
-.. literalinclude:: ../../templates/pars_few_alldoc.py
+.. literalinclude:: ../../templates/misc/pars_few_alldoc.py
    :language: python
    :linenos:
    :lines: 1-50
@@ -345,7 +344,7 @@ We encourage you to use the script ``[ptypy_root]/templates/minimal_prep_and_run
 and modify the *recipe* part of the data parameter branch.
 Observe what changes in the reconstruction when scan parameters change.
 
-.. literalinclude:: ../../templates/minimal_prep_and_run.py
+.. literalinclude:: ../../templates/ptypy_minimal_prep_and_run.py
    :language: python
    :linenos:
    :emphasize-lines: 31,33,35
@@ -360,7 +359,7 @@ forward to :ref:`ptypy_data` and take a look at |ptypy|'s data management.
 Check out the data parameter branch :py:data:`.scan.data` for detailed parameter
 descriptions.
 
-.. literalinclude:: ../../templates/make_sample_ptyd.py
+.. literalinclude:: ../../templates/ptypy_make_sample_ptyd.py
    :language: python
    :linenos:
    :emphasize-lines: 15-26
@@ -375,6 +374,6 @@ and alter the reconstruction parameters and algorithms to find out if you
 can make the recontruction converge. Check out the engine parameter
 branch :py:data:`.engine` for detailed parameter descriptions.
 
-.. literalinclude:: ../../templates/minimal_load_and_run.py
+.. literalinclude:: ../../templates/ptypy_minimal_load_and_run.py
    :language: python
    :linenos:
