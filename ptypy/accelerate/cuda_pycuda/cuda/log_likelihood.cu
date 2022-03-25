@@ -31,8 +31,8 @@ template <class AUX_T>
 inline __device__ void log_likelihood_impl(
                    int nmodes,
                    AUX_T *aux,
-                   const IN_TYPE *fmask,
-                   const IN_TYPE *fmag,
+                   const IN_TYPE *weights,
+                   const IN_TYPE *I,
                    const int *addr,
                    IN_TYPE *llerr,
                    int A,
@@ -47,8 +47,8 @@ inline __device__ void log_likelihood_impl(
   const int *ma = addr + 12 + (blockIdx.x * nmodes) * addr_stride;
 
   aux += ea[0] * A * B;
-  fmag += da[0] * A * B;
-  fmask += ma[0] * A * B;
+  weights += da[0] * A * B;
+  I += ma[0] * A * B;
   llerr += da[0] * A * B;
   MATH_TYPE norm = A * B;
 
@@ -57,13 +57,13 @@ inline __device__ void log_likelihood_impl(
     for (int b = tx; b < B; b += blockDim.x)
     {
       MATH_TYPE acc = 0.0;
+      MATH_TYPE i = I[a * B + b];
       for (int idx = 0; idx < nmodes; ++idx)
       {
         acc += aux_intensity(aux[a * B + b + idx * A * B]);
       }
-      auto I = MATH_TYPE(fmag[a * B + b]) * MATH_TYPE(fmag[a * B + b]);
       llerr[a * B + b] =
-          MATH_TYPE(fmask[a * B + b]) * (acc - I) * (acc - I) / (I + 1) / norm;
+          MATH_TYPE(weights[a * B + b]) * (acc - i) * (acc - i) / norm;
     }
   }
 }
@@ -75,27 +75,27 @@ inline __device__ void log_likelihood_impl(
 extern "C" __global__ void __launch_bounds__(1024, 2)
     log_likelihood(int nmodes,
                    complex<OUT_TYPE> *aux,
-                   const IN_TYPE *fmask,
-                   const IN_TYPE *fmag,
+                   const IN_TYPE *weights,
+                   const IN_TYPE *I,
                    const int *addr,
                    IN_TYPE *llerr,
                    int A,
                    int B)
 {
-  log_likelihood_impl(nmodes, aux, fmask, fmag, addr, llerr, A, B);
+  log_likelihood_impl(nmodes, aux, weights, I, addr, llerr, A, B);
 }
 
 extern "C" __global__ void __launch_bounds__(1024, 2)
     log_likelihood_auxintensity(int nmodes,
                    OUT_TYPE *aux,
-                   const IN_TYPE *fmask,
-                   const IN_TYPE *fmag,
+                   const IN_TYPE *weights,
+                   const IN_TYPE *I,
                    const int *addr,
                    IN_TYPE *llerr,
                    int A,
                    int B)
 {
-  log_likelihood_impl(nmodes, aux, fmask, fmag, addr, llerr, A, B);
+  log_likelihood_impl(nmodes, aux, weights, I, addr, llerr, A, B);
 }
 
 /////////////////// version with 1 thread block per x dimension only
@@ -103,8 +103,8 @@ template <class AUX_T>
 __device__ inline void log_likelihood2_impl(
                    int nmodes,
                    AUX_T *aux,
-                   const IN_TYPE *fmask,
-                   const IN_TYPE *fmag,
+                   const IN_TYPE *weights,
+                   const IN_TYPE *I,
                    const int *addr,
                    IN_TYPE *llerr,
                    int A,
@@ -122,47 +122,48 @@ __device__ inline void log_likelihood2_impl(
   const int *ma = addr + 12 + (bid * nmodes) * addr_stride;
 
   aux += ea[0] * A * B;
-  fmag += da[0] * A * B;
-  fmask += ma[0] * A * B;
+  weights += da[0] * A * B;
+  I += ma[0] * A * B;
   llerr += da[0] * A * B;
   MATH_TYPE norm = A * B;
 
   for (int b = tx; b < B; b += blockDim.x)
   {
     MATH_TYPE acc = 0.0;
+    MATH_TYPE i = I[a * B + b];
     for (int idx = 0; idx < nmodes; ++idx)
     {
       acc += aux_intensity(aux[a * B + b + idx * A * B]);
     }
-    auto I = MATH_TYPE(fmag[a * B + b]) * MATH_TYPE(fmag[a * B + b]);
     llerr[a * B + b] =
-        MATH_TYPE(fmask[a * B + b]) * (acc - I) * (acc - I) / (I + 1) / norm;
+        MATH_TYPE(weights[a * B + b]) * (acc - i) * (acc - i) / norm;
   }
 }
 
-
-extern "C" __global__ void 
-    log_likelihood2(int nmodes,
+// ML variant which uses weights and intensity directly.
+// Based of log_likelihood
+extern "C" __global__ void __launch_bounds__(1024, 2)
+    log_likelihood_ml(int nmodes,
                    complex<OUT_TYPE> *aux,
-                   const IN_TYPE *fmask,
-                   const IN_TYPE *fmag,
+                   const IN_TYPE *weights,
+                   const IN_TYPE *I,
                    const int *addr,
                    IN_TYPE *llerr,
                    int A,
                    int B)
 {
-  log_likelihood2_impl(nmodes, aux, fmask, fmag, addr, llerr, A, B);
+  log_likelihood2_impl(nmodes, aux, weights, I, addr, llerr, A, B);
 }
 
 extern "C" __global__ void 
     log_likelihood2_auxintensity(int nmodes,
                    OUT_TYPE *aux,
-                   const IN_TYPE *fmask,
-                   const IN_TYPE *fmag,
+                   const IN_TYPE *weights,
+                   const IN_TYPE *I,
                    const int *addr,
                    IN_TYPE *llerr,
                    int A,
                    int B)
 {
-  log_likelihood2_impl(nmodes, aux, fmask, fmag, addr, llerr, A, B);
+  log_likelihood2_impl(nmodes, aux, weights, I, addr, llerr, A, B);
 }

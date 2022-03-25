@@ -27,7 +27,7 @@ from ptypy.engines.projectional import DMMixin, RAARMixin
 from . import projectional_pycuda
 
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
-from ..mem_utils import GpuDataManager2
+from ..mem_utils import GpuDataManager
 
 EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
@@ -74,9 +74,9 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
         log(4, 'Free memory on device: %.2f GB' % (float(mem)/1e9))
         log(4, 'PyCUDA max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
         # reset memory or create new
-        self.ex_data = GpuDataManager2(ex_mem, 0, nex, True)
-        self.ma_data = GpuDataManager2(ma_mem, 0, nma, False)
-        self.mag_data = GpuDataManager2(mag_mem, 0, nma, False)
+        self.ex_data = GpuDataManager(ex_mem, 0, nex, True)
+        self.ma_data = GpuDataManager(ma_mem, 0, nma, False)
+        self.mag_data = GpuDataManager(mag_mem, 0, nma, False)
 
     def engine_prepare(self):
 
@@ -499,7 +499,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
 
         return np.sqrt(change)
 
-    def engine_finalize(self, benchmark=False):
+    def engine_finalize(self):
         """
         Clear all GPU data, pinned memory, etc
         """
@@ -507,11 +507,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
         self.ma_data = None
         self.mag_data = None
 
-        # copy data to cpu
-        for name, s in self.pr.S.items():
-            s.data = np.copy(s.data)  # is this the same as s.data.get()?
-
-        super().engine_finalize(benchmark)
+        super().engine_finalize()
 
 
 @register(name="DM_pycuda")

@@ -1187,7 +1187,8 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
             'BDIM_Y': 32,
             'ACC_TYPE': self.accumulate_type
         })
-        self.log_likelihood_cuda = load_kernel("log_likelihood", {
+        self.log_likelihood_cuda, self.log_likelihood_ml_cuda = load_kernel(
+            ("log_likelihood", "log_likelihood_ml"), {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type
@@ -1265,6 +1266,22 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
                                  np.int32(self.fshape[2]),
                                  block=(32, 32, 1),
                                  grid=(int(mag.shape[0]), 1, 1),
+                                 stream=self.queue)
+        # TODO: we might want to move this call outside of here
+        self.error_reduce(addr, err_phot)
+
+    def log_likelihood_ml(self, b_aux, addr, I, weights, err_phot):
+        ferr = self.gpu.ferr
+        self.log_likelihood_ml_cuda(np.int32(self.nmodes),
+                                 b_aux,
+                                 weights,
+                                 I,
+                                 addr,
+                                 ferr,
+                                 np.int32(self.fshape[1]),
+                                 np.int32(self.fshape[2]),
+                                 block=(32, 32, 1),
+                                 grid=(int(I.shape[0]), 1, 1),
                                  stream=self.queue)
         # TODO: we might want to move this call outside of here
         self.error_reduce(addr, err_phot)

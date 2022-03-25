@@ -38,7 +38,7 @@ class FFT_cuda(object):
         else:
             self.post_fft_ptr = 0
 
-        from ptypy import filtered_cufft
+        import filtered_cufft
         self.fftobj = filtered_cufft.FilteredFFT(
                 self.batches, 
                 self.arr_shape[0], 

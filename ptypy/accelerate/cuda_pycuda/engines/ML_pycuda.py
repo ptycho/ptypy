@@ -16,7 +16,6 @@ from pycuda import gpuarray
 import pycuda.driver as cuda
 import pycuda.cumath
 from pycuda.tools import DeviceMemoryPool
-from collections import deque
 
 from ptypy.engines import register
 from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
@@ -24,96 +23,17 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from .. import get_context
-from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PropagationKernel, PositionCorrectionKernel
+from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
+from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, TransposeKernel
 
+from ..mem_utils import GpuDataManager
 from ptypy.accelerate.base import address_manglers
 
 __all__ = ['ML_pycuda']
 
-
-class MemoryManager:
-
-    def __init__(self, fraction=0.7):
-        self.fraction = fraction
-        self.dmp = DeviceMemoryPool()
-        self.queue_in = cuda.Stream()
-        self.queue_out = cuda.Stream()
-        self.mem_avail = None
-        self.mem_total = None
-        self.get_free_memory()
-        self.on_device = {}
-        self.on_device_inv = {}
-        self.out_events = deque()
-        self.bytes = 0
-
-    def get_free_memory(self):
-        self.mem_avail, self.mem_total = cuda.mem_get_info()
-
-    def device_is_full(self, nbytes = 0):
-        return (nbytes + self.bytes) > self.mem_avail
-
-    def to_gpu(self, ar, ev=None):
-        """
-        Issues asynchronous copy to device. Waits for optional event ev
-        Emits event for other streams to synchronize with
-        """
-        stream = self.queue_in
-        id_cpu = id(ar)
-        gpu_ar = self.on_device.get(id_cpu)
-
-        if gpu_ar is None:
-            if ev is not None:
-                stream.wait_for_event(ev)
-            if self.device_is_full(ar.nbytes):
-                self.wait_for_freeing_events(ar.nbytes)
-
-            # TOD0: try /except with garbage collection to make sure there is space
-            gpu_ar = gpuarray.to_gpu_async(ar, allocator=self.dmp.allocate, stream=stream)
-
-            # keeps gpuarray alive
-            self.on_device[id_cpu] = gpu_ar
-
-            # for deleting later
-            self.on_device_inv[id(gpu_ar)] = ar
-
-            self.bytes += gpu_ar.mem_size * gpu_ar.dtype.itemsize
-
-
-        ev = cuda.Event()
-        ev.record(stream)
-        return ev, gpu_ar
-
-
-    def wait_for_freeing_events(self, nbytes):
-        """
-        Wait until at least nbytes have been copied back to the host. Or marked for deletion
-        """
-        freed = 0
-        if not self.out_events:
-            #print('Waiting for memory to be released on device failed as no release event was scheduled')
-            self.queue_out.synchronize()
-        while self.out_events and freed < nbytes:
-            ev, id_cpu, id_gpu = self.out_events.popleft()
-            gpu_ar = self.on_device.pop(id_cpu)
-            cpu_ar = self.on_device_inv.pop(id_gpu)
-            ev.synchronize()
-            freed += cpu_ar.nbytes
-            self.bytes -= gpu_ar.mem_size * gpu_ar.dtype.itemsize
-
-    def mark_release_from_gpu(self, gpu_ar, to_cpu=False, ev=None):
-        stream = self.queue_out
-        if ev is not None:
-            stream.wait_for_event(ev)
-        if to_cpu:
-            cpu_ar = self.on_device_inv[id(gpu_ar)]
-            gpu_ar.get_asynch(stream, cpu_ar)
-
-        ev_out = cuda.Event()
-        ev_out.record(stream)
-        self.out_events.append((ev_out, id(cpu_ar), id(gpu_ar)))
-        return ev_out
-
+MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
+#MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
 
 @register()
 class ML_pycuda(ML_serial):
@@ -168,11 +88,16 @@ class ML_pycuda(ML_serial):
             self._dmp = None
             self.allocate = cuda.mem_alloc
 
-        self.queue_transfer = cuda.Stream()
-        
+        self.qu_htod = cuda.Stream()
+        self.qu_dtoh = cuda.Stream()
+
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
         self.GSK.tmp = None
-        
+
+        # Real/Fourier Support Kernel
+        self.RSK = {}
+        self.FSK = {}
+
         super().engine_initialize()
         #self._setup_kernels()
 
@@ -210,7 +135,7 @@ class ML_pycuda(ML_serial):
             kern.b = gpuarray.zeros(ash, dtype=np.complex64)
 
             # setup kernels, one for each SCAN.
-            kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue)
+            kern.GDK = GradientDescentKernel(aux, nmodes, queue=self.queue, math_type="double")
             kern.GDK.allocate()
 
             kern.POK = PoUpdateKernel(queue_thread=self.queue)
@@ -228,6 +153,76 @@ class ML_pycuda(ML_serial):
             if self.do_position_refinement:
                 kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
                 kern.PCK.allocate()
+
+        mag_mem = 0
+        for scan, kern in self.kernels.items():
+            mag_mem = max(kern.aux.nbytes // 2, mag_mem)
+        ma_mem = mag_mem
+        mem = cuda.mem_get_info()[0]
+        blk = ma_mem + mag_mem
+        fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
+        if not fit:
+            log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
+            self.context.pop()
+            self.context.detach()
+            raise SystemExit("ptypy has been exited.")
+
+        # TODO grow blocks dynamically
+        nma = min(fit, MAX_BLOCKS)
+        log(4, 'Free memory on device: %.2f GB' % (float(mem)/1e9))
+        log(4, 'PyCUDA max blocks fitting on GPU: ma_arrays={}'.format(nma))
+        # reset memory or create new
+        self.w_data = GpuDataManager(ma_mem, 0, nma, False)
+        self.I_data = GpuDataManager(mag_mem, 0, nma, False)
+
+    def engine_prepare(self):
+
+        super().engine_prepare()
+        ## Serialize new data ##
+        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
+
+        # recursive copy to gpu for probe and object
+        for _cname, c in self.ptycho.containers.items():
+            if c.original != self.pr and c.original != self.ob:
+                continue
+            for _sname, s in c.S.items():
+                # convert data here
+                s.gpu = gpuarray.to_gpu(s.data)
+                s.cpu = cuda.pagelocked_empty(s.data.shape, s.data.dtype, order="C")
+                s.cpu[:] = s.data
+
+        for label, d in self.ptycho.new_data:
+            prep = self.diff_info[d.ID]
+            prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
+            prep.fic_gpu = gpuarray.ones_like(prep.err_phot_gpu)
+
+            if use_tiles:
+                prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
+
+            prep.addr_gpu = gpuarray.to_gpu(prep.addr)
+            if self.do_position_refinement:
+                prep.original_addr_gpu = gpuarray.to_gpu(prep.original_addr)
+                prep.error_state_gpu = gpuarray.empty_like(prep.err_phot_gpu)
+                prep.mangled_addr_gpu = prep.addr_gpu.copy()
+
+            # Todo: Which address to pick?
+            if use_tiles:
+                prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
+
+            prep.I = cuda.pagelocked_empty(d.data.shape, d.data.dtype, order="C", mem_flags=4)
+            prep.I[:] = d.data
+
+            # Todo: avoid that extra copy of data
+            if self.do_position_refinement:
+                ma = self.ma.S[d.ID].data.astype(np.float32)
+                prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
+                prep.ma[:] = ma
+
+            log(4, 'Free memory on device: %.2f GB' % (float(cuda.mem_get_info()[0])/1e9))
+            self.w_data.add_data_block()
+            self.I_data.add_data_block()
+
+        self.dID_list = list(self.di.S.keys())
 
     def _initialize_model(self):
 
@@ -283,18 +278,7 @@ class ML_pycuda(ML_serial):
         if self.p.probe_update_start <= self.curiter:
             # Apply probe support if needed
             for name, s in new_pr_grad.storages.items():
-
-                # DtoH copies
-                s.gpu.get(s.cpu)
-                self._set_pr_ob_ref_for_data('cpu')
-
-                # TODO this needs to be implemented on GPU
                 self.support_constraint(s)
-
-                # HtoD cause we continue on gpu
-                s.gpu.set(s.cpu)
-                self._set_pr_ob_ref_for_data('gpu')
-
         else:
             new_pr_grad.fill(0.)
 
@@ -316,49 +300,6 @@ class ML_pycuda(ML_serial):
         self._set_pr_ob_ref_for_data(dev='cpu', container=None, sync_copy=True)
         return err
 
-    def engine_prepare(self):
-
-        super().engine_prepare()
-        ## Serialize new data ##
-        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
-
-        # recursive copy to gpu for probe and object
-        for _cname, c in self.ptycho.containers.items():
-            if c.original != self.pr and c.original != self.ob:
-                continue
-            for _sname, s in c.S.items():
-                # convert data here
-                s.gpu = gpuarray.to_gpu(s.data)
-                s.cpu = cuda.pagelocked_empty(s.data.shape, s.data.dtype, order="C")
-                s.cpu[:] = s.data
-
-        for label, d in self.ptycho.new_data:
-            prep = self.diff_info[d.ID]
-            prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
-            prep.fic_gpu = gpuarray.ones_like(prep.err_phot_gpu)
-
-            if use_tiles:
-                prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
-
-            prep.addr_gpu = gpuarray.to_gpu(prep.addr)
-            if self.do_position_refinement:
-                prep.original_addr_gpu = gpuarray.to_gpu(prep.original_addr)
-                prep.error_state_gpu = gpuarray.empty_like(prep.err_phot_gpu)
-                prep.mangled_addr_gpu = prep.addr_gpu.copy()
-
-            # Todo: Which address to pick?
-            if use_tiles:
-                prep.addr2_gpu = gpuarray.to_gpu(prep.addr2)
-
-            prep.I = cuda.pagelocked_empty(d.data.shape, d.data.dtype, order="C", mem_flags=4)
-            prep.I[:] = d.data
-
-            # Todo: avoid that extra copy of data
-            if self.do_position_refinement:
-                ma = self.ma.S[d.ID].data.astype(np.float32)
-                prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
-                prep.ma[:] = ma
-
     def position_update(self):
         """ 
         Position refinement
@@ -375,7 +316,7 @@ class ML_pycuda(ML_serial):
             Iterates through all positions and refines them by a given algorithm.
             """
             log(4, "----------- START POS REF -------------")
-            for dID in self.di.S.keys():
+            for dID in self.dID_list:
 
                 prep = self.diff_info[dID]
                 pID, oID, eID = prep.poe_IDs
@@ -389,12 +330,9 @@ class ML_pycuda(ML_serial):
                 err_phot = prep.err_phot_gpu
                 error_state = prep.error_state_gpu
 
-                # # copy intensities and mask to GPU
-                stream = self.queue_transfer
-                mag  = gpuarray.to_gpu_async(prep.I, allocator=self.allocate, stream=stream)
-                ma = gpuarray.to_gpu_async(prep.ma, allocator=self.allocate, stream=stream)
-                ev = cuda.Event()
-                ev.record(stream)
+                # copy intensities and weights to GPU
+                ev_w, w, data_w = self.w_data.to_gpu(prep.weights, dID, self.qu_htod)
+                ev, I, data_I = self.I_data.to_gpu(prep.I, dID, self.qu_htod)
 
                 PCK = kern.PCK
                 TK  = kern.TK
@@ -408,9 +346,8 @@ class ML_pycuda(ML_serial):
                 PCK.build_aux(aux, addr, ob, pr)
                 PROP.fw(aux, aux)
                 PCK.queue.wait_for_event(ev)
-                # mag & ma now on device
-                pycuda.cumath.sqrt(mag, out=mag, stream=PCK.queue) # for position refinement, we need the magnitude
-                PCK.log_likelihood(aux, addr, mag, ma, err_phot)
+                # w & I now on device
+                PCK.log_likelihood_ml(aux, addr, I, w, err_phot)
                 cuda.memcpy_dtod(dest=error_state.ptr,
                                     src=err_phot.ptr,
                                     size=err_phot.nbytes)
@@ -422,9 +359,11 @@ class ML_pycuda(ML_serial):
                     PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
                     PCK.build_aux(aux, mangled_addr, ob, pr)
                     PROP.fw(aux, aux)
-                    PCK.log_likelihood(aux, mangled_addr, mag, ma, err_phot)
+                    PCK.log_likelihood_ml(aux, mangled_addr, I, w, err_phot)
                     PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_phot)
-                
+
+                data_w.record_done(self.queue, 'compute')
+                data_I.record_done(self.queue, 'compute')
                 cuda.memcpy_dtod(dest=err_phot.ptr,
                                  src=error_state.ptr,
                                  size=err_phot.nbytes)
@@ -433,11 +372,40 @@ class ML_pycuda(ML_serial):
                     s2 = addr.shape[2] * addr.shape[3]
                     TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
 
+            self.dID_list.reverse()
+
+    def support_constraint(self, storage=None):
+        """
+        Enforces 2D support constraint on probe.
+        """
+        if storage is None:
+            for s in self.pr.storages.values():
+                self.support_constraint(s)
+
+        # Fourier space
+        support = self._probe_fourier_support.get(storage.ID)
+        if support is not None:
+            if storage.ID not in self.FSK:
+                supp = support.astype(np.complex64)
+                self.FSK[storage.ID] = FourierSupportKernel(supp, self.queue, self.p.fft_lib)
+                self.FSK[storage.ID].allocate()
+            self.FSK[storage.ID].apply_fourier_support(storage.gpu)
+
+        # Real space
+        support = self._probe_support.get(storage.ID)
+        if support is not None:
+            if storage.ID not in self.RSK:
+                self.RSK[storage.ID] = RealSupportKernel(support.astype(np.complex64))
+                self.RSK[storage.ID].allocate()
+            self.RSK[storage.ID].apply_real_support(storage.gpu)
 
     def engine_finalize(self):
         """
-        try deleting ever helper contianer
+        Clear all GPU data, pinned memory, etc
         """
+        self.w_data = None
+        self.I_data = None
+
         for name, s in self.pr.S.items():
             s.data = s.gpu.get() # need this, otherwise getting segfault once context is detached
             # no longer need those
@@ -452,7 +420,9 @@ class ML_pycuda(ML_serial):
             prep.addr = prep.addr_gpu.get()
             prep.float_intens_coeff = prep.fic_gpu.get()
 
+
         #self.queue.synchronize()
+        self.context.pop()
         self.context.detach()
         super().engine_finalize()
 
@@ -503,6 +473,8 @@ class GaussianModel(BaseModelSerial):
         """
         ob_grad = self.engine.ob_grad_new
         pr_grad = self.engine.pr_grad_new
+        qu_htod = self.engine.qu_htod
+        queue = self.engine.queue
 
         self.engine._set_pr_ob_ref_for_data('gpu')
         ob_grad << 0.
@@ -512,7 +484,7 @@ class GaussianModel(BaseModelSerial):
         LL = np.array([0.])
         error_dct = {}
 
-        for dID in self.di.S.keys():
+        for dID in self.engine.dID_list:
             prep = self.engine.diff_info[dID]
             # find probe, object in exit ID in dependence of dID
             pID, oID, eID = prep.poe_IDs
@@ -538,15 +510,9 @@ class GaussianModel(BaseModelSerial):
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
 
-            # TODO streaming?
-            #w = gpuarray.to_gpu(prep.weights)
-            #I = gpuarray.to_gpu(prep.I)
-            stream = self.engine.queue_transfer
-            # TODO keep alive
-            w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.allocate, stream=stream)
-            I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.allocate, stream=stream)
-            ev = cuda.Event()
-            ev.record(stream)
+            # Schedule w & I to device
+            ev_w, w, data_w = self.engine.w_data.to_gpu(prep.weights, dID, qu_htod)
+            ev, I, data_I = self.engine.I_data.to_gpu(prep.I, dID, qu_htod)
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
@@ -555,14 +521,14 @@ class GaussianModel(BaseModelSerial):
             FW(aux, aux)
             GDK.make_model(aux, addr)
 
-            GDK.queue.wait_for_event(ev)
+            queue.wait_for_event(ev)
 
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
 
             GDK.main(aux, addr, w, I)
-            ev = cuda.Event()
-            ev.record(GDK.queue)
+            data_w.record_done(queue, 'compute')
+            data_I.record_done(queue, 'compute')
 
             GDK.error_reduce(addr, err_phot)
 
@@ -576,7 +542,8 @@ class GaussianModel(BaseModelSerial):
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
             POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
 
-            GDK.queue.synchronize()
+        queue.synchronize()
+        self.engine.dID_list.reverse()
 
         # TODO we err_phot.sum, but not necessarily this error_dct until the end of contiguous iteration
         for dID, prep in self.engine.diff_info.items():
@@ -624,12 +591,14 @@ class GaussianModel(BaseModelSerial):
         in direction h
         """
         self.engine._set_pr_ob_ref_for_data('gpu')
+        qu_htod = self.engine.qu_htod
+        queue = self.engine.queue
 
         B = gpuarray.zeros((3,), dtype=np.float32) # does not accept np.longdouble
         Brenorm = 1. / self.LL[0] ** 2
 
         # Outer loop: through diffraction patterns
-        for dID in self.di.S.keys():
+        for dID in self.engine.dID_list:
             prep = self.engine.diff_info[dID]
 
             # find probe, object in exit ID in dependence of dID
@@ -650,14 +619,9 @@ class GaussianModel(BaseModelSerial):
             addr = prep.addr_gpu
             fic = prep.fic_gpu
 
-            # TODO streaming?
-            #w = gpuarray.to_gpu(prep.weights)
-            #I = gpuarray.to_gpu(prep.I)
-            stream = self.engine.queue_transfer
-            w = gpuarray.to_gpu_async(prep.weights, allocator=self.engine.allocate, stream=stream)
-            I = gpuarray.to_gpu_async(prep.I, allocator=self.engine.allocate, stream=stream)
-            ev = cuda.Event()
-            ev.record(stream)
+            # Schedule w & I to device
+            ev_w, w, data_w = self.engine.w_data.to_gpu(prep.weights, dID, qu_htod)
+            ev, I, data_I = self.engine.I_data.to_gpu(prep.I, dID, qu_htod)
 
             # local references
             ob = self.ob.S[oID].data
@@ -676,17 +640,16 @@ class GaussianModel(BaseModelSerial):
             FW(a,a)
             FW(b,b)
 
-            GDK.queue.wait_for_event(ev)
-            GDK.make_a012(f, a, b, addr, I, fic)
+            queue.wait_for_event(ev)
 
-            """
-            if self.p.floating_intensities:
-                A0 *= self.float_intens_coeff[dname]
-                A1 *= self.float_intens_coeff[dname]
-                A2 *= self.float_intens_coeff[dname]
-            """
+            GDK.make_a012(f, a, b, addr, I, fic)
             GDK.fill_b(addr, Brenorm, w, B)
-            GDK.queue.synchronize()
+
+            data_w.record_done(queue, 'compute')
+            data_I.record_done(queue, 'compute')
+
+        queue.synchronize()
+        self.engine.dID_list.reverse()
 
         B = B.get()
         parallel.allreduce(B)

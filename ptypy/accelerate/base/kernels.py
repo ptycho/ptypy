@@ -287,7 +287,7 @@ class GradientDescentKernel(BaseKernel):
         if aux_is_intensity:
             Imodel[:] = tf.sum(1)
         else:
-            Imodel[:] = (np.abs(tf) ** 2).sum(1)
+            Imodel[:] = ((tf * tf.conj()).real).sum(1)
 
     def make_a012(self, b_f, b_a, b_b, addr, I, fic):
 
@@ -309,15 +309,15 @@ class GradientDescentKernel(BaseKernel):
         ## Actual math ## (subset of FUK.fourier_error)
         fc = fic.reshape((maxz,1,1))
         A0.fill(0.)
-        tf = np.abs(f).astype(self.ftype) ** 2
-        A0[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc - I
+        tf = np.real(f * f.conj()).astype(self.ftype)
+        A0[:maxz] = np.double(tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc) - I
 
         A1.fill(0.)
         tf = 2. * np.real(f * a.conj())
         A1[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc
 
         A2.fill(0.)
-        tf = 2. * np.real(f * b.conj()) + np.abs(a) ** 2
+        tf = 2. * np.real(f * b.conj()) + np.real(a * a.conj())
         A2[:maxz] = tf.reshape(maxz, self.nmodes, sh[1], sh[2]).sum(1) * fc
         return
 
@@ -395,7 +395,7 @@ class GradientDescentKernel(BaseKernel):
         ish = aux.shape
 
         ## math ##
-        DI = Imodel - I
+        DI = np.double(Imodel) - I
         tmp = w * DI
 
         err[:] = tmp * DI
@@ -805,6 +805,24 @@ class PositionCorrectionKernel(BaseKernel):
 
         # Calculate log likelihood error
         err_sum[:] = ((mask * (LL - I)**2 / (I + 1.)).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
+        return
+
+    def log_likelihood_ml(self, b_aux, addr, I, weights, err_sum):
+        # reference shape (write-to shape)
+        sh = self.fshape
+        # stopper
+        maxz = I.shape[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * self.nmodes]
+
+        # build model from complex fourier magnitudes, summing up
+        # all modes incoherently
+        tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
+        LL = (np.abs(tf) ** 2).sum(1)
+
+        # Calculate log likelihood error
+        err_sum[:] = ((weights * (LL - I)**2).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
         return
 
     def update_addr_and_error_state(self, addr, error_state, mangled_addr, err_sum):

@@ -6,11 +6,8 @@ import numpy as np
 from . import PyCudaTest, have_pycuda
 
 if have_pycuda():
-    from pycuda import gpuarray
     import pycuda.driver as cuda
     from pycuda.compiler import SourceModule
-    from pycuda.tools import DeviceMemoryPool
-    from ptypy.accelerate.cuda_pycuda.engines.projectional_pycuda_streams import GpuStreamData
     from ptypy.accelerate.cuda_pycuda.mem_utils import GpuData, GpuDataManager
 
 class GpuDataTest(PyCudaTest):
@@ -175,14 +172,14 @@ class GpuDataTest(PyCudaTest):
         gdm = GpuDataManager(cpu1.nbytes, 4, syncback=False)
 
         # act
-        gpu1 = gdm.to_gpu(cpu1, '1', self.stream)
-        gpu2 = gdm.to_gpu(cpu2, '2', self.stream)
-        gpu11 = gdm.to_gpu(-1.*cpu1, '1', self.stream)
-        gpu21 = gdm.to_gpu(-1.*cpu4, '2', self.stream)
-        gpu3 = gdm.to_gpu(cpu3, '3', self.stream)
-        gpu31 = gdm.to_gpu(-1.*cpu1, '3', self.stream)
-        gpu4 = gdm.to_gpu(cpu4, '4', self.stream)
-        gpu41 = gdm.to_gpu(-1.*cpu1, '4', self.stream)
+        gpu1 = gdm.to_gpu(cpu1, '1', self.stream)[1]
+        gpu2 = gdm.to_gpu(cpu2, '2', self.stream)[1]
+        gpu11 = gdm.to_gpu(-1.*cpu1, '1', self.stream)[1]
+        gpu21 = gdm.to_gpu(-1.*cpu4, '2', self.stream)[1]
+        gpu3 = gdm.to_gpu(cpu3, '3', self.stream)[1]
+        gpu31 = gdm.to_gpu(-1.*cpu1, '3', self.stream)[1]
+        gpu4 = gdm.to_gpu(cpu4, '4', self.stream)[1]
+        gpu41 = gdm.to_gpu(-1.*cpu1, '4', self.stream)[1]
         self.stream.synchronize()
 
         # assert
@@ -208,17 +205,17 @@ class GpuDataTest(PyCudaTest):
         gdm = GpuDataManager(cpu1.nbytes, 2, syncback=True)
 
         # act
-        gpu1 = gdm.to_gpu(cpu1, '1', self.stream)
-        gpu2 = gdm.to_gpu(cpu2, '2', self.stream)
+        gpu1 = gdm.to_gpu(cpu1, '1', self.stream)[1]
+        gpu2 = gdm.to_gpu(cpu2, '2', self.stream)[1]
         gpu1.fill(np.float32(3.), self.stream)
         gpu2.fill(np.float32(5.), self.stream)
-        gpu3 = gdm.to_gpu(cpu3, '3', self.stream)
+        gpu3 = gdm.to_gpu(cpu3, '3', self.stream)[1]
         gpu3.fill(np.float32(7.), self.stream)
-        gpu4 = gdm.to_gpu(cpu4, '4', self.stream)
+        gpu4 = gdm.to_gpu(cpu4, '4', self.stream)[1]
         gpu4.fill(np.float32(9.), self.stream)
         gdm.syncback = False
-        gpu5 = gdm.to_gpu(cpu4*.2, '5', self.stream)
-        gpu6 = gdm.to_gpu(cpu4*.4, '6', self.stream)
+        gpu5 = gdm.to_gpu(cpu4*.2, '5', self.stream)[1]
+        gpu6 = gdm.to_gpu(cpu4*.4, '6', self.stream)[1]
         self.stream.synchronize()
 
         # assert

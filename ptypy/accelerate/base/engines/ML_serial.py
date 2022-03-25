@@ -226,8 +226,8 @@ class ML_serial(ML):
                 bt_denom = self.scale_p_o * self.cn2_pr_grad + self.cn2_ob_grad
 
                 bt = max(0, bt_num / bt_denom)
-                #print(it, bt, bt_num, bt_denom)
-            # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
+
+            # logger.info('Polak-Ribiere coefficient: %f ' % bt)
 
             self.cn2_ob_grad = cn2_new_ob_grad
             self.cn2_pr_grad = cn2_new_pr_grad
@@ -305,8 +305,8 @@ class ML_serial(ML):
                 addr = prep.addr
                 original_addr = prep.original_addr
                 mangled_addr = addr.copy()
-                ma = prep.ma
-                mag = np.sqrt(prep.I)
+                w = prep.weights
+                I = prep.I
                 err_phot = prep.err_phot
 
                 PCK = kern.PCK
@@ -319,7 +319,7 @@ class ML_serial(ML):
                 # We need to re-calculate the current error 
                 PCK.build_aux(aux, addr, ob, pr)
                 aux[:] = FW(aux)
-                PCK.log_likelihood(aux, addr, mag, ma, err_phot)
+                PCK.log_likelihood_ml(aux, addr, I, w, err_phot)
                 error_state = np.zeros_like(err_phot)
                 error_state[:] = err_phot
                 PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
@@ -329,7 +329,7 @@ class ML_serial(ML):
                     PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
                     PCK.build_aux(aux, mangled_addr, ob, pr)
                     aux[:] = FW(aux)
-                    PCK.log_likelihood(aux, mangled_addr, mag, ma, err_phot)
+                    PCK.log_likelihood_ml(aux, mangled_addr, I, w, err_phot)
                     PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_phot)
 
                 prep.err_phot = error_state
@@ -472,9 +472,9 @@ class GaussianModel(BaseModelSerial):
 
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
+
             GDK.main(aux, addr, w, I)
             GDK.error_reduce(addr, err_phot)
-
             aux[:] = BW(aux)
 
             POK.ob_update_ML(addr, obg, pr, aux)

@@ -27,7 +27,7 @@ from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel,\
         TransposeKernel, MaxAbs2Kernel, MassCenterKernel, Abs2SumKernel,\
         InterpolatedShiftKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
-from ..mem_utils import GpuDataManager2
+from ..mem_utils import GpuDataManager
 
 MPI = False
 
@@ -170,9 +170,9 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
 
         log(3, 'PyCUDA max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
         # reset memory or create new
-        self.ex_data = GpuDataManager2(ex_mem, 0, nex, True)
-        self.ma_data = GpuDataManager2(ma_mem, 0, nma, False)
-        self.mag_data = GpuDataManager2(mag_mem, 0, nma, False)
+        self.ex_data = GpuDataManager(ex_mem, 0, nex, True)
+        self.ma_data = GpuDataManager(ma_mem, 0, nma, False)
+        self.mag_data = GpuDataManager(mag_mem, 0, nma, False)
         log(4, "Kernel setup completed")
 
     def engine_prepare(self):

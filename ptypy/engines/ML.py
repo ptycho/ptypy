@@ -264,11 +264,12 @@ class ML(PositionCorrectionEngine):
 
                 bt = max(0, bt_num/bt_denom)
 
-            # verbose(3,'Polak-Ribiere coefficient: %f ' % bt)
+            # logger.info('Polak-Ribiere coefficient: %f ' % bt)
 
             self.ob_grad << new_ob_grad
             self.pr_grad << new_pr_grad
 
+            dt = self.ptycho.FType
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
 
@@ -278,6 +279,7 @@ class ML(PositionCorrectionEngine):
                     s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
             else:
                 self.ob_h -= self.ob_grad
+
             self.pr_h *= bt / self.tmin
             self.pr_grad *= self.scale_p_o
             self.pr_h -= self.pr_grad
@@ -287,14 +289,14 @@ class ML(PositionCorrectionEngine):
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
-            #print(B, Cnorm2(self.ob_h), Cnorm2(self.ob_grad), Cnorm2(self.pr_h), Cnorm2(self.pr_grad))
+
             if np.isinf(B).any() or np.isnan(B).any():
                 logger.warning(
                     'Warning! inf or nan found! Trying to continue...')
                 B[np.isinf(B)] = 0.
                 B[np.isnan(B)] = 0.
 
-            self.tmin = -.5 * B[1] / B[2]
+            self.tmin = dt(-.5 * B[1] / B[2])
             self.ob_h *= self.tmin
             self.pr_h *= self.tmin
             self.ob += self.ob_h
@@ -493,7 +495,7 @@ class GaussianModel(BaseModel):
                                                 / (w * Imodel**2).sum())
                 Imodel *= self.float_intens_coeff[dname]
 
-            DI = Imodel - I
+            DI = np.double(Imodel) - I
 
             # Second pod loop: gradients computation
             LLL = np.sum((w * DI**2).astype(np.float64))
@@ -519,7 +521,6 @@ class GaussianModel(BaseModel):
                 self.ob_grad.storages[name].data += self.regularizer.grad(
                     s.data)
                 LL += self.regularizer.LL
-
         self.LL = LL / self.tot_measpts
 
         return error_dct
@@ -569,9 +570,10 @@ class GaussianModel(BaseModel):
                 A1 *= self.float_intens_coeff[dname]
                 A2 *= self.float_intens_coeff[dname]
 
-            A0 -= pod.upsample(I)
+            A0 = np.double(A0) - pod.upsample(I)
+            #A0 -= pod.upsample(I)
             w = pod.upsample(w)
-            
+
             B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
             B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
             B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
