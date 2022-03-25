@@ -127,8 +127,8 @@ extern "C" __global__ void __launch_bounds__(1024, 2)
   const int *ma = addr + 12 + (blockIdx.x * nmodes) * addr_stride;
 
   aux += ea[0] * A * B;
-  weights += da[0] * A * B;
-  I += ma[0] * A * B;
+  I += da[0] * A * B;
+  weights += ma[0] * A * B;
   llerr += da[0] * A * B;
   MATH_TYPE norm = A * B;
 
