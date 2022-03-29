@@ -53,11 +53,12 @@ absolute minimum.
 GPU engines work in parallel when each MPI rank takes one GPU. For sending
 data between ranks, PtyPy will perform a host copy first in most cases or
 use whatever the underlying MPI implementations does for CUDA-aware MPI
-(only tested for OpenMPI).
+(only tested for OpenMPI). Unfortunately, this mapping of one rank per 
+GPU will leave CPU cores idle if there are more cores on the system than GPUs. 
+
 Within a node, PtyPy can use nccl (requires a CuPy install 
-and `PTYPY_USE_NCCL=1`) for passing data between ranks/GPUs.
-Unfortunately, this mapping of one rank per GPU will leave CPU 
-cores idle if there are more cores on the system than GPUs. 
+and setting `PTYPY_USE_NCCL=1`) for passing data between ranks/GPUs.
+
 
 ## Breaking changes
 
@@ -93,8 +94,9 @@ which attempts to load all optional PtyScan classes and all engines.
  1. Code for `utils.parallel.bcast_dict` and `gather_dict` has been simplified and
     should be backwards compatible.
  2. The `fourier_power_bound` that was previously calculated internally from
-    the `fourier_relax_factor` can now be set explicitly. In the long run we consider
-    deprecation the `fourier_relax_factor`.
+    the `fourier_relax_factor` can now be set explicitly and we recommend that from
+    now on. The recommend value for the`fourier_power_bound` is 0.25 for Poisson statistics
+    (see [`this paper`](https://www.pnas.org/doi/10.1073/pnas.0905846107#supplementary-materials))
  3. Position correction now supports an alternate search scheme, i.e. along a fixed grid.
     This scheme is more accurate than a stochastic search and the overhead incurred
     for this brute force search is acceptable for GPU engines.

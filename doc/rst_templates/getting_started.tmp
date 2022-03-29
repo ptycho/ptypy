@@ -50,7 +50,7 @@ Only three Python packages are essential for |ptypy|_ to work:
 Install the essential version like so
 ::
 
-    $ conda env create -f core_dependencies.yml
+    $ conda env create -f dependencies_full.yml
     $ conda activate ptypy_core
     (ptypy_core)$ python setup.py install
 
@@ -81,7 +81,7 @@ packages listed here. Therefore, we recommend to install these packages.
 Install the recommended version like so
 ::
 
-    $ conda env create -f full_dependencies.yml
+    $ conda env create -f dependencies_full.yml
     $ conda activate ptypy_full
     (ptypy_full)$ python setup.py install
 
@@ -101,7 +101,7 @@ Install the dependencies for this version like so.
     (ptypy_pycuda)$ python setup.py install
 
 
-While we use `Reikna <https://pypi.org/project/reikna/> to
+While we use `Reikna <https://pypi.org/project/reikna/>` to
 provide a filtered FFT, i.e. a FFT that is fused with a pointwise
 matrix multiplication, you can optionally also install a version
 based cufft and callbacks. Due to the nature of this extension it

@@ -25,8 +25,9 @@ Get started quickly :ref:`here <getting_started>` or with one of the examples in
 Highlights
 ----------
 
-* **Difference Map** [#dm]_ algorithm engine with power bound constraint.
+* **Difference Map** [#dm]_ algorithm engine with power bound constraint [#power]_.
 * **Maximum Likelihood** [#ml]_ engine with preconditioners and regularizers.
+* Many more engines (RAAR, sDR, ePIE, ...).
 
 * **Fully parallelized** using the Massage Passing Interface
   (`MPI <https://en.wikipedia.org/wiki/Message_Passing_Interface>`_). 
@@ -74,6 +75,10 @@ Quicklinks
 
 .. [#Thi2013] P.Thibault and A.Menzel, **Nature** 494, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`__
 
-.. [#ml] P.Thibault and M.Guizar-Sicairos, **New J. of Phys.** 14, 6 (2012), `doi <http://dx.doi.org/10.1126/science.1158573>`__
+.. [#high] P.Thibault, M.Dierolf *et al.*,  **Scince 321**, 5887 (2008), `doi <http://dx.doi.org/10.1126/science.1158573>`__
 
-.. [#dm] P.Thibault, M.Dierolf *et al.*, **New J. of Phys. 14**, 6 (2012), `doi <http://dx.doi.org/10.1088/1367-2630/14/6/063004>`__
+.. [#ml] P.Thibault and M.Guizar-Sicairos, **New J. of Phys. 14**, 6 (2012), `doi <http://dx.doi.org/10.1088/1367-2630/14/6/063004>`__
+
+.. [#dm] P.Thibault, M.Dierolf *et al.*, **Ultramicroscopy 109**, 4 (2009), `doi <https://doi.org/10.1016/j.ultramic.2008.12.011>`__
+
+.. [#power] K. Giewekemeyer *et al.*, **PNAS 108**, 2 (2007), `suppl. material <https://www.pnas.org/doi/10.1073/pnas.0905846107#supplementary-materials>`__, `doi <https://doi.org/10.1073/pnas.0905846107>`__

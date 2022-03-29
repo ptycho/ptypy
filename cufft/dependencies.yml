@@ -6,3 +6,4 @@ dependencies:
   - cmake>=3.8.0
   - pybind11
   - compilers
+  - cudatoolkit-dev
