@@ -12,41 +12,65 @@ Installation
 General installation instructions
 ---------------------------------
 
-Being a python package, |ptypy|_ depends on a number of other
-packages which are listed below.
-Once its dependencies are met, ptypy should work *out-of-the-box*.
+Download and unpack |ptypy|_ from the sources. For example, on Linux
+systems you can do::
 
-.. note:: 
-   |ptypy| is developed for Python>3.7
-          
+    $ wget https://github.com/ptycho/ptypy/archive/master.zip
+    $ unzip master.zip -d /tmp/; rm master.zip
 
-Essential packages
-^^^^^^^^^^^^^^^^^^
+or make a clone of the |ptypy|_ github repository::
 
-* `NumPy <https://pypi.python.org/pypi/numpy/1.9.2>`_ 
+    $ git clone https://github.com/ptycho/ptypy.git /tmp/ptypy-master
+
+which will unpack the master branch of ptypy into `/tmp/ptypy-master` but
+you are of course free to place the software wherever it is convenient for you.
+In principle, next you only have to navigate to that directory and install with
+::
+
+    $ python setup.py install
+
+However, since |ptypy|_ depends on a number of other packages, we recommend
+installing it in a virtual environment using the
+`anaconda <https://www.anaconda.com/>`_ package manager. Conveniently, this
+installation route allows you to install |ptypy|_ across platforms.
+
+
+Essential install
+^^^^^^^^^^^^^^^^^
+
+Only three Python packages are essential for |ptypy|_ to work:
+
+* `NumPy <https://pypi.python.org/pypi/numpy>`_
   (homepage: `<http://www.numpy.org>`_)
-* `SciPy <https://pypi.python.org/pypi/scipy/0.15.1>`_ 
+* `SciPy <https://pypi.python.org/pypi/scipy>`_
   (homepage: `<http://www.scipy.org>`_)
-* `h5py <https://pypi.python.org/pypi/scipy/2.5.0>`_ 
+* `h5py <https://pypi.python.org/pypi/h5py>`_
   (homepage: `<http://www.h5py.org>`_)
 
-Recommended packages for additional functionality
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Install the essential version like so
+::
+
+    $ conda env create -f core_dependencies.yml
+    $ conda activate ptypy_core
+    (ptypy_core)$ python setup.py install
+
+
+Recommended install for additional functionality
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Please note that |ptypy| is an alpha release and lacks rigorous import 
 checking. There may be parts of code that implicitly ask for any of the
 packages listed here. Therefore, we recommend to install these packages.
 
-* `Matplotlib <https://pypi.python.org/pypi/matplotlib/1.4.3>`_ 
+* `Matplotlib <https://pypi.python.org/pypi/matplotlib>`_
   for any kind of plotting or image generation
-  (homepage: `<http://www.matplotlib.org>`_) and python bindings for
-  `QT4 <https://pypi.python.org/pypi/PyQt4/4.11.3>`_
+  (homepage: `<http://www.matplotlib.org>`_)
 
-* `mpi4py <https://pypi.python.org/pypi/mpi4py/1.3.1>`_ 
-  for CPU-node parallelisation,  contains python bindings for the
+* `mpi4py <https://pypi.python.org/pypi/mpi4py>`_
+  for CPU-node parallelization, contains python bindings for the
   `Message Passaging Interface <http://www.mcs.anl.gov/research/projects/mpi/>`_, 
   (homepage: `<https://bitbucket.org/mpi4py/mpi4py/>`_)
 
-* `pyzmq <https://pypi.python.org/pypi/pyzmq/14.6.0>`_ 
+* `pyzmq <https://pypi.python.org/pypi/pyzmq>`_
   for a threaded server on the main node to perfrom asynchronous 
   client-server communication, contains python bindings for the
   ZeroMQ protocol, 
@@ -54,139 +78,33 @@ packages listed here. Therefore, we recommend to install these packages.
   This package is needed for non-blocking plots of the reconstruction run
   (e.g. for :ref:`plotclient`).
 
+Install the recommended version like so
+::
+
+    $ conda env create -f full_dependencies.yml
+    $ conda activate ptypy_full
+    (ptypy_full)$ python setup.py install
+
+
+Recommended install for GPU support
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We support an accelerated version of |ptypy|_ for CUDA-capable GPUs.
+
+Install the dependencies for this version like so.
+::
+
+    $ conda env create -f accelerate/cuda_pycuda/dependencies.yml
+    $ conda activate ptypy_pycuda
+    (ptypy_pycuda)$ python setup.py install
+
+
 Optional packages
 ^^^^^^^^^^^^^^^^^
 Other very useful packages are
 
-* `Ipython <https://pypi.python.org/pypi/ipython/3.1.0>`_ 
+* `Ipython <https://pypi.python.org/pypi/ipython>`_
   (homepage: `<http://www.ipython.org>`_)
-
-Installation on Debian/Ubuntu
------------------------------
-|ptypy| is developed on the current LTS version of Ubuntu which is the
-recommended operating system for |ptypy|
-
-Prerequisites
-^^^^^^^^^^^^^
-Many of the required python packages are
-available in the repositories. Just type (with sudo rights)
-::
-
-    $ sudo apt-get install python-numpy python-scipy python-h5py\
-    $ python-matplotlib python-mpi4py python-pyzmq
-
-Get ptypy
-^^^^^^^^^
-Download and unpack |ptypy|_ from the sources::
-
-    $ wget https://github.com/ptycho/ptypy/archive/master.zip
-    $ unzip master.zip -d /tmp/; rm master.zip
-
-or make a clone of the |ptypy|_ github repository::
-  
-    $ git clone https://github.com/ptycho/ptypy.git /tmp/ptypy-master
-
-CD into the download directory (e.g. /tmp/ptypy-master) and install |ptypy| with 
-::
-
-    $ python setup.py install --user 
-
-The local ``--user`` install is recommended instead of a system-wide
-``sudo`` install. It makes it easier to quickly apply fixes yourself.
-However, for an all-user system-wide install, type
-::
-
-    $ sudo python setup.py install 
-
-Installation on Windows
------------------------
-
-These installation instructions were contributed by M. Stockmar and tested
-with *Windows 8.1 Enterprise (64 bit)* on a core i7 Thinkpad w520 
-in February 2015. 
-No python was installed before on that machine. 
-
-.. note::
-   There might be also simpler ways to get a full scientific python 
-   suite for 32 bit Windows. Please let us know if you managed to get
-   |ptypy|_ running on a system not listed here.
-
-Prerequisites
-^^^^^^^^^^^^^
-
-* Download and install python 2.7.x from `<http://www.python.org>`_ 
-  (Make sure you have the 64 bit version)
-  Click *yes* when asked to add python to the path environment variable.
-
-* Go to the command line and install wheel::
-  
-  $ pip install wheel
-
-* Install Microsoft's implementation for MPI to use multiple CPUs from
-  `<https://msdn.microsoft.com/en-us/library/bb524831(v=vs.85).aspx>`_
-  Other MPI implementations may work as well but were not tested.
-
-* Install the QT-Framework if you don't have it already.
-  `<http://qt-project.org/>`_
-
-
-Download all other binaries
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The binaries will be downloaded from a `website <http://www.lfd.uci.edu/~gohlke/pythonlibs/>`_ 
-which offers various builds for different python versions for Windows (both 32 and 64 bit) in
-the form of a `python wheel <https://pypi.python.org/pypi/wheel>`_.
-Make sure you choose the correct version for your windows and system. 
-
-Numpy and some other builds are linked against the 
-Intel Math Kernel Library (MKL) which is supposed to be fast.
-
-* First make sure you have the Microsoft Visual C++ 2010 redistributable package (maybe also the 2008 version).
-  
-  * | 2010 (64 bit, for 32 bit version check the website):
-    | `<http://www.microsoft.com/en-us/download/details.aspx?id=14632>`_ 
-  * | 2008 (64 bit, for 32 bit check the website):
-    | `<http://www.microsoft.com/en-us/download/details.aspx?id=15336>`_
-
-* Now, go to to `<http://www.lfd.uci.edu/~gohlke/pythonlibs/>`_
-  and download the latest pip binaries and update pip::
-  
-    $ python.exe pip-6.0.8-py2.py3-none-any.whl/pip install pip-6.0.8-py2.py3-none-any.whl.
-  
-  (The file name might change slightly if a newer version of pip is available)
-
-* Then download all the other binaries as whl-files.
-  A whl-file can be installed via command line according to::
-  
-    $ pip install filename.whl
-  
-  Download and install the binaries in the following order:
-
-  #. ``numpy``
-  #. ``pillow`` (replacement for PIL)
-  #. ``matplotlib``
-  #. ``ipython``
-  #. ``h5py``
-  #. ``scipy`` (may install additional packages as well)
-  #. ``mpi4py`` (choose the one for MS MPI if you have installed MS MPI)
-  #. ``pyzmq``
-  #. ``pyqt4`` (QT framework was installed before on the testing machine)
-  #. ``pyside`` 
-
-..
-   pip install pyqt4  (QT framework was installed before on the testing machine)
-   pip install pyside
-
-   In case these instructions are not sufficient, refer to the website by C. Gohlke.
-
-Get ptypy
-^^^^^^^^^
-Download |ptypy| from `<https://github.com/ptycho/ptypy/archive/master.zip>`_
-and unzip to any directory, for example ``C:\Temp``. 
-Change into that directly and install from commandline::
-
-  $ cd C:\Temp\ptypy-master
-  $ python setup.py install
 
 
 .. _quickstart:

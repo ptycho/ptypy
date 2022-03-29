@@ -5,7 +5,7 @@ Welcome Ptychonaut!
 framework for scientific ptychography compiled by 
 P.Thibault and B. Enders and licensed under the GPLv2 license.
 
-It comprises 7 years of experience in the field of ptychography condensed  
+It comprises 8 years of experience in the field of ptychography condensed
 to a versatile python package. The package covers the whole path of
 ptychographic analysis after the actual experiment 
 - from data management to reconstruction to visualization.
@@ -25,14 +25,16 @@ Get started quickly :ref:`here <getting_started>` or with one of the examples in
 Highlights
 ----------
 
-* **Difference Map** [#dm]_ algorithm engine with power bound constraint
+* **Difference Map** [#dm]_ algorithm engine with power bound constraint.
 * **Maximum Likelihood** [#ml]_ engine with preconditioners and regularizers.
 
-* **Fully parallelized** (CPU only) using the Massage Passing Interface 
+* **Fully parallelized** using the Massage Passing Interface
   (`MPI <https://en.wikipedia.org/wiki/Message_Passing_Interface>`_). 
   Simply execute your script with::
   
-    $ mpiexec -n [nodes] python <your_ptypy_script>.py
+    $ mpiexec/mpirun -n [nodes] python <your_ptypy_script>.py
+
+* **GPU acceleration** based on custom kernels, pycuda, and reikna.
 
 * A **client-server** approach for visualization and control based on 
   `ZeroMQ <http://www.zeromq.org>`_ .
