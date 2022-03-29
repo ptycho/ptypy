@@ -173,6 +173,7 @@ storage = P.obj.storages['S00']
 storage.fill(flower_obj(storage.shape[-2:]))
 fig = u.plot_storage(storage, 5)
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
+# Complex transmission function of the object.
 
 # Creating additional Views and the PODs
 # --------------------------------------
@@ -240,7 +241,7 @@ pod.exit = pod.probe * pod.object
 exit_storage = list(P.exit.storages.values())[0]
 fig = u.plot_storage(exit_storage, 6)
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
-# Simulated exit wave using a pod
+# Simulated exit wave using a pod.
 
 # The diffraction plane is also conveniently accessible with
 pod.diff = np.abs(pod.fw(pod.exit))**2
@@ -249,7 +250,7 @@ pod.diff = np.abs(pod.fw(pod.exit))**2
 diff_storage = list(P.diff.storages.values())[0]
 fig = u.plot_storage(diff_storage, 7, modulus='log')
 fig.savefig('%s_%d.png' % (scriptname, fig.number), dpi=300)
-
+# First simulated diffraction image (without noise)
 
 # Creating the rest of the pods is now straight-forward
 # since the data accesses are similar.

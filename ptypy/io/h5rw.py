@@ -620,15 +620,12 @@ def h5info(filename, path='', output=None, depth=8):
 
     def _format_arraytuple(key, dset):
         a = dset[...]
-        if len(a) < 5:
+        if len(a) < 5 and a.ndim==1:
             stringout = ' ' * key[0] + ' * ' + key[1] + ' [tuple = ' + str(tuple(a.ravel())) + ']\n'
         else:
-            try:
-                float(a.ravel()[0])
-                stringout = ' ' * key[0] + ' * ' + key[1] + ' [tuple = (' + (
-                            ('%f, ' * 4) % tuple(a.ravel()[:4])) + ' ...)]\n'
-            except ValueError:
-                stringout = ' ' * key[0] + ' * ' + key[1] + ' [tuple = (%d x %s objects)]\n' % (a.size, str(a.dtype))
+            stringout = ' ' * key[0] + ' * ' + key[1] + \
+                        ' [tuple = ' + str(len(a)) + 'x[' + (('%dx' * (a[0].ndim - 1) + '%d') % a[0].shape) + \
+                        ' ' + str(a.dtype) + ' array]]\n'
         return stringout
 
     def _format_arraylist(key, dset):

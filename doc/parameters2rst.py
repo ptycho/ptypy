@@ -82,7 +82,7 @@ def write_desc_tree(prst, tree):
             prst.write('\n' + path + '\n')
             prst.write('-' * len(path) + '\n\n')
 
-        prst.write('.. py:data:: ' + desc.path)
+        prst.write('.. py:data:: ' + path)
 
         if desc.is_symlink:
             tp = 'Param'

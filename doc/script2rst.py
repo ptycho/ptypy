@@ -138,7 +138,6 @@ while True:
 
     if len(wline) > 0:
         if line.startswith('#'):  # This was '# ' before, but pycharm eats trailing whitespaces so the marker
-            print('here')
             wline = line[2:]
             was_comment = True
             if not wline:
