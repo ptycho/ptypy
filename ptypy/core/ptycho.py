@@ -990,6 +990,7 @@ class Ptycho(Base):
                 for ID, S in self.obj.storages.items():
                     content.obj[ID]['grids'] = S.grids()
 
+            if kind in ['minimal', 'dls'] and self.record_positions:
                 content.positions = {}
                 for ID, S in self.obj.storages.items():
                     content.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
