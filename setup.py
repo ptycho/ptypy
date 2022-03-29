@@ -64,7 +64,7 @@ if __name__ == '__main__':
     except:
         vers = VERSION
 
-exclude_packages = []
+exclude_packages = ["test.*", "test"]
 package_list = setuptools.find_packages(exclude=exclude_packages)
 setup(
     name='Python Ptychography toolbox',

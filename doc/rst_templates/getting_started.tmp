@@ -27,7 +27,7 @@ you are of course free to place the software wherever it is convenient for you.
 In principle, next you only have to navigate to that directory and install with
 ::
 
-    $ python setup.py install
+    $ pip install .
 
 However, since |ptypy|_ depends on a number of other packages, we recommend
 installing it in a virtual environment using the
@@ -52,7 +52,7 @@ Install the essential version like so
 
     $ conda env create -f dependencies_core.yml
     $ conda activate ptypy_core
-    (ptypy_core)$ python setup.py install
+    (ptypy_core)$ pip install .
 
 
 Recommended install for additional functionality
@@ -83,7 +83,7 @@ Install the recommended version like so
 
     $ conda env create -f dependencies_full.yml
     $ conda activate ptypy_full
-    (ptypy_full)$ python setup.py install
+    (ptypy_full)$ pip install .
 
 
 Recommended install for GPU support
@@ -98,7 +98,7 @@ Install the dependencies for this version like so.
 
     $ conda env create -f accelerate/cuda_pycuda/dependencies.yml
     $ conda activate ptypy_pycuda
-    (ptypy_pycuda)$ python setup.py install
+    (ptypy_pycuda)$ pip install .
 
 
 While we use `Reikna <https://pypi.org/project/reikna/>` to
@@ -111,7 +111,7 @@ needs to be built for fixed array sizes externally.
     $ conda activate ptypy_pycuda
     (ptypy_pycuda)$ cd cufft
     (ptypy_pycuda)$ conda env update --file dependencies.yml --name ptypy_pycuda
-    (ptypy_pycuda)$ python setup.py install
+    (ptypy_pycuda)$ pip install .
 
 
 Optional packages
