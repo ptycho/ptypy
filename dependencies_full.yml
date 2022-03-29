@@ -1,4 +1,4 @@
-name: ptypy_pycuda
+name: ptypy_full
 channels:
   - conda-forge
 dependencies:
@@ -11,9 +11,4 @@ dependencies:
   - mpi4py
   - pillow
   - pyfftw
-  - reikna
-  - pycuda
-  - cudatoolkit-dev
-  - pip
-  - pip:
-    - scikit-cuda
+

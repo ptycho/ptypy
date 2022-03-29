@@ -110,7 +110,7 @@ needs to be built for fixed array sizes externally.
 
     $ conda activate ptypy_pycuda
     (ptypy_pycuda)$ cd cufft
-    (ptypy_pycuda)$ conda install --file dependencies.yml
+    (ptypy_pycuda)$ conda env update --file dependencies.yml --name ptypy_pycuda
     (ptypy_pycuda)$ python setup.py install
 
 
