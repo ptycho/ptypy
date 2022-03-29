@@ -17,7 +17,7 @@ p.verbose_level = "info"
 # set home path
 p.io = u.Param()
 p.io.home = "/".join([tmpdir, "ptypy"])
-
+p.io.rformat = 'funny'
 # saving intermediate results
 p.io.autosave = u.Param(active=False)
 
@@ -48,7 +48,7 @@ p.scans.MF.data.psf = 0.
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'DM'
-p.engines.engine00.numiter = 80
+p.engines.engine00.numiter = 10
 
 # prepare and run
 P = Ptycho(p,level=5)

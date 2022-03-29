@@ -714,7 +714,7 @@ class Ptycho(Base):
 
             # Save
             if self.p.io.rfile:
-                self.save_run()
+                self.save_run(kind=self.p.io.rformat)
             else:
                 pass
             # Time the initialization
@@ -981,7 +981,7 @@ class Ptycho(Base):
 
                 content = minimal
             else:
-                raise(RuntimeError, "Save file format " + str(kind) + " is not supported")
+                raise RuntimeError("Save file format '" + str(kind) + "' is not supported")
 
             if kind == 'dls':
                 for ID, S in self.probe.storages.items():
