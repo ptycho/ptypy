@@ -403,24 +403,26 @@ def reduce_dimension(a, dim, local_indices=None):
     """
     Apply a low-rank approximation on a.
 
-    :param a:
-     3D numpy array.
+    Parameters
+    ----------
+    a : ndarray
+        3D numpy array
 
-    :param dim:
-     The number of dimensions to retain. The case dim=0 (which would
-     just reduce all layers to a mean) is not implemented.
+    dim : int
+        The number of dimensions to retain. The case dim=0 (which would
+        just reduce all layers to a mean) is not implemented.
 
-    :param local_indices:
-     Used for Containers distributed across nodes. Local indices of
-     the current node.
+    local_indices :
+        Used for Containers distributed across nodes. Local indices of
+        the current node.
 
-    :return: [reduced array, modes, coefficients]
-     Where:
-      - reduced array is the result of dimensionality reduction
-         (same shape as a)
-      - modes: 3D array of length dim containing eigenmodes
-         (aka singular vectors)
-      - coefficients: 2D matrix representing the decomposition of a.
+    Returns
+    -------
+    reduced array, modes, coefficients :
+        where:
+          - reduced array is the result of dimensionality reduction (same shape as a)
+          - modes: 3D array of length dim containing eigenmodes (aka singular vectors)
+          - coefficients: 2D matrix representing the decomposition of a.
     """
     if local_indices is None:  # No MPI - generate a list of indices
         Nl = len(a)

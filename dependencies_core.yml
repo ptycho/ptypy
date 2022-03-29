@@ -1,0 +1,9 @@
+name: ptypy_core
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - numpy
+  - scipy
+  - h5py
+  - pip

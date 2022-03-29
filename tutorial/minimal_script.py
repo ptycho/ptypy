@@ -1,5 +1,5 @@
 # This tutorial explains the minimal settings to get a reconstruction
-# runnig in |ptypy|. A |ptypy| script consists of two parts:
+# runnig in |ptypy|_. A |ptypy| script consists of two parts:
 
 # * Creation of a parameter tree with parameters
 #   as listed in :ref:`parameters` and

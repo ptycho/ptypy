@@ -169,23 +169,23 @@ def _h5write(filename, mode, *args, **kwargs):
         pop_id(id(d))
         return dset
 
-    # @sdebug
-    def _store_ordered_dict(group, d, name):
-        check_id(id(d))
-        if any([type(k) not in [str,] for k in d.keys()]):
-            raise RuntimeError('Only dictionaries with string keys are supported.')
-        dset = group.create_group(name)
-        dset.attrs['type'] = 'ordered_dict'
-        for k, v in d.items():
-            if k.find('/') > -1:
-                k = k.replace('/', h5options['SLASH_ESCAPE'])
-                ndset = _store(dset, v, k)
-                if ndset is not None:
-                    ndset.attrs['escaped'] = '1'
-            else:
-                _store(dset, v, k)
-        pop_id(id(d))
-        return dset
+    # # @sdebug
+    # def _store_ordered_dict(group, d, name):
+    #     check_id(id(d))
+    #     if any([type(k) not in [str,] for k in d.keys()]):
+    #         raise RuntimeError('Only dictionaries with string keys are supported.')
+    #     dset = group.create_group(name)
+    #     dset.attrs['type'] = 'ordered_dict'
+    #     for k, v in d.items():
+    #         if k.find('/') > -1:
+    #             k = k.replace('/', h5options['SLASH_ESCAPE'])
+    #             ndset = _store(dset, v, k)
+    #             if ndset is not None:
+    #                 ndset.attrs['escaped'] = '1'
+    #         else:
+    #             _store(dset, v, k)
+    #     pop_id(id(d))
+    #     return dset
 
     # @sdebug
     def _store_param(group, d, name):
@@ -231,7 +231,7 @@ def _h5write(filename, mode, *args, **kwargs):
         elif type(a) is dict:
             dset = _store_dict(group, a, name)
         elif type(a) is OrderedDict:
-            dset = _store_ordered_dict(group, a, name)
+            dset = _store_dict(group, a, name)
         elif type(a) is Param:
             dset = _store_param(group, a, name)
         elif type(a) is list:
@@ -432,14 +432,14 @@ def h5read(filename, *args, **kwargs):
         except:
             return dset[...]
 
-    def _load_ordered_dict(dset, depth):
-        d = OrderedDict()
-        if depth > 0:
-            for k, v in dset.items():
-                if v.attrs.get('escaped', None) is not None:
-                    k = k.replace(h5options['SLASH_ESCAPE'], '/')
-                d[k] = _load(v, depth - 1)
-        return d
+    # def _load_ordered_dict(dset, depth):
+    #     d = OrderedDict()
+    #     if depth > 0:
+    #         for k, v in dset.items():
+    #             if v.attrs.get('escaped', None) is not None:
+    #                 k = k.replace(h5options['SLASH_ESCAPE'], '/')
+    #             d[k] = _load(v, depth - 1)
+    #     return d
 
     def _load_str(dset):
         if h5py.version.version_tuple[0]>2:
@@ -480,7 +480,7 @@ def h5read(filename, *args, **kwargs):
             if sl is not None:
                 val = val[sl]
         elif dset_type == 'ordered_dict':
-            val = _load_ordered_dict(dset, depth)
+            val = _load_dict(dset, depth)
         elif dset_type == 'array':
             val = _load_numpy(dset, sl)
         elif dset_type == 'arraylist':
@@ -620,15 +620,12 @@ def h5info(filename, path='', output=None, depth=8):
 
     def _format_arraytuple(key, dset):
         a = dset[...]
-        if len(a) < 5:
+        if len(a) < 5 and a.ndim==1:
             stringout = ' ' * key[0] + ' * ' + key[1] + ' [tuple = ' + str(tuple(a.ravel())) + ']\n'
         else:
-            try:
-                float(a.ravel()[0])
-                stringout = ' ' * key[0] + ' * ' + key[1] + ' [tuple = (' + (
-                            ('%f, ' * 4) % tuple(a.ravel()[:4])) + ' ...)]\n'
-            except ValueError:
-                stringout = ' ' * key[0] + ' * ' + key[1] + ' [tuple = (%d x %s objects)]\n' % (a.size, str(a.dtype))
+            stringout = ' ' * key[0] + ' * ' + key[1] + \
+                        ' [tuple = ' + str(len(a)) + 'x[' + (('%dx' * (a[0].ndim - 1) + '%d') % a[0].shape) + \
+                        ' ' + str(a.dtype) + ' array]]\n'
         return stringout
 
     def _format_arraylist(key, dset):
@@ -686,7 +683,7 @@ def h5info(filename, path='', output=None, depth=8):
         if (dset_type is None) and (type(dset) is h5py.Group):
             dset_type = 'dict'
 
-        if dset_type == 'dict':
+        if dset_type == 'dict' or dset_type == 'ordered_dict':
             stringout = _format_dict(d, key, dset, False)
         elif dset_type == 'param':
             stringout = _format_dict(d, key, dset, True)
