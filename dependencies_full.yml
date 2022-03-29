@@ -11,4 +11,5 @@ dependencies:
   - mpi4py
   - pillow
   - pyfftw
+  - pip
 

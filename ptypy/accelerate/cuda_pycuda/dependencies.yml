@@ -15,5 +15,6 @@ dependencies:
   - pycuda
   - cudatoolkit-dev
   - pip
+  - compilers
   - pip:
     - scikit-cuda

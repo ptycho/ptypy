@@ -7,3 +7,4 @@ dependencies:
   - pybind11
   - compilers
   - cudatoolkit-dev
+  - pip

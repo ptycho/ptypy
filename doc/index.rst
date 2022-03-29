@@ -75,8 +75,6 @@ Quicklinks
 
 .. [#Thi2013] P.Thibault and A.Menzel, **Nature** 494, 68 (2013), `doi <http://dx.doi.org/10.1038/nature11806>`__
 
-.. [#high] P.Thibault, M.Dierolf *et al.*,  **Scince 321**, 5887 (2008), `doi <http://dx.doi.org/10.1126/science.1158573>`__
-
 .. [#ml] P.Thibault and M.Guizar-Sicairos, **New J. of Phys. 14**, 6 (2012), `doi <http://dx.doi.org/10.1088/1367-2630/14/6/063004>`__
 
 .. [#dm] P.Thibault, M.Dierolf *et al.*, **Ultramicroscopy 109**, 4 (2009), `doi <https://doi.org/10.1016/j.ultramic.2008.12.011>`__

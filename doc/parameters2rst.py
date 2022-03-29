@@ -116,10 +116,20 @@ def write_desc_tree(prst, tree):
 
 prst = open('rst/parameters.rst','w')
 
-Header = '.. _parameters:\n\n'
-Header += '************************\n'
-Header += 'Parameter tree structure\n'
-Header += '************************\n\n'
+Header = """\
+.. _parameters:
+
+************************
+Parameter tree structure
+************************
+ 
+.. note::
+   This section needs to be reworked to account for the
+   recursive nature for |ptypy|_'s parameter tree. 
+   Please use the examples in the templates folder to 
+   craft your own scripts.
+"""
+
 prst.write(Header)
 write_desc_tree(prst, defaults_tree)
 # write_desc_recursive(prst, defaults_tree['ptycho'])
