@@ -122,8 +122,7 @@ Utilies/Binaries for convenience
 
 |ptypy| provides a few utility scripts to make life easier for you, 
 the user. They are located in ``[ptypy_root]/scripts``. 
-In case of a user install on 
-Ubuntu Linux, they are copied to ``~/.local/bin``
+In case of an install with conda, these are copied to ``<conda_env_dir>/bin``
 
 .. note:: 
    Due to the early stage of developmnet, 
@@ -165,13 +164,14 @@ that was created by |ptypy|. For such cases, we can use ``ptypy.inspect``.
 For example, a quick view at the top level can be realized with
 ::
 
-    $ ptypy.inspect /tmp/ptypy/recons/minimal/minimal_DM.ptyr -d 1
+    $ ptypy.inspect /tmp/ptypy/recons/minimal/minimal_DM_0040.ptyr -d 1
 
 which has the following the output::
 
-     * content [Param 4]:
+     * content [Param 5]:
          * obj [dict 1]:
          * pars [Param 9]:
+         * positions [dict 1]:
          * probe [dict 1]:
          * runtime [Param 8]:
      * header [dict 2]:

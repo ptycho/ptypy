@@ -121,9 +121,9 @@ Header += '************************\n'
 Header += 'Parameter tree structure\n'
 Header += '************************\n\n'
 prst.write(Header)
-#write_desc_recursive(prst, defaults_tree)
-write_desc_recursive(prst, defaults_tree['ptycho'])
+write_desc_tree(prst, defaults_tree)
+# write_desc_recursive(prst, defaults_tree['ptycho'])
 # write_desc_tree(prst, defaults_tree['io'])
-write_desc_tree(prst, defaults_tree['scan'])
+# write_desc_tree(prst, defaults_tree['scan'])
 # write_desc_tree(prst, defaults_tree['scandata'])
 prst.close()
