@@ -50,7 +50,7 @@ Only three Python packages are essential for |ptypy|_ to work:
 Install the essential version like so
 ::
 
-    $ conda env create -f dependencies_full.yml
+    $ conda env create -f dependencies_core.yml
     $ conda activate ptypy_core
     (ptypy_core)$ python setup.py install
 
