@@ -89,13 +89,28 @@ Install the recommended version like so
 Recommended install for GPU support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We support an accelerated version of |ptypy|_ for CUDA-capable GPUs.
+We support an accelerated version of |ptypy|_ for CUDA-capable
+GPUs based on our own kernels and the
+`PuCUDA <https://pypi.org/project/pycuda/>` package.
 
 Install the dependencies for this version like so.
 ::
 
     $ conda env create -f accelerate/cuda_pycuda/dependencies.yml
     $ conda activate ptypy_pycuda
+    (ptypy_pycuda)$ python setup.py install
+
+
+While we use `Reikna <https://pypi.org/project/reikna/> to
+provide a filtered FFT, i.e. a FFT that is fused with a pointwise
+matrix multiplication, you can optionally also install a version
+based cufft and callbacks. Due to the nature of this extension it
+needs to be built for fixed array sizes externally.
+::
+
+    $ conda activate ptypy_pycuda
+    (ptypy_pycuda)$ cd cufft
+    (ptypy_pycuda)$ conda install --file dependencies.yml
     (ptypy_pycuda)$ python setup.py install
 
 

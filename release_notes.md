@@ -50,10 +50,14 @@ performance, we employ a mirror scheme such that each cycle reverses the
 block order and reduces the host to device copies (and vice versa) to the
 absolute minimum.
 
-GPU engines do work in parallel, when each MPI rank takes one GPU. Within a 
-node, PtyPy tries to use nccl (requires a CuPy install) if available.
-Unfortunately, this will currently leave CPU cores idle if there are more 
-cores on the system than GPUs. 
+GPU engines work in parallel when each MPI rank takes one GPU. For sending
+data between ranks, PtyPy will perform a host copy first in most cases or
+use whatever the underlying MPI implementations does for CUDA-aware MPI
+(only tested for OpenMPI).
+Within a node, PtyPy can use nccl (requires a CuPy install 
+and `PTYPY_USE_NCCL=1`) for passing data between ranks/GPUs.
+Unfortunately, this mapping of one rank per GPU will leave CPU 
+cores idle if there are more cores on the system than GPUs. 
 
 ## Breaking changes
 
@@ -88,12 +92,13 @@ which attempts to load all optional PtyScan classes and all engines.
 
  1. Code for `utils.parallel.bcast_dict` and `gather_dict` has been simplified and
     should be backwards compatible.
- 3. The `fourier_power_bound` that was previously calculated internally from
+ 2. The `fourier_power_bound` that was previously calculated internally from
     the `fourier_relax_factor` can now be set explicitly. In the long run we consider
     deprecation the `fourier_relax_factor`.
- 4. Position correction now supports an alternate search scheme, i.e. along a fixed grid.
-    Why?
- 5. We switched to a conda install as the main supported way of installation
+ 3. Position correction now supports an alternate search scheme, i.e. along a fixed grid.
+    This scheme is more accurate than a stochastic search and the overhead incurred
+    for this brute force search is acceptable for GPU engines.
+ 4. We switched to a conda install as the main supported way of installation
  
 ## Roadmap
 
