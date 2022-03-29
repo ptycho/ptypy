@@ -142,6 +142,15 @@ class Ptycho(Base):
     help = Reconstruction file name (or format string)
     doc = Reconstruction file name or format string (constructed against runtime dictionary)
 
+    [io.rformat]
+    default = "minimal"
+    type = str
+    help = Reconstruction file format
+    doc = Choose a reconstruction file format for after engine completion.
+       - ``'minimal'``: Bare minimum of information
+       - ``'dls'``:    Custom format for Diamond Light Source
+    choices = 'minimal','dls'
+
     [io.interaction]
     default = None
     type = Param
@@ -807,7 +816,7 @@ class Ptycho(Base):
 
         logger.info('Creating Ptycho instance from %s' % runfile)
         header = u.Param(io.h5read(runfile, 'header')['header'])
-        if header['kind'] == 'minimal':
+        if header['kind'] == 'minimal' or header['kind'] == 'dls':
             logger.info('Found minimal ptypy dump')
             content = io.h5read(runfile, 'content')['content']
 
@@ -952,7 +961,7 @@ class Ptycho(Base):
 
                 content = dump
 
-            elif kind == 'minimal':
+            elif kind == 'minimal' or kind == 'dls':
                 # if self.interactor is not None:
                 #    self.interactor.stop()
                 logger.info('Generating shallow copies of probe, object and '
@@ -960,20 +969,9 @@ class Ptycho(Base):
                 minimal = u.Param()
                 minimal.probe = {ID: S._to_dict()
                                  for ID, S in self.probe.storages.items()}
-                for ID, S in self.probe.storages.items():
-                    minimal.probe[ID]['grids'] = S.grids()
 
                 minimal.obj = {ID: S._to_dict()
                                for ID, S in self.obj.storages.items()}
-
-                for ID, S in self.obj.storages.items():
-                    minimal.obj[ID]['grids'] = S.grids()
-
-                if self.record_positions:
-                    minimal.positions = {}
-                    for ID, S in self.obj.storages.items():
-                        minimal.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
-
                 try:
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
@@ -982,6 +980,19 @@ class Ptycho(Base):
                 minimal.runtime = self.runtime.copy()
 
                 content = minimal
+            else:
+                raise(RuntimeError, "Save file format " + str(kind) + " is not supported")
+
+            if kind == 'dls':
+                for ID, S in self.probe.storages.items():
+                    content.probe[ID]['grids'] = S.grids()
+
+                for ID, S in self.obj.storages.items():
+                    content.obj[ID]['grids'] = S.grids()
+
+                content.positions = {}
+                for ID, S in self.obj.storages.items():
+                    content.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
 
             h5opt = io.h5options['UNSUPPORTED']
             io.h5options['UNSUPPORTED'] = 'ignore'
