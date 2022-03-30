@@ -27,7 +27,7 @@ Highlights
 
 * **Difference Map** [#dm]_ algorithm engine with power bound constraint [#power]_.
 * **Maximum Likelihood** [#ml]_ engine with preconditioners and regularizers.
-* Many more engines (RAAR, sDR, ePIE, ...).
+* A few more engines (RAAR, sDR, ePIE, ...).
 
 * **Fully parallelized** using the Massage Passing Interface
   (`MPI <https://en.wikipedia.org/wiki/Message_Passing_Interface>`_). 
@@ -79,4 +79,5 @@ Quicklinks
 
 .. [#dm] P.Thibault, M.Dierolf *et al.*, **Ultramicroscopy 109**, 4 (2009), `doi <https://doi.org/10.1016/j.ultramic.2008.12.011>`__
 
-.. [#power] K. Giewekemeyer *et al.*, **PNAS 108**, 2 (2007), `suppl. material <https://www.pnas.org/doi/10.1073/pnas.0905846107#supplementary-materials>`__, `doi <https://doi.org/10.1073/pnas.0905846107>`__
+.. [#power] K.Giewekemeyer *et al.*, **PNAS 108**, 2 (2007), `suppl. material <https://www.pnas.org/doi/10.1073/pnas.0905846107#supplementary-materials>`__, `doi <https://doi.org/10.1073/pnas.0905846107>`__
+

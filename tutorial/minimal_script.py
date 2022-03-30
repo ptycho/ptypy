@@ -25,7 +25,7 @@ p = u.Param()  # root level
 # We set the verbosity to a high level, in order to have information on the
 # reconstruction process printed to the terminal.
 # See :py:data:`~ptycho.verbose_level`.
-p.verbose_level = 3
+p.verbose_level = "info"
 
 # We limit this reconstruction to single precision. The other choice is to
 # use double precision.

@@ -33,14 +33,17 @@ To get started quickly, please find the official documentation at the project pa
 Features
 --------
 
-* **Difference Map** [#dm]_ algorithm engine with power bound constraint
+* **Difference Map** [#dm]_ algorithm engine with power bound constraint [#power]_.
 * **Maximum Likelihood** [#ml]_ engine with preconditioners and regularizers.
+* A few more engines (RAAR, sDR, ePIE, ...).
 
 * **Fully parallelized** (CPU only) using the Massage Passing Interface 
   (`MPI <https://en.wikipedia.org/wiki/Message_Passing_Interface>`_). 
   Simply execute your script with::
   
     $ mpiexec -n [nodes] python <your_ptypy_script>.py
+
+* **GPU acceleration** based on custom kernels, pycuda, and reikna.
 
 * A **client-server** approach for visualization and control based on 
   `ZeroMQ <http://www.zeromq.org>`_ .
@@ -60,11 +63,11 @@ Installation
 
 Installation should be as simple as ::
 
-   $ sudo python setup.py install
+   $ sudo pip install .
 
 or, as a user, ::
 
-   $ python setup.py install --user
+   $ pip install . --user
 
 
 Dependencies
@@ -130,3 +133,5 @@ References
 .. [#dm] P.Thibault, M.Dierolf *et al.*, *Science* **321**, 7 (2009), `doi <http://dx.doi.org/10.1126/science.1158573>`_
 
 .. [#ml] P.Thibault and M.Guizar-Sicairos, *New J. of Phys.* **14**, 6 (2012), `doi <http://dx.doi.org/10.1088/1367-2630/14/6/063004>`_
+
+.. [#power] K.Giewekemeyer *et al.*, **PNAS 108**, 2 (2007), `suppl. material <https://www.pnas.org/doi/10.1073/pnas.0905846107#supplementary-materials>`__, `doi <https://doi.org/10.1073/pnas.0905846107>`__

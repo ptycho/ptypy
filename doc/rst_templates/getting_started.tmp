@@ -57,7 +57,7 @@ Install the essential version like so
 
 Recommended install for additional functionality
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Please note that |ptypy| is an alpha release and lacks rigorous import 
+Please note that |ptypy|_ is an alpha release and lacks rigorous import 
 checking. There may be parts of code that implicitly ask for any of the
 packages listed here. Therefore, we recommend to install these packages.
 
@@ -91,7 +91,7 @@ Recommended install for GPU support
 
 We support an accelerated version of |ptypy|_ for CUDA-capable
 GPUs based on our own kernels and the
-`PuCUDA <https://pypi.org/project/pycuda/>` package.
+`PyCUDA <https://pypi.org/project/pycuda/>`_ package.
 
 Install the dependencies for this version like so.
 ::
@@ -101,10 +101,10 @@ Install the dependencies for this version like so.
     (ptypy_pycuda)$ pip install .
 
 
-While we use `Reikna <https://pypi.org/project/reikna/>` to
+While we use `Reikna <https://pypi.org/project/reikna/>`_ to
 provide a filtered FFT, i.e. a FFT that is fused with a pointwise
 matrix multiplication, you can optionally also install a version
-based cufft and callbacks. Due to the nature of this extension it
+based on cufft and callbacks. Due to the nature of this extension it
 needs to be built for fixed array sizes externally.
 ::
 
@@ -269,7 +269,7 @@ Observe what changes in the reconstruction when scan parameters change.
 .. literalinclude:: ../../templates/ptypy_minimal_prep_and_run.py
    :language: python
    :linenos:
-   :emphasize-lines: 31,33,35
+   :emphasize-lines: 41,43,45
    
 Creating a .ptyd data-file
 --------------------------
@@ -277,14 +277,14 @@ Creating a .ptyd data-file
 We encourage you to use this script ``[ptypy_root]/templates/ptypy_make_sample_ptyd.py``
 to create various different samples and see what happens if the data
 processing parameters are changed. If you have become curious, move
-forward to :ref:`ptypy_data` and take a look at |ptypy|'s data management.
+forward to :ref:`ptypy_data` and take a look at |ptypy|_'s data management.
 Check out the data parameter branch :py:data:`.scan.data` for detailed parameter
 descriptions.
 
 .. literalinclude:: ../../templates/ptypy_make_sample_ptyd.py
    :language: python
    :linenos:
-   :emphasize-lines: 15-26
+   :emphasize-lines: 12-19
    
 Loading a data file to run a reconstruction
 -------------------------------------------

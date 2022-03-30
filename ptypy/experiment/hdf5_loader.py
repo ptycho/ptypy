@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """\
-Scan loading recipe for the I13 beamline, Diamond.
+Scan loading recipe for the Diamond beamlines.
 
 This file is part of the PTYPY package.
 

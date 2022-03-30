@@ -12,6 +12,14 @@ ptypy.experiment.ID16Anfp module
     :undoc-members:
     :show-inheritance:
 
+ptypy.experiment.hdf5_loader module
+--------------------------------
+
+.. automodule:: ptypy.experiment.hdf5_loader
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ptypy.experiment.optiklabor module
 ----------------------------------
 
