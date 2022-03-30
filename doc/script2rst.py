@@ -137,10 +137,14 @@ while True:
         sout.buf = ''
 
     if len(wline) > 0:
-        if line.startswith('# '):
+        if line.startswith('#'):  # This was '# ' before, but pycharm eats trailing whitespaces so the marker
             wline = line[2:]
             was_comment = True
-            frst.write(wline)
+            if not wline:
+                # just in case there is an empty line on purpose
+                frst.write('\n')
+            else:
+                frst.write(wline)
         else:
             wline = '   >>> '+wline
             if was_comment:

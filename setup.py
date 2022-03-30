@@ -17,8 +17,8 @@ Operating System :: Unix
 
 
 MAJOR               = 0
-MINOR               = 4
-MICRO               = 1
+MINOR               = 5
+MICRO               = 0
 ISRELEASED          = False
 VERSION             = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     except:
         vers = VERSION
 
-exclude_packages = []
+exclude_packages = ["test.*", "test"]
 package_list = setuptools.find_packages(exclude=exclude_packages)
 setup(
     name='Python Ptychography toolbox',
