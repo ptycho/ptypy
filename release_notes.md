@@ -1,4 +1,4 @@
-# PtyPy 0.5 release notes (WIP)
+# PtyPy 0.5 release notes
 
 We're excited to bring you a new release, with new engines, GPU accelerations and
 many smaller improvements.
@@ -31,20 +31,20 @@ collection of custom kernels.
 
 All GPU engines leverage a "streaming" model which means that the 
 primary locations of all objects are on the host (CPU) memory.
-Diffraction data arrays and all other arrys that scale linear with 
+Diffraction data arrays and all other arrys that scale linearly with 
 the number of shifts/positons are segmented into blocks (of frames).
 The idea is that these blocks are moved on and off the device (GPU) during
 engine iteration if the GPU does not have enough memory to store all
 blocks. The number of frames per block can
 be adjusted with the new top-level
 [`frames_per_block`](https://ptycho.github.io/ptypy/rst/parameters.html#ptycho.frames_per_block)
-parameter. This parameter as little influence for smaller problem size,
+parameter. This parameter has little influence for smaller problem size,
 but needs to be adjusted if your GPU has too little memory to fit even
 a single block. 
 
 Each engine iteration will cycle through all blocks, DM needs to even cycle 
 once for each projection. We therefore recommend to make the block size small 
-enough that at least a couple of blocks fit on the GPU to hide the latency of 
+enough such that at least a couple of blocks fit on the GPU to hide the latency of 
 data transfers. For best 
 performance, we employ a mirror scheme such that each cycle reverses the 
 block order and reduces the host to device copies (and vice versa) to the
@@ -95,12 +95,12 @@ which attempts to load all optional PtyScan classes and all engines.
     should be backwards compatible.
  2. The `fourier_power_bound` that was previously calculated internally from
     the `fourier_relax_factor` can now be set explicitly and we recommend that from
-    now on. The recommend value for the`fourier_power_bound` is 0.25 for Poisson statistics
-    (see [`this paper`](https://www.pnas.org/doi/10.1073/pnas.0905846107#supplementary-materials))
+    now on. The recommended value for the`fourier_power_bound` is 0.25 for Poisson statistics
+    (see supplementary of [`this paper`](https://www.pnas.org/doi/10.1073/pnas.0905846107#supplementary-materials))
  3. Position correction now supports an alternate search scheme, i.e. along a fixed grid.
     This scheme is more accurate than a stochastic search and the overhead incurred
     for this brute force search is acceptable for GPU engines.
- 4. We switched to a conda install as the main supported way of installation
+ 4. We switched to a pip install within a conda environment as the main supported way of installation
  
 ## Roadmap
 
