@@ -13,7 +13,7 @@ ptypy.experiment.ID16Anfp module
     :show-inheritance:
 
 ptypy.experiment.hdf5_loader module
---------------------------------
+-----------------------------------
 
 .. automodule:: ptypy.experiment.hdf5_loader
     :members:

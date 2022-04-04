@@ -5,7 +5,7 @@ Submodules
 ----------
    
 ptypy.engines.projectional module
------------------------
+---------------------------------
 
 .. automodule:: ptypy.engines.projectional
     :members:
@@ -22,7 +22,7 @@ ptypy.engines.ML module
     :show-inheritance:
 
 ptypy.engines.stochastic module
------------------------
+-------------------------------
 
 .. automodule:: ptypy.engines.stochastic
     :members:
