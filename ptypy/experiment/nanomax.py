@@ -616,7 +616,7 @@ class NanomaxFlyscanDec2019(NanomaxFlyscanMay2019):
         if self.info.I0 is not None:
             with h5py.File(fullfilename, 'r') as hf:
                 normdata = np.array(hf['%s/measurement/%s' % (entry, self.info.I0)], dtype=float)
-            normdata = normdata[self.firstLine:self.lastLine+1, :Nsteps].flatten()
+            normdata = normdata[self.firstLine:self.lastLine+1, :Nsteps].flatten() # noqa: F821
             self.normdata = normdata / np.mean(normdata)
             logger.info('*** going to normalize by channel %s - loaded %d values' % (self.info.I0, len(self.normdata)))
 

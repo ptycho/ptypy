@@ -10,8 +10,17 @@ import unittest
 from test import utils as tu
 from ptypy import utils as u
 from ptypy.core import Ptycho
+import tempfile
+import shutil
+
+from ptypy.custom import MLOPR
 
 class MLOPRTest(unittest.TestCase):
+    def setUp(self):
+        self.outpath = tempfile.mkdtemp(suffix="MLOPR_test")
+
+    def tearDown(self):
+        shutil.rmtree(self.outpath)
 
     def test_MLOPR(self):
 
@@ -20,8 +29,8 @@ class MLOPRTest(unittest.TestCase):
         p.io = u.Param()
         p.io.interaction = u.Param()
         p.io.interaction.active = False
-        p.io.home = './'
-        p.io.rfile = "./MLOPRTest.ptyr"
+        p.io.home = self.outpath
+        p.io.rfile = "MLOPRTest.ptyr"
         p.io.autosave = u.Param(active=False)
         p.io.autoplot = u.Param(active=False)
         p.ipython_kernel = False
@@ -43,7 +52,7 @@ class MLOPRTest(unittest.TestCase):
         p.scans.MF.data.experimentID = None
         p.scans.MF.data.label = None
         p.scans.MF.data.version = 0.1
-        p.scans.MF.data.dfile = "./MLOPRTest.ptyd"
+        p.scans.MF.data.dfile = "MLOPRTest.ptyd"
         p.scans.MF.data.psize = 0.000172
         p.scans.MF.data.load_parallel = None
         p.scans.MF.data.distance = 7.0

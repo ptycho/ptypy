@@ -1,0 +1,10 @@
+name: ptypy_cufft
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - cmake>=3.8.0
+  - pybind11
+  - compilers
+  - cudatoolkit-dev
+  - pip

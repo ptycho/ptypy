@@ -10,9 +10,10 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-from .. import utils as u
-from .. import defaults_tree
+
 from .utils import *
+
+
 
 ENGINES = dict()
 
@@ -38,16 +39,11 @@ def by_name(name):
 from .base import BaseEngine, DEFAULT_iter_info
 
 # These imports should be executable separately
-from . import DM
-from . import DM_simple
-from . import DMOPR
+from . import projectional
+from . import stochastic
 from . import ML
-from . import MLOPR
-from . import dummy
-from . import ePIE
 from . import Bragg3d_engines
 
-
 # dynamic load, maybe discarded in future
-dynamic_load('./', ['BaseEngine', 'PositionCorrectionEngine'] + list(ENGINES.keys()), True)
-dynamic_load('~/.ptypy/', ['BaseEngine', 'PositionCorrectionEngine'] + list(ENGINES.keys()), True)
+#dynamic_load('./', ['BaseEngine', 'PositionCorrectionEngine'] + list(ENGINES.keys()), True)
+#dynamic_load('~/.ptypy/', ['BaseEngine', 'PositionCorrectionEngine'] + list(ENGINES.keys()), True)

@@ -9,8 +9,16 @@ This file is part of the PTYPY package.
 import unittest
 from test import utils as tu
 from ptypy import utils as u
+import tempfile
+import shutil
 
 class DMTest(unittest.TestCase):
+
+    def setUp(self):
+        self.outpath = tempfile.mkdtemp(suffix="DMOPR_test")
+
+    def tearDown(self):
+        shutil.rmtree(self.outpath)
 
     def test_DM_position_refinement(self):
         engine_params = u.Param()
@@ -25,7 +33,7 @@ class DMTest(unittest.TestCase):
         engine_params.fourier_relax_factor = 0.01
         engine_params.obj_smooth_std = 20
         engine_params.position_refinement = True
-        tu.EngineTestRunner(engine_params)
+        tu.EngineTestRunner(engine_params, output_path=self.outpath)
 
     def test_DM(self):
         engine_params = u.Param()
@@ -39,7 +47,7 @@ class DMTest(unittest.TestCase):
         engine_params.object_inertia = 0.1
         engine_params.fourier_relax_factor = 0.01
         engine_params.obj_smooth_std = 20
-        tu.EngineTestRunner(engine_params)
+        tu.EngineTestRunner(engine_params, output_path=self.outpath)
 
 if __name__ == "__main__":
     unittest.main()
