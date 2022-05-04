@@ -1,18 +1,18 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
-    <title>Data management &#8212; ptypy 0.4.0 documentation</title>
-    <link rel="stylesheet" href="../_static/header.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Data management &#8212; ptypy 0.5.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/header.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -53,66 +53,17 @@
         <li class="right" >
           <a href="concept.html" title="Concepts and Classes"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Data management</a></li> 
       </ul>
-    </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-            <p class="logo"><a href="../content.html">
-              <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
-            </a></p>
-<h3><a href="../content.html">Table of Contents</a></h3>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started with Ptypy</a></li>
-<li class="toctree-l1"><a class="reference internal" href="concept.html">Concepts and Classes</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Data management</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#the-ptyscan-class">The PtyScan class</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#usage-scenarios">Usage scenarios</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#ptyd-file-format">Ptyd file format</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#tutorial-subclassing-ptyscan">Tutorial : Subclassing PtyScan</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#writing-a-subclass">Writing a subclass</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#loading-the-data">Loading the data</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#listing-the-new-subclass">Listing the new subclass</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameter tree structure</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ptypy.html">ptypy package</a></li>
-</ul>
-
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="concept.html"
-                        title="previous chapter">Concepts and Classes</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="parameters.html"
-                        title="next chapter">Parameter tree structure</a></p>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/rst/data_management.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
+    </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="data-management">
+  <section id="data-management">
 <span id="ptypy-data"></span><h1>Data management<a class="headerlink" href="#data-management" title="Permalink to this headline">¶</a></h1>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -156,7 +107,7 @@ to adapt PtyPy for a specific experimental setup, we simply
 subclass <code class="xref py py-class docutils literal notranslate"><span class="pre">PtyScan</span></code> and reimplement only that subset of its methods which are
 affected by the specifics of the experiemental setup
 (see <a class="reference internal" href="#subclassptyscan"><span class="std std-ref">Tutorial : Subclassing PtyScan</span></a>).</p>
-<div class="section" id="the-ptyscan-class">
+<section id="the-ptyscan-class">
 <span id="sec-ptyscan"></span><h2>The PtyScan class<a class="headerlink" href="#the-ptyscan-class" title="Permalink to this headline">¶</a></h2>
 <p><code class="xref py py-class docutils literal notranslate"><span class="pre">PtyScan</span></code> is the abstract base class in PtyPy that manages raw input
 data.</p>
@@ -219,8 +170,8 @@ to the master node which writes the date to a file.</p>
 </div>
 </dd>
 </dl>
-</div>
-<div class="section" id="usage-scenarios">
+</section>
+<section id="usage-scenarios">
 <span id="ptyd-scenarios"></span><h2>Usage scenarios<a class="headerlink" href="#usage-scenarios" title="Permalink to this headline">¶</a></h2>
 <p>The PtyScan class of PtyPy provides support for three use cases.</p>
 <p><strong>Beamline integreted use.</strong></p>
@@ -235,9 +186,10 @@ patterns (for a detailed introduction on how to subclass PtyScan, see
 <a class="reference internal" href="#subclassptyscan"><span class="std std-ref">Tutorial : Subclassing PtyScan</span></a>). Once the experiment is completed, the researcher can initiate
 a reconstruction directly from raw data with a standard reconstruction
 script.</p>
-<div class="highlights figure align-default" id="case-integrated">
+<figure class="highlights align-default" id="case-integrated">
 <a class="reference internal image-reference" href="../_images/data_case_integrated.png"><img alt="../_images/data_case_integrated.png" src="../_images/data_case_integrated.png" style="width: 70%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 20 </span><span class="caption-text">Integrated use case of <code class="xref py py-class docutils literal notranslate"><span class="pre">PtyScan</span></code>.</span><a class="headerlink" href="#case-integrated" title="Permalink to this image">¶</a></p>
+<figcaption>
+<p><span class="caption-number">Fig. 20 </span><span class="caption-text">Integrated use case of <code class="xref py py-class docutils literal notranslate"><span class="pre">PtyScan</span></code>.</span><a class="headerlink" href="#case-integrated" title="Permalink to this image">¶</a></p>
 <div class="legend">
 <p>A custom subclass <code class="docutils literal notranslate"><span class="pre">UserScan</span></code>
 serves as a translator between PtyPy’s generic parameters and
@@ -250,7 +202,8 @@ holds when new data is prepared. Optionally, the prepared data
 is saved to a <code class="docutils literal notranslate"><span class="pre">.ptyd</span></code> file to avoid having to run the preparation steps for subsequent
 reconstruction runs.</p>
 </div>
-</div>
+</figcaption>
+</figure>
 </div></blockquote>
 <p><strong>Post preparation use.</strong></p>
 <blockquote>
@@ -272,16 +225,18 @@ post-experiment analysis. Only the <code class="xref py py-data docutils literal
 parameter needs to be altered in script from <code class="docutils literal notranslate"><span class="pre">&lt;..&gt;.data.source=&lt;recipe&gt;</span></code>
 to <code class="docutils literal notranslate"><span class="pre">&lt;..&gt;.data.source='file'</span></code> while the rest of the parameters are ignored
 and may remain untouched.</p>
-<div class="highlights figure align-default" id="case-prepared">
+<figure class="highlights align-default" id="case-prepared">
 <a class="reference internal image-reference" href="../_images/data_case_prepared.png"><img alt="../_images/data_case_prepared.png" src="../_images/data_case_prepared.png" style="width: 70%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 21 </span><span class="caption-text">Standard supported use case of <code class="xref py py-class docutils literal notranslate"><span class="pre">PtyScan</span></code>.</span><a class="headerlink" href="#case-prepared" title="Permalink to this image">¶</a></p>
+<figcaption>
+<p><span class="caption-number">Fig. 21 </span><span class="caption-text">Standard supported use case of <code class="xref py py-class docutils literal notranslate"><span class="pre">PtyScan</span></code>.</span><a class="headerlink" href="#case-prepared" title="Permalink to this image">¶</a></p>
 <div class="legend">
 <p>If a structure-compatible (see <a class="reference internal" href="#ptyd-file"><span class="std std-ref">Ptyd file format</span></a>) <code class="docutils literal notranslate"><span class="pre">*.hdf5</span></code>-file is
 available, PtyPy can be used without customizing a subclass of
 <code class="xref py py-class docutils literal notranslate"><span class="pre">PtyScan</span></code>. It will use the shipped subclass <code class="xref py py-class docutils literal notranslate"><span class="pre">PtydScan</span></code>
 to read in the (prepared) raw data.</p>
 </div>
-</div>
+</figcaption>
+</figure>
 </div></blockquote>
 <p><strong>Preparation and reconstruction on-the-fly with data acquisition.</strong></p>
 <blockquote>
@@ -298,9 +253,10 @@ The chunk files are linked back into the main source <code class="docutils liter
 <p>All reconstruction processes may access the prepared data without
 overhead or notable pauses in the reconstruction. For PtyPy there
 is no difference if compared to a single source file (a feature of <a class="reference internal" href="#hdf" id="id3"><span>[HDF]</span></a>).</p>
-<div class="highlights figure align-default" id="case-flyscan">
+<figure class="highlights align-default" id="case-flyscan">
 <a class="reference internal image-reference" href="../_images/data_case_flyscan.png"><img alt="../_images/data_case_flyscan.png" src="../_images/data_case_flyscan.png" style="width: 70%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 22 </span><span class="caption-text">On-the-fly or demon-like use case of <code class="xref py py-class docutils literal notranslate"><span class="pre">PtyScan</span></code>.</span><a class="headerlink" href="#case-flyscan" title="Permalink to this image">¶</a></p>
+<figcaption>
+<p><span class="caption-number">Fig. 22 </span><span class="caption-text">On-the-fly or demon-like use case of <code class="xref py py-class docutils literal notranslate"><span class="pre">PtyScan</span></code>.</span><a class="headerlink" href="#case-flyscan" title="Permalink to this image">¶</a></p>
 <div class="legend">
 <p>A separate process prepares the data <em>chunks</em> and saves them
 in separate files which are
@@ -309,10 +265,11 @@ may run silently as a ‘’demon’’ in the background. Reconstructions
 can start immediately and run without delays or pauses due to data
 preparation.</p>
 </div>
-</div>
+</figcaption>
+</figure>
 </div></blockquote>
-</div>
-<div class="section" id="ptyd-file-format">
+</section>
+<section id="ptyd-file-format">
 <span id="ptyd-file"></span><h2>Ptyd file format<a class="headerlink" href="#ptyd-file-format" title="Permalink to this headline">¶</a></h2>
 <p>Ptypy uses the python module <strong>h5py</strong> <a class="reference internal" href="#h5py" id="id4"><span>[h5py]</span></a> to store and load data in the
 <strong>H</strong>ierarchical <strong>D</strong>ata <strong>F</strong>ormat <a class="reference internal" href="#hdf" id="id5"><span>[HDF]</span></a> . HDF resembles very
@@ -368,7 +325,7 @@ Omitting any of these parameters or setting the value of the dataset to
 <blockquote>
 <div><ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">version</span></code> is ptypy version this dataset was prepared with
-(current version is 0.4.0, see <code class="xref py py-data docutils literal notranslate"><span class="pre">version</span></code>).</p></li>
+(current version is 0.5.0.dev72f54d3d, see <code class="xref py py-data docutils literal notranslate"><span class="pre">version</span></code>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">label</span></code> is a custom user label. Choose a unique label to your liking.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">num_frames</span></code> indicates how many diffraction image frames are
 expected in the dataset (see <code class="xref py py-data docutils literal notranslate"><span class="pre">num_frames</span></code>)
@@ -417,8 +374,8 @@ geometry of the experiment.</p>
 <p>As walking the data tree and extracting the data from the <em>hdf5</em> file
 is a bit cumbersome with h5py, there are a few convenience function in the
 <a class="reference internal" href="ptypy.io.html#module-ptypy.io.h5rw" title="ptypy.io.h5rw"><code class="xref py py-mod docutils literal notranslate"><span class="pre">ptypy.io.h5rw</span></code></a> module.</p>
-</div>
-<div class="section" id="tutorial-subclassing-ptyscan">
+</section>
+<section id="tutorial-subclassing-ptyscan">
 <span id="subclassptyscan"></span><h2>Tutorial : Subclassing PtyScan<a class="headerlink" href="#tutorial-subclassing-ptyscan" title="Permalink to this headline">¶</a></h2>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -435,13 +392,8 @@ ptypy work with any experimental setup.</p>
 if section <a class="reference internal" href="concept.html#store"><span class="std std-ref">Storing the simulation</span></a> was completed</p>
 <p>Again, the imports first.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core.data</span> <span class="k">import</span> <span class="n">PtyScan</span>
-<span class="go">Message Passaging for Python (mpi4py) not found.</span>
-<span class="go">    CPU-parallelization disabled.</span>
-<span class="go">    Install python-mpi4py via the package repositories or with `pip install --user mpi4py`</span>
-<span class="go">Could not import experiment cSAXSScan from .cSAXS, Reason: No module named &#39;fabio&#39;</span>
-
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="k">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core.data</span> <span class="kn">import</span> <span class="n">PtyScan</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
 </pre></div>
 </div>
 <p>For this tutorial we assume that the data and meta information is
@@ -482,7 +434,7 @@ image frame from the “camera”</p>
 <span class="go">....</span>
 </pre></div>
 </div>
-<div class="section" id="writing-a-subclass">
+<section id="writing-a-subclass">
 <h3>Writing a subclass<a class="headerlink" href="#writing-a-subclass" title="Permalink to this headline">¶</a></h3>
 <p>The simplest subclass of PtyScan would look like this</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">NumpyScan</span><span class="p">(</span><span class="n">PtyScan</span><span class="p">):</span>
@@ -490,7 +442,7 @@ image frame from the “camera”</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="sd">    A PtyScan subclass to extract data from a numpy array.</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="sd">    &quot;&quot;&quot;</span>
 <span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="c1"># In init we need to call the parent.</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="nb">super</span><span class="p">(</span><span class="n">NumpyScan</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">pars</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 <span class="go">&gt;&gt;&gt;</span>
@@ -503,7 +455,7 @@ powerful self-documenting tool call a “descriptor” which can be applied
 to any new class using a decorator. The tree of all valid ptypy parameters
 is located at <a class="reference internal" href="parameters.html#parameters"><span class="std std-ref">here</span></a>. To manage the default
 parameters of our subclass and document its existence, we would need to write</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="k">import</span> <span class="n">defaults_tree</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">defaults_tree</span>
 </pre></div>
 </div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nd">@defaults_tree</span><span class="o">.</span><span class="n">parse_doc</span><span class="p">(</span><span class="s1">&#39;scandata.numpyscan&#39;</span><span class="p">)</span>
@@ -512,7 +464,7 @@ parameters of our subclass and document its existence, we would need to write</p
 <span class="gp">&gt;&gt;&gt; </span><span class="sd">    A PtyScan subclass to extract data from a numpy array.</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="sd">    &quot;&quot;&quot;</span>
 <span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="c1"># In init we need to call the parent.</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="nb">super</span><span class="p">(</span><span class="n">NumpyScan</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">pars</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 <span class="go">&gt;&gt;&gt;</span>
@@ -603,6 +555,7 @@ registered are those of the parent class, <cite>PtyScan</cite>:</p>
 <span class="go">type = int</span>
 <span class="go">doc =</span>
 <span class="go">userlevel = 2</span>
+<span class="go">lowlim = 1</span>
 
 <span class="go">[positions_theory]</span>
 <span class="go">default = None</span>
@@ -692,7 +645,7 @@ class. For each parameter, most important are the <em>type</em>, <em>default</em
 <em>help</em> string. The decorator does more than collect this information: it also
 generates from it a class variable called <cite>DEFAULT</cite>, which stores all defaults:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">NumpyScan</span><span class="o">.</span><span class="n">DEFAULT</span><span class="p">,</span> <span class="n">noheader</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-<span class="go">* id3VFJNGLJTG           : ptypy.utils.parameters.Param(20)</span>
+<span class="go">* id3VMDSB2BHG           : ptypy.utils.parameters.Param(20)</span>
 <span class="go">  * name                 : PtyScan</span>
 <span class="go">  * dfile                : None</span>
 <span class="go">  * chunk_format         : .chunk%02d</span>
@@ -757,7 +710,7 @@ our subclass becomes</p>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">help</span> <span class="o">=</span> <span class="n">Base</span> <span class="n">path</span> <span class="n">to</span> <span class="n">extract</span> <span class="n">data</span> <span class="n">files</span> <span class="n">from</span><span class="o">.</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="s2">&quot;&quot;&quot;</span>
 <span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">p</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span>
 <span class="go">&gt;&gt;&gt;</span>
@@ -872,7 +825,7 @@ for this purpose.</p>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">help</span> <span class="o">=</span> <span class="n">Base</span> <span class="n">path</span> <span class="n">to</span> <span class="n">extract</span> <span class="n">data</span> <span class="n">files</span> <span class="n">from</span><span class="o">.</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="s2">&quot;&quot;&quot;</span>
 <span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">p</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span>
 <span class="go">&gt;&gt;&gt;</span>
@@ -956,7 +909,7 @@ and there were no bad pixels in the (linear) detector</p>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">default</span> <span class="o">=</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">ptypy</span><span class="o">/</span><span class="n">sim</span><span class="o">/</span><span class="n">npy</span><span class="o">.</span><span class="n">ptyd</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="s2">&quot;&quot;&quot;</span>
 <span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span>        <span class="n">p</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span>
 <span class="go">&gt;&gt;&gt;</span>
@@ -989,8 +942,8 @@ and there were no bad pixels in the (linear) detector</p>
 <span class="go">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="loading-the-data">
+</section>
+<section id="loading-the-data">
 <h3>Loading the data<a class="headerlink" href="#loading-the-data" title="Permalink to this headline">¶</a></h3>
 <p>With the subclass we create a scan only using defaults</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">NPS</span> <span class="o">=</span> <span class="n">NumpyScan</span><span class="p">()</span>
@@ -1004,7 +957,7 @@ with <a class="reference internal" href="ptypy.utils.html#ptypy.utils.verbose.re
 concatenated, but the length of iterables or dicts is always indicated
 in parantheses.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">NPS</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">80</span><span class="p">),</span> <span class="n">noheader</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-<span class="go">* id3VFJNE7930           : dict(2)</span>
+<span class="go">* id3VMDSBIOU0           : dict(3)</span>
 <span class="go">  * common               : ptypy.utils.parameters.Param(8)</span>
 <span class="go">    * version            : 0.1</span>
 <span class="go">    * num_frames         : 116</span>
@@ -1014,28 +967,207 @@ in parantheses.</p>
 <span class="go">    * energy             : 7.2</span>
 <span class="go">    * center             : [array = [128. 128.]]</span>
 <span class="go">    * distance           : 7.19</span>
+<span class="go">  * chunk                : ptypy.utils.parameters.Param(6)</span>
+<span class="go">    * indices            : list(80)</span>
+<span class="go">      * id44VE53G        : 0</span>
+<span class="go">      * id44VE54G        : 1</span>
+<span class="go">      * id44VE55G        : 2</span>
+<span class="go">      * id44VE56G        : 3</span>
+<span class="go">      * id44VE57G        : 4</span>
+<span class="go">      * ...              : ....</span>
+<span class="go">    * indices_node       : list(80)</span>
+<span class="go">      * id44VE53G        : 0</span>
+<span class="go">      * id44VE54G        : 1</span>
+<span class="go">      * id44VE55G        : 2</span>
+<span class="go">      * id44VE56G        : 3</span>
+<span class="go">      * id44VE57G        : 4</span>
+<span class="go">      * ...              : ....</span>
+<span class="go">    * num                : 0</span>
+<span class="go">    * data               : dict(80)</span>
+<span class="go">      * 0                : [256x256 int32 array]</span>
+<span class="go">      * 1                : [256x256 int32 array]</span>
+<span class="go">      * 2                : [256x256 int32 array]</span>
+<span class="go">      * 3                : [256x256 int32 array]</span>
+<span class="go">      * 4                : [256x256 int32 array]</span>
+<span class="go">      * 5                : [256x256 int32 array]</span>
+<span class="go">      * 6                : [256x256 int32 array]</span>
+<span class="go">      * 7                : [256x256 int32 array]</span>
+<span class="go">      * 8                : [256x256 int32 array]</span>
+<span class="go">      * 9                : [256x256 int32 array]</span>
+<span class="go">      * 10               : [256x256 int32 array]</span>
+<span class="go">      * 11               : [256x256 int32 array]</span>
+<span class="go">      * 12               : [256x256 int32 array]</span>
+<span class="go">      * 13               : [256x256 int32 array]</span>
+<span class="go">      * 14               : [256x256 int32 array]</span>
+<span class="go">      * 15               : [256x256 int32 array]</span>
+<span class="go">      * 16               : [256x256 int32 array]</span>
+<span class="go">      * 17               : [256x256 int32 array]</span>
+<span class="go">      * 18               : [256x256 int32 array]</span>
+<span class="go">      * 19               : [256x256 int32 array]</span>
+<span class="go">      * 20               : [256x256 int32 array]</span>
+<span class="go">      * 21               : [256x256 int32 array]</span>
+<span class="go">      * 22               : [256x256 int32 array]</span>
+<span class="go">      * 23               : [256x256 int32 array]</span>
+<span class="go">      * 24               : [256x256 int32 array]</span>
+<span class="go">      * 25               : [256x256 int32 array]</span>
+<span class="go">      * 26               : [256x256 int32 array]</span>
+<span class="go">      * 27               : [256x256 int32 array]</span>
+<span class="go">      * 28               : [256x256 int32 array]</span>
+<span class="go">      * 29               : [256x256 int32 array]</span>
+<span class="go">      * 30               : [256x256 int32 array]</span>
+<span class="go">      * 31               : [256x256 int32 array]</span>
+<span class="go">      * 32               : [256x256 int32 array]</span>
+<span class="go">      * 33               : [256x256 int32 array]</span>
+<span class="go">      * 34               : [256x256 int32 array]</span>
+<span class="go">      * 35               : [256x256 int32 array]</span>
+<span class="go">      * 36               : [256x256 int32 array]</span>
+<span class="go">      * 37               : [256x256 int32 array]</span>
+<span class="go">      * 38               : [256x256 int32 array]</span>
+<span class="go">      * 39               : [256x256 int32 array]</span>
+<span class="go">      * 40               : [256x256 int32 array]</span>
+<span class="go">      * 41               : [256x256 int32 array]</span>
+<span class="go">      * 42               : [256x256 int32 array]</span>
+<span class="go">      * 43               : [256x256 int32 array]</span>
+<span class="go">      * 44               : [256x256 int32 array]</span>
+<span class="go">      * 45               : [256x256 int32 array]</span>
+<span class="go">      * 46               : [256x256 int32 array]</span>
+<span class="go">      * 47               : [256x256 int32 array]</span>
+<span class="go">      * 48               : [256x256 int32 array]</span>
+<span class="go">      * 49               : [256x256 int32 array]</span>
+<span class="go">      * 50               : [256x256 int32 array]</span>
+<span class="go">      * 51               : [256x256 int32 array]</span>
+<span class="go">      * 52               : [256x256 int32 array]</span>
+<span class="go">      * 53               : [256x256 int32 array]</span>
+<span class="go">      * 54               : [256x256 int32 array]</span>
+<span class="go">      * 55               : [256x256 int32 array]</span>
+<span class="go">      * 56               : [256x256 int32 array]</span>
+<span class="go">      * 57               : [256x256 int32 array]</span>
+<span class="go">      * 58               : [256x256 int32 array]</span>
+<span class="go">      * 59               : [256x256 int32 array]</span>
+<span class="go">      * 60               : [256x256 int32 array]</span>
+<span class="go">      * 61               : [256x256 int32 array]</span>
+<span class="go">      * 62               : [256x256 int32 array]</span>
+<span class="go">      * 63               : [256x256 int32 array]</span>
+<span class="go">      * 64               : [256x256 int32 array]</span>
+<span class="go">      * 65               : [256x256 int32 array]</span>
+<span class="go">      * 66               : [256x256 int32 array]</span>
+<span class="go">      * 67               : [256x256 int32 array]</span>
+<span class="go">      * 68               : [256x256 int32 array]</span>
+<span class="go">      * 69               : [256x256 int32 array]</span>
+<span class="go">      * 70               : [256x256 int32 array]</span>
+<span class="go">      * 71               : [256x256 int32 array]</span>
+<span class="go">      * 72               : [256x256 int32 array]</span>
+<span class="go">      * 73               : [256x256 int32 array]</span>
+<span class="go">      * 74               : [256x256 int32 array]</span>
+<span class="go">      * 75               : [256x256 int32 array]</span>
+<span class="go">      * 76               : [256x256 int32 array]</span>
+<span class="go">      * 77               : [256x256 int32 array]</span>
+<span class="go">      * 78               : [256x256 int32 array]</span>
+<span class="go">      * 79               : [256x256 int32 array]</span>
+<span class="go">    * weights            : dict(80)</span>
+<span class="go">      * 0                : [256x256 bool array]</span>
+<span class="go">      * 1                : [256x256 bool array]</span>
+<span class="go">      * 2                : [256x256 bool array]</span>
+<span class="go">      * 3                : [256x256 bool array]</span>
+<span class="go">      * 4                : [256x256 bool array]</span>
+<span class="go">      * 5                : [256x256 bool array]</span>
+<span class="go">      * 6                : [256x256 bool array]</span>
+<span class="go">      * 7                : [256x256 bool array]</span>
+<span class="go">      * 8                : [256x256 bool array]</span>
+<span class="go">      * 9                : [256x256 bool array]</span>
+<span class="go">      * 10               : [256x256 bool array]</span>
+<span class="go">      * 11               : [256x256 bool array]</span>
+<span class="go">      * 12               : [256x256 bool array]</span>
+<span class="go">      * 13               : [256x256 bool array]</span>
+<span class="go">      * 14               : [256x256 bool array]</span>
+<span class="go">      * 15               : [256x256 bool array]</span>
+<span class="go">      * 16               : [256x256 bool array]</span>
+<span class="go">      * 17               : [256x256 bool array]</span>
+<span class="go">      * 18               : [256x256 bool array]</span>
+<span class="go">      * 19               : [256x256 bool array]</span>
+<span class="go">      * 20               : [256x256 bool array]</span>
+<span class="go">      * 21               : [256x256 bool array]</span>
+<span class="go">      * 22               : [256x256 bool array]</span>
+<span class="go">      * 23               : [256x256 bool array]</span>
+<span class="go">      * 24               : [256x256 bool array]</span>
+<span class="go">      * 25               : [256x256 bool array]</span>
+<span class="go">      * 26               : [256x256 bool array]</span>
+<span class="go">      * 27               : [256x256 bool array]</span>
+<span class="go">      * 28               : [256x256 bool array]</span>
+<span class="go">      * 29               : [256x256 bool array]</span>
+<span class="go">      * 30               : [256x256 bool array]</span>
+<span class="go">      * 31               : [256x256 bool array]</span>
+<span class="go">      * 32               : [256x256 bool array]</span>
+<span class="go">      * 33               : [256x256 bool array]</span>
+<span class="go">      * 34               : [256x256 bool array]</span>
+<span class="go">      * 35               : [256x256 bool array]</span>
+<span class="go">      * 36               : [256x256 bool array]</span>
+<span class="go">      * 37               : [256x256 bool array]</span>
+<span class="go">      * 38               : [256x256 bool array]</span>
+<span class="go">      * 39               : [256x256 bool array]</span>
+<span class="go">      * 40               : [256x256 bool array]</span>
+<span class="go">      * 41               : [256x256 bool array]</span>
+<span class="go">      * 42               : [256x256 bool array]</span>
+<span class="go">      * 43               : [256x256 bool array]</span>
+<span class="go">      * 44               : [256x256 bool array]</span>
+<span class="go">      * 45               : [256x256 bool array]</span>
+<span class="go">      * 46               : [256x256 bool array]</span>
+<span class="go">      * 47               : [256x256 bool array]</span>
+<span class="go">      * 48               : [256x256 bool array]</span>
+<span class="go">      * 49               : [256x256 bool array]</span>
+<span class="go">      * 50               : [256x256 bool array]</span>
+<span class="go">      * 51               : [256x256 bool array]</span>
+<span class="go">      * 52               : [256x256 bool array]</span>
+<span class="go">      * 53               : [256x256 bool array]</span>
+<span class="go">      * 54               : [256x256 bool array]</span>
+<span class="go">      * 55               : [256x256 bool array]</span>
+<span class="go">      * 56               : [256x256 bool array]</span>
+<span class="go">      * 57               : [256x256 bool array]</span>
+<span class="go">      * 58               : [256x256 bool array]</span>
+<span class="go">      * 59               : [256x256 bool array]</span>
+<span class="go">      * 60               : [256x256 bool array]</span>
+<span class="go">      * 61               : [256x256 bool array]</span>
+<span class="go">      * 62               : [256x256 bool array]</span>
+<span class="go">      * 63               : [256x256 bool array]</span>
+<span class="go">      * 64               : [256x256 bool array]</span>
+<span class="go">      * 65               : [256x256 bool array]</span>
+<span class="go">      * 66               : [256x256 bool array]</span>
+<span class="go">      * 67               : [256x256 bool array]</span>
+<span class="go">      * 68               : [256x256 bool array]</span>
+<span class="go">      * 69               : [256x256 bool array]</span>
+<span class="go">      * 70               : [256x256 bool array]</span>
+<span class="go">      * 71               : [256x256 bool array]</span>
+<span class="go">      * 72               : [256x256 bool array]</span>
+<span class="go">      * 73               : [256x256 bool array]</span>
+<span class="go">      * 74               : [256x256 bool array]</span>
+<span class="go">      * 75               : [256x256 bool array]</span>
+<span class="go">      * 76               : [256x256 bool array]</span>
+<span class="go">      * 77               : [256x256 bool array]</span>
+<span class="go">      * 78               : [256x256 bool array]</span>
+<span class="go">      * 79               : [256x256 bool array]</span>
+<span class="go">    * positions          : [80x2 float64 array]</span>
 <span class="go">  * iterable             : list(80)</span>
-<span class="go">    * id3VFJNEMEQ0       : dict(4)</span>
+<span class="go">    * id3VMDSBIQNG       : dict(4)</span>
 <span class="go">      * index            : 0</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0. 0.]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VFJNEMCU0       : dict(4)</span>
+<span class="go">    * id3VMDK84LKG       : dict(4)</span>
 <span class="go">      * index            : 1</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.         0.00041562]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VFJNE7AIG       : dict(4)</span>
+<span class="go">    * id3VMDSBIA60       : dict(4)</span>
 <span class="go">      * index            : 2</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.00039528 0.00012844]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VFJNE7ANG       : dict(4)</span>
+<span class="go">    * id3VMDSBIA10       : dict(4)</span>
 <span class="go">      * index            : 3</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [ 0.0002443  -0.00033625]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VFJNE7980       : dict(4)</span>
+<span class="go">    * id3VMDSBIQ60       : dict(4)</span>
 <span class="go">      * index            : 4</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [-0.0002443  -0.00033625]]</span>
@@ -1044,7 +1176,7 @@ in parantheses.</p>
 
 
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">NPS</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">80</span><span class="p">),</span> <span class="n">noheader</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-<span class="go">* id3VFJNE7930           : dict(2)</span>
+<span class="go">* id3VMDSBHP0G           : dict(3)</span>
 <span class="go">  * common               : ptypy.utils.parameters.Param(8)</span>
 <span class="go">    * version            : 0.1</span>
 <span class="go">    * num_frames         : 116</span>
@@ -1054,28 +1186,119 @@ in parantheses.</p>
 <span class="go">    * energy             : 7.2</span>
 <span class="go">    * center             : [array = [128. 128.]]</span>
 <span class="go">    * distance           : 7.19</span>
+<span class="go">  * chunk                : ptypy.utils.parameters.Param(6)</span>
+<span class="go">    * indices            : list(36)</span>
+<span class="go">      * id44VE7JG        : 80</span>
+<span class="go">      * id44VE7KG        : 81</span>
+<span class="go">      * id44VE7LG        : 82</span>
+<span class="go">      * id44VE7MG        : 83</span>
+<span class="go">      * id44VE7NG        : 84</span>
+<span class="go">      * ...              : ....</span>
+<span class="go">    * indices_node       : list(36)</span>
+<span class="go">      * id44VE7JG        : 80</span>
+<span class="go">      * id44VE7KG        : 81</span>
+<span class="go">      * id44VE7LG        : 82</span>
+<span class="go">      * id44VE7MG        : 83</span>
+<span class="go">      * id44VE7NG        : 84</span>
+<span class="go">      * ...              : ....</span>
+<span class="go">    * num                : 1</span>
+<span class="go">    * data               : dict(36)</span>
+<span class="go">      * 80               : [256x256 int32 array]</span>
+<span class="go">      * 81               : [256x256 int32 array]</span>
+<span class="go">      * 82               : [256x256 int32 array]</span>
+<span class="go">      * 83               : [256x256 int32 array]</span>
+<span class="go">      * 84               : [256x256 int32 array]</span>
+<span class="go">      * 85               : [256x256 int32 array]</span>
+<span class="go">      * 86               : [256x256 int32 array]</span>
+<span class="go">      * 87               : [256x256 int32 array]</span>
+<span class="go">      * 88               : [256x256 int32 array]</span>
+<span class="go">      * 89               : [256x256 int32 array]</span>
+<span class="go">      * 90               : [256x256 int32 array]</span>
+<span class="go">      * 91               : [256x256 int32 array]</span>
+<span class="go">      * 92               : [256x256 int32 array]</span>
+<span class="go">      * 93               : [256x256 int32 array]</span>
+<span class="go">      * 94               : [256x256 int32 array]</span>
+<span class="go">      * 95               : [256x256 int32 array]</span>
+<span class="go">      * 96               : [256x256 int32 array]</span>
+<span class="go">      * 97               : [256x256 int32 array]</span>
+<span class="go">      * 98               : [256x256 int32 array]</span>
+<span class="go">      * 99               : [256x256 int32 array]</span>
+<span class="go">      * 100              : [256x256 int32 array]</span>
+<span class="go">      * 101              : [256x256 int32 array]</span>
+<span class="go">      * 102              : [256x256 int32 array]</span>
+<span class="go">      * 103              : [256x256 int32 array]</span>
+<span class="go">      * 104              : [256x256 int32 array]</span>
+<span class="go">      * 105              : [256x256 int32 array]</span>
+<span class="go">      * 106              : [256x256 int32 array]</span>
+<span class="go">      * 107              : [256x256 int32 array]</span>
+<span class="go">      * 108              : [256x256 int32 array]</span>
+<span class="go">      * 109              : [256x256 int32 array]</span>
+<span class="go">      * 110              : [256x256 int32 array]</span>
+<span class="go">      * 111              : [256x256 int32 array]</span>
+<span class="go">      * 112              : [256x256 int32 array]</span>
+<span class="go">      * 113              : [256x256 int32 array]</span>
+<span class="go">      * 114              : [256x256 int32 array]</span>
+<span class="go">      * 115              : [256x256 int32 array]</span>
+<span class="go">    * weights            : dict(36)</span>
+<span class="go">      * 80               : [256x256 bool array]</span>
+<span class="go">      * 81               : [256x256 bool array]</span>
+<span class="go">      * 82               : [256x256 bool array]</span>
+<span class="go">      * 83               : [256x256 bool array]</span>
+<span class="go">      * 84               : [256x256 bool array]</span>
+<span class="go">      * 85               : [256x256 bool array]</span>
+<span class="go">      * 86               : [256x256 bool array]</span>
+<span class="go">      * 87               : [256x256 bool array]</span>
+<span class="go">      * 88               : [256x256 bool array]</span>
+<span class="go">      * 89               : [256x256 bool array]</span>
+<span class="go">      * 90               : [256x256 bool array]</span>
+<span class="go">      * 91               : [256x256 bool array]</span>
+<span class="go">      * 92               : [256x256 bool array]</span>
+<span class="go">      * 93               : [256x256 bool array]</span>
+<span class="go">      * 94               : [256x256 bool array]</span>
+<span class="go">      * 95               : [256x256 bool array]</span>
+<span class="go">      * 96               : [256x256 bool array]</span>
+<span class="go">      * 97               : [256x256 bool array]</span>
+<span class="go">      * 98               : [256x256 bool array]</span>
+<span class="go">      * 99               : [256x256 bool array]</span>
+<span class="go">      * 100              : [256x256 bool array]</span>
+<span class="go">      * 101              : [256x256 bool array]</span>
+<span class="go">      * 102              : [256x256 bool array]</span>
+<span class="go">      * 103              : [256x256 bool array]</span>
+<span class="go">      * 104              : [256x256 bool array]</span>
+<span class="go">      * 105              : [256x256 bool array]</span>
+<span class="go">      * 106              : [256x256 bool array]</span>
+<span class="go">      * 107              : [256x256 bool array]</span>
+<span class="go">      * 108              : [256x256 bool array]</span>
+<span class="go">      * 109              : [256x256 bool array]</span>
+<span class="go">      * 110              : [256x256 bool array]</span>
+<span class="go">      * 111              : [256x256 bool array]</span>
+<span class="go">      * 112              : [256x256 bool array]</span>
+<span class="go">      * 113              : [256x256 bool array]</span>
+<span class="go">      * 114              : [256x256 bool array]</span>
+<span class="go">      * 115              : [256x256 bool array]</span>
+<span class="go">    * positions          : [36x2 float64 array]</span>
 <span class="go">  * iterable             : list(36)</span>
-<span class="go">    * id3VFJNE7D0G       : dict(4)</span>
+<span class="go">    * id3VMDSBHR6G       : dict(4)</span>
 <span class="go">      * index            : 80</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.0018532 0.0016686]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VFJNF78RG       : dict(4)</span>
+<span class="go">    * id3VMDK8128G       : dict(4)</span>
 <span class="go">      * index            : 81</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.0021597 0.0012469]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VFJNE7D80       : dict(4)</span>
+<span class="go">    * id3VMDSBHQQ0       : dict(4)</span>
 <span class="go">      * index            : 82</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.0023717  0.00077061]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VFJNF61PG       : dict(4)</span>
+<span class="go">    * id3VMDSBIQ60       : dict(4)</span>
 <span class="go">      * index            : 83</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.0024801  0.00026067]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VFJNE7DFG       : dict(4)</span>
+<span class="go">    * id3VMDSBHPKG       : dict(4)</span>
 <span class="go">      * index            : 84</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [ 0.0024801  -0.00026067]]</span>
@@ -1103,40 +1326,40 @@ input paramaters.</p>
 </div>
 <p>We can analyse the saved <code class="docutils literal notranslate"><span class="pre">npy.ptyd</span></code> with
 <code class="xref py py-func docutils literal notranslate"><span class="pre">h5info()</span></code></p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.io</span> <span class="k">import</span> <span class="n">h5info</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.io</span> <span class="kn">import</span> <span class="n">h5info</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">h5info</span><span class="p">(</span><span class="n">NPS</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">dfile</span><span class="p">))</span>
-<span class="go">File created : Thu Oct 31 21:21:20 2019</span>
+<span class="go">File created : Wed May  4 09:26:59 2022</span>
 <span class="go"> * chunks [dict 6]:</span>
 <span class="go">     * 0 [dict 4]:</span>
 <span class="go">         * data [20x256x256 int32 array]</span>
 <span class="go">         * indices [list = [0.000000, 1.000000, 2.000000, 3.000000,  ...]]</span>
 <span class="go">         * positions [20x2 float64 array]</span>
-<span class="go">         * weights [array = []]</span>
+<span class="go">         * weights [20x256x256 bool array]</span>
 <span class="go">     * 1 [dict 4]:</span>
 <span class="go">         * data [20x256x256 int32 array]</span>
 <span class="go">         * indices [list = [20.000000, 21.000000, 22.000000, 23.000000,  ...]]</span>
 <span class="go">         * positions [20x2 float64 array]</span>
-<span class="go">         * weights [array = []]</span>
+<span class="go">         * weights [20x256x256 bool array]</span>
 <span class="go">     * 2 [dict 4]:</span>
 <span class="go">         * data [20x256x256 int32 array]</span>
 <span class="go">         * indices [list = [40.000000, 41.000000, 42.000000, 43.000000,  ...]]</span>
 <span class="go">         * positions [20x2 float64 array]</span>
-<span class="go">         * weights [array = []]</span>
+<span class="go">         * weights [20x256x256 bool array]</span>
 <span class="go">     * 3 [dict 4]:</span>
 <span class="go">         * data [20x256x256 int32 array]</span>
 <span class="go">         * indices [list = [60.000000, 61.000000, 62.000000, 63.000000,  ...]]</span>
 <span class="go">         * positions [20x2 float64 array]</span>
-<span class="go">         * weights [array = []]</span>
+<span class="go">         * weights [20x256x256 bool array]</span>
 <span class="go">     * 4 [dict 4]:</span>
 <span class="go">         * data [20x256x256 int32 array]</span>
 <span class="go">         * indices [list = [80.000000, 81.000000, 82.000000, 83.000000,  ...]]</span>
 <span class="go">         * positions [20x2 float64 array]</span>
-<span class="go">         * weights [array = []]</span>
+<span class="go">         * weights [20x256x256 bool array]</span>
 <span class="go">     * 5 [dict 4]:</span>
 <span class="go">         * data [16x256x256 int32 array]</span>
 <span class="go">         * indices [list = [100.000000, 101.000000, 102.000000, 103.000000,  ...]]</span>
 <span class="go">         * positions [16x2 float64 array]</span>
-<span class="go">         * weights [array = []]</span>
+<span class="go">         * weights [16x256x256 bool array]</span>
 <span class="go"> * info [dict 23]:</span>
 <span class="go">     * add_poisson_noise [scalar = False]</span>
 <span class="go">     * auto_center [scalar = False]</span>
@@ -1174,8 +1397,8 @@ input paramaters.</p>
 <span class="go">None</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="listing-the-new-subclass">
+</section>
+<section id="listing-the-new-subclass">
 <h3>Listing the new subclass<a class="headerlink" href="#listing-the-new-subclass" title="Permalink to this headline">¶</a></h3>
 <p>In order to make the subclass available in your local PtyPy,
 navigate to <code class="docutils literal notranslate"><span class="pre">[ptypy_root]/ptypy/experiment</span></code> and paste the content
@@ -1184,7 +1407,7 @@ into a new file <code class="docutils literal notranslate"><span class="pre">use
 </pre></div>
 </div>
 <p>Append the following lines into <code class="docutils literal notranslate"><span class="pre">[ptypy_root]/ptypy/experiment.__init__.py</span></code>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">user</span> <span class="k">import</span> <span class="n">NumpyScan</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">user</span> <span class="kn">import</span> <span class="n">NumpyScan</span>
 <span class="n">PtyScanTypes</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;numpy&#39;</span><span class="p">:</span><span class="n">NumpyScan</span><span class="p">})</span>
 </pre></div>
 </div>
@@ -1199,12 +1422,67 @@ should be passed via the dict <code class="xref py py-data docutils literal notr
 <dd><p><strong>H</strong>ierarchical <strong>D</strong>ata <strong>F</strong>ormat, <a class="reference external" href="http://www.hdfgroup.org/HDF5/">http://www.hdfgroup.org/HDF5/</a></p>
 </dd>
 </dl>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
+            <div class="clearer"></div>
           </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../content.html">
+              <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
+            </a></p>
+<h3><a href="../content.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started with Ptypy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concept.html">Concepts and Classes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Data management</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-ptyscan-class">The PtyScan class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage-scenarios">Usage scenarios</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ptyd-file-format">Ptyd file format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-subclassing-ptyscan">Tutorial : Subclassing PtyScan</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#writing-a-subclass">Writing a subclass</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loading-the-data">Loading the data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#listing-the-new-subclass">Listing the new subclass</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameter tree structure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ptypy.html">ptypy package</a></li>
+</ul>
+
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="concept.html"
+                          title="previous chapter">Concepts and Classes</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="parameters.html"
+                          title="next chapter">Parameter tree structure</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/rst/data_management.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -1224,12 +1502,13 @@ should be passed via the dict <code class="xref py py-data docutils literal notr
         <li class="right" >
           <a href="concept.html" title="Concepts and Classes"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Data management</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
     </div>
   </body>
 </html>

@@ -372,11 +372,6 @@ Again, the imports first.
 
    >>> import numpy as np
    >>> from ptypy.core.data import PtyScan
-   Message Passaging for Python (mpi4py) not found.
-       CPU-parallelization disabled.
-       Install python-mpi4py via the package repositories or with `pip install --user mpi4py`
-   Could not import experiment cSAXSScan from .cSAXS, Reason: No module named 'fabio'
-   
    >>> from ptypy import utils as u
 
 For this tutorial we assume that the data and meta information is
@@ -562,6 +557,7 @@ registered are those of the parent class, `PtyScan`:
    type = int
    doc = 
    userlevel = 2
+   lowlim = 1
    
    [positions_theory]
    default = None
@@ -654,7 +650,7 @@ generates from it a class variable called `DEFAULT`, which stores all defaults:
 ::
 
    >>> print(u.verbose.report(NumpyScan.DEFAULT, noheader=True))
-   * id3VFJNGLJTG           : ptypy.utils.parameters.Param(20)
+   * id3VMDSB2BHG           : ptypy.utils.parameters.Param(20)
      * name                 : PtyScan
      * dfile                : None
      * chunk_format         : .chunk%02d
@@ -1004,7 +1000,7 @@ in parantheses.
 ::
 
    >>> print(u.verbose.report(NPS.auto(80), noheader=True))
-   * id3VFJNE7930           : dict(2)
+   * id3VMDSBIOU0           : dict(3)
      * common               : ptypy.utils.parameters.Param(8)
        * version            : 0.1
        * num_frames         : 116
@@ -1014,28 +1010,207 @@ in parantheses.
        * energy             : 7.2
        * center             : [array = [128. 128.]]
        * distance           : 7.19
+     * chunk                : ptypy.utils.parameters.Param(6)
+       * indices            : list(80)
+         * id44VE53G        : 0
+         * id44VE54G        : 1
+         * id44VE55G        : 2
+         * id44VE56G        : 3
+         * id44VE57G        : 4
+         * ...              : ....
+       * indices_node       : list(80)
+         * id44VE53G        : 0
+         * id44VE54G        : 1
+         * id44VE55G        : 2
+         * id44VE56G        : 3
+         * id44VE57G        : 4
+         * ...              : ....
+       * num                : 0
+       * data               : dict(80)
+         * 0                : [256x256 int32 array]
+         * 1                : [256x256 int32 array]
+         * 2                : [256x256 int32 array]
+         * 3                : [256x256 int32 array]
+         * 4                : [256x256 int32 array]
+         * 5                : [256x256 int32 array]
+         * 6                : [256x256 int32 array]
+         * 7                : [256x256 int32 array]
+         * 8                : [256x256 int32 array]
+         * 9                : [256x256 int32 array]
+         * 10               : [256x256 int32 array]
+         * 11               : [256x256 int32 array]
+         * 12               : [256x256 int32 array]
+         * 13               : [256x256 int32 array]
+         * 14               : [256x256 int32 array]
+         * 15               : [256x256 int32 array]
+         * 16               : [256x256 int32 array]
+         * 17               : [256x256 int32 array]
+         * 18               : [256x256 int32 array]
+         * 19               : [256x256 int32 array]
+         * 20               : [256x256 int32 array]
+         * 21               : [256x256 int32 array]
+         * 22               : [256x256 int32 array]
+         * 23               : [256x256 int32 array]
+         * 24               : [256x256 int32 array]
+         * 25               : [256x256 int32 array]
+         * 26               : [256x256 int32 array]
+         * 27               : [256x256 int32 array]
+         * 28               : [256x256 int32 array]
+         * 29               : [256x256 int32 array]
+         * 30               : [256x256 int32 array]
+         * 31               : [256x256 int32 array]
+         * 32               : [256x256 int32 array]
+         * 33               : [256x256 int32 array]
+         * 34               : [256x256 int32 array]
+         * 35               : [256x256 int32 array]
+         * 36               : [256x256 int32 array]
+         * 37               : [256x256 int32 array]
+         * 38               : [256x256 int32 array]
+         * 39               : [256x256 int32 array]
+         * 40               : [256x256 int32 array]
+         * 41               : [256x256 int32 array]
+         * 42               : [256x256 int32 array]
+         * 43               : [256x256 int32 array]
+         * 44               : [256x256 int32 array]
+         * 45               : [256x256 int32 array]
+         * 46               : [256x256 int32 array]
+         * 47               : [256x256 int32 array]
+         * 48               : [256x256 int32 array]
+         * 49               : [256x256 int32 array]
+         * 50               : [256x256 int32 array]
+         * 51               : [256x256 int32 array]
+         * 52               : [256x256 int32 array]
+         * 53               : [256x256 int32 array]
+         * 54               : [256x256 int32 array]
+         * 55               : [256x256 int32 array]
+         * 56               : [256x256 int32 array]
+         * 57               : [256x256 int32 array]
+         * 58               : [256x256 int32 array]
+         * 59               : [256x256 int32 array]
+         * 60               : [256x256 int32 array]
+         * 61               : [256x256 int32 array]
+         * 62               : [256x256 int32 array]
+         * 63               : [256x256 int32 array]
+         * 64               : [256x256 int32 array]
+         * 65               : [256x256 int32 array]
+         * 66               : [256x256 int32 array]
+         * 67               : [256x256 int32 array]
+         * 68               : [256x256 int32 array]
+         * 69               : [256x256 int32 array]
+         * 70               : [256x256 int32 array]
+         * 71               : [256x256 int32 array]
+         * 72               : [256x256 int32 array]
+         * 73               : [256x256 int32 array]
+         * 74               : [256x256 int32 array]
+         * 75               : [256x256 int32 array]
+         * 76               : [256x256 int32 array]
+         * 77               : [256x256 int32 array]
+         * 78               : [256x256 int32 array]
+         * 79               : [256x256 int32 array]
+       * weights            : dict(80)
+         * 0                : [256x256 bool array]
+         * 1                : [256x256 bool array]
+         * 2                : [256x256 bool array]
+         * 3                : [256x256 bool array]
+         * 4                : [256x256 bool array]
+         * 5                : [256x256 bool array]
+         * 6                : [256x256 bool array]
+         * 7                : [256x256 bool array]
+         * 8                : [256x256 bool array]
+         * 9                : [256x256 bool array]
+         * 10               : [256x256 bool array]
+         * 11               : [256x256 bool array]
+         * 12               : [256x256 bool array]
+         * 13               : [256x256 bool array]
+         * 14               : [256x256 bool array]
+         * 15               : [256x256 bool array]
+         * 16               : [256x256 bool array]
+         * 17               : [256x256 bool array]
+         * 18               : [256x256 bool array]
+         * 19               : [256x256 bool array]
+         * 20               : [256x256 bool array]
+         * 21               : [256x256 bool array]
+         * 22               : [256x256 bool array]
+         * 23               : [256x256 bool array]
+         * 24               : [256x256 bool array]
+         * 25               : [256x256 bool array]
+         * 26               : [256x256 bool array]
+         * 27               : [256x256 bool array]
+         * 28               : [256x256 bool array]
+         * 29               : [256x256 bool array]
+         * 30               : [256x256 bool array]
+         * 31               : [256x256 bool array]
+         * 32               : [256x256 bool array]
+         * 33               : [256x256 bool array]
+         * 34               : [256x256 bool array]
+         * 35               : [256x256 bool array]
+         * 36               : [256x256 bool array]
+         * 37               : [256x256 bool array]
+         * 38               : [256x256 bool array]
+         * 39               : [256x256 bool array]
+         * 40               : [256x256 bool array]
+         * 41               : [256x256 bool array]
+         * 42               : [256x256 bool array]
+         * 43               : [256x256 bool array]
+         * 44               : [256x256 bool array]
+         * 45               : [256x256 bool array]
+         * 46               : [256x256 bool array]
+         * 47               : [256x256 bool array]
+         * 48               : [256x256 bool array]
+         * 49               : [256x256 bool array]
+         * 50               : [256x256 bool array]
+         * 51               : [256x256 bool array]
+         * 52               : [256x256 bool array]
+         * 53               : [256x256 bool array]
+         * 54               : [256x256 bool array]
+         * 55               : [256x256 bool array]
+         * 56               : [256x256 bool array]
+         * 57               : [256x256 bool array]
+         * 58               : [256x256 bool array]
+         * 59               : [256x256 bool array]
+         * 60               : [256x256 bool array]
+         * 61               : [256x256 bool array]
+         * 62               : [256x256 bool array]
+         * 63               : [256x256 bool array]
+         * 64               : [256x256 bool array]
+         * 65               : [256x256 bool array]
+         * 66               : [256x256 bool array]
+         * 67               : [256x256 bool array]
+         * 68               : [256x256 bool array]
+         * 69               : [256x256 bool array]
+         * 70               : [256x256 bool array]
+         * 71               : [256x256 bool array]
+         * 72               : [256x256 bool array]
+         * 73               : [256x256 bool array]
+         * 74               : [256x256 bool array]
+         * 75               : [256x256 bool array]
+         * 76               : [256x256 bool array]
+         * 77               : [256x256 bool array]
+         * 78               : [256x256 bool array]
+         * 79               : [256x256 bool array]
+       * positions          : [80x2 float64 array]
      * iterable             : list(80)
-       * id3VFJNEMEQ0       : dict(4)
+       * id3VMDSBIQNG       : dict(4)
          * index            : 0
          * data             : [256x256 int32 array]
          * position         : [array = [0. 0.]]
          * mask             : [256x256 bool array]
-       * id3VFJNEMCU0       : dict(4)
+       * id3VMDK84LKG       : dict(4)
          * index            : 1
          * data             : [256x256 int32 array]
          * position         : [array = [0.         0.00041562]]
          * mask             : [256x256 bool array]
-       * id3VFJNE7AIG       : dict(4)
+       * id3VMDSBIA60       : dict(4)
          * index            : 2
          * data             : [256x256 int32 array]
          * position         : [array = [0.00039528 0.00012844]]
          * mask             : [256x256 bool array]
-       * id3VFJNE7ANG       : dict(4)
+       * id3VMDSBIA10       : dict(4)
          * index            : 3
          * data             : [256x256 int32 array]
          * position         : [array = [ 0.0002443  -0.00033625]]
          * mask             : [256x256 bool array]
-       * id3VFJNE7980       : dict(4)
+       * id3VMDSBIQ60       : dict(4)
          * index            : 4
          * data             : [256x256 int32 array]
          * position         : [array = [-0.0002443  -0.00033625]]
@@ -1044,7 +1219,7 @@ in parantheses.
    
    
    >>> print(u.verbose.report(NPS.auto(80), noheader=True))
-   * id3VFJNE7930           : dict(2)
+   * id3VMDSBHP0G           : dict(3)
      * common               : ptypy.utils.parameters.Param(8)
        * version            : 0.1
        * num_frames         : 116
@@ -1054,28 +1229,119 @@ in parantheses.
        * energy             : 7.2
        * center             : [array = [128. 128.]]
        * distance           : 7.19
+     * chunk                : ptypy.utils.parameters.Param(6)
+       * indices            : list(36)
+         * id44VE7JG        : 80
+         * id44VE7KG        : 81
+         * id44VE7LG        : 82
+         * id44VE7MG        : 83
+         * id44VE7NG        : 84
+         * ...              : ....
+       * indices_node       : list(36)
+         * id44VE7JG        : 80
+         * id44VE7KG        : 81
+         * id44VE7LG        : 82
+         * id44VE7MG        : 83
+         * id44VE7NG        : 84
+         * ...              : ....
+       * num                : 1
+       * data               : dict(36)
+         * 80               : [256x256 int32 array]
+         * 81               : [256x256 int32 array]
+         * 82               : [256x256 int32 array]
+         * 83               : [256x256 int32 array]
+         * 84               : [256x256 int32 array]
+         * 85               : [256x256 int32 array]
+         * 86               : [256x256 int32 array]
+         * 87               : [256x256 int32 array]
+         * 88               : [256x256 int32 array]
+         * 89               : [256x256 int32 array]
+         * 90               : [256x256 int32 array]
+         * 91               : [256x256 int32 array]
+         * 92               : [256x256 int32 array]
+         * 93               : [256x256 int32 array]
+         * 94               : [256x256 int32 array]
+         * 95               : [256x256 int32 array]
+         * 96               : [256x256 int32 array]
+         * 97               : [256x256 int32 array]
+         * 98               : [256x256 int32 array]
+         * 99               : [256x256 int32 array]
+         * 100              : [256x256 int32 array]
+         * 101              : [256x256 int32 array]
+         * 102              : [256x256 int32 array]
+         * 103              : [256x256 int32 array]
+         * 104              : [256x256 int32 array]
+         * 105              : [256x256 int32 array]
+         * 106              : [256x256 int32 array]
+         * 107              : [256x256 int32 array]
+         * 108              : [256x256 int32 array]
+         * 109              : [256x256 int32 array]
+         * 110              : [256x256 int32 array]
+         * 111              : [256x256 int32 array]
+         * 112              : [256x256 int32 array]
+         * 113              : [256x256 int32 array]
+         * 114              : [256x256 int32 array]
+         * 115              : [256x256 int32 array]
+       * weights            : dict(36)
+         * 80               : [256x256 bool array]
+         * 81               : [256x256 bool array]
+         * 82               : [256x256 bool array]
+         * 83               : [256x256 bool array]
+         * 84               : [256x256 bool array]
+         * 85               : [256x256 bool array]
+         * 86               : [256x256 bool array]
+         * 87               : [256x256 bool array]
+         * 88               : [256x256 bool array]
+         * 89               : [256x256 bool array]
+         * 90               : [256x256 bool array]
+         * 91               : [256x256 bool array]
+         * 92               : [256x256 bool array]
+         * 93               : [256x256 bool array]
+         * 94               : [256x256 bool array]
+         * 95               : [256x256 bool array]
+         * 96               : [256x256 bool array]
+         * 97               : [256x256 bool array]
+         * 98               : [256x256 bool array]
+         * 99               : [256x256 bool array]
+         * 100              : [256x256 bool array]
+         * 101              : [256x256 bool array]
+         * 102              : [256x256 bool array]
+         * 103              : [256x256 bool array]
+         * 104              : [256x256 bool array]
+         * 105              : [256x256 bool array]
+         * 106              : [256x256 bool array]
+         * 107              : [256x256 bool array]
+         * 108              : [256x256 bool array]
+         * 109              : [256x256 bool array]
+         * 110              : [256x256 bool array]
+         * 111              : [256x256 bool array]
+         * 112              : [256x256 bool array]
+         * 113              : [256x256 bool array]
+         * 114              : [256x256 bool array]
+         * 115              : [256x256 bool array]
+       * positions          : [36x2 float64 array]
      * iterable             : list(36)
-       * id3VFJNE7D0G       : dict(4)
+       * id3VMDSBHR6G       : dict(4)
          * index            : 80
          * data             : [256x256 int32 array]
          * position         : [array = [0.0018532 0.0016686]]
          * mask             : [256x256 bool array]
-       * id3VFJNF78RG       : dict(4)
+       * id3VMDK8128G       : dict(4)
          * index            : 81
          * data             : [256x256 int32 array]
          * position         : [array = [0.0021597 0.0012469]]
          * mask             : [256x256 bool array]
-       * id3VFJNE7D80       : dict(4)
+       * id3VMDSBHQQ0       : dict(4)
          * index            : 82
          * data             : [256x256 int32 array]
          * position         : [array = [0.0023717  0.00077061]]
          * mask             : [256x256 bool array]
-       * id3VFJNF61PG       : dict(4)
+       * id3VMDSBIQ60       : dict(4)
          * index            : 83
          * data             : [256x256 int32 array]
          * position         : [array = [0.0024801  0.00026067]]
          * mask             : [256x256 bool array]
-       * id3VFJNE7DFG       : dict(4)
+       * id3VMDSBHPKG       : dict(4)
          * index            : 84
          * data             : [256x256 int32 array]
          * position         : [array = [ 0.0024801  -0.00026067]]
@@ -1113,38 +1379,38 @@ We can analyse the saved ``npy.ptyd`` with
 
    >>> from ptypy.io import h5info
    >>> print(h5info(NPS.info.dfile))
-   File created : Thu Oct 31 21:21:20 2019
+   File created : Wed May  4 09:26:59 2022
     * chunks [dict 6]:
         * 0 [dict 4]:
             * data [20x256x256 int32 array]
             * indices [list = [0.000000, 1.000000, 2.000000, 3.000000,  ...]]
             * positions [20x2 float64 array]
-            * weights [array = []]
+            * weights [20x256x256 bool array]
         * 1 [dict 4]:
             * data [20x256x256 int32 array]
             * indices [list = [20.000000, 21.000000, 22.000000, 23.000000,  ...]]
             * positions [20x2 float64 array]
-            * weights [array = []]
+            * weights [20x256x256 bool array]
         * 2 [dict 4]:
             * data [20x256x256 int32 array]
             * indices [list = [40.000000, 41.000000, 42.000000, 43.000000,  ...]]
             * positions [20x2 float64 array]
-            * weights [array = []]
+            * weights [20x256x256 bool array]
         * 3 [dict 4]:
             * data [20x256x256 int32 array]
             * indices [list = [60.000000, 61.000000, 62.000000, 63.000000,  ...]]
             * positions [20x2 float64 array]
-            * weights [array = []]
+            * weights [20x256x256 bool array]
         * 4 [dict 4]:
             * data [20x256x256 int32 array]
             * indices [list = [80.000000, 81.000000, 82.000000, 83.000000,  ...]]
             * positions [20x2 float64 array]
-            * weights [array = []]
+            * weights [20x256x256 bool array]
         * 5 [dict 4]:
             * data [16x256x256 int32 array]
             * indices [list = [100.000000, 101.000000, 102.000000, 103.000000,  ...]]
             * positions [16x2 float64 array]
-            * weights [array = []]
+            * weights [16x256x256 bool array]
     * info [dict 23]:
         * add_poisson_noise [scalar = False]
         * auto_center [scalar = False]

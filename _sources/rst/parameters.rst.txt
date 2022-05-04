@@ -3,7 +3,12 @@
 ************************
 Parameter tree structure
 ************************
-
+ 
+.. note::
+   This section needs to be reworked to account for the
+   recursive nature for |ptypy|_'s parameter tree. 
+   Please use the examples in the templates folder to 
+   craft your own scripts.
 
 io
 ==
@@ -259,7 +264,7 @@ scandata.PtyScan
 
    
 
-   *default* = ``1``
+   *default* = ``1 (>1)``
 
 .. py:data:: scandata.PtyScan.positions_theory (ndarray)
 
@@ -460,7 +465,7 @@ scandata.PtydScan
 
    
 
-   *default* = ``1``
+   *default* = ``1 (>1)``
 
 .. py:data:: scandata.PtydScan.positions_theory (ndarray)
 
@@ -668,7 +673,7 @@ scandata.MoonFlowerScan
 
    
 
-   *default* = ``1``
+   *default* = ``1 (>1)``
 
 .. py:data:: scandata.MoonFlowerScan.positions_theory (ndarray)
 
@@ -759,7 +764,7 @@ scandata.MoonFlowerScan
 
    
 
-   *default* = ``False``
+   *default* = ``True``
 
 .. py:data:: scandata.MoonFlowerScan.density (float)
 
@@ -792,6 +797,14 @@ scandata.MoonFlowerScan
    
 
    *default* = ``0.0``
+
+.. py:data:: scandata.MoonFlowerScan.block_wait_count (int)
+
+   Signals a WAIT to the model after this many blocks.
+
+   
+
+   *default* = ``0``
 
 
 scandata.QuickScan
@@ -899,7 +912,7 @@ scandata.QuickScan
 
    
 
-   *default* = ``1``
+   *default* = ``1 (>1)``
 
 .. py:data:: scandata.QuickScan.positions_theory (ndarray)
 
@@ -1213,7 +1226,7 @@ scandata.SimScan
 
    *default* = ``'\\*.ptyr'``
 
-.. py:data:: scandata.SimScan.sample (Param)
+.. py:data:: scandata.SimScan.sample (Param, str)
 
    
 
@@ -1544,7 +1557,7 @@ scandata.SimScan
 
    
 
-   *default* = ``1``
+   *default* = ``1 (>1)``
 
 .. py:data:: scandata.SimScan.positions_theory (ndarray)
 
@@ -1711,3918 +1724,6 @@ scandata.SimScan
    *default* = ``'farfield'``
 
 
-scandata.Hdf5Loader
--------------------
-
-.. py:data:: scandata.Hdf5Loader (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Hdf5Loader.name (str)
-
-   
-
-   
-
-   *default* = ``'Hdf5Loader'``
-
-.. py:data:: scandata.Hdf5Loader.dfile (str)
-
-   File path where prepared data will be saved in the ``ptyd`` format.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.chunk_format (str)
-
-   Appendix to saved files if save == 'link'
-
-   
-
-   *default* = ``'.chunk%02d'``
-
-.. py:data:: scandata.Hdf5Loader.save (str)
-
-   Saving mode
-
-   Mode to use to save data to file.
-   
-   
-   - ``None``: No saving
-   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-   - ``'append'``: appends each chunk in master \*.ptyd file
-   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-   
-   
-   in the path given by the link. Links file paths are relative to master file.
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.auto_center (bool)
-
-   Determine if center in data is calculated automatically
-
-   
-   - ``False``, no automatic centering
-   - ``None``, only if :py:data:`center` is ``None``
-   - ``True``, it will be enforced
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.load_parallel (str)
-
-   Determines what will be loaded in parallel
-
-   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
-
-   *default* = ``'data'``
-
-.. py:data:: scandata.Hdf5Loader.rebin (int)
-
-   Rebinning factor
-
-   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-
-   *default* = ``None (>1, <8)``
-
-.. py:data:: scandata.Hdf5Loader.orientation (int, tuple, list)
-
-   Data frame orientation
-
-   Choose
-   
-   
-   - ``None`` or ``0``: correct orientation
-   - ``1``: invert columns (numpy.flip_lr)
-   - ``2``: invert rows  (numpy.flip_ud)
-   - ``3``: invert columns, invert rows
-   - ``4``: transpose (numpy.transpose)
-   - ``4+i``: tranpose + other operations from above
-   
-   
-   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-   do_flipud, do_fliplr)``
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.min_frames (int)
-
-   Minimum number of frames loaded by each node
-
-   
-
-   *default* = ``1``
-
-.. py:data:: scandata.Hdf5Loader.positions_theory (ndarray)
-
-   Theoretical positions for this scan
-
-   If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
-   preparation is called from Ptycho instance, the calculated positions from the
-   :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.num_frames (int)
-
-   Maximum number of frames to be prepared
-
-   If `positions_theory` are provided, num_frames will be ovverriden with the number of
-   positions available
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.label (str)
-
-   The scan label
-
-   Unique string identifying the scan
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.experimentID (str)
-
-   Name of the experiment
-
-   If None, a default value will be provided by the recipe. **unused**
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.version (float)
-
-   TODO: Explain this and decide if it is a user parameter.
-
-   
-
-   *default* = ``0.1``
-
-.. py:data:: scandata.Hdf5Loader.shape (int, tuple)
-
-   Shape of the region of interest cropped from the raw data.
-
-   Cropping dimension of the diffraction frame
-   Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.center (list, tuple, str)
-
-   Center (pixel) of the optical axes in raw data
-
-   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-
-   *default* = ``'fftshift'``
-
-.. py:data:: scandata.Hdf5Loader.psize (float, tuple)
-
-   Detector pixel size
-
-   Dimensions of the detector pixels (in meters)
-
-   *default* = ``0.000172 (>0.0)``
-
-.. py:data:: scandata.Hdf5Loader.distance (float)
-
-   Sample to detector distance
-
-   In meters.
-
-   *default* = ``7.19 (>0.0)``
-
-.. py:data:: scandata.Hdf5Loader.energy (float)
-
-   Photon energy of the incident radiation in keV
-
-   
-
-   *default* = ``7.2 (>0.0)``
-
-.. py:data:: scandata.Hdf5Loader.add_poisson_noise (bool)
-
-   Decides whether the scan should have poisson noise or not
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.Hdf5Loader.intensities (Param)
-
-   Parameters for the diffraction data.
-
-   Data shapes can be either (A, B, frame_size_m, frame_size_n) or (C, frame_size_m, frame_size_n).
-   It is assumed in this latter case that the fast axis in the scan corresponds
-   the fast axis on disc (i.e. C-ordered layout).
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Hdf5Loader.intensities.is_swmr (bool)
-
-   If True, then intensities are assumed to be a swmr dataset that is being written as processing
-   is taking place.
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.Hdf5Loader.intensities.live_key (str)
-
-   Key to live keys inside the intensities.file (used only if is_swmr is True)
-
-   Live_keys indicate where the data collection has progressed to. They are zero at the
-   scan start, but non-zero when the position is complete.
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.intensities.file (str)
-
-   Path to the file containing the diffraction intensities.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.intensities.key (str)
-
-   Key to the intensities entry in the hdf5 file.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.positions (Param)
-
-   Parameters for the position information data.
-
-   Shapes for each axis that are currently covered and tested corresponding
-   to the intensity shapes are:
-   * axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n),
-   * axis_data.shape (k,) for data.shape (k, frame_size_m, frame_size_n),
-   * axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
-   * axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the
-   size of the other axis, and
-   * axis_data.shape (C,) for data.shape (C*D, frame_size_m, frame_size_n) where D is the
-   size of the other axis.
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Hdf5Loader.positions.is_swmr (bool)
-
-   If True, positions are assumed to be a swmr dataset that is being written as processing
-   is taking place.
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.Hdf5Loader.positions.live_key (str)
-
-   Live_keys indicate where the data collection has progressed to. They are zero at the
-   scan start, but non-zero when the position is complete. If None whilst positions.is_swmr
-   is True, use "intensities.live_key".
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.positions.file (str)
-
-   Path to the file containing the position information. If None use "intensities.file".
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.positions.slow_key (str)
-
-   Key to the slow-axis positions entry in the hdf5 file.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.positions.slow_multiplier (float)
-
-   Multiplicative factor that converts motor positions to metres.
-
-   
-
-   *default* = ``1.0``
-
-.. py:data:: scandata.Hdf5Loader.positions.fast_key (str)
-
-   Key to the fast-axis positions entry in the hdf5 file.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.positions.fast_multiplier (float)
-
-   Multiplicative factor that converts motor positions to metres.
-
-   
-
-   *default* = ``1.0``
-
-.. py:data:: scandata.Hdf5Loader.positions.bounding_box (Param)
-
-   Bounding box (in array indices) to reconstruct a restricted area
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Hdf5Loader.positions.bounding_box.fast_axis_bounds (NoneType, int, tuple, list)
-
-   If an int, this is the lower bound only, if a tuple is (min, max)
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.positions.bounding_box.slow_axis_bounds (NoneType, int, tuple, list)
-
-   If an int, this is the lower bound only, if a tuple is (min, max)
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.mask (Param)
-
-   Parameters for mask data.
-
-   The shape of the loaded data is assumed to be (frame_size_m, frame_size_n) or the same
-   shape of the full intensities data.
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Hdf5Loader.mask.file (str)
-
-   Path to the file containing the diffraction mask.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.mask.key (str)
-
-   Key to the mask entry in the hdf5 file.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.flatfield (Param)
-
-   Parameters for flatfield data.
-
-   The shape of the loaded data is assumed to be (frame_size_m, frame_size_n) or the same
-   shape of the full intensities data.
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Hdf5Loader.flatfield.file (str)
-
-   Path to the file containing the diffraction flatfield.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.flatfield.key (str)
-
-   Key to the flatfield entry in the hdf5 file.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.darkfield (Param)
-
-   Parameters for darkfield data.
-
-   The shape is assumed to be (frame_size_m, frame_size_n) or the same
-   shape of the full intensities data.
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Hdf5Loader.darkfield.file (str)
-
-   Path to the file containing the diffraction darkfield.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.darkfield.key (str)
-
-   Key to the darkfield entry in the hdf5 file.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.normalisation (Param)
-
-   Parameters for per-point normalisation (i.e. ion chamber reading).
-
-   The shape of loaded data is assumed to have the same dimensionality as data.shape[:-2]
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Hdf5Loader.normalisation.is_swmr (bool)
-
-   If this is set to be true, then normalisations are assumed to be swmr datasets that are being written as processing
-   is taking place.
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.Hdf5Loader.normalisation.live_key (str)
-
-   If normalisation.is_swmr is true then we need a live_key to know where the data collection has progressed to.
-   This is the key to these live keys inside the normalisation.file. If None, whilst normalisation.is_swmr is
-   True, then we just assume the same keys work for both normalisation and intensities. They are zero at the
-   scan start, but non-zero when the position is complete.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.normalisation.file (str)
-
-   This is the path to the file containing the normalisation information. If None then we try to find the information
-   in the "intensities.file" location.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.normalisation.key (str)
-
-   This is the key to the normalisation entry in the hdf5 file.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.recorded_energy (Param)
-
-   This parameter contains information if we are use the recorded energy rather than as a parameter.
-   It should be a scalar value.
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Hdf5Loader.recorded_energy.file (str)
-
-   This is the path to the file containing the recorded_energy.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.recorded_energy.key (str)
-
-   This is the key to the recorded_energy entry in the hdf5 file.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.recorded_energy.multiplier (float)
-
-   This is the multiplier for the recorded energy.
-
-   
-
-   *default* = ``1.0``
-
-.. py:data:: scandata.Hdf5Loader.recorded_distance (Param)
-
-   This parameter contains information if we are use the recorded distance to the detector rather than as a parameter,
-   It should be a scalar value.
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Hdf5Loader.recorded_distance.file (str)
-
-   This is the path to the file containing the recorded_distance between sample and detector.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.recorded_distance.key (str)
-
-   This is the key to the recorded_distance entry in the hdf5 file.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.recorded_psize (Param)
-
-   This parameter contains information if we are use the recorded psize to the detector rather than as a parameter,
-   It should be a scalar value.
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Hdf5Loader.recorded_psize.file (str)
-
-   This is the path to the file containing the recorded detector psize.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Hdf5Loader.recorded_psize.key (str)
-
-   This is the key to the recorded_psize entry in the hdf5 file.
-
-   
-
-   *default* = ``None``
-
-
-scandata.Savu
--------------
-
-.. py:data:: scandata.Savu (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Savu.name (str)
-
-   
-
-   
-
-   *default* = ``'Savu'``
-
-.. py:data:: scandata.Savu.dfile (str)
-
-   File path where prepared data will be saved in the ``ptyd`` format.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Savu.chunk_format (str)
-
-   Appendix to saved files if save == 'link'
-
-   
-
-   *default* = ``'.chunk%02d'``
-
-.. py:data:: scandata.Savu.save (str)
-
-   Saving mode
-
-   Mode to use to save data to file.
-   
-   
-   - ``None``: No saving
-   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-   - ``'append'``: appends each chunk in master \*.ptyd file
-   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-   
-   
-   in the path given by the link. Links file paths are relative to master file.
-
-   *default* = ``None``
-
-.. py:data:: scandata.Savu.auto_center (bool)
-
-   Determine if center in data is calculated automatically
-
-   
-   - ``False``, no automatic centering
-   - ``None``, only if :py:data:`center` is ``None``
-   - ``True``, it will be enforced
-
-   *default* = ``None``
-
-.. py:data:: scandata.Savu.load_parallel (str)
-
-   Determines what will be loaded in parallel
-
-   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
-
-   *default* = ``'data'``
-
-.. py:data:: scandata.Savu.rebin (int)
-
-   Rebinning factor
-
-   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-
-   *default* = ``None (>1, <8)``
-
-.. py:data:: scandata.Savu.orientation (int, tuple, list)
-
-   Data frame orientation
-
-   Choose
-   
-   
-   - ``None`` or ``0``: correct orientation
-   - ``1``: invert columns (numpy.flip_lr)
-   - ``2``: invert rows  (numpy.flip_ud)
-   - ``3``: invert columns, invert rows
-   - ``4``: transpose (numpy.transpose)
-   - ``4+i``: tranpose + other operations from above
-   
-   
-   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-   do_flipud, do_fliplr)``
-
-   *default* = ``None``
-
-.. py:data:: scandata.Savu.min_frames (int)
-
-   Minimum number of frames loaded by each node
-
-   
-
-   *default* = ``1``
-
-.. py:data:: scandata.Savu.positions_theory (ndarray)
-
-   Theoretical positions for this scan
-
-   If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
-   preparation is called from Ptycho instance, the calculated positions from the
-   :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
-
-   *default* = ``None``
-
-.. py:data:: scandata.Savu.num_frames (int)
-
-   Maximum number of frames to be prepared
-
-   If `positions_theory` are provided, num_frames will be ovverriden with the number of
-   positions available
-
-   *default* = ``None``
-
-.. py:data:: scandata.Savu.label (str)
-
-   The scan label
-
-   Unique string identifying the scan
-
-   *default* = ``None``
-
-.. py:data:: scandata.Savu.experimentID (str)
-
-   Name of the experiment
-
-   If None, a default value will be provided by the recipe. **unused**
-
-   *default* = ``None``
-
-.. py:data:: scandata.Savu.version (float)
-
-   TODO: Explain this and decide if it is a user parameter.
-
-   
-
-   *default* = ``0.1``
-
-.. py:data:: scandata.Savu.shape (int, tuple)
-
-   Shape of the region of interest cropped from the raw data.
-
-   Cropping dimension of the diffraction frame
-   Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-
-   *default* = ``256``
-
-.. py:data:: scandata.Savu.center (list, tuple, str)
-
-   Center (pixel) of the optical axes in raw data
-
-   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-
-   *default* = ``'fftshift'``
-
-.. py:data:: scandata.Savu.psize (float, tuple)
-
-   Detector pixel size
-
-   Dimensions of the detector pixels (in meters)
-
-   *default* = ``0.000172 (>0.0)``
-
-.. py:data:: scandata.Savu.distance (float)
-
-   Sample to detector distance
-
-   In meters.
-
-   *default* = ``7.19 (>0.0)``
-
-.. py:data:: scandata.Savu.energy (float)
-
-   Photon energy of the incident radiation in keV
-
-   
-
-   *default* = ``7.2 (>0.0)``
-
-.. py:data:: scandata.Savu.add_poisson_noise (bool)
-
-   Decides whether the scan should have poisson noise or not
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.Savu.mask (ndarray)
-
-   
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Savu.data (ndarray)
-
-   
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Savu.positions (ndarray)
-
-   
-
-   
-
-   *default* = ``None``
-
-
-scandata.ID16AScan
-------------------
-
-.. py:data:: scandata.ID16AScan (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.ID16AScan.name (str)
-
-   
-
-   
-
-   *default* = ``'ID16AScan'``
-
-.. py:data:: scandata.ID16AScan.dfile (str)
-
-   File path where prepared data will be saved in the ``ptyd`` format.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.ID16AScan.chunk_format (str)
-
-   Appendix to saved files if save == 'link'
-
-   
-
-   *default* = ``'.chunk%02d'``
-
-.. py:data:: scandata.ID16AScan.save (str)
-
-   Saving mode
-
-   Mode to use to save data to file.
-   
-   
-   - ``None``: No saving
-   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-   - ``'append'``: appends each chunk in master \*.ptyd file
-   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-   
-   
-   in the path given by the link. Links file paths are relative to master file.
-
-   *default* = ``None``
-
-.. py:data:: scandata.ID16AScan.auto_center (bool)
-
-   Determine if center in data is calculated automatically
-
-   
-   - ``False``, no automatic centering
-   - ``None``, only if :py:data:`center` is ``None``
-   - ``True``, it will be enforced
-
-   *default* = ``False``
-
-.. py:data:: scandata.ID16AScan.load_parallel (str)
-
-   Determines what will be loaded in parallel
-
-   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
-
-   *default* = ``'data'``
-
-.. py:data:: scandata.ID16AScan.rebin (int)
-
-   Rebinning factor
-
-   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-
-   *default* = ``None (>1, <8)``
-
-.. py:data:: scandata.ID16AScan.orientation (int, tuple, list)
-
-   Data frame orientation
-
-   Choose
-   
-   
-   - ``None`` or ``0``: correct orientation
-   - ``1``: invert columns (numpy.flip_lr)
-   - ``2``: invert rows  (numpy.flip_ud)
-   - ``3``: invert columns, invert rows
-   - ``4``: transpose (numpy.transpose)
-   - ``4+i``: tranpose + other operations from above
-   
-   
-   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-   do_flipud, do_fliplr)``
-
-   *default* = ``(False, True, False)``
-
-.. py:data:: scandata.ID16AScan.min_frames (int)
-
-   Minimum number of frames loaded by each node
-
-   
-
-   *default* = ``1``
-
-.. py:data:: scandata.ID16AScan.positions_theory (ndarray)
-
-   Theoretical positions for this scan
-
-   If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
-   preparation is called from Ptycho instance, the calculated positions from the
-   :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
-
-   *default* = ``None``
-
-.. py:data:: scandata.ID16AScan.num_frames (int)
-
-   Maximum number of frames to be prepared
-
-   If `positions_theory` are provided, num_frames will be ovverriden with the number of
-   positions available
-
-   *default* = ``None``
-
-.. py:data:: scandata.ID16AScan.label (str)
-
-   The scan label
-
-   Unique string identifying the scan
-
-   *default* = ``None``
-
-.. py:data:: scandata.ID16AScan.experimentID (str)
-
-   Name of the experiment
-
-   If None, a default value will be provided by the recipe. **unused**
-
-   *default* = ``None``
-
-.. py:data:: scandata.ID16AScan.version (float)
-
-   TODO: Explain this and decide if it is a user parameter.
-
-   
-
-   *default* = ``0.1``
-
-.. py:data:: scandata.ID16AScan.shape (int, tuple)
-
-   Shape of the region of interest cropped from the raw data.
-
-   Cropping dimension of the diffraction frame
-   Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-
-   *default* = ``256``
-
-.. py:data:: scandata.ID16AScan.center (list, tuple, str)
-
-   Center (pixel) of the optical axes in raw data
-
-   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-
-   *default* = ``'fftshift'``
-
-.. py:data:: scandata.ID16AScan.psize (float, tuple)
-
-   Detector pixel size
-
-   Dimensions of the detector pixels (in meters)
-
-   *default* = ``0.000172 (>0.0)``
-
-.. py:data:: scandata.ID16AScan.distance (float)
-
-   Sample to detector distance
-
-   In meters.
-
-   *default* = ``7.19 (>0.0)``
-
-.. py:data:: scandata.ID16AScan.energy (float)
-
-   Photon energy of the incident radiation in keV
-
-   
-
-   *default* = ``7.2 (>0.0)``
-
-.. py:data:: scandata.ID16AScan.add_poisson_noise (bool)
-
-   Decides whether the scan should have poisson noise or not
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.ID16AScan.motors (list)
-
-   Motor names to determine the sample translation
-
-   
-
-   *default* = ``['spy', 'spz']``
-
-.. py:data:: scandata.ID16AScan.motors_multiplier (float)
-
-   Motor conversion factor to meters at ID16A beamline
-
-   
-
-   *default* = ``1e-06``
-
-.. py:data:: scandata.ID16AScan.base_path (str)
-
-   Base path to read and write data
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.ID16AScan.sample_name (str)
-
-   Sample name - will be read from h5
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.ID16AScan.mask_file (str)
-
-   Mask file name
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.ID16AScan.flat_division (bool)
-
-   Switch for flat division
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.ID16AScan.dark_subtraction (bool)
-
-   Switch for dark subtraction
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.ID16AScan.distortion_h_file (str)
-
-   The h and v are inverted here - that's on purpose!
-
-   
-
-   *default* = ``'/data/id16a/inhouse1/instrument/img1/optique_peter_distortion/detector_distortion2d_v.edf'``
-
-.. py:data:: scandata.ID16AScan.distortion_v_file (str)
-
-   The h and v are inverted here - that's on purpose!
-
-   
-
-   *default* = ``'/data/id16a/inhouse1/instrument/img1/optique_peter_distortion/detector_distortion2d_h.edf'``
-
-.. py:data:: scandata.ID16AScan.whitefield_file (str)
-
-   
-
-   
-
-   *default* = ``'/data/id16a/inhouse1/instrument/whitefield/white.edf'``
-
-.. py:data:: scandata.ID16AScan.det_flat_field (str)
-
-   path to detector flat field
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.ID16AScan.recipe (Param)
-
-   Specific additional parameters of ID16A
-
-   
-
-   *default* = ``Param({})``
-
-
-scandata.AMOScan
-----------------
-
-.. py:data:: scandata.AMOScan (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.AMOScan.name (str)
-
-   
-
-   
-
-   *default* = ``'AMOScan'``
-
-.. py:data:: scandata.AMOScan.dfile (str)
-
-   File path where prepared data will be saved in the ``ptyd`` format.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.chunk_format (str)
-
-   Appendix to saved files if save == 'link'
-
-   
-
-   *default* = ``'.chunk%02d'``
-
-.. py:data:: scandata.AMOScan.save (str)
-
-   Saving mode
-
-   Mode to use to save data to file.
-   
-   
-   - ``None``: No saving
-   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-   - ``'append'``: appends each chunk in master \*.ptyd file
-   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-   
-   
-   in the path given by the link. Links file paths are relative to master file.
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.auto_center (bool)
-
-   Determine if center in data is calculated automatically
-
-   
-   - ``False``, no automatic centering
-   - ``None``, only if :py:data:`center` is ``None``
-   - ``True``, it will be enforced
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.load_parallel (str)
-
-   Determines what will be loaded in parallel
-
-   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
-
-   *default* = ``'data'``
-
-.. py:data:: scandata.AMOScan.rebin (int)
-
-   Rebinning factor
-
-   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-
-   *default* = ``None (>1, <8)``
-
-.. py:data:: scandata.AMOScan.orientation (int, tuple, list)
-
-   Data frame orientation
-
-   Choose
-   
-   
-   - ``None`` or ``0``: correct orientation
-   - ``1``: invert columns (numpy.flip_lr)
-   - ``2``: invert rows  (numpy.flip_ud)
-   - ``3``: invert columns, invert rows
-   - ``4``: transpose (numpy.transpose)
-   - ``4+i``: tranpose + other operations from above
-   
-   
-   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-   do_flipud, do_fliplr)``
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.min_frames (int)
-
-   Minimum number of frames loaded by each node
-
-   
-
-   *default* = ``1``
-
-.. py:data:: scandata.AMOScan.positions_theory (ndarray)
-
-   Theoretical positions for this scan
-
-   If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
-   preparation is called from Ptycho instance, the calculated positions from the
-   :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.num_frames (int)
-
-   Maximum number of frames to be prepared
-
-   If `positions_theory` are provided, num_frames will be ovverriden with the number of
-   positions available
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.label (str)
-
-   The scan label
-
-   Unique string identifying the scan
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.experimentID (str)
-
-   Name of the experiment
-
-   If None, a default value will be provided by the recipe. **unused**
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.version (float)
-
-   TODO: Explain this and decide if it is a user parameter.
-
-   
-
-   *default* = ``0.1``
-
-.. py:data:: scandata.AMOScan.shape (int, tuple)
-
-   Shape of the region of interest cropped from the raw data.
-
-   Cropping dimension of the diffraction frame
-   Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-
-   *default* = ``256``
-
-.. py:data:: scandata.AMOScan.center (list, tuple, str)
-
-   Center (pixel) of the optical axes in raw data
-
-   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-
-   *default* = ``'fftshift'``
-
-.. py:data:: scandata.AMOScan.psize (float, tuple)
-
-   Detector pixel size
-
-   Dimensions of the detector pixels (in meters)
-
-   *default* = ``0.000172 (>0.0)``
-
-.. py:data:: scandata.AMOScan.distance (float)
-
-   Sample to detector distance
-
-   In meters.
-
-   *default* = ``7.19 (>0.0)``
-
-.. py:data:: scandata.AMOScan.energy (float)
-
-   Photon energy of the incident radiation in keV
-
-   
-
-   *default* = ``7.2 (>0.0)``
-
-.. py:data:: scandata.AMOScan.add_poisson_noise (bool)
-
-   Decides whether the scan should have poisson noise or not
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.AMOScan.date (str)
-
-   timestamp-like date for documenting recons
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.scan_number (int)
-
-   indicate scan number (label)
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.motors_multiplier (float)
-
-   Motor conversion factor to meters
-
-   1e-3 AMO, 1e-6 for CXI
-
-   *default* = ``0.001``
-
-.. py:data:: scandata.AMOScan.data_file (str)
-
-   path to data file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.dark_file (str)
-
-   path to dark file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.flat_file (str)
-
-   path to flat file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.mask_file (str)
-
-   path to mask file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.AMOScan.threshold_correct (float)
-
-   value used for thresholding raws (values below set to 0.)
-
-   
-
-   *default* = ``0.0``
-
-
-scandata.DiProIFERMIScan
-------------------------
-
-.. py:data:: scandata.DiProIFERMIScan (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.DiProIFERMIScan.name (str)
-
-   
-
-   
-
-   *default* = ``'DiProIFERMIScan'``
-
-.. py:data:: scandata.DiProIFERMIScan.dfile (str)
-
-   File path where prepared data will be saved in the ``ptyd`` format.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.chunk_format (str)
-
-   Appendix to saved files if save == 'link'
-
-   
-
-   *default* = ``'.chunk%02d'``
-
-.. py:data:: scandata.DiProIFERMIScan.save (str)
-
-   Saving mode
-
-   Mode to use to save data to file.
-   
-   
-   - ``None``: No saving
-   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-   - ``'append'``: appends each chunk in master \*.ptyd file
-   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-   
-   
-   in the path given by the link. Links file paths are relative to master file.
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.auto_center (bool)
-
-   Determine if center in data is calculated automatically
-
-   
-   - ``False``, no automatic centering
-   - ``None``, only if :py:data:`center` is ``None``
-   - ``True``, it will be enforced
-
-   *default* = ``False``
-
-.. py:data:: scandata.DiProIFERMIScan.load_parallel (str)
-
-   Determines what will be loaded in parallel
-
-   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
-
-   *default* = ``'data'``
-
-.. py:data:: scandata.DiProIFERMIScan.rebin (int)
-
-   Rebinning factor
-
-   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-
-   *default* = ``None (>1, <8)``
-
-.. py:data:: scandata.DiProIFERMIScan.orientation (int, tuple, list)
-
-   Data frame orientation
-
-   Choose
-   
-   
-   - ``None`` or ``0``: correct orientation
-   - ``1``: invert columns (numpy.flip_lr)
-   - ``2``: invert rows  (numpy.flip_ud)
-   - ``3``: invert columns, invert rows
-   - ``4``: transpose (numpy.transpose)
-   - ``4+i``: tranpose + other operations from above
-   
-   
-   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-   do_flipud, do_fliplr)``
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.min_frames (int)
-
-   Minimum number of frames loaded by each node
-
-   
-
-   *default* = ``1``
-
-.. py:data:: scandata.DiProIFERMIScan.positions_theory (ndarray)
-
-   Theoretical positions for this scan
-
-   If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
-   preparation is called from Ptycho instance, the calculated positions from the
-   :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.num_frames (int)
-
-   Maximum number of frames to be prepared
-
-   If `positions_theory` are provided, num_frames will be ovverriden with the number of
-   positions available
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.label (str)
-
-   The scan label
-
-   Unique string identifying the scan
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.experimentID (str)
-
-   Name of the experiment
-
-   If None, a default value will be provided by the recipe. **unused**
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.version (float)
-
-   TODO: Explain this and decide if it is a user parameter.
-
-   
-
-   *default* = ``0.1``
-
-.. py:data:: scandata.DiProIFERMIScan.shape (int, tuple)
-
-   Shape of the region of interest cropped from the raw data.
-
-   Cropping dimension of the diffraction frame
-   Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-
-   *default* = ``256``
-
-.. py:data:: scandata.DiProIFERMIScan.center (list, tuple, str)
-
-   Center (pixel) of the optical axes in raw data
-
-   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-
-   *default* = ``'fftshift'``
-
-.. py:data:: scandata.DiProIFERMIScan.psize (float, tuple)
-
-   Detector pixel size
-
-   Dimensions of the detector pixels (in meters)
-
-   *default* = ``0.000172 (>0.0)``
-
-.. py:data:: scandata.DiProIFERMIScan.distance (float)
-
-   Sample to detector distance
-
-   In meters.
-
-   *default* = ``7.19 (>0.0)``
-
-.. py:data:: scandata.DiProIFERMIScan.energy (float)
-
-   Photon energy of the incident radiation in keV
-
-   
-
-   *default* = ``7.2 (>0.0)``
-
-.. py:data:: scandata.DiProIFERMIScan.add_poisson_noise (bool)
-
-   Decides whether the scan should have poisson noise or not
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.DiProIFERMIScan.base_path (str)
-
-   
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.scan_name (str)
-
-   has to be a string (e.g. 'Cycle001')
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.run_ID (str)
-
-   has to be a string (e.g. 'Scan018')
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.dark_name (str)
-
-   has to be a string (e.g. 'Dark')
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.dark_value (float)
-
-   Used if dark_number is None (?!)
-
-   
-
-   *default* = ``200.0``
-
-.. py:data:: scandata.DiProIFERMIScan.detector_flat_file (str)
-
-   
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.h5_file_pattern (str)
-
-   
-
-   
-
-   *default* = ``'%(base_path)s/imported/%(run_ID)s/%(scan_name)s/rawdata/'``
-
-.. py:data:: scandata.DiProIFERMIScan.dark_h5_file_pattern (str)
-
-   
-
-   
-
-   *default* = ``'%(base_path)s/imported/%(run_ID)s/%(dark_name)s/rawdata/'``
-
-.. py:data:: scandata.DiProIFERMIScan.date (str)
-
-   
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.motors (list)
-
-   check orientation
-
-   
-
-   *default* = ``['sample_x', 'sample_y']``
-
-.. py:data:: scandata.DiProIFERMIScan.motors_multiplier (float)
-
-   DiProI-specific
-
-   
-
-   *default* = ``0.001``
-
-.. py:data:: scandata.DiProIFERMIScan.mask_file (str)
-
-   Mask file name
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.DiProIFERMIScan.use_refined_positions (bool)
-
-   
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.DiProIFERMIScan.refined_positions_pattern (str)
-
-   
-
-   
-
-   *default* = ``'%(base_path)s/imported/%(run_ID)s/%(scan_name)s/'``
-
-.. py:data:: scandata.DiProIFERMIScan.flat_division (bool)
-
-   Switch for flat division
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.DiProIFERMIScan.dark_subtraction (bool)
-
-   Switch for dark subtraction
-
-   
-
-   *default* = ``False``
-
-
-scandata.FliSpecScanMultexp
----------------------------
-
-.. py:data:: scandata.FliSpecScanMultexp (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.FliSpecScanMultexp.name (str)
-
-   
-
-   
-
-   *default* = ``'FliSpecScanMultexp'``
-
-.. py:data:: scandata.FliSpecScanMultexp.dfile (str)
-
-   File path where prepared data will be saved in the ``ptyd`` format.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.FliSpecScanMultexp.chunk_format (str)
-
-   Appendix to saved files if save == 'link'
-
-   
-
-   *default* = ``'.chunk%02d'``
-
-.. py:data:: scandata.FliSpecScanMultexp.save (str)
-
-   Saving mode
-
-   Mode to use to save data to file.
-   
-   
-   - ``None``: No saving
-   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-   - ``'append'``: appends each chunk in master \*.ptyd file
-   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-   
-   
-   in the path given by the link. Links file paths are relative to master file.
-
-   *default* = ``None``
-
-.. py:data:: scandata.FliSpecScanMultexp.auto_center (bool)
-
-   Determine if center in data is calculated automatically
-
-   
-   - ``False``, no automatic centering
-   - ``None``, only if :py:data:`center` is ``None``
-   - ``True``, it will be enforced
-
-   *default* = ``None``
-
-.. py:data:: scandata.FliSpecScanMultexp.load_parallel (str)
-
-   Determines what will be loaded in parallel
-
-   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
-
-   *default* = ``'data'``
-
-.. py:data:: scandata.FliSpecScanMultexp.rebin (int)
-
-   Rebinning factor
-
-   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-
-   *default* = ``None (>1, <8)``
-
-.. py:data:: scandata.FliSpecScanMultexp.orientation (int, tuple, list)
-
-   Data frame orientation
-
-   Choose
-   
-   
-   - ``None`` or ``0``: correct orientation
-   - ``1``: invert columns (numpy.flip_lr)
-   - ``2``: invert rows  (numpy.flip_ud)
-   - ``3``: invert columns, invert rows
-   - ``4``: transpose (numpy.transpose)
-   - ``4+i``: tranpose + other operations from above
-   
-   
-   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-   do_flipud, do_fliplr)``
-
-   *default* = ``(True, True, False)``
-
-.. py:data:: scandata.FliSpecScanMultexp.min_frames (int)
-
-   Minimum number of frames loaded by each node
-
-   
-
-   *default* = ``1``
-
-.. py:data:: scandata.FliSpecScanMultexp.positions_theory (ndarray)
-
-   Theoretical positions for this scan
-
-   If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
-   preparation is called from Ptycho instance, the calculated positions from the
-   :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
-
-   *default* = ``None``
-
-.. py:data:: scandata.FliSpecScanMultexp.num_frames (int)
-
-   Maximum number of frames to be prepared
-
-   If `positions_theory` are provided, num_frames will be ovverriden with the number of
-   positions available
-
-   *default* = ``None``
-
-.. py:data:: scandata.FliSpecScanMultexp.label (str)
-
-   The scan label
-
-   Unique string identifying the scan
-
-   *default* = ``None``
-
-.. py:data:: scandata.FliSpecScanMultexp.experimentID (str)
-
-   Name of the experiment
-
-   If None, a default value will be provided by the recipe. **unused**
-
-   *default* = ``None``
-
-.. py:data:: scandata.FliSpecScanMultexp.version (float)
-
-   TODO: Explain this and decide if it is a user parameter.
-
-   
-
-   *default* = ``0.1``
-
-.. py:data:: scandata.FliSpecScanMultexp.shape (int, tuple)
-
-   Shape of the region of interest cropped from the raw data.
-
-   Cropping dimension of the diffraction frame
-   Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-
-   *default* = ``256``
-
-.. py:data:: scandata.FliSpecScanMultexp.center (list, tuple, str)
-
-   Center (pixel) of the optical axes in raw data
-
-   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-
-   *default* = ``'auto'``
-
-.. py:data:: scandata.FliSpecScanMultexp.psize (float, tuple)
-
-   Detector pixel size
-
-   Dimensions of the detector pixels (in meters)
-
-   *default* = ``0.000172 (>0.0)``
-
-.. py:data:: scandata.FliSpecScanMultexp.distance (float)
-
-   Sample to detector distance
-
-   In meters.
-
-   *default* = ``7.19 (>0.0)``
-
-.. py:data:: scandata.FliSpecScanMultexp.energy (float)
-
-   Photon energy of the incident radiation in keV
-
-   
-
-   *default* = ``None (>0.0)``
-
-.. py:data:: scandata.FliSpecScanMultexp.add_poisson_noise (bool)
-
-   Decides whether the scan should have poisson noise or not
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.FliSpecScanMultexp.base_path (str)
-
-   
-
-   
-
-   *default* = ``'/data/CDI/opticslab_sxdm_2013/'``
-
-.. py:data:: scandata.FliSpecScanMultexp.scan_number (int)
-
-   
-
-   
-
-   *default* = ``74``
-
-.. py:data:: scandata.FliSpecScanMultexp.dark_number (int)
-
-   
-
-   
-
-   *default* = ``72``
-
-.. py:data:: scandata.FliSpecScanMultexp.exp_string (str)
-
-   
-
-   
-
-   *default* = ``'exp_time'``
-
-.. py:data:: scandata.FliSpecScanMultexp.hdr_thresholds (list)
-
-   
-
-   
-
-   *default* = ``[500, 50000]``
-
-.. py:data:: scandata.FliSpecScanMultexp.lam (float)
-
-   
-
-   
-
-   *default* = ``6.5e-07``
-
-.. py:data:: scandata.FliSpecScanMultexp.z (float)
-
-   
-
-   
-
-   *default* = ``0.158``
-
-.. py:data:: scandata.FliSpecScanMultexp.psize_det (float)
-
-   
-
-   
-
-   *default* = ``2.4e-05``
-
-.. py:data:: scandata.FliSpecScanMultexp.scan_dir (str)
-
-   
-
-   
-
-   *default* = ``'ccdfli/S00000-00999/'``
-
-.. py:data:: scandata.FliSpecScanMultexp.log_file_pattern (str)
-
-   
-
-   
-
-   *default* = ``'%(base_path)sspec/dat-files/spec_started_2013_11_21_1659.dat'``
-
-.. py:data:: scandata.FliSpecScanMultexp.data_dir_pattern (str)
-
-   
-
-   
-
-   *default* = ``'%(base_path)s%(scan_dir)sS%(scan_number)05d/'``
-
-.. py:data:: scandata.FliSpecScanMultexp.dark_dir_pattern (str)
-
-   
-
-   
-
-   *default* = ``'%(base_path)s%(scan_dir)sS%(dark_number)05d/'``
-
-
-scandata.UCLLaserScan
----------------------
-
-.. py:data:: scandata.UCLLaserScan (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.UCLLaserScan.name (str)
-
-   
-
-   
-
-   *default* = ``'UCLLaserScan'``
-
-.. py:data:: scandata.UCLLaserScan.dfile (str)
-
-   File path where prepared data will be saved in the ``ptyd`` format.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.chunk_format (str)
-
-   Appendix to saved files if save == 'link'
-
-   
-
-   *default* = ``'.chunk%02d'``
-
-.. py:data:: scandata.UCLLaserScan.save (str)
-
-   Saving mode
-
-   Mode to use to save data to file.
-   
-   
-   - ``None``: No saving
-   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-   - ``'append'``: appends each chunk in master \*.ptyd file
-   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-   
-   
-   in the path given by the link. Links file paths are relative to master file.
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.auto_center (bool)
-
-   Determine if center in data is calculated automatically
-
-   
-   - ``False``, no automatic centering
-   - ``None``, only if :py:data:`center` is ``None``
-   - ``True``, it will be enforced
-
-   *default* = ``False``
-
-.. py:data:: scandata.UCLLaserScan.load_parallel (str)
-
-   Determines what will be loaded in parallel
-
-   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
-
-   *default* = ``'data'``
-
-.. py:data:: scandata.UCLLaserScan.rebin (int)
-
-   Rebinning factor
-
-   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-
-   *default* = ``None (>1, <8)``
-
-.. py:data:: scandata.UCLLaserScan.orientation (int, tuple, list)
-
-   Data frame orientation
-
-   Choose
-   
-   
-   - ``None`` or ``0``: correct orientation
-   - ``1``: invert columns (numpy.flip_lr)
-   - ``2``: invert rows  (numpy.flip_ud)
-   - ``3``: invert columns, invert rows
-   - ``4``: transpose (numpy.transpose)
-   - ``4+i``: tranpose + other operations from above
-   
-   
-   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-   do_flipud, do_fliplr)``
-
-   *default* = ``(False, False, False)``
-
-.. py:data:: scandata.UCLLaserScan.min_frames (int)
-
-   Minimum number of frames loaded by each node
-
-   
-
-   *default* = ``1``
-
-.. py:data:: scandata.UCLLaserScan.positions_theory (ndarray)
-
-   Theoretical positions for this scan
-
-   If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
-   preparation is called from Ptycho instance, the calculated positions from the
-   :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.num_frames (int)
-
-   Maximum number of frames to be prepared
-
-   If `positions_theory` are provided, num_frames will be ovverriden with the number of
-   positions available
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.label (str)
-
-   The scan label
-
-   Unique string identifying the scan
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.experimentID (str)
-
-   Name of the experiment
-
-   If None, a default value will be provided by the recipe. **unused**
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.version (float)
-
-   TODO: Explain this and decide if it is a user parameter.
-
-   
-
-   *default* = ``0.1``
-
-.. py:data:: scandata.UCLLaserScan.shape (int, tuple)
-
-   Shape of the region of interest cropped from the raw data.
-
-   Cropping dimension of the diffraction frame
-   Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-
-   *default* = ``256``
-
-.. py:data:: scandata.UCLLaserScan.center (list, tuple, str)
-
-   Center (pixel) of the optical axes in raw data
-
-   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-
-   *default* = ``'fftshift'``
-
-.. py:data:: scandata.UCLLaserScan.psize (float, tuple)
-
-   Detector pixel size
-
-   Dimensions of the detector pixels (in meters)
-
-   *default* = ``0.000172 (>0.0)``
-
-.. py:data:: scandata.UCLLaserScan.distance (float)
-
-   Sample to detector distance
-
-   In meters.
-
-   *default* = ``7.19 (>0.0)``
-
-.. py:data:: scandata.UCLLaserScan.energy (float)
-
-   Photon energy of the incident radiation in keV
-
-   
-
-   *default* = ``None (>0.0)``
-
-.. py:data:: scandata.UCLLaserScan.add_poisson_noise (bool)
-
-   Decides whether the scan should have poisson noise or not
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.UCLLaserScan.scan_number (int)
-
-   Scan number
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.dark_number (int)
-
-   
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.flat_number (int)
-
-   
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.lam (float)
-
-   
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.z (float)
-
-   Distance from object to screen
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.detector_name (str)
-
-   Name of the detector as specified in the nexus file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.motors (list)
-
-   Motor names to determine the sample translation
-
-   
-
-   *default* = ``['t1_sx', 't1_sy']``
-
-.. py:data:: scandata.UCLLaserScan.motors_multiplier (float)
-
-   Motor conversion factor to meters
-
-   
-
-   *default* = ``0.001``
-
-.. py:data:: scandata.UCLLaserScan.base_path (str)
-
-   
-
-   
-
-   *default* = ``'./'``
-
-.. py:data:: scandata.UCLLaserScan.data_file_path (str)
-
-   
-
-   
-
-   *default* = ``"%(base_path)s' + 'raw/%(scan_number)06d"``
-
-.. py:data:: scandata.UCLLaserScan.dark_file_path (str)
-
-   
-
-   
-
-   *default* = ``"%(base_path)s' + 'raw/%(dark_number)06d"``
-
-.. py:data:: scandata.UCLLaserScan.flat_file_path (str)
-
-   
-
-   
-
-   *default* = ``"%(base_path)s' + 'raw/%(flat_number)06d"``
-
-.. py:data:: scandata.UCLLaserScan.mask_file (str)
-
-   
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.use_EP (bool)
-
-   Use flat as Empty Probe (EP) for probe sharing needs to be set to True in the recipe of the scan that will act as EP
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.UCLLaserScan.remove_hot_pixels (Param)
-
-   Apply hot pixel correction
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.UCLLaserScan.remove_hot_pixels.apply (bool)
-
-   Initiate by setting to True
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.UCLLaserScan.remove_hot_pixels.size (int)
-
-   Size of the window on which the median filter will be applied around every data point
-
-   
-
-   *default* = ``3``
-
-.. py:data:: scandata.UCLLaserScan.remove_hot_pixels.tolerance (int)
-
-   Tolerance multiplied with the standard deviation of the data array subtracted by the blurred array (difference array) yields the threshold for cutoff.
-
-   
-
-   *default* = ``10``
-
-.. py:data:: scandata.UCLLaserScan.remove_hot_pixels.ignore_edges (bool)
-
-   If True, edges of the array are ignored, which speeds up the code
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.UCLLaserScan.rl_deconvolution (Param)
-
-   Apply Richardson Lucy deconvolution
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.UCLLaserScan.rl_deconvolution.apply (bool)
-
-   Initiate by setting to True
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.UCLLaserScan.rl_deconvolution.numiter (int)
-
-   Number of iterations
-
-   
-
-   *default* = ``5``
-
-.. py:data:: scandata.UCLLaserScan.rl_deconvolution.dfile (str)
-
-   Provide MTF from file; no loading procedure present for now, loading through recon script required
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.UCLLaserScan.rl_deconvolution.gaussians (Param)
-
-   Create fake psf as a sum of gaussians if no MTF provided
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.UCLLaserScan.rl_deconvolution.gaussians.g1 (Param)
-
-   list of gaussians for Richardson Lucy deconvolution
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.UCLLaserScan.rl_deconvolution.gaussians.g1.std_x (float)
-
-   Standard deviation in x direction
-
-   
-
-   *default* = ``1.0``
-
-.. py:data:: scandata.UCLLaserScan.rl_deconvolution.gaussians.g1.std_y (float)
-
-   Standard deviation in y direction
-
-   
-
-   *default* = ``1.0``
-
-.. py:data:: scandata.UCLLaserScan.rl_deconvolution.gaussians.g1.off_x (float)
-
-   Offset / shift in x direction
-
-   
-
-   *default* = ``0.0``
-
-.. py:data:: scandata.UCLLaserScan.rl_deconvolution.gaussians.g1.off_y (float)
-
-   Offset / shift in y direction
-
-   
-
-   *default* = ``0.0``
-
-
-scandata.NanomaxStepscanNov2016
--------------------------------
-
-.. py:data:: scandata.NanomaxStepscanNov2016 (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.name (str)
-
-   
-
-   
-
-   *default* = ``'NanomaxStepscanNov2016'``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.dfile (str)
-
-   File path where prepared data will be saved in the ``ptyd`` format.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.chunk_format (str)
-
-   Appendix to saved files if save == 'link'
-
-   
-
-   *default* = ``'.chunk%02d'``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.save (str)
-
-   Saving mode
-
-   Mode to use to save data to file.
-   
-   
-   - ``None``: No saving
-   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-   - ``'append'``: appends each chunk in master \*.ptyd file
-   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-   
-   
-   in the path given by the link. Links file paths are relative to master file.
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.auto_center (bool)
-
-   Determine if center in data is calculated automatically
-
-   
-   - ``False``, no automatic centering
-   - ``None``, only if :py:data:`center` is ``None``
-   - ``True``, it will be enforced
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.load_parallel (str)
-
-   Determines what will be loaded in parallel
-
-   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
-
-   *default* = ``'data'``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.rebin (int)
-
-   Rebinning factor
-
-   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-
-   *default* = ``None (>1, <8)``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.orientation (int, tuple, list)
-
-   Data frame orientation
-
-   Choose
-   
-   
-   - ``None`` or ``0``: correct orientation
-   - ``1``: invert columns (numpy.flip_lr)
-   - ``2``: invert rows  (numpy.flip_ud)
-   - ``3``: invert columns, invert rows
-   - ``4``: transpose (numpy.transpose)
-   - ``4+i``: tranpose + other operations from above
-   
-   
-   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-   do_flipud, do_fliplr)``
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.min_frames (int)
-
-   Minimum number of frames loaded by each node
-
-   
-
-   *default* = ``1``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.positions_theory (ndarray)
-
-   Theoretical positions for this scan
-
-   If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
-   preparation is called from Ptycho instance, the calculated positions from the
-   :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.num_frames (int)
-
-   Maximum number of frames to be prepared
-
-   If `positions_theory` are provided, num_frames will be ovverriden with the number of
-   positions available
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.label (str)
-
-   The scan label
-
-   Unique string identifying the scan
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.experimentID (str)
-
-   Name of the experiment
-
-   If None, a default value will be provided by the recipe. **unused**
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.version (float)
-
-   TODO: Explain this and decide if it is a user parameter.
-
-   
-
-   *default* = ``0.1``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.shape (int, tuple)
-
-   Shape of the region of interest cropped from the raw data.
-
-   Cropping dimension of the diffraction frame
-   Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-
-   *default* = ``256``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.center (list, tuple, str)
-
-   Center (pixel) of the optical axes in raw data
-
-   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-
-   *default* = ``'fftshift'``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.psize (float, tuple)
-
-   Detector pixel size
-
-   Dimensions of the detector pixels (in meters)
-
-   *default* = ``0.000172 (>0.0)``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.distance (float)
-
-   Sample to detector distance
-
-   In meters.
-
-   *default* = ``7.19 (>0.0)``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.energy (float)
-
-   Photon energy of the incident radiation in keV
-
-   
-
-   *default* = ``7.2 (>0.0)``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.add_poisson_noise (bool)
-
-   Decides whether the scan should have poisson noise or not
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.dataPath (str)
-
-   Path to folder containing the Sardana master file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.datafile (str)
-
-   Sardana master file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.maskfile (str)
-
-   Arbitrary mask file
-
-   Hdf5 file containing an array called 'mask' at the root level.
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.pilatusPath (str)
-
-   Path to folder containing detector image files
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.pilatusPattern (str)
-
-   Format string for detector image files
-
-   A format string with two integer fields, the first holds the scan number while the second holds the image number.
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanNov2016.scannr (int)
-
-   Scan number
-
-   
-
-   *default* = ``None``
-
-
-scandata.NanomaxStepscanMay2017
--------------------------------
-
-.. py:data:: scandata.NanomaxStepscanMay2017 (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.name (str)
-
-   
-
-   
-
-   *default* = ``'NanomaxStepscanMay2017'``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.dfile (str)
-
-   File path where prepared data will be saved in the ``ptyd`` format.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.chunk_format (str)
-
-   Appendix to saved files if save == 'link'
-
-   
-
-   *default* = ``'.chunk%02d'``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.save (str)
-
-   Saving mode
-
-   Mode to use to save data to file.
-   
-   
-   - ``None``: No saving
-   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-   - ``'append'``: appends each chunk in master \*.ptyd file
-   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-   
-   
-   in the path given by the link. Links file paths are relative to master file.
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.auto_center (bool)
-
-   Determine if center in data is calculated automatically
-
-   
-   - ``False``, no automatic centering
-   - ``None``, only if :py:data:`center` is ``None``
-   - ``True``, it will be enforced
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.load_parallel (str)
-
-   Determines what will be loaded in parallel
-
-   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
-
-   *default* = ``'data'``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.rebin (int)
-
-   Rebinning factor
-
-   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-
-   *default* = ``None (>1, <8)``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.orientation (int, tuple, list)
-
-   Data frame orientation
-
-   Choose
-   
-   
-   - ``None`` or ``0``: correct orientation
-   - ``1``: invert columns (numpy.flip_lr)
-   - ``2``: invert rows  (numpy.flip_ud)
-   - ``3``: invert columns, invert rows
-   - ``4``: transpose (numpy.transpose)
-   - ``4+i``: tranpose + other operations from above
-   
-   
-   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-   do_flipud, do_fliplr)``
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.min_frames (int)
-
-   Minimum number of frames loaded by each node
-
-   
-
-   *default* = ``1``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.positions_theory (ndarray)
-
-   Theoretical positions for this scan
-
-   If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
-   preparation is called from Ptycho instance, the calculated positions from the
-   :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.num_frames (int)
-
-   Maximum number of frames to be prepared
-
-   If `positions_theory` are provided, num_frames will be ovverriden with the number of
-   positions available
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.label (str)
-
-   The scan label
-
-   Unique string identifying the scan
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.experimentID (str)
-
-   Name of the experiment
-
-   If None, a default value will be provided by the recipe. **unused**
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.version (float)
-
-   TODO: Explain this and decide if it is a user parameter.
-
-   
-
-   *default* = ``0.1``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.shape (int, tuple)
-
-   Shape of the region of interest cropped from the raw data.
-
-   Cropping dimension of the diffraction frame
-   Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-
-   *default* = ``256``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.center (list, tuple, str)
-
-   Center (pixel) of the optical axes in raw data
-
-   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-
-   *default* = ``'fftshift'``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.psize (float, tuple)
-
-   Detector pixel size
-
-   Dimensions of the detector pixels (in meters)
-
-   *default* = ``0.000172 (>0.0)``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.distance (float)
-
-   Sample to detector distance
-
-   In meters.
-
-   *default* = ``7.19 (>0.0)``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.energy (float)
-
-   Photon energy of the incident radiation in keV
-
-   
-
-   *default* = ``7.2 (>0.0)``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.add_poisson_noise (bool)
-
-   Decides whether the scan should have poisson noise or not
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.dataPath (str)
-
-   Path to folder containing the Sardana master file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.datafile (str)
-
-   Sardana master file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.maskfile (str)
-
-   Arbitrary mask file
-
-   Hdf5 file containing an array called 'mask' at the root level.
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.pilatusPath (str)
-
-   Path to folder containing detector image files
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.pilatusPattern (str)
-
-   Format string for detector image files
-
-   A format string with two integer fields, the first holds the scan number while the second holds the image number.
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.scannr (int)
-
-   Scan number
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.hdfPath (str)
-
-   Path to image array within detector hdf5 file
-
-   
-
-   *default* = ``'entry_0000/measurement/Pilatus/data'``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.xMotorFlipped (bool)
-
-   Flip detector x positions
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.yMotorFlipped (bool)
-
-   Flip detector y positions
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.NanomaxStepscanMay2017.xMotorAngle (float)
-
-   Angle of the motor x axis relative to the lab x axis
-
-   Use this if the stage is mounted at an angle around the y axis, the sign doesn't matter as a cos factor is added.
-
-   *default* = ``0.0``
-
-
-scandata.NanomaxFlyscanJune2017
--------------------------------
-
-.. py:data:: scandata.NanomaxFlyscanJune2017 (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.name (str)
-
-   
-
-   
-
-   *default* = ``'NanomaxFlyscanJune2017'``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.dfile (str)
-
-   File path where prepared data will be saved in the ``ptyd`` format.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.chunk_format (str)
-
-   Appendix to saved files if save == 'link'
-
-   
-
-   *default* = ``'.chunk%02d'``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.save (str)
-
-   Saving mode
-
-   Mode to use to save data to file.
-   
-   
-   - ``None``: No saving
-   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-   - ``'append'``: appends each chunk in master \*.ptyd file
-   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-   
-   
-   in the path given by the link. Links file paths are relative to master file.
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.auto_center (bool)
-
-   Determine if center in data is calculated automatically
-
-   
-   - ``False``, no automatic centering
-   - ``None``, only if :py:data:`center` is ``None``
-   - ``True``, it will be enforced
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.load_parallel (str)
-
-   Determines what will be loaded in parallel
-
-   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
-
-   *default* = ``'data'``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.rebin (int)
-
-   Rebinning factor
-
-   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-
-   *default* = ``None (>1, <8)``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.orientation (int, tuple, list)
-
-   Data frame orientation
-
-   Choose
-   
-   
-   - ``None`` or ``0``: correct orientation
-   - ``1``: invert columns (numpy.flip_lr)
-   - ``2``: invert rows  (numpy.flip_ud)
-   - ``3``: invert columns, invert rows
-   - ``4``: transpose (numpy.transpose)
-   - ``4+i``: tranpose + other operations from above
-   
-   
-   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-   do_flipud, do_fliplr)``
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.min_frames (int)
-
-   Minimum number of frames loaded by each node
-
-   
-
-   *default* = ``1``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.positions_theory (ndarray)
-
-   Theoretical positions for this scan
-
-   If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
-   preparation is called from Ptycho instance, the calculated positions from the
-   :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.num_frames (int)
-
-   Maximum number of frames to be prepared
-
-   If `positions_theory` are provided, num_frames will be ovverriden with the number of
-   positions available
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.label (str)
-
-   The scan label
-
-   Unique string identifying the scan
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.experimentID (str)
-
-   Name of the experiment
-
-   If None, a default value will be provided by the recipe. **unused**
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.version (float)
-
-   TODO: Explain this and decide if it is a user parameter.
-
-   
-
-   *default* = ``0.1``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.shape (int, tuple)
-
-   Shape of the region of interest cropped from the raw data.
-
-   Cropping dimension of the diffraction frame
-   Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-
-   *default* = ``256``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.center (list, tuple, str)
-
-   Center (pixel) of the optical axes in raw data
-
-   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-
-   *default* = ``'fftshift'``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.psize (float, tuple)
-
-   Detector pixel size
-
-   Dimensions of the detector pixels (in meters)
-
-   *default* = ``0.000172 (>0.0)``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.distance (float)
-
-   Sample to detector distance
-
-   In meters.
-
-   *default* = ``7.19 (>0.0)``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.energy (float)
-
-   Photon energy of the incident radiation in keV
-
-   
-
-   *default* = ``7.2 (>0.0)``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.add_poisson_noise (bool)
-
-   Decides whether the scan should have poisson noise or not
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.dataPath (str)
-
-   Path to folder containing the Sardana master file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.datafile (str)
-
-   Sardana master file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.maskfile (str)
-
-   Arbitrary mask file
-
-   Hdf5 file containing an array called 'mask' at the root level.
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.pilatusPath (str)
-
-   Path to folder containing detector image files
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.pilatusPattern (str)
-
-   Format string for detector image files
-
-   A format string with two integer fields, the first holds the scan number while the second holds the image number.
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.scannr (int)
-
-   Scan number
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.hdfPath (str)
-
-   Path to image array within detector hdf5 file
-
-   
-
-   *default* = ``'entry_0000/measurement/Pilatus/data'``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.xMotorFlipped (bool)
-
-   Flip detector x positions
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.yMotorFlipped (bool)
-
-   Flip detector y positions
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.xMotorAngle (float)
-
-   Angle of the motor x axis relative to the lab x axis
-
-   Use this if the stage is mounted at an angle around the y axis, the sign doesn't matter as a cos factor is added.
-
-   *default* = ``0.0``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.detNormalizationFilePattern (str)
-
-   Format string for detector file containing data over which to normalize
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.NanomaxFlyscanJune2017.detNormalizationIndices (str)
-
-   Indices over which to normalize
-
-   
-
-   *default* = ``None``
-
-
-scandata.ALS5321Scan
---------------------
-
-.. py:data:: scandata.ALS5321Scan (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.ALS5321Scan.name (str)
-
-   
-
-   
-
-   *default* = ``'ALS5321Scan'``
-
-.. py:data:: scandata.ALS5321Scan.dfile (str)
-
-   File path where prepared data will be saved in the ``ptyd`` format.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.ALS5321Scan.chunk_format (str)
-
-   Appendix to saved files if save == 'link'
-
-   
-
-   *default* = ``'.chunk%02d'``
-
-.. py:data:: scandata.ALS5321Scan.save (str)
-
-   Saving mode
-
-   Mode to use to save data to file.
-   
-   
-   - ``None``: No saving
-   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-   - ``'append'``: appends each chunk in master \*.ptyd file
-   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-   
-   
-   in the path given by the link. Links file paths are relative to master file.
-
-   *default* = ``None``
-
-.. py:data:: scandata.ALS5321Scan.auto_center (bool)
-
-   Determine if center in data is calculated automatically
-
-   
-   - ``False``, no automatic centering
-   - ``None``, only if :py:data:`center` is ``None``
-   - ``True``, it will be enforced
-
-   *default* = ``None``
-
-.. py:data:: scandata.ALS5321Scan.load_parallel (str)
-
-   Determines what will be loaded in parallel
-
-   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
-
-   *default* = ``'data'``
-
-.. py:data:: scandata.ALS5321Scan.rebin (int)
-
-   Rebinning factor
-
-   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-
-   *default* = ``None (>1, <8)``
-
-.. py:data:: scandata.ALS5321Scan.orientation (int, tuple, list)
-
-   Data frame orientation
-
-   Choose
-   
-   
-   - ``None`` or ``0``: correct orientation
-   - ``1``: invert columns (numpy.flip_lr)
-   - ``2``: invert rows  (numpy.flip_ud)
-   - ``3``: invert columns, invert rows
-   - ``4``: transpose (numpy.transpose)
-   - ``4+i``: tranpose + other operations from above
-   
-   
-   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-   do_flipud, do_fliplr)``
-
-   *default* = ``None``
-
-.. py:data:: scandata.ALS5321Scan.min_frames (int)
-
-   Minimum number of frames loaded by each node
-
-   
-
-   *default* = ``1``
-
-.. py:data:: scandata.ALS5321Scan.positions_theory (ndarray)
-
-   Theoretical positions for this scan
-
-   If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
-   preparation is called from Ptycho instance, the calculated positions from the
-   :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
-
-   *default* = ``None``
-
-.. py:data:: scandata.ALS5321Scan.num_frames (int)
-
-   Maximum number of frames to be prepared
-
-   If `positions_theory` are provided, num_frames will be ovverriden with the number of
-   positions available
-
-   *default* = ``None``
-
-.. py:data:: scandata.ALS5321Scan.label (str)
-
-   The scan label
-
-   Unique string identifying the scan
-
-   *default* = ``None``
-
-.. py:data:: scandata.ALS5321Scan.experimentID (str)
-
-   Name of the experiment
-
-   If None, a default value will be provided by the recipe. **unused**
-
-   *default* = ``None``
-
-.. py:data:: scandata.ALS5321Scan.version (float)
-
-   TODO: Explain this and decide if it is a user parameter.
-
-   
-
-   *default* = ``0.1``
-
-.. py:data:: scandata.ALS5321Scan.shape (int, tuple)
-
-   Shape of the region of interest cropped from the raw data.
-
-   Cropping dimension of the diffraction frame
-   Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-
-   *default* = ``256``
-
-.. py:data:: scandata.ALS5321Scan.center (list, tuple, str)
-
-   Center (pixel) of the optical axes in raw data
-
-   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-
-   *default* = ``'fftshift'``
-
-.. py:data:: scandata.ALS5321Scan.psize (float, tuple)
-
-   Detector pixel size
-
-   Dimensions of the detector pixels (in meters)
-
-   *default* = ``0.000172 (>0.0)``
-
-.. py:data:: scandata.ALS5321Scan.distance (float)
-
-   Sample to detector distance
-
-   In meters.
-
-   *default* = ``7.19 (>0.0)``
-
-.. py:data:: scandata.ALS5321Scan.energy (float)
-
-   Photon energy of the incident radiation in keV
-
-   
-
-   *default* = ``0.82 (>0.0)``
-
-.. py:data:: scandata.ALS5321Scan.add_poisson_noise (bool)
-
-   Decides whether the scan should have poisson noise or not
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.ALS5321Scan.dataPath (str)
-
-   Path to folder containing the data
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.ALS5321Scan.dataile (str)
-
-   CXI data file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.ALS5321Scan.maskfile (str)
-
-   Optional mask file
-
-   Should contain an array called 'mask' at the root level.
-
-   *default* = ``None``
-
-.. py:data:: scandata.ALS5321Scan.CXI_PATHS (Param)
-
-   Container for CXI path options
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.ALS5321Scan.CXI_PATHS.CXI_DATA_PATH (str)
-
-   Data path within the CXI file
-
-   
-
-   *default* = ``'entry_1/data_1/data'``
-
-.. py:data:: scandata.ALS5321Scan.CXI_PATHS.CXI_MASK_PATH (str)
-
-   Mask path within the CXI file
-
-   
-
-   *default* = ``'mask'``
-
-.. py:data:: scandata.ALS5321Scan.CXI_PATHS.CXI_POS_PATH (str)
-
-   Positions path within the CXI file
-
-   
-
-   *default* = ``'entry_1/data_1/translation'``
-
-.. py:data:: scandata.ALS5321Scan.CXI_PATHS.CXI_DISTANCE (str)
-
-   Distance path within the CXI file
-
-   
-
-   *default* = ``'entry_1/instrument_1/detector_1/distance'``
-
-.. py:data:: scandata.ALS5321Scan.CXI_PATHS.CXI_PSIZES (list)
-
-   Pixel size path within the CXI file
-
-   
-
-   *default* = ``['entry_1/instrument_1/detector_1/x_pixel_size', 'entry_1/instrument_1/detector_1/y_pixel_size']``
-
-
-scandata.Bragg3dSimScan
------------------------
-
-.. py:data:: scandata.Bragg3dSimScan (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Bragg3dSimScan.name (str)
-
-   PtyScan subclass identifier
-
-   
-
-   *default* = ``'Bragg3dSimScan'``
-
-.. py:data:: scandata.Bragg3dSimScan.dfile (str)
-
-   File path where prepared data will be saved in the ``ptyd`` format.
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.chunk_format (str)
-
-   Appendix to saved files if save == 'link'
-
-   
-
-   *default* = ``'.chunk%02d'``
-
-.. py:data:: scandata.Bragg3dSimScan.save (str)
-
-   Saving mode
-
-   Mode to use to save data to file.
-   
-   
-   - ``None``: No saving
-   - ``'merge'``: attemts to merge data in single chunk **[not implemented]**
-   - ``'append'``: appends each chunk in master \*.ptyd file
-   - ``'link'``: appends external links in master \*.ptyd file and stores chunks separately
-   
-   
-   in the path given by the link. Links file paths are relative to master file.
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.auto_center (bool)
-
-   Determine if center in data is calculated automatically
-
-   
-   - ``False``, no automatic centering
-   - ``None``, only if :py:data:`center` is ``None``
-   - ``True``, it will be enforced
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.load_parallel (str)
-
-   Determines what will be loaded in parallel
-
-   Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
-
-   *default* = ``'data'``
-
-.. py:data:: scandata.Bragg3dSimScan.rebin (int)
-
-   Rebinning factor
-
-   Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
-
-   *default* = ``None (>1, <8)``
-
-.. py:data:: scandata.Bragg3dSimScan.orientation (int, tuple, list)
-
-   Data frame orientation
-
-   Choose
-   
-   
-   - ``None`` or ``0``: correct orientation
-   - ``1``: invert columns (numpy.flip_lr)
-   - ``2``: invert rows  (numpy.flip_ud)
-   - ``3``: invert columns, invert rows
-   - ``4``: transpose (numpy.transpose)
-   - ``4+i``: tranpose + other operations from above
-   
-   
-   Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-   do_flipud, do_fliplr)``
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.min_frames (int)
-
-   Minimum number of frames loaded by each node
-
-   
-
-   *default* = ``1``
-
-.. py:data:: scandata.Bragg3dSimScan.positions_theory (ndarray)
-
-   Theoretical positions for this scan
-
-   If provided, experimental positions from :py:class:`PtyScan` subclass will be ignored. If data
-   preparation is called from Ptycho instance, the calculated positions from the
-   :py:func:`ptypy.core.xy.from_pars` dict will be inserted here
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.num_frames (int)
-
-   Maximum number of frames to be prepared
-
-   If `positions_theory` are provided, num_frames will be ovverriden with the number of
-   positions available
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.label (str)
-
-   The scan label
-
-   Unique string identifying the scan
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.experimentID (str)
-
-   Name of the experiment
-
-   If None, a default value will be provided by the recipe. **unused**
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.version (float)
-
-   TODO: Explain this and decide if it is a user parameter.
-
-   
-
-   *default* = ``0.1``
-
-.. py:data:: scandata.Bragg3dSimScan.shape (int, tuple)
-
-   Shape of the region of interest cropped from the raw data.
-
-   Cropping dimension of the diffraction frame
-   Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
-
-   *default* = ``256``
-
-.. py:data:: scandata.Bragg3dSimScan.center (list, tuple, str)
-
-   Center (pixel) of the optical axes in raw data
-
-   If ``None``, this parameter will be set by :py:data:`~.scan.data.auto_center` or elsewhere
-
-   *default* = ``'fftshift'``
-
-.. py:data:: scandata.Bragg3dSimScan.psize (float, tuple)
-
-   Detector pixel size
-
-   Dimensions of the detector pixels (in meters)
-
-   *default* = ``1.3e-05 (>0.0)``
-
-.. py:data:: scandata.Bragg3dSimScan.distance (float)
-
-   Sample to detector distance
-
-   In meters.
-
-   *default* = ``2 (>0.0)``
-
-.. py:data:: scandata.Bragg3dSimScan.energy (float)
-
-   Photon energy of the incident radiation in keV
-
-   
-
-   *default* = ``8.5 (>0.0)``
-
-.. py:data:: scandata.Bragg3dSimScan.add_poisson_noise (bool)
-
-   Decides whether the scan should have poisson noise or not
-
-   
-
-   *default* = ``False``
-
-.. py:data:: scandata.Bragg3dSimScan.rocking_step (float)
-
-   Step size in the rocking curve in degrees
-
-   
-
-   *default* = ``0.0025``
-
-.. py:data:: scandata.Bragg3dSimScan.n_rocking_positions (int)
-
-   Number of rocking positions
-
-   
-
-   *default* = ``40``
-
-.. py:data:: scandata.Bragg3dSimScan.theta_bragg (float)
-
-   Bragg angle in degrees
-
-   
-
-   *default* = ``22.32``
-
-.. py:data:: scandata.Bragg3dSimScan.shuffle (bool)
-
-   Shuffles all diffraction patterns
-
-   Mainly to test that they are still assembled correctly.
-
-   *default* = ``False``
-
-.. py:data:: scandata.Bragg3dSimScan.dump (str)
-
-   Dump raw simulated 3d diffraction data to npz file
-
-   
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.dry_run (bool)
-
-   Don't calculate diffraction patterns
-
-   Skips the heavy FFT and just returns empty diff patterns.
-
-   *default* = ``False``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination (Param, str)
-
-   Illumination parameters
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.aperture (Param)
-
-   Beam aperture parameters
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.aperture.rotate (float)
-
-   Rotate aperture by this value
-
-   
-
-   *default* = ``0.0``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.aperture.central_stop (float)
-
-   size of central stop as a fraction of aperture.size
-
-   If not None: places a central beam stop in aperture. The value given here is the fraction of the beam stop compared to `size`
-
-   *default* = ``None (>0.0, <1.0)``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.aperture.diffuser (tuple)
-
-   Noise in the transparen part of the aperture
-
-   Can be either:
-   - ``None`` : no noise
-   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
-   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.aperture.edge (float)
-
-   Edge width of aperture (in pixels!)
-
-   
-
-   *default* = ``2.0``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.aperture.form (NoneType, str)
-
-   One of None, 'rect' or 'circ'
-
-   One of:
-   - ``None`` : no aperture, this may be useful for nearfield
-   - ``'rect'`` : rectangular aperture
-   - ``'circ'`` : circular aperture
-
-   *default* = ``'circ'``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.aperture.offset (float, tuple, list)
-
-   Offset between center of aperture and optical axes
-
-   May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset
-
-   *default* = ``0.0``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.aperture.size (float, tuple, list)
-
-   Aperture width or diameter
-
-   May also be a tuple *(vertical,horizontal)* in case of an asymmetric aperture
-
-   *default* = ``None (>0.0)``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.model (str, ndarray)
-
-   Type of illumination model
-
-   One of:
-   - ``None`` : model initialitziation defaults to flat array filled with the specified number of photons
-   - ``'recon'`` : load model from previous reconstruction, see `recon` Parameters
-   - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
-   - *<resource>* : one of ptypys internal image resource strings
-   - *<template>* : one of the templates inillumination module
-   
-   In script, you may pass a numpy.ndarray here directly as the model. It is considered as incoming wavefront and will be propagated according to `propagation` with an optional `aperture` applied before.
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.photons (int, float, NoneType)
-
-   Number of photons in the incident illumination
-
-   A value specified here will take precedence over calculated statistics from the loaded data.
-
-   *default* = ``None (>0)``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.propagation (Param)
-
-   Parameters for propagation after aperture plane
-
-   Propagation to focus takes precedence to parallel propagation if `foccused` is not ``None``
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.propagation.antialiasing (float)
-
-   Antialiasing factor
-
-   Antialiasing factor used when generating the probe. (numbers larger than 2 or 3 are memory hungry)
-   **[Untested]**
-
-   *default* = ``1``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.propagation.focussed (NoneType, float)
-
-   Propagation distance from aperture to focus
-
-   If ``None`` or ``0`` : No focus propagation
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.propagation.parallel (NoneType, float)
-
-   Parallel propagation distance
-
-   If ``None`` or ``0`` : No parallel propagation
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.propagation.spot_size (NoneType, float)
-
-   Focal spot diameter
-
-   If not ``None``, this parameter is used to generate the appropriate aperture size instead of :py:data:`size`
-
-   *default* = ``None (>0.0)``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.recon (Param)
-
-   Parameters to load from previous reconstruction
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.recon.label (NoneType, str)
-
-   Scan label of diffraction that is to be used for probe estimate
-
-   If ``None``, own scan label is used
-
-   *default* = ``None``
-
-.. py:data:: scandata.Bragg3dSimScan.illumination.recon.rfile (str)
-
-   Path to a ``.ptyr`` compatible file
-
-   
-
-   *default* = ``'\\*.ptyr'``
-
-.. py:data:: scandata.Bragg3dSimScan.scantype (str)
-
-   Type of position scan
-
-   '1d' for scan along y as in the paper, '2d' for xy spiral scan
-
-   *default* = ``'1d'``
-
-.. py:data:: scandata.Bragg3dSimScan.stepsize (float)
-
-   Step size of the spiral scan
-
-   
-
-   *default* = ``5e-07``
-
-
 scan
 ====
 
@@ -5668,7 +1769,7 @@ scan.ScanModel
 
    
 
-   *default* = :py:data:`scan.ScanModel.data`
+   *default* = :py:data:`scandata.PtyScan`
 
 .. py:data:: scan.ScanModel.data.name (str)
 
@@ -5686,13 +1787,91 @@ scan.ScanModel
 
    *default* = ``Param({})``
 
-.. py:data:: scan.ScanModel.sample (Param)
+.. py:data:: scan.ScanModel.sample (Param, str)
 
    Container for sample initialization model
 
    
 
    *default* = ``Param({})``
+
+.. py:data:: scan.ScanModel.resample (int, NoneType)
+
+   Resampling fraction of the image frames w.r.t. diffraction frames
+
+   A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+   as densely as the raw diffraction data.
+
+   *default* = ``1``
+
+
+scan.BlockScanModel
+-------------------
+
+.. py:data:: scan.BlockScanModel (Param)
+
+   
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockScanModel.tags (list)
+
+   Comma seperated string tags describing the data input
+
+   [deprecated?]
+
+   *default* = ``['dummy']``
+
+.. py:data:: scan.BlockScanModel.propagation (str)
+
+   Propagation type
+
+   Either "farfield" or "nearfield"
+
+   *default* = ``'farfield'``
+
+.. py:data:: scan.BlockScanModel.data (Param)
+
+   Link to container for data preparation
+
+   
+
+   *default* = :py:data:`scandata.PtyScan`
+
+.. py:data:: scan.BlockScanModel.data.name (str)
+
+   Name of the PtyScan subclass to use
+
+   
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockScanModel.illumination (Param, str)
+
+   Container for probe initialization model
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockScanModel.sample (Param, str)
+
+   Container for sample initialization model
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockScanModel.resample (int, NoneType)
+
+   Resampling fraction of the image frames w.r.t. diffraction frames
+
+   A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+   as densely as the raw diffraction data.
+
+   *default* = ``1``
 
 
 scan.Vanilla
@@ -5705,6 +1884,14 @@ scan.Vanilla
    
 
    *default* = ``Param({})``
+
+.. py:data:: scan.Vanilla.name (str)
+
+   
+
+   
+
+   *default* = ``'Vanilla'``
 
 .. py:data:: scan.Vanilla.tags (list)
 
@@ -5728,7 +1915,7 @@ scan.Vanilla
 
    
 
-   *default* = :py:data:`scan.Vanilla.data`
+   *default* = :py:data:`scandata.PtyScan`
 
 .. py:data:: scan.Vanilla.data.name (str)
 
@@ -5754,7 +1941,7 @@ scan.Vanilla
 
    *default* = ``None``
 
-.. py:data:: scan.Vanilla.sample (Param)
+.. py:data:: scan.Vanilla.sample (Param, str)
 
    Container for sample initialization model
 
@@ -5770,13 +1957,107 @@ scan.Vanilla
 
    *default* = ``1``
 
-.. py:data:: scan.Vanilla.name (str)
+.. py:data:: scan.Vanilla.resample (int, NoneType)
+
+   Resampling fraction of the image frames w.r.t. diffraction frames
+
+   A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+   as densely as the raw diffraction data.
+
+   *default* = ``1``
+
+
+scan.BlockVanilla
+-----------------
+
+.. py:data:: scan.BlockVanilla (Param)
+
+   
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockVanilla.name (str)
 
    
 
    
 
    *default* = ``'Vanilla'``
+
+.. py:data:: scan.BlockVanilla.tags (list)
+
+   Comma seperated string tags describing the data input
+
+   [deprecated?]
+
+   *default* = ``['dummy']``
+
+.. py:data:: scan.BlockVanilla.propagation (str)
+
+   Propagation type
+
+   Either "farfield" or "nearfield"
+
+   *default* = ``'farfield'``
+
+.. py:data:: scan.BlockVanilla.data (Param)
+
+   Link to container for data preparation
+
+   
+
+   *default* = :py:data:`scandata.PtyScan`
+
+.. py:data:: scan.BlockVanilla.data.name (str)
+
+   Name of the PtyScan subclass to use
+
+   
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockVanilla.illumination (Param, str)
+
+   Container for probe initialization model
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockVanilla.illumination.size (float)
+
+   Initial probe size
+
+   The probe is initialized as a flat circle.
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockVanilla.sample (Param, str)
+
+   Container for sample initialization model
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockVanilla.sample.fill (float, complex)
+
+   Initial sample value
+
+   The sample is initialized with this value everywhere.
+
+   *default* = ``1``
+
+.. py:data:: scan.BlockVanilla.resample (int, NoneType)
+
+   Resampling fraction of the image frames w.r.t. diffraction frames
+
+   A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+   as densely as the raw diffraction data.
+
+   *default* = ``1``
 
 
 scan.Full
@@ -5789,6 +2070,86 @@ scan.Full
    
 
    *default* = ``Param({})``
+
+.. py:data:: scan.Full.name (str)
+
+   
+
+   
+
+   *default* = ``'Full'``
+
+.. py:data:: scan.Full.coherence (Param)
+
+   Coherence parameters
+
+   
+
+   *default* = ``Param({}) (>0.0)``
+
+.. py:data:: scan.Full.coherence.num_probe_modes (int)
+
+   Number of probe modes
+
+   
+
+   *default* = ``1 (>0)``
+
+.. py:data:: scan.Full.coherence.num_object_modes (int)
+
+   Number of object modes
+
+   
+
+   *default* = ``1 (>0)``
+
+.. py:data:: scan.Full.coherence.energies (list)
+
+   ?
+
+   ?
+
+   *default* = ``[1.0]``
+
+.. py:data:: scan.Full.coherence.spectrum (list)
+
+   Amplitude of relative energy bins if the probe modes have a different energy
+
+   
+
+   *default* = ``[1.0] (>0.0)``
+
+.. py:data:: scan.Full.coherence.object_dispersion (str)
+
+   Energy dispersive response of the object
+
+   One of:
+   - ``None`` or ``'achromatic'``: no dispersion
+   - ``'linear'``: linear response model
+   - ``'irregular'``: no assumption
+   **[not implemented]**
+
+   *default* = ``None``
+
+.. py:data:: scan.Full.coherence.probe_dispersion (str)
+
+   Energy dispersive response of the probe
+
+   One of:
+   - ``None`` or ``'achromatic'``: no dispersion
+   - ``'linear'``: linear response model
+   - ``'irregular'``: no assumption
+   **[not implemented]**
+
+   *default* = ``None``
+
+.. py:data:: scan.Full.resolution (NoneType, float)
+
+   Will force the reconstruction to adapt to the given resolution, this might lead to cropping/padding in diffraction space which could reduce performance.
+
+   Half-period resolution given in [m]
+
+   *default* = ``None (>0.0)``
 
 .. py:data:: scan.Full.tags (list)
 
@@ -5812,7 +2173,7 @@ scan.Full
 
    
 
-   *default* = :py:data:`scan.Full.data`
+   *default* = :py:data:`scandata.PtyScan`
 
 .. py:data:: scan.Full.data.name (str)
 
@@ -6023,7 +2384,7 @@ scan.Full
 
    *default* = ``'\\*.ptyr'``
 
-.. py:data:: scan.Full.sample (Param)
+.. py:data:: scan.Full.sample (Param, str)
 
    
 
@@ -6188,7 +2549,28 @@ scan.Full
 
    *default* = ``None``
 
-.. py:data:: scan.Full.name (str)
+.. py:data:: scan.Full.resample (int, NoneType)
+
+   Resampling fraction of the image frames w.r.t. diffraction frames
+
+   A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+   as densely as the raw diffraction data.
+
+   *default* = ``1``
+
+
+scan.BlockFull
+--------------
+
+.. py:data:: scan.BlockFull (Param)
+
+   
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockFull.name (str)
 
    
 
@@ -6196,7 +2578,7 @@ scan.Full
 
    *default* = ``'Full'``
 
-.. py:data:: scan.Full.coherence (Param)
+.. py:data:: scan.BlockFull.coherence (Param)
 
    Coherence parameters
 
@@ -6204,7 +2586,7 @@ scan.Full
 
    *default* = ``Param({}) (>0.0)``
 
-.. py:data:: scan.Full.coherence.num_probe_modes (int)
+.. py:data:: scan.BlockFull.coherence.num_probe_modes (int)
 
    Number of probe modes
 
@@ -6212,7 +2594,7 @@ scan.Full
 
    *default* = ``1 (>0)``
 
-.. py:data:: scan.Full.coherence.num_object_modes (int)
+.. py:data:: scan.BlockFull.coherence.num_object_modes (int)
 
    Number of object modes
 
@@ -6220,7 +2602,7 @@ scan.Full
 
    *default* = ``1 (>0)``
 
-.. py:data:: scan.Full.coherence.energies (list)
+.. py:data:: scan.BlockFull.coherence.energies (list)
 
    ?
 
@@ -6228,7 +2610,7 @@ scan.Full
 
    *default* = ``[1.0]``
 
-.. py:data:: scan.Full.coherence.spectrum (list)
+.. py:data:: scan.BlockFull.coherence.spectrum (list)
 
    Amplitude of relative energy bins if the probe modes have a different energy
 
@@ -6236,7 +2618,7 @@ scan.Full
 
    *default* = ``[1.0] (>0.0)``
 
-.. py:data:: scan.Full.coherence.object_dispersion (str)
+.. py:data:: scan.BlockFull.coherence.object_dispersion (str)
 
    Energy dispersive response of the object
 
@@ -6248,7 +2630,7 @@ scan.Full
 
    *default* = ``None``
 
-.. py:data:: scan.Full.coherence.probe_dispersion (str)
+.. py:data:: scan.BlockFull.coherence.probe_dispersion (str)
 
    Energy dispersive response of the probe
 
@@ -6259,6 +2641,1017 @@ scan.Full
    **[not implemented]**
 
    *default* = ``None``
+
+.. py:data:: scan.BlockFull.resolution (NoneType, float)
+
+   Will force the reconstruction to adapt to the given resolution, this might lead to cropping/padding in diffraction space which could reduce performance.
+
+   Half-period resolution given in [m]
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: scan.BlockFull.tags (list)
+
+   Comma seperated string tags describing the data input
+
+   [deprecated?]
+
+   *default* = ``['dummy']``
+
+.. py:data:: scan.BlockFull.propagation (str)
+
+   Propagation type
+
+   Either "farfield" or "nearfield"
+
+   *default* = ``'farfield'``
+
+.. py:data:: scan.BlockFull.data (Param)
+
+   Link to container for data preparation
+
+   
+
+   *default* = :py:data:`scandata.PtyScan`
+
+.. py:data:: scan.BlockFull.data.name (str)
+
+   Name of the PtyScan subclass to use
+
+   
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockFull.illumination (Param, str)
+
+   Illumination parameters
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockFull.illumination.aperture (Param)
+
+   Beam aperture parameters
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockFull.illumination.aperture.rotate (float)
+
+   Rotate aperture by this value
+
+   
+
+   *default* = ``0.0``
+
+.. py:data:: scan.BlockFull.illumination.aperture.central_stop (float)
+
+   size of central stop as a fraction of aperture.size
+
+   If not None: places a central beam stop in aperture. The value given here is the fraction of the beam stop compared to `size`
+
+   *default* = ``None (>0.0, <1.0)``
+
+.. py:data:: scan.BlockFull.illumination.aperture.diffuser (tuple)
+
+   Noise in the transparen part of the aperture
+
+   Can be either:
+   - ``None`` : no noise
+   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockFull.illumination.aperture.edge (float)
+
+   Edge width of aperture (in pixels!)
+
+   
+
+   *default* = ``2.0``
+
+.. py:data:: scan.BlockFull.illumination.aperture.form (NoneType, str)
+
+   One of None, 'rect' or 'circ'
+
+   One of:
+   - ``None`` : no aperture, this may be useful for nearfield
+   - ``'rect'`` : rectangular aperture
+   - ``'circ'`` : circular aperture
+
+   *default* = ``'circ'``
+
+.. py:data:: scan.BlockFull.illumination.aperture.offset (float, tuple, list)
+
+   Offset between center of aperture and optical axes
+
+   May also be a tuple (vertical,horizontal) for size in case of an asymmetric offset
+
+   *default* = ``0.0``
+
+.. py:data:: scan.BlockFull.illumination.aperture.size (float, tuple, list)
+
+   Aperture width or diameter
+
+   May also be a tuple *(vertical,horizontal)* in case of an asymmetric aperture
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: scan.BlockFull.illumination.diversity (Param, NoneType)
+
+   Probe mode(s) diversity parameters
+
+   Can be ``None`` i.e. no diversity
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockFull.illumination.diversity.noise (tuple, list)
+
+   Noise in each non-primary mode of the illumination.
+
+   Can be either:
+   - ``None`` : no noise
+   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+
+   *default* = ``(0.5, 1.0)``
+
+.. py:data:: scan.BlockFull.illumination.diversity.power (tuple, float, list)
+
+   Power of modes relative to main mode (zero-layer)
+
+   
+
+   *default* = ``0.1 (>0.0, <1.0)``
+
+.. py:data:: scan.BlockFull.illumination.diversity.shift (float)
+
+   Lateral shift of modes relative to main mode
+
+   **[not implemented]**
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockFull.illumination.model (str, ndarray)
+
+   Type of illumination model
+
+   One of:
+   - ``None`` : model initialitziation defaults to flat array filled with the specified number of photons
+   - ``'recon'`` : load model from previous reconstruction, see `recon` Parameters
+   - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
+   - *<resource>* : one of ptypys internal image resource strings
+   - *<template>* : one of the templates inillumination module
+   
+   In script, you may pass a numpy.ndarray here directly as the model. It is considered as incoming wavefront and will be propagated according to `propagation` with an optional `aperture` applied before.
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockFull.illumination.photons (int, float, NoneType)
+
+   Number of photons in the incident illumination
+
+   A value specified here will take precedence over calculated statistics from the loaded data.
+
+   *default* = ``None (>0)``
+
+.. py:data:: scan.BlockFull.illumination.propagation (Param)
+
+   Parameters for propagation after aperture plane
+
+   Propagation to focus takes precedence to parallel propagation if `foccused` is not ``None``
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockFull.illumination.propagation.antialiasing (float)
+
+   Antialiasing factor
+
+   Antialiasing factor used when generating the probe. (numbers larger than 2 or 3 are memory hungry)
+   **[Untested]**
+
+   *default* = ``1``
+
+.. py:data:: scan.BlockFull.illumination.propagation.focussed (NoneType, float)
+
+   Propagation distance from aperture to focus
+
+   If ``None`` or ``0`` : No focus propagation
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockFull.illumination.propagation.parallel (NoneType, float)
+
+   Parallel propagation distance
+
+   If ``None`` or ``0`` : No parallel propagation
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockFull.illumination.propagation.spot_size (NoneType, float)
+
+   Focal spot diameter
+
+   If not ``None``, this parameter is used to generate the appropriate aperture size instead of :py:data:`size`
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: scan.BlockFull.illumination.recon (Param)
+
+   Parameters to load from previous reconstruction
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockFull.illumination.recon.label (NoneType, str)
+
+   Scan label of diffraction that is to be used for probe estimate
+
+   If ``None``, own scan label is used
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockFull.illumination.recon.rfile (str)
+
+   Path to a ``.ptyr`` compatible file
+
+   
+
+   *default* = ``'\\*.ptyr'``
+
+.. py:data:: scan.BlockFull.sample (Param, str)
+
+   
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockFull.sample.model (str, ndarray)
+
+   Type of initial object model
+
+   One of:
+   - ``None`` : model initialitziation defaults to flat array filled `fill`
+   - ``'recon'`` : load model from STXM analysis of diffraction data
+   - ``'stxm'`` : Estimate model from autocorrelation of mean diffraction data
+   - *<resource>* : one of ptypys internal model resource strings
+   - *<template>* : one of the templates in sample module
+   In script, you may pass a numpy.array here directly as the model. This array will be
+   processed according to `process` in order to *simulate* a sample from e.g. a thickness
+   profile.
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockFull.sample.fill (float, complex)
+
+   Default fill value
+
+   
+
+   *default* = ``1``
+
+.. py:data:: scan.BlockFull.sample.recon (Param)
+
+   Parameters to load from previous reconstruction
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockFull.sample.recon.rfile (str)
+
+   Path to a ``.ptyr`` compatible file
+
+   
+
+   *default* = ``'\\*.ptyr'``
+
+.. py:data:: scan.BlockFull.sample.stxm (Param)
+
+   STXM analysis parameters
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockFull.sample.stxm.label (str)
+
+   Scan label of diffraction that is to be used for probe estimate
+
+   ``None``, own scan label is used
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockFull.sample.process (Param, NoneType)
+
+   Model processing parameters
+
+   Can be ``None``, i.e. no processing
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockFull.sample.process.offset (tuple, list)
+
+   Offset between center of object array and scan pattern
+
+   
+
+   *default* = ``(0, 0) (>0.0)``
+
+.. py:data:: scan.BlockFull.sample.process.zoom (list, tuple, float)
+
+   Zoom value for object simulation.
+
+   If ``None``, leave the array untouched. Otherwise the modeled or loaded image will be
+   resized using :py:func:`zoom`.
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: scan.BlockFull.sample.process.formula (str)
+
+   Chemical formula
+
+   A Formula compatible with a cxro database query,e.g. ``'Au'`` or ``'NaCl'`` or ``'H2O'``
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockFull.sample.process.density (float)
+
+   Density in [g/ccm]
+
+   Only used if `formula` is not None
+
+   *default* = ``1``
+
+.. py:data:: scan.BlockFull.sample.process.thickness (float)
+
+   Maximum thickness of sample
+
+   If ``None``, the absolute values of loaded source array will be used
+
+   *default* = ``1e-06``
+
+.. py:data:: scan.BlockFull.sample.process.ref_index (list, tuple)
+
+   Assigned refractive index, tuple of format (real, complex)
+
+   If ``None``, treat source array as projection of refractive index a+bj for (a, b). If a refractive index
+   is provided the array's absolute value will be used to scale the refractive index.
+
+   *default* = ``(0.5, 0.0) (>0.0)``
+
+.. py:data:: scan.BlockFull.sample.process.smoothing (int)
+
+   Smoothing scale
+
+   Smooth the projection with gaussian kernel of width given by `smoothing_mfs`
+
+   *default* = ``2 (>0)``
+
+.. py:data:: scan.BlockFull.sample.diversity (Param)
+
+   Probe mode(s) diversity parameters
+
+   Can be ``None`` i.e. no diversity
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockFull.sample.diversity.noise (tuple)
+
+   Noise in the generated modes of the illumination
+
+   Can be either:
+   - ``None`` : no noise
+   - ``2-tuple`` : noise in phase (amplitude (rms), minimum feature size)
+   - ``4-tuple`` : noise in phase & modulus (rms, mfs, rms_mod, mfs_mod)
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockFull.sample.diversity.power (tuple, float)
+
+   Power of modes relative to main mode (zero-layer)
+
+   
+
+   *default* = ``0.1``
+
+.. py:data:: scan.BlockFull.sample.diversity.shift (float)
+
+   Lateral shift of modes relative to main mode
+
+   **[not implemented]**
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockFull.resample (int, NoneType)
+
+   Resampling fraction of the image frames w.r.t. diffraction frames
+
+   A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+   as densely as the raw diffraction data.
+
+   *default* = ``1``
+
+
+scan.OPRModel
+-------------
+
+.. py:data:: scan.OPRModel (Param)
+
+   
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.OPRModel.name (str)
+
+   
+
+   
+
+   *default* = ``'Full'``
+
+.. py:data:: scan.OPRModel.coherence (Param)
+
+   Coherence parameters
+
+   
+
+   *default* = ``Param({}) (>0.0)``
+
+.. py:data:: scan.OPRModel.coherence.num_probe_modes (int)
+
+   Number of probe modes
+
+   
+
+   *default* = ``1 (>0)``
+
+.. py:data:: scan.OPRModel.coherence.num_object_modes (int)
+
+   Number of object modes
+
+   
+
+   *default* = ``1 (>0)``
+
+.. py:data:: scan.OPRModel.coherence.energies (list)
+
+   ?
+
+   ?
+
+   *default* = ``[1.0]``
+
+.. py:data:: scan.OPRModel.coherence.spectrum (list)
+
+   Amplitude of relative energy bins if the probe modes have a different energy
+
+   
+
+   *default* = ``[1.0] (>0.0)``
+
+.. py:data:: scan.OPRModel.coherence.object_dispersion (str)
+
+   Energy dispersive response of the object
+
+   One of:
+   - ``None`` or ``'achromatic'``: no dispersion
+   - ``'linear'``: linear response model
+   - ``'irregular'``: no assumption
+   **[not implemented]**
+
+   *default* = ``None``
+
+.. py:data:: scan.OPRModel.coherence.probe_dispersion (str)
+
+   Energy dispersive response of the probe
+
+   One of:
+   - ``None`` or ``'achromatic'``: no dispersion
+   - ``'linear'``: linear response model
+   - ``'irregular'``: no assumption
+   **[not implemented]**
+
+   *default* = ``None``
+
+.. py:data:: scan.OPRModel.resolution (NoneType, float)
+
+   Will force the reconstruction to adapt to the given resolution, this might lead to cropping/padding in diffraction space which could reduce performance.
+
+   Half-period resolution given in [m]
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: scan.OPRModel.tags (list)
+
+   Comma seperated string tags describing the data input
+
+   [deprecated?]
+
+   *default* = ``['dummy']``
+
+.. py:data:: scan.OPRModel.propagation (str)
+
+   Propagation type
+
+   Either "farfield" or "nearfield"
+
+   *default* = ``'farfield'``
+
+.. py:data:: scan.OPRModel.data (Param)
+
+   Link to container for data preparation
+
+   
+
+   *default* = :py:data:`scandata.PtyScan`
+
+.. py:data:: scan.OPRModel.data.name (str)
+
+   Name of the PtyScan subclass to use
+
+   
+
+   *default* = ``None``
+
+.. py:data:: scan.OPRModel.illumination (Param, str)
+
+   Container for probe initialization model
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.OPRModel.sample (Param, str)
+
+   Container for sample initialization model
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.OPRModel.resample (int, NoneType)
+
+   Resampling fraction of the image frames w.r.t. diffraction frames
+
+   A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+   as densely as the raw diffraction data.
+
+   *default* = ``1``
+
+
+scan.BlockOPRModel
+------------------
+
+.. py:data:: scan.BlockOPRModel (Param)
+
+   
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockOPRModel.name (str)
+
+   
+
+   
+
+   *default* = ``'Full'``
+
+.. py:data:: scan.BlockOPRModel.coherence (Param)
+
+   Coherence parameters
+
+   
+
+   *default* = ``Param({}) (>0.0)``
+
+.. py:data:: scan.BlockOPRModel.coherence.num_probe_modes (int)
+
+   Number of probe modes
+
+   
+
+   *default* = ``1 (>0)``
+
+.. py:data:: scan.BlockOPRModel.coherence.num_object_modes (int)
+
+   Number of object modes
+
+   
+
+   *default* = ``1 (>0)``
+
+.. py:data:: scan.BlockOPRModel.coherence.energies (list)
+
+   ?
+
+   ?
+
+   *default* = ``[1.0]``
+
+.. py:data:: scan.BlockOPRModel.coherence.spectrum (list)
+
+   Amplitude of relative energy bins if the probe modes have a different energy
+
+   
+
+   *default* = ``[1.0] (>0.0)``
+
+.. py:data:: scan.BlockOPRModel.coherence.object_dispersion (str)
+
+   Energy dispersive response of the object
+
+   One of:
+   - ``None`` or ``'achromatic'``: no dispersion
+   - ``'linear'``: linear response model
+   - ``'irregular'``: no assumption
+   **[not implemented]**
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockOPRModel.coherence.probe_dispersion (str)
+
+   Energy dispersive response of the probe
+
+   One of:
+   - ``None`` or ``'achromatic'``: no dispersion
+   - ``'linear'``: linear response model
+   - ``'irregular'``: no assumption
+   **[not implemented]**
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockOPRModel.resolution (NoneType, float)
+
+   Will force the reconstruction to adapt to the given resolution, this might lead to cropping/padding in diffraction space which could reduce performance.
+
+   Half-period resolution given in [m]
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: scan.BlockOPRModel.tags (list)
+
+   Comma seperated string tags describing the data input
+
+   [deprecated?]
+
+   *default* = ``['dummy']``
+
+.. py:data:: scan.BlockOPRModel.propagation (str)
+
+   Propagation type
+
+   Either "farfield" or "nearfield"
+
+   *default* = ``'farfield'``
+
+.. py:data:: scan.BlockOPRModel.data (Param)
+
+   Link to container for data preparation
+
+   
+
+   *default* = :py:data:`scandata.PtyScan`
+
+.. py:data:: scan.BlockOPRModel.data.name (str)
+
+   Name of the PtyScan subclass to use
+
+   
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockOPRModel.illumination (Param, str)
+
+   Container for probe initialization model
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockOPRModel.sample (Param, str)
+
+   Container for sample initialization model
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockOPRModel.resample (int, NoneType)
+
+   Resampling fraction of the image frames w.r.t. diffraction frames
+
+   A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+   as densely as the raw diffraction data.
+
+   *default* = ``1``
+
+
+scan.GradFull
+-------------
+
+.. py:data:: scan.GradFull (Param)
+
+   
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.GradFull.name (str)
+
+   
+
+   
+
+   *default* = ``'Full'``
+
+.. py:data:: scan.GradFull.coherence (Param)
+
+   Coherence parameters
+
+   
+
+   *default* = ``Param({}) (>0.0)``
+
+.. py:data:: scan.GradFull.coherence.num_probe_modes (int)
+
+   Number of probe modes
+
+   
+
+   *default* = ``1 (>0)``
+
+.. py:data:: scan.GradFull.coherence.num_object_modes (int)
+
+   Number of object modes
+
+   
+
+   *default* = ``1 (>0)``
+
+.. py:data:: scan.GradFull.coherence.energies (list)
+
+   ?
+
+   ?
+
+   *default* = ``[1.0]``
+
+.. py:data:: scan.GradFull.coherence.spectrum (list)
+
+   Amplitude of relative energy bins if the probe modes have a different energy
+
+   
+
+   *default* = ``[1.0] (>0.0)``
+
+.. py:data:: scan.GradFull.coherence.object_dispersion (str)
+
+   Energy dispersive response of the object
+
+   One of:
+   - ``None`` or ``'achromatic'``: no dispersion
+   - ``'linear'``: linear response model
+   - ``'irregular'``: no assumption
+   **[not implemented]**
+
+   *default* = ``None``
+
+.. py:data:: scan.GradFull.coherence.probe_dispersion (str)
+
+   Energy dispersive response of the probe
+
+   One of:
+   - ``None`` or ``'achromatic'``: no dispersion
+   - ``'linear'``: linear response model
+   - ``'irregular'``: no assumption
+   **[not implemented]**
+
+   *default* = ``None``
+
+.. py:data:: scan.GradFull.resolution (NoneType, float)
+
+   Will force the reconstruction to adapt to the given resolution, this might lead to cropping/padding in diffraction space which could reduce performance.
+
+   Half-period resolution given in [m]
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: scan.GradFull.tags (list)
+
+   Comma seperated string tags describing the data input
+
+   [deprecated?]
+
+   *default* = ``['dummy']``
+
+.. py:data:: scan.GradFull.propagation (str)
+
+   Propagation type
+
+   Either "farfield" or "nearfield"
+
+   *default* = ``'farfield'``
+
+.. py:data:: scan.GradFull.data (Param)
+
+   Link to container for data preparation
+
+   
+
+   *default* = :py:data:`scandata.PtyScan`
+
+.. py:data:: scan.GradFull.data.name (str)
+
+   Name of the PtyScan subclass to use
+
+   
+
+   *default* = ``None``
+
+.. py:data:: scan.GradFull.illumination (Param, str)
+
+   Container for probe initialization model
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.GradFull.sample (Param, str)
+
+   Container for sample initialization model
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.GradFull.resample (int, NoneType)
+
+   Resampling fraction of the image frames w.r.t. diffraction frames
+
+   A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+   as densely as the raw diffraction data.
+
+   *default* = ``1``
+
+
+scan.BlockGradFull
+------------------
+
+.. py:data:: scan.BlockGradFull (Param)
+
+   
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockGradFull.name (str)
+
+   
+
+   
+
+   *default* = ``'Full'``
+
+.. py:data:: scan.BlockGradFull.coherence (Param)
+
+   Coherence parameters
+
+   
+
+   *default* = ``Param({}) (>0.0)``
+
+.. py:data:: scan.BlockGradFull.coherence.num_probe_modes (int)
+
+   Number of probe modes
+
+   
+
+   *default* = ``1 (>0)``
+
+.. py:data:: scan.BlockGradFull.coherence.num_object_modes (int)
+
+   Number of object modes
+
+   
+
+   *default* = ``1 (>0)``
+
+.. py:data:: scan.BlockGradFull.coherence.energies (list)
+
+   ?
+
+   ?
+
+   *default* = ``[1.0]``
+
+.. py:data:: scan.BlockGradFull.coherence.spectrum (list)
+
+   Amplitude of relative energy bins if the probe modes have a different energy
+
+   
+
+   *default* = ``[1.0] (>0.0)``
+
+.. py:data:: scan.BlockGradFull.coherence.object_dispersion (str)
+
+   Energy dispersive response of the object
+
+   One of:
+   - ``None`` or ``'achromatic'``: no dispersion
+   - ``'linear'``: linear response model
+   - ``'irregular'``: no assumption
+   **[not implemented]**
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockGradFull.coherence.probe_dispersion (str)
+
+   Energy dispersive response of the probe
+
+   One of:
+   - ``None`` or ``'achromatic'``: no dispersion
+   - ``'linear'``: linear response model
+   - ``'irregular'``: no assumption
+   **[not implemented]**
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockGradFull.resolution (NoneType, float)
+
+   Will force the reconstruction to adapt to the given resolution, this might lead to cropping/padding in diffraction space which could reduce performance.
+
+   Half-period resolution given in [m]
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: scan.BlockGradFull.tags (list)
+
+   Comma seperated string tags describing the data input
+
+   [deprecated?]
+
+   *default* = ``['dummy']``
+
+.. py:data:: scan.BlockGradFull.propagation (str)
+
+   Propagation type
+
+   Either "farfield" or "nearfield"
+
+   *default* = ``'farfield'``
+
+.. py:data:: scan.BlockGradFull.data (Param)
+
+   Link to container for data preparation
+
+   
+
+   *default* = :py:data:`scandata.PtyScan`
+
+.. py:data:: scan.BlockGradFull.data.name (str)
+
+   Name of the PtyScan subclass to use
+
+   
+
+   *default* = ``None``
+
+.. py:data:: scan.BlockGradFull.illumination (Param, str)
+
+   Container for probe initialization model
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockGradFull.sample (Param, str)
+
+   Container for sample initialization model
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: scan.BlockGradFull.resample (int, NoneType)
+
+   Resampling fraction of the image frames w.r.t. diffraction frames
+
+   A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+   as densely as the raw diffraction data.
+
+   *default* = ``1``
 
 
 scan.Bragg3dModel
@@ -6446,6 +3839,14 @@ scan.Bragg3dModel
 
    *default* = ``None``
 
+.. py:data:: scan.Bragg3dModel.name (str)
+
+   
+
+   
+
+   *default* = ``'Bragg3dModel'``
+
 .. py:data:: scan.Bragg3dModel.tags (list)
 
    Comma seperated string tags describing the data input
@@ -6468,7 +3869,7 @@ scan.Bragg3dModel
 
    
 
-   *default* = :py:data:`scan.Bragg3dModel.data`
+   *default* = :py:data:`scandata.PtyScan`
 
 .. py:data:: scan.Bragg3dModel.data.name (str)
 
@@ -6478,7 +3879,7 @@ scan.Bragg3dModel
 
    *default* = ``None``
 
-.. py:data:: scan.Bragg3dModel.sample (Param)
+.. py:data:: scan.Bragg3dModel.sample (Param, str)
 
    Container for sample initialization model
 
@@ -6494,13 +3895,14 @@ scan.Bragg3dModel
 
    *default* = ``1``
 
-.. py:data:: scan.Bragg3dModel.name (str)
+.. py:data:: scan.Bragg3dModel.resample (int, NoneType)
 
-   
+   Diffraction resampling *CURRENTLY NOT SUPPORTED FOR BRAGG CASE*
 
-   
+   A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
+   as densely as the raw diffraction data.
 
-   *default* = ``'Bragg3dModel'``
+   *default* = ``1``
 
 
 engine
@@ -6542,13 +3944,29 @@ engine.DM
 
    *default* = ``1 (>1)``
 
-.. py:data:: engine.DM.probe_support (float)
+.. py:data:: engine.DM.probe_support (float, NoneType)
 
    Valid probe area as fraction of the probe frame
 
    Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.
 
    *default* = ``0.7 (>0.0)``
+
+.. py:data:: engine.DM.probe_fourier_support (float, NoneType)
+
+   Valid probe area in frequency domain as fraction of the probe frame
+
+   Defines a circular area centered on the probe frame (in frequency domain), in which the probe is allowed to be nonzero.
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: engine.DM.record_local_error (bool)
+
+   If True, save the local map of errors into the runtime dictionary.
+
+   
+
+   *default* = ``False``
 
 .. py:data:: engine.DM.position_refinement (Param, bool)
 
@@ -6558,11 +3976,19 @@ engine.DM
 
    *default* = ``Param({})``
 
+.. py:data:: engine.DM.position_refinement.method (str)
+
+   Annealing or GridSearch
+
+   
+
+   *default* = ``'Annealing'``
+
 .. py:data:: engine.DM.position_refinement.start (int)
 
    Number of iterations until position refinement starts
 
-   
+   If None, position refinement starts at first iteration
 
    *default* = ``None``
 
@@ -6596,7 +4022,15 @@ engine.DM
 
    
 
-   *default* = ``0.001``
+   *default* = ``1e-06``
+
+.. py:data:: engine.DM.position_refinement.amplitude_decay (bool)
+
+   After each interation, multiply amplitude by factor (stop - iteration) / (stop - start)
+
+   
+
+   *default* = ``True``
 
 .. py:data:: engine.DM.position_refinement.max_shift (float)
 
@@ -6604,7 +4038,15 @@ engine.DM
 
    
 
-   *default* = ``0.002``
+   *default* = ``2e-06``
+
+.. py:data:: engine.DM.position_refinement.metric (str)
+
+   Error metric, can choose between "fourier" and "photon"
+
+   
+
+   *default* = ``'fourier'``
 
 .. py:data:: engine.DM.position_refinement.record (bool)
 
@@ -6613,22 +4055,6 @@ engine.DM
    
 
    *default* = ``False``
-
-.. py:data:: engine.DM.name (str)
-
-   
-
-   
-
-   *default* = ``'DM'``
-
-.. py:data:: engine.DM.alpha (float)
-
-   Difference map parameter
-
-   
-
-   *default* = ``1 (>0.0)``
 
 .. py:data:: engine.DM.probe_update_start (int)
 
@@ -6694,9 +4120,17 @@ engine.DM
 
    *default* = ``0.0001 (>0.0)``
 
+.. py:data:: engine.DM.fourier_power_bound (float)
+
+   If rms error of model vs diffraction data is smaller than this value, Fourier constraint is met
+
+   For Poisson-sampled data, the theoretical value for this parameter is 1/4. Set this value higher for noisy data. By default, power bound is calculated using fourier_relax_factor
+
+   *default* = ``None``
+
 .. py:data:: engine.DM.fourier_relax_factor (float)
 
-   If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met
+   A factor used to calculate the Fourier power bound as 0.25 * fourier_relax_factor**2 * maximum power in diffraction data
 
    Set this value higher for noisy data.
 
@@ -6726,11 +4160,35 @@ engine.DM
 
    *default* = ``None (>0.0)``
 
+.. py:data:: engine.DM.compute_log_likelihood (bool)
 
-engine.DM_simple
-----------------
+   A switch for computing the log-likelihood error (this can impact the performance of the engine)
 
-.. py:data:: engine.DM_simple (Param)
+   
+
+   *default* = ``True``
+
+.. py:data:: engine.DM.alpha (float)
+
+   Mix parameter between Difference Map (alpha=1.) and Alternating Projections (alpha=0.)
+
+   
+
+   *default* = ``1.0 (>0.0)``
+
+.. py:data:: engine.DM.name (str)
+
+   
+
+   
+
+   *default* = ``'DM'``
+
+
+engine.RAAR
+-----------
+
+.. py:data:: engine.RAAR (Param)
 
    
 
@@ -6738,15 +4196,15 @@ engine.DM_simple
 
    *default* = ``Param({})``
 
-.. py:data:: engine.DM_simple.numiter (int)
+.. py:data:: engine.RAAR.numiter (int)
 
    Total number of iterations
 
    
 
-   *default* = ``123 (>1)``
+   *default* = ``20 (>1)``
 
-.. py:data:: engine.DM_simple.numiter_contiguous (int)
+.. py:data:: engine.RAAR.numiter_contiguous (int)
 
    Number of iterations without interruption
 
@@ -6754,7 +4212,7 @@ engine.DM_simple
 
    *default* = ``1 (>1)``
 
-.. py:data:: engine.DM_simple.probe_support (float)
+.. py:data:: engine.RAAR.probe_support (float, NoneType)
 
    Valid probe area as fraction of the probe frame
 
@@ -6762,23 +4220,143 @@ engine.DM_simple
 
    *default* = ``0.7 (>0.0)``
 
-.. py:data:: engine.DM_simple.name (str)
+.. py:data:: engine.RAAR.probe_fourier_support (float, NoneType)
+
+   Valid probe area in frequency domain as fraction of the probe frame
+
+   Defines a circular area centered on the probe frame (in frequency domain), in which the probe is allowed to be nonzero.
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: engine.RAAR.record_local_error (bool)
+
+   If True, save the local map of errors into the runtime dictionary.
 
    
 
-   
+   *default* = ``False``
 
-   *default* = ``'DM_simple'``
+.. py:data:: engine.RAAR.position_refinement (Param, bool)
 
-.. py:data:: engine.DM_simple.alpha (float)
-
-   Difference map parameter
+   If True refine scan positions
 
    
 
-   *default* = ``1 (>0.0)``
+   *default* = ``Param({})``
 
-.. py:data:: engine.DM_simple.overlap_converge_factor (float)
+.. py:data:: engine.RAAR.position_refinement.method (str)
+
+   Annealing or GridSearch
+
+   
+
+   *default* = ``'Annealing'``
+
+.. py:data:: engine.RAAR.position_refinement.start (int)
+
+   Number of iterations until position refinement starts
+
+   If None, position refinement starts at first iteration
+
+   *default* = ``None``
+
+.. py:data:: engine.RAAR.position_refinement.stop (int)
+
+   Number of iterations after which positon refinement stops
+
+   If None, position refinement stops after last iteration
+
+   *default* = ``None``
+
+.. py:data:: engine.RAAR.position_refinement.interval (int)
+
+   Frequency of position refinement
+
+   
+
+   *default* = ``1``
+
+.. py:data:: engine.RAAR.position_refinement.nshifts (int)
+
+   Number of random shifts calculated in each position refinement step (has to be multiple of 4)
+
+   
+
+   *default* = ``4``
+
+.. py:data:: engine.RAAR.position_refinement.amplitude (float)
+
+   Distance from original position per random shift [m]
+
+   
+
+   *default* = ``1e-06``
+
+.. py:data:: engine.RAAR.position_refinement.amplitude_decay (bool)
+
+   After each interation, multiply amplitude by factor (stop - iteration) / (stop - start)
+
+   
+
+   *default* = ``True``
+
+.. py:data:: engine.RAAR.position_refinement.max_shift (float)
+
+   Maximum distance from original position [m]
+
+   
+
+   *default* = ``2e-06``
+
+.. py:data:: engine.RAAR.position_refinement.metric (str)
+
+   Error metric, can choose between "fourier" and "photon"
+
+   
+
+   *default* = ``'fourier'``
+
+.. py:data:: engine.RAAR.position_refinement.record (bool)
+
+   record movement of positions
+
+   
+
+   *default* = ``False``
+
+.. py:data:: engine.RAAR.probe_update_start (int)
+
+   Number of iterations before probe update starts
+
+   
+
+   *default* = ``2 (>0)``
+
+.. py:data:: engine.RAAR.subpix_start (int)
+
+   Number of iterations before starting subpixel interpolation
+
+   
+
+   *default* = ``0 (>0)``
+
+.. py:data:: engine.RAAR.subpix (str)
+
+   Subpixel interpolation; 'fourier','linear' or None for no interpolation
+
+   
+
+   *default* = ``'linear'``
+
+.. py:data:: engine.RAAR.update_object_first (bool)
+
+   If True update object before probe
+
+   
+
+   *default* = ``True``
+
+.. py:data:: engine.RAAR.overlap_converge_factor (float)
 
    Threshold for interruption of the inner overlap loop
 
@@ -6786,13 +4364,493 @@ engine.DM_simple
 
    *default* = ``0.05 (>0.0)``
 
-.. py:data:: engine.DM_simple.overlap_max_iterations (int)
+.. py:data:: engine.RAAR.overlap_max_iterations (int)
 
    Maximum of iterations for the overlap constraint inner loop
 
    
 
    *default* = ``10 (>1)``
+
+.. py:data:: engine.RAAR.probe_inertia (float)
+
+   Weight of the current probe estimate in the update
+
+   
+
+   *default* = ``1e-09 (>0.0)``
+
+.. py:data:: engine.RAAR.object_inertia (float)
+
+   Weight of the current object in the update
+
+   
+
+   *default* = ``0.0001 (>0.0)``
+
+.. py:data:: engine.RAAR.fourier_power_bound (float)
+
+   If rms error of model vs diffraction data is smaller than this value, Fourier constraint is met
+
+   For Poisson-sampled data, the theoretical value for this parameter is 1/4. Set this value higher for noisy data. By default, power bound is calculated using fourier_relax_factor
+
+   *default* = ``None``
+
+.. py:data:: engine.RAAR.fourier_relax_factor (float)
+
+   A factor used to calculate the Fourier power bound as 0.25 * fourier_relax_factor**2 * maximum power in diffraction data
+
+   Set this value higher for noisy data.
+
+   *default* = ``0.05 (>0.0)``
+
+.. py:data:: engine.RAAR.obj_smooth_std (float)
+
+   Gaussian smoothing (pixel) of the current object prior to update
+
+   If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: engine.RAAR.clip_object (tuple)
+
+   Clip object amplitude into this interval
+
+   
+
+   *default* = ``None``
+
+.. py:data:: engine.RAAR.probe_center_tol (float)
+
+   Pixel radius around optical axes that the probe mass center must reside in
+
+   
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: engine.RAAR.compute_log_likelihood (bool)
+
+   A switch for computing the log-likelihood error (this can impact the performance of the engine)
+
+   
+
+   *default* = ``True``
+
+.. py:data:: engine.RAAR.beta (float)
+
+   Beta parameter for RAAR algorithm
+
+   
+
+   *default* = ``0.75 (>0.0)``
+
+.. py:data:: engine.RAAR.name (str)
+
+   
+
+   
+
+   *default* = ``'RAAR'``
+
+
+engine.EPIE
+-----------
+
+.. py:data:: engine.EPIE (Param)
+
+   
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: engine.EPIE.numiter (int)
+
+   Total number of iterations
+
+   
+
+   *default* = ``20 (>1)``
+
+.. py:data:: engine.EPIE.numiter_contiguous (int)
+
+   Number of iterations without interruption
+
+   The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...).
+
+   *default* = ``1 (>1)``
+
+.. py:data:: engine.EPIE.probe_support (float, NoneType)
+
+   Valid probe area as fraction of the probe frame
+
+   Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.
+
+   *default* = ``0.7 (>0.0)``
+
+.. py:data:: engine.EPIE.probe_fourier_support (float, NoneType)
+
+   Valid probe area in frequency domain as fraction of the probe frame
+
+   Defines a circular area centered on the probe frame (in frequency domain), in which the probe is allowed to be nonzero.
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: engine.EPIE.record_local_error (bool)
+
+   If True, save the local map of errors into the runtime dictionary.
+
+   
+
+   *default* = ``False``
+
+.. py:data:: engine.EPIE.position_refinement (Param, bool)
+
+   If True refine scan positions
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: engine.EPIE.position_refinement.method (str)
+
+   Annealing or GridSearch
+
+   
+
+   *default* = ``'Annealing'``
+
+.. py:data:: engine.EPIE.position_refinement.start (int)
+
+   Number of iterations until position refinement starts
+
+   If None, position refinement starts at first iteration
+
+   *default* = ``None``
+
+.. py:data:: engine.EPIE.position_refinement.stop (int)
+
+   Number of iterations after which positon refinement stops
+
+   If None, position refinement stops after last iteration
+
+   *default* = ``None``
+
+.. py:data:: engine.EPIE.position_refinement.interval (int)
+
+   Frequency of position refinement
+
+   
+
+   *default* = ``1``
+
+.. py:data:: engine.EPIE.position_refinement.nshifts (int)
+
+   Number of random shifts calculated in each position refinement step (has to be multiple of 4)
+
+   
+
+   *default* = ``4``
+
+.. py:data:: engine.EPIE.position_refinement.amplitude (float)
+
+   Distance from original position per random shift [m]
+
+   
+
+   *default* = ``1e-06``
+
+.. py:data:: engine.EPIE.position_refinement.amplitude_decay (bool)
+
+   After each interation, multiply amplitude by factor (stop - iteration) / (stop - start)
+
+   
+
+   *default* = ``True``
+
+.. py:data:: engine.EPIE.position_refinement.max_shift (float)
+
+   Maximum distance from original position [m]
+
+   
+
+   *default* = ``2e-06``
+
+.. py:data:: engine.EPIE.position_refinement.metric (str)
+
+   Error metric, can choose between "fourier" and "photon"
+
+   
+
+   *default* = ``'fourier'``
+
+.. py:data:: engine.EPIE.position_refinement.record (bool)
+
+   record movement of positions
+
+   
+
+   *default* = ``False``
+
+.. py:data:: engine.EPIE.probe_update_start (int)
+
+   Number of iterations before probe update starts
+
+   
+
+   *default* = ``0 (>0)``
+
+.. py:data:: engine.EPIE.probe_center_tol (float)
+
+   Pixel radius around optical axes that the probe mass center must reside in
+
+   
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: engine.EPIE.compute_log_likelihood (bool)
+
+   A switch for computing the log-likelihood error (this can impact the performance of the engine)
+
+   
+
+   *default* = ``True``
+
+.. py:data:: engine.EPIE.alpha (float)
+
+   Parameter for adjusting the step size of the object update
+
+   
+
+   *default* = ``1.0 (>0.0)``
+
+.. py:data:: engine.EPIE.beta (float)
+
+   Parameter for adjusting the step size of the probe update
+
+   
+
+   *default* = ``1.0 (>0.0)``
+
+.. py:data:: engine.EPIE.object_norm_is_global (bool)
+
+   Calculate the object norm based on the global object instead of the local object
+
+   
+
+   *default* = ``False``
+
+.. py:data:: engine.EPIE.name (str)
+
+   
+
+   
+
+   *default* = ``'EPIE'``
+
+
+engine.SDR
+----------
+
+.. py:data:: engine.SDR (Param)
+
+   
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: engine.SDR.numiter (int)
+
+   Total number of iterations
+
+   
+
+   *default* = ``20 (>1)``
+
+.. py:data:: engine.SDR.numiter_contiguous (int)
+
+   Number of iterations without interruption
+
+   The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...).
+
+   *default* = ``1 (>1)``
+
+.. py:data:: engine.SDR.probe_support (float, NoneType)
+
+   Valid probe area as fraction of the probe frame
+
+   Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.
+
+   *default* = ``0.7 (>0.0)``
+
+.. py:data:: engine.SDR.probe_fourier_support (float, NoneType)
+
+   Valid probe area in frequency domain as fraction of the probe frame
+
+   Defines a circular area centered on the probe frame (in frequency domain), in which the probe is allowed to be nonzero.
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: engine.SDR.record_local_error (bool)
+
+   If True, save the local map of errors into the runtime dictionary.
+
+   
+
+   *default* = ``False``
+
+.. py:data:: engine.SDR.position_refinement (Param, bool)
+
+   If True refine scan positions
+
+   
+
+   *default* = ``Param({})``
+
+.. py:data:: engine.SDR.position_refinement.method (str)
+
+   Annealing or GridSearch
+
+   
+
+   *default* = ``'Annealing'``
+
+.. py:data:: engine.SDR.position_refinement.start (int)
+
+   Number of iterations until position refinement starts
+
+   If None, position refinement starts at first iteration
+
+   *default* = ``None``
+
+.. py:data:: engine.SDR.position_refinement.stop (int)
+
+   Number of iterations after which positon refinement stops
+
+   If None, position refinement stops after last iteration
+
+   *default* = ``None``
+
+.. py:data:: engine.SDR.position_refinement.interval (int)
+
+   Frequency of position refinement
+
+   
+
+   *default* = ``1``
+
+.. py:data:: engine.SDR.position_refinement.nshifts (int)
+
+   Number of random shifts calculated in each position refinement step (has to be multiple of 4)
+
+   
+
+   *default* = ``4``
+
+.. py:data:: engine.SDR.position_refinement.amplitude (float)
+
+   Distance from original position per random shift [m]
+
+   
+
+   *default* = ``1e-06``
+
+.. py:data:: engine.SDR.position_refinement.amplitude_decay (bool)
+
+   After each interation, multiply amplitude by factor (stop - iteration) / (stop - start)
+
+   
+
+   *default* = ``True``
+
+.. py:data:: engine.SDR.position_refinement.max_shift (float)
+
+   Maximum distance from original position [m]
+
+   
+
+   *default* = ``2e-06``
+
+.. py:data:: engine.SDR.position_refinement.metric (str)
+
+   Error metric, can choose between "fourier" and "photon"
+
+   
+
+   *default* = ``'fourier'``
+
+.. py:data:: engine.SDR.position_refinement.record (bool)
+
+   record movement of positions
+
+   
+
+   *default* = ``False``
+
+.. py:data:: engine.SDR.probe_update_start (int)
+
+   Number of iterations before probe update starts
+
+   
+
+   *default* = ``0 (>0)``
+
+.. py:data:: engine.SDR.probe_center_tol (float)
+
+   Pixel radius around optical axes that the probe mass center must reside in
+
+   
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: engine.SDR.compute_log_likelihood (bool)
+
+   A switch for computing the log-likelihood error (this can impact the performance of the engine)
+
+   
+
+   *default* = ``True``
+
+.. py:data:: engine.SDR.sigma (float)
+
+   Relaxed Fourier reflection parameter.
+
+   
+
+   *default* = ``1 (>0.0)``
+
+.. py:data:: engine.SDR.tau (float)
+
+   Relaxed modulus constraint parameter.
+
+   
+
+   *default* = ``1 (>0.0)``
+
+.. py:data:: engine.SDR.beta_probe (float)
+
+   Parameter for adjusting the step size of the probe update
+
+   
+
+   *default* = ``0.1 (>0.0)``
+
+.. py:data:: engine.SDR.beta_object (float)
+
+   Parameter for adjusting the step size of the object update
+
+   
+
+   *default* = ``0.9 (>0.0)``
+
+.. py:data:: engine.SDR.name (str)
+
+   
+
+   
+
+   *default* = ``'SDR'``
 
 
 engine.ML
@@ -6822,13 +4880,29 @@ engine.ML
 
    *default* = ``1 (>1)``
 
-.. py:data:: engine.ML.probe_support (float)
+.. py:data:: engine.ML.probe_support (float, NoneType)
 
    Valid probe area as fraction of the probe frame
 
    Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.
 
    *default* = ``0.7 (>0.0)``
+
+.. py:data:: engine.ML.probe_fourier_support (float, NoneType)
+
+   Valid probe area in frequency domain as fraction of the probe frame
+
+   Defines a circular area centered on the probe frame (in frequency domain), in which the probe is allowed to be nonzero.
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: engine.ML.record_local_error (bool)
+
+   If True, save the local map of errors into the runtime dictionary.
+
+   
+
+   *default* = ``False``
 
 .. py:data:: engine.ML.position_refinement (Param, bool)
 
@@ -6838,11 +4912,19 @@ engine.ML
 
    *default* = ``Param({})``
 
+.. py:data:: engine.ML.position_refinement.method (str)
+
+   Annealing or GridSearch
+
+   
+
+   *default* = ``'Annealing'``
+
 .. py:data:: engine.ML.position_refinement.start (int)
 
    Number of iterations until position refinement starts
 
-   
+   If None, position refinement starts at first iteration
 
    *default* = ``None``
 
@@ -6876,7 +4958,15 @@ engine.ML
 
    
 
-   *default* = ``0.001``
+   *default* = ``1e-06``
+
+.. py:data:: engine.ML.position_refinement.amplitude_decay (bool)
+
+   After each interation, multiply amplitude by factor (stop - iteration) / (stop - start)
+
+   
+
+   *default* = ``True``
 
 .. py:data:: engine.ML.position_refinement.max_shift (float)
 
@@ -6884,7 +4974,15 @@ engine.ML
 
    
 
-   *default* = ``0.002``
+   *default* = ``2e-06``
+
+.. py:data:: engine.ML.position_refinement.metric (str)
+
+   Error metric, can choose between "fourier" and "photon"
+
+   
+
+   *default* = ``'fourier'``
 
 .. py:data:: engine.ML.position_refinement.record (bool)
 
@@ -6983,182 +5081,6 @@ engine.ML
    *default* = ``2 (>0)``
 
 
-engine.Dummy
-------------
-
-.. py:data:: engine.Dummy (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: engine.Dummy.numiter (int)
-
-   Total number of iterations
-
-   
-
-   *default* = ``20 (>1)``
-
-.. py:data:: engine.Dummy.numiter_contiguous (int)
-
-   Number of iterations without interruption
-
-   The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...).
-
-   *default* = ``1 (>1)``
-
-.. py:data:: engine.Dummy.probe_support (float)
-
-   Valid probe area as fraction of the probe frame
-
-   Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.
-
-   *default* = ``0.7 (>0.0)``
-
-.. py:data:: engine.Dummy.name (str)
-
-   
-
-   
-
-   *default* = ``'Dummy'``
-
-.. py:data:: engine.Dummy.itertime (float)
-
-   Sleep time for a single iteration (in seconds)
-
-   
-
-   *default* = ``0.2``
-
-
-engine.ePIE
------------
-
-.. py:data:: engine.ePIE (Param)
-
-   
-
-   
-
-   *default* = ``Param({})``
-
-.. py:data:: engine.ePIE.numiter (int)
-
-   Total number of iterations
-
-   
-
-   *default* = ``20 (>1)``
-
-.. py:data:: engine.ePIE.numiter_contiguous (int)
-
-   Number of iterations without interruption
-
-   The engine will not return control to the caller until this number of iterations is completed (not processing server requests, I/O operations, ...).
-
-   *default* = ``1 (>1)``
-
-.. py:data:: engine.ePIE.probe_support (float)
-
-   Valid probe area as fraction of the probe frame
-
-   Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.
-
-   *default* = ``0.7 (>0.0)``
-
-.. py:data:: engine.ePIE.name (str)
-
-   
-
-   
-
-   *default* = ``'ePIE'``
-
-.. py:data:: engine.ePIE.alpha (float)
-
-   ePIE object update parameter
-
-   Step size for the object update, a higher value will give faster change.
-
-   *default* = ``1.0 (>0.0, <1.0)``
-
-.. py:data:: engine.ePIE.beta (float)
-
-   ePIE probe update parameter
-
-   Step size for the probe update, a higher value will give faster change.
-
-   *default* = ``1.0 (>0.0, <1.0)``
-
-.. py:data:: engine.ePIE.probe_update_start (int)
-
-   Number of iterations before probe update starts
-
-   
-
-   *default* = ``2 (>0)``
-
-.. py:data:: engine.ePIE.synchronization (int)
-
-   Probe/object synchronization period
-
-   Period with which to synchronize the object (and optionally the probe) among parallel nodes.
-
-   *default* = ``1 (>1)``
-
-.. py:data:: engine.ePIE.redistribute_data (bool)
-
-   Redistribute views to form blocks
-
-   Whether or not to redistribute data among nodes to keep each node's views in a contiguous geographic block, even if new data is added during reconstruction.
-
-   *default* = ``True``
-
-.. py:data:: engine.ePIE.average_probe (bool)
-
-   Average probe among nodes
-
-   Whether or not to average the probe among nodes, otherwise each node has its own probe as in the original publication. Averaging seems to work the best.
-
-   *default* = ``False``
-
-.. py:data:: engine.ePIE.random_order (bool)
-
-   Visit positions in random order
-
-   Whether to cycle through the positions in random order on each ePIE iteration. Otherwise does the pods in alphabetical order as per list.sort(). Disabling is useful for debugging.
-
-   *default* = ``True``
-
-.. py:data:: engine.ePIE.clip_object (tuple)
-
-   Clip object amplitude into this interval
-
-   
-
-   *default* = ``None``
-
-.. py:data:: engine.ePIE.obj_smooth_std (int)
-
-   Gaussian smoothing (pixel) of the current object prior to update
-
-   If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.
-
-   *default* = ``None (>0)``
-
-.. py:data:: engine.ePIE.probe_center_tol (float)
-
-   Pixel radius around optical axes that the probe mass center must reside in
-
-   
-
-   *default* = ``3 (>0.0)``
-
-
 engine.DM_3dBragg
 -----------------
 
@@ -7186,13 +5108,29 @@ engine.DM_3dBragg
 
    *default* = ``1 (>1)``
 
-.. py:data:: engine.DM_3dBragg.probe_support (float)
+.. py:data:: engine.DM_3dBragg.probe_support (float, NoneType)
 
    Valid probe area as fraction of the probe frame
 
    Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.
 
    *default* = ``0.7 (>0.0)``
+
+.. py:data:: engine.DM_3dBragg.probe_fourier_support (float, NoneType)
+
+   Valid probe area in frequency domain as fraction of the probe frame
+
+   Defines a circular area centered on the probe frame (in frequency domain), in which the probe is allowed to be nonzero.
+
+   *default* = ``None (>0.0)``
+
+.. py:data:: engine.DM_3dBragg.record_local_error (bool)
+
+   If True, save the local map of errors into the runtime dictionary.
+
+   
+
+   *default* = ``False``
 
 .. py:data:: engine.DM_3dBragg.position_refinement (Param, bool)
 
@@ -7202,11 +5140,19 @@ engine.DM_3dBragg
 
    *default* = ``Param({})``
 
+.. py:data:: engine.DM_3dBragg.position_refinement.method (str)
+
+   Annealing or GridSearch
+
+   
+
+   *default* = ``'Annealing'``
+
 .. py:data:: engine.DM_3dBragg.position_refinement.start (int)
 
    Number of iterations until position refinement starts
 
-   
+   If None, position refinement starts at first iteration
 
    *default* = ``None``
 
@@ -7240,7 +5186,15 @@ engine.DM_3dBragg
 
    
 
-   *default* = ``0.001``
+   *default* = ``1e-06``
+
+.. py:data:: engine.DM_3dBragg.position_refinement.amplitude_decay (bool)
+
+   After each interation, multiply amplitude by factor (stop - iteration) / (stop - start)
+
+   
+
+   *default* = ``True``
 
 .. py:data:: engine.DM_3dBragg.position_refinement.max_shift (float)
 
@@ -7248,7 +5202,15 @@ engine.DM_3dBragg
 
    
 
-   *default* = ``0.002``
+   *default* = ``2e-06``
+
+.. py:data:: engine.DM_3dBragg.position_refinement.metric (str)
+
+   Error metric, can choose between "fourier" and "photon"
+
+   
+
+   *default* = ``'fourier'``
 
 .. py:data:: engine.DM_3dBragg.position_refinement.record (bool)
 
@@ -7257,22 +5219,6 @@ engine.DM_3dBragg
    
 
    *default* = ``False``
-
-.. py:data:: engine.DM_3dBragg.name (str)
-
-   
-
-   
-
-   *default* = ``'DM_3dBragg'``
-
-.. py:data:: engine.DM_3dBragg.alpha (float)
-
-   Difference map parameter
-
-   
-
-   *default* = ``1 (>0.0)``
 
 .. py:data:: engine.DM_3dBragg.probe_update_start (int)
 
@@ -7338,9 +5284,17 @@ engine.DM_3dBragg
 
    *default* = ``0.0001 (>0.0)``
 
+.. py:data:: engine.DM_3dBragg.fourier_power_bound (float)
+
+   If rms error of model vs diffraction data is smaller than this value, Fourier constraint is met
+
+   For Poisson-sampled data, the theoretical value for this parameter is 1/4. Set this value higher for noisy data. By default, power bound is calculated using fourier_relax_factor
+
+   *default* = ``None``
+
 .. py:data:: engine.DM_3dBragg.fourier_relax_factor (float)
 
-   If rms error of model vs diffraction data is smaller than this fraction, Fourier constraint is met
+   A factor used to calculate the Fourier power bound as 0.25 * fourier_relax_factor**2 * maximum power in diffraction data
 
    Set this value higher for noisy data.
 
@@ -7369,6 +5323,30 @@ engine.DM_3dBragg
    
 
    *default* = ``None (>0.0)``
+
+.. py:data:: engine.DM_3dBragg.compute_log_likelihood (bool)
+
+   A switch for computing the log-likelihood error (this can impact the performance of the engine)
+
+   
+
+   *default* = ``True``
+
+.. py:data:: engine.DM_3dBragg.alpha (float)
+
+   Mix parameter between Difference Map (alpha=1.) and Alternating Projections (alpha=0.)
+
+   
+
+   *default* = ``1.0 (>0.0)``
+
+.. py:data:: engine.DM_3dBragg.name (str)
+
+   
+
+   
+
+   *default* = ``'DM_3dBragg'``
 
 .. py:data:: engine.DM_3dBragg.sample_support (Param)
 
@@ -7464,19 +5442,19 @@ ptycho
 
    *default* = ``Param({})``
 
-.. py:data:: ptycho.verbose_level (int)
+.. py:data:: ptycho.verbose_level (str, int)
 
    Verbosity level
 
    Verbosity level for information logging.
-   - ``0``: Only critical errors
-   - ``1``: All errors
-   - ``2``: Warning
-   - ``3``: Process Information
-   - ``4``: Object Information
-   - ``5``: Debug
+   - ``CRITICAL``: Only critical errors
+   - ``ERROR``:    All errors
+   - ``WARNING``:  Warning
+   - ``INFO``:     Process Information
+   - ``INSPECT``:  Object Information
+   - ``DEBUG``:    Debug
 
-   *default* = ``1 (>0, <5)``
+   *default* = ``'ERROR'``
 
 .. py:data:: ptycho.data_type (str)
 
@@ -7495,6 +5473,15 @@ ptycho
    be constructed at run time from other information.
 
    *default* = ``None``
+
+.. py:data:: ptycho.frames_per_block (int)
+
+   Max number of frames per block of data
+
+   This parameter determines the size of buffer arrays for GPUs.
+   Reduce this number if you run out of memory on the GPU.
+
+   *default* = ``100000 (>1)``
 
 .. py:data:: ptycho.dry_run (bool)
 
@@ -7542,6 +5529,16 @@ ptycho.io
 
    *default* = ``'recons/%(run)s/%(run)s_%(engine)s_%(iterations)04d.ptyr'``
 
+.. py:data:: ptycho.io.rformat (str)
+
+   Reconstruction file format
+
+   Choose a reconstruction file format for after engine completion.
+   - ``'minimal'``: Bare minimum of information
+   - ``'dls'``:    Custom format for Diamond Light Source
+
+   *default* = ``'minimal'``
+
 .. py:data:: ptycho.io.interaction (Param)
 
    ZeroMQ interactor options
@@ -7564,7 +5561,7 @@ ptycho.io
 
    
 
-   *default* = :py:data:`ptycho.io.interaction.server`
+   *default* = :py:data:`io.interaction.server`
 
 .. py:data:: ptycho.io.interaction.client (Param)
 
@@ -7572,7 +5569,7 @@ ptycho.io
 
    
 
-   *default* = :py:data:`ptycho.io.interaction.client`
+   *default* = :py:data:`io.interaction.client`
 
 .. py:data:: ptycho.io.autosave (Param)
 
@@ -7610,7 +5607,7 @@ ptycho.io
 
    Plotting client parameters
 
-   Csontainer for the plotting.
+   Container for the plotting.
 
    *default* = ``Param({})``
 
@@ -7677,6 +5674,15 @@ ptycho.io
 
    *default* = ``False``
 
+.. py:data:: ptycho.io.benchmark (str)
+
+   Produce timings for benchmarking the performance of data loaders and engines
+
+   Switch to get timings and save results to a json file in p.io.home
+   Choose ``'all'`` for timing data loading, engine_init, engine_prepare, engine_iterate and engine_finalize
+
+   *default* = ``None``
+
 
 ptycho.scans
 ------------
@@ -7697,7 +5703,7 @@ ptycho.scans
 
    
 
-   *default* = :py:data:`ptycho.scans.*`
+   *default* = :py:data:`scan.ScanModel`
 
 
 ptycho.engines
@@ -7719,5 +5725,5 @@ ptycho.engines
 
    The value of engines.*.name is used to choose among the available engines.
 
-   *default* = :py:data:`ptycho.engines.*`
+   *default* = :py:data:`engine.DM`
 

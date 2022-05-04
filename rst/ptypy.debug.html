@@ -1,18 +1,18 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
-    <title>ptypy.debug package &#8212; ptypy 0.4.0 documentation</title>
-    <link rel="stylesheet" href="../_static/header.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>ptypy.debug package &#8212; ptypy 0.5.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/header.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -49,10 +49,92 @@
         <li class="right" >
           <a href="ptypy.utils.html" title="ptypy.utils package"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ptypy.debug package</a></li> 
       </ul>
-    </div>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="ptypy-debug-package">
+<h1>ptypy.debug package<a class="headerlink" href="#ptypy-debug-package" title="Permalink to this headline">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-ptypy.debug.embedded_shell">
+<span id="ptypy-debug-embedded-shell-module"></span><h2>ptypy.debug.embedded_shell module<a class="headerlink" href="#module-ptypy.debug.embedded_shell" title="Permalink to this headline">¶</a></h2>
+<p>Tool to embed an ipython shell for debugging.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+<section id="module-ptypy.debug.ipython_kernel">
+<span id="ptypy-debug-ipython-kernel-module"></span><h2>ptypy.debug.ipython_kernel module<a class="headerlink" href="#module-ptypy.debug.ipython_kernel" title="Permalink to this headline">¶</a></h2>
+<p>Tool to embed an ipython kernel for debugging.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="py class">
+<dt class="sig sig-object py" id="ptypy.debug.ipython_kernel.IPythonKernelThread">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ptypy.debug.ipython_kernel.</span></span><span class="sig-name descname"><span class="pre">IPythonKernelThread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ns</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.debug.ipython_kernel.IPythonKernelThread" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.debug.ipython_kernel.IPythonKernelThread.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.debug.ipython_kernel.IPythonKernelThread.start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.debug.ipython_kernel.start_ipython_kernel">
+<span class="sig-prename descclassname"><span class="pre">ptypy.debug.ipython_kernel.</span></span><span class="sig-name descname"><span class="pre">start_ipython_kernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ns</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.debug.ipython_kernel.start_ipython_kernel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-ptypy.debug">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ptypy.debug" title="Permalink to this headline">¶</a></h2>
+<p>Debug sub-package.</p>
+<p>A separate module because all this IPython mingling repeatedly caused
+trouble. Should not have any dependence on other submodules</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../content.html">
@@ -81,9 +163,11 @@
 </li>
 </ul>
 
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="ptypy.utils.html"
-                        title="previous chapter">ptypy.utils package</a></p>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="ptypy.utils.html"
+                          title="previous chapter">ptypy.utils package</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -95,110 +179,12 @@
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
-
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
-            
-  <div class="section" id="ptypy-debug-package">
-<h1>ptypy.debug package<a class="headerlink" href="#ptypy-debug-package" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="submodules">
-<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
-</div>
-<div class="section" id="module-ptypy.debug.embedded_shell">
-<span id="ptypy-debug-embedded-shell-module"></span><h2>ptypy.debug.embedded_shell module<a class="headerlink" href="#module-ptypy.debug.embedded_shell" title="Permalink to this headline">¶</a></h2>
-<p>Tool to embed an ipython shell for debugging.</p>
-<p>This file is part of the PTYPY package.</p>
-<blockquote>
-<div><dl class="field-list simple">
-<dt class="field-odd">copyright</dt>
-<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
-</dd>
-<dt class="field-even">license</dt>
-<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
-</dd>
-</dl>
-</div></blockquote>
-</div>
-<div class="section" id="module-ptypy.debug.ipython_kernel">
-<span id="ptypy-debug-ipython-kernel-module"></span><h2>ptypy.debug.ipython_kernel module<a class="headerlink" href="#module-ptypy.debug.ipython_kernel" title="Permalink to this headline">¶</a></h2>
-<p>Tool to embed an ipython kernel for debugging.</p>
-<p>This file is part of the PTYPY package.</p>
-<blockquote>
-<div><dl class="field-list simple">
-<dt class="field-odd">copyright</dt>
-<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
-</dd>
-<dt class="field-even">license</dt>
-<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
-</dd>
-</dl>
-</div></blockquote>
-<dl class="class">
-<dt id="ptypy.debug.ipython_kernel.IPythonKernelThread">
-<em class="property">class </em><code class="sig-prename descclassname">ptypy.debug.ipython_kernel.</code><code class="sig-name descname">IPythonKernelThread</code><span class="sig-paren">(</span><em class="sig-param">ns</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.debug.ipython_kernel.IPythonKernelThread" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">threading.Thread</span></code></p>
-<p>This constructor should always be called with keyword arguments. Arguments are:</p>
-<p><em>group</em> should be None; reserved for future extension when a ThreadGroup
-class is implemented.</p>
-<p><em>target</em> is the callable object to be invoked by the run()
-method. Defaults to None, meaning nothing is called.</p>
-<p><em>name</em> is the thread name. By default, a unique name is constructed of
-the form “Thread-N” where N is a small decimal number.</p>
-<p><em>args</em> is the argument tuple for the target invocation. Defaults to ().</p>
-<p><em>kwargs</em> is a dictionary of keyword arguments for the target
-invocation. Defaults to {}.</p>
-<p>If a subclass overrides the constructor, it must make sure to invoke
-the base class constructor (Thread.__init__()) before doing anything
-else to the thread.</p>
-<dl class="method">
-<dt id="ptypy.debug.ipython_kernel.IPythonKernelThread.run">
-<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.debug.ipython_kernel.IPythonKernelThread.run" title="Permalink to this definition">¶</a></dt>
-<dd><p>Method representing the thread’s activity.</p>
-<p>You may override this method in a subclass. The standard run() method
-invokes the callable object passed to the object’s constructor as the
-target argument, if any, with sequential and keyword arguments taken
-from the args and kwargs arguments, respectively.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="function">
-<dt id="ptypy.debug.ipython_kernel.start_ipython_kernel">
-<code class="sig-prename descclassname">ptypy.debug.ipython_kernel.</code><code class="sig-name descname">start_ipython_kernel</code><span class="sig-paren">(</span><em class="sig-param">ns</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.debug.ipython_kernel.start_ipython_kernel" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</div>
-<div class="section" id="module-ptypy.debug">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ptypy.debug" title="Permalink to this headline">¶</a></h2>
-<p>Debug sub-package.</p>
-<p>A separate module because all this IPython mingling repeatedly caused
-trouble. Should not have any dependence on other submodules</p>
-<p>This file is part of the PTYPY package.</p>
-<blockquote>
-<div><dl class="field-list simple">
-<dt class="field-odd">copyright</dt>
-<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
-</dd>
-<dt class="field-even">license</dt>
-<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
-</dd>
-</dl>
-</div></blockquote>
-</div>
-</div>
-
-
-          </div>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -215,13 +201,14 @@ trouble. Should not have any dependence on other submodules</p>
         <li class="right" >
           <a href="ptypy.utils.html" title="ptypy.utils package"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ptypy.debug package</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
     </div>
   </body>
 </html>

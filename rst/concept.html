@@ -1,18 +1,19 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
-    <title>Concepts and Classes &#8212; ptypy 0.4.0 documentation</title>
-    <link rel="stylesheet" href="../_static/header.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Concepts and Classes &#8212; ptypy 0.5.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/header.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -53,77 +54,19 @@
         <li class="right" >
           <a href="getting_started.html" title="Getting started with Ptypy"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Concepts and Classes</a></li> 
       </ul>
-    </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-            <p class="logo"><a href="../content.html">
-              <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
-            </a></p>
-<h3><a href="../content.html">Table of Contents</a></h3>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started with Ptypy</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Concepts and Classes</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#tutorial-data-access-storage-view-container">Tutorial: Data access - Storage, View, Container</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#a-single-storage-in-one-container">A single Storage in one Container</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#adding-views-as-a-way-to-access-data">Adding Views as a way to access data</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#tutorial-modeling-the-experiment-pod-geometry">Tutorial: Modeling the experiment - Pod, Geometry</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#set-experimental-setup-geometry-and-create-propagator">Set experimental setup geometry and create propagator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#create-probing-illumination">Create probing illumination</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#create-scan-pattern-and-object">Create scan pattern and object</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#creating-additional-views-and-the-pods">Creating additional Views and the PODs</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#storing-the-simulation">Storing the simulation</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#tutorial-a-reconstruction-engine-from-scratch">Tutorial: A reconstruction engine from scratch</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#preparing-a-managing-ptycho-instance">Preparing a managing Ptycho instance</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#a-basic-difference-map-implementation">A basic Difference-Map implementation</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="data_management.html">Data management</a></li>
-<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameter tree structure</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ptypy.html">ptypy package</a></li>
-</ul>
-
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="getting_started.html"
-                        title="previous chapter">Getting started with Ptypy</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="data_management.html"
-                        title="next chapter">Data management</a></p>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/rst/concept.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
+    </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="concepts-and-classes">
+  <section id="concepts-and-classes">
 <span id="concepts"></span><h1>Concepts and Classes<a class="headerlink" href="#concepts-and-classes" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="tutorial-data-access-storage-view-container">
+<section id="tutorial-data-access-storage-view-container">
 <span id="ptypyclasses"></span><h2>Tutorial: Data access - Storage, View, Container<a class="headerlink" href="#tutorial-data-access-storage-view-container" title="Permalink to this headline">¶</a></h2>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -166,17 +109,12 @@ about the classes this tutorial covers.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib</span> <span class="k">as</span> <span class="nn">mpl</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ptypy</span>
-<span class="go">Message Passaging for Python (mpi4py) not found.</span>
-<span class="go">    CPU-parallelization disabled.</span>
-<span class="go">    Install python-mpi4py via the package repositories or with `pip install --user mpi4py`</span>
-<span class="go">Could not import experiment cSAXSScan from .cSAXS, Reason: No module named &#39;fabio&#39;</span>
-
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="k">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="k">import</span> <span class="n">View</span><span class="p">,</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Base</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">View</span><span class="p">,</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Base</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span> <span class="o">=</span> <span class="n">mpl</span><span class="o">.</span><span class="n">pyplot</span>
 </pre></div>
 </div>
-<div class="section" id="a-single-storage-in-one-container">
+<section id="a-single-storage-in-one-container">
 <h3>A single Storage in one Container<a class="headerlink" href="#a-single-storage-in-one-container" title="Permalink to this headline">¶</a></h3>
 <p>The governing object is a <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.Container" title="ptypy.core.classes.Container"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Container</span></code></a> instance, which we need
 to construct as first object. It does not need much for an input but
@@ -319,20 +257,22 @@ still filled with ones, i.e. flat. We can use
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ptypyclasses-00"><span class="std std-numref">Fig. 2</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="ptypyclasses-00">
+<figure class="highlights align-default" id="ptypyclasses-00">
 <a class="reference internal image-reference" href="../_images/ptypyclasses_00.png"><img alt="../_images/ptypyclasses_00.png" src="../_images/ptypyclasses_00.png" style="width: 72%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 2 </span><span class="caption-text">A plot of the data stored in <code class="docutils literal notranslate"><span class="pre">S1</span></code></span><a class="headerlink" href="#ptypyclasses-00" title="Permalink to this image">¶</a></p>
-</div>
-</div>
-<div class="section" id="adding-views-as-a-way-to-access-data">
+<figcaption>
+<p><span class="caption-number">Fig. 2 </span><span class="caption-text">A plot of the data stored in <code class="docutils literal notranslate"><span class="pre">S1</span></code></span><a class="headerlink" href="#ptypyclasses-00" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="adding-views-as-a-way-to-access-data">
 <h3>Adding Views as a way to access data<a class="headerlink" href="#adding-views-as-a-way-to-access-data" title="Permalink to this headline">¶</a></h3>
 <p>Besides being able to access the data directly through its attribute
 and the corresponding <em>numpy</em> syntax, ptypy offers acces through a
 <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.View" title="ptypy.core.classes.View"><code class="xref any py py-class docutils literal notranslate"><span class="pre">View</span></code></a> instance. The View invocation is a bit more complex.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core.classes</span> <span class="k">import</span> <span class="n">DEFAULT_ACCESSRULE</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core.classes</span> <span class="kn">import</span> <span class="n">DEFAULT_ACCESSRULE</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span> <span class="o">=</span> <span class="n">DEFAULT_ACCESSRULE</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">ar</span><span class="p">)</span>
-<span class="go">* id3VMUK3075G           : ptypy.utils.parameters.Param(6)</span>
+<span class="go">* id3VIQ862Q1G           : ptypy.utils.parameters.Param(6)</span>
 <span class="go">  * storageID            : None</span>
 <span class="go">  * shape                : None</span>
 <span class="go">  * coord                : None</span>
@@ -501,10 +441,12 @@ in a plot.</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ptypyclasses-02"><span class="std std-numref">Fig. 3</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="ptypyclasses-02">
+<figure class="highlights align-default" id="ptypyclasses-02">
 <a class="reference internal image-reference" href="../_images/ptypyclasses_02.png"><img alt="../_images/ptypyclasses_02.png" src="../_images/ptypyclasses_02.png" style="width: 72%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 3 </span><span class="caption-text">Storage with 4x4 views of the same content.</span><a class="headerlink" href="#ptypyclasses-02" title="Permalink to this image">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-number">Fig. 3 </span><span class="caption-text">Storage with 4x4 views of the same content.</span><a class="headerlink" href="#ptypyclasses-02" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p>We observe that the data buffer spans both views.
 Now let us add more and more Views!</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">):</span>
@@ -522,10 +464,12 @@ views having access to this pixel.</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ptypyclasses-03"><span class="std std-numref">Fig. 4</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="ptypyclasses-03">
+<figure class="highlights align-default" id="ptypyclasses-03">
 <a class="reference internal image-reference" href="../_images/ptypyclasses_03.png"><img alt="../_images/ptypyclasses_03.png" src="../_images/ptypyclasses_03.png" style="width: 72%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 4 </span><span class="caption-text">View coverage of data buffer of <code class="docutils literal notranslate"><span class="pre">S1</span></code>.</span><a class="headerlink" href="#ptypyclasses-03" title="Permalink to this image">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-number">Fig. 4 </span><span class="caption-text">View coverage of data buffer of <code class="docutils literal notranslate"><span class="pre">S1</span></code>.</span><a class="headerlink" href="#ptypyclasses-03" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p>Another handy feature of the <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.View" title="ptypy.core.classes.View"><code class="xref any py py-class docutils literal notranslate"><span class="pre">View</span></code></a> class is that it automatically
 creates a Storage instance to a <code class="docutils literal notranslate"><span class="pre">storageID</span></code> if that ID does not already
 exist.</p>
@@ -547,9 +491,9 @@ exist.</p>
 <span class="go">S100     :    0.3 :    1 * 200 * 200 :       1.0*1.0e0 :       2.0*2.0e2 :     1</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="tutorial-modeling-the-experiment-pod-geometry">
+</section>
+</section>
+<section id="tutorial-modeling-the-experiment-pod-geometry">
 <span id="simupod"></span><h2>Tutorial: Modeling the experiment - Pod, Geometry<a class="headerlink" href="#tutorial-modeling-the-experiment-pod-geometry" title="Permalink to this headline">¶</a></h2>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -575,13 +519,8 @@ physical quantities only simulate an experimental setup.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib</span> <span class="k">as</span> <span class="nn">mpl</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ptypy</span>
-<span class="go">Message Passaging for Python (mpi4py) not found.</span>
-<span class="go">    CPU-parallelization disabled.</span>
-<span class="go">    Install python-mpi4py via the package repositories or with `pip install --user mpi4py`</span>
-<span class="go">Could not import experiment cSAXSScan from .cSAXS, Reason: No module named &#39;fabio&#39;</span>
-
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="k">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="k">import</span> <span class="n">View</span><span class="p">,</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Base</span><span class="p">,</span> <span class="n">POD</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">View</span><span class="p">,</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Base</span><span class="p">,</span> <span class="n">POD</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span> <span class="o">=</span> <span class="n">mpl</span><span class="o">.</span><span class="n">pyplot</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">sys</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">scriptname</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
@@ -607,11 +546,11 @@ python class. To reenable ths feature we have to subclasse once.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">FType</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
 </pre></div>
 </div>
-<div class="section" id="set-experimental-setup-geometry-and-create-propagator">
+<section id="set-experimental-setup-geometry-and-create-propagator">
 <h3>Set experimental setup geometry and create propagator<a class="headerlink" href="#set-experimental-setup-geometry-and-create-propagator" title="Permalink to this headline">¶</a></h3>
 <p>Here, we accept a little help from the <a class="reference internal" href="ptypy.core.html#ptypy.core.geometry.Geo" title="ptypy.core.geometry.Geo"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Geo</span></code></a> class to provide
 a propagator and pixel sizes for sample and detector space.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="k">import</span> <span class="n">geometry</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">geometry</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">energy</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># u.keV2m(1.0)/6.32e-7</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">lam</span> <span class="o">=</span> <span class="mf">5.32e-7</span>
@@ -636,8 +575,8 @@ pixel size in the sample plane (aka resolution),</p>
 <span class="go">3.32x3.32mm</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="create-probing-illumination">
+</section>
+<section id="create-probing-illumination">
 <h3>Create probing illumination<a class="headerlink" href="#create-probing-illumination" title="Permalink to this headline">¶</a></h3>
 <p>Next, we need to create a probing illumination.
 We start with a suited container that we call <em>probe</em></p>
@@ -646,7 +585,7 @@ We start with a suited container that we call <em>probe</em></p>
 </div>
 <p>For convenience, there is a test probing illumination in PtyPy’s
 resources.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.resources</span> <span class="k">import</span> <span class="n">moon_pr</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.resources</span> <span class="kn">import</span> <span class="n">moon_pr</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">moon_probe</span> <span class="o">=</span> <span class="o">-</span><span class="n">moon_pr</span><span class="p">(</span><span class="n">G</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -663,10 +602,12 @@ creation to align the coordinate system.</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-00"><span class="std std-numref">Fig. 5</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="simupod-00">
+<figure class="highlights align-default" id="simupod-00">
 <a class="reference internal image-reference" href="../_images/simupod_00.png"><img alt="../_images/simupod_00.png" src="../_images/simupod_00.png" style="width: 72%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 5 </span><span class="caption-text">Ptypy’s default testing illumination, an image of the moon.</span><a class="headerlink" href="#simupod-00" title="Permalink to this image">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-number">Fig. 5 </span><span class="caption-text">Ptypy’s default testing illumination, an image of the moon.</span><a class="headerlink" href="#simupod-00" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p>Of course, we could have also used the coordinate grids
 from the propagator to model a probe,</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">G</span><span class="o">.</span><span class="n">propagator</span><span class="o">.</span><span class="n">grids_sam</span>
@@ -677,10 +618,12 @@ from the propagator to model a probe,</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-01"><span class="std std-numref">Fig. 6</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="simupod-01">
+<figure class="highlights align-default" id="simupod-01">
 <a class="reference internal image-reference" href="../_images/simupod_01.png"><img alt="../_images/simupod_01.png" src="../_images/simupod_01.png" style="width: 72%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 6 </span><span class="caption-text">Round test illumination (not necessarily smoothly varying).</span><a class="headerlink" href="#simupod-01" title="Permalink to this image">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-number">Fig. 6 </span><span class="caption-text">Round test illumination (not necessarily smoothly varying).</span><a class="headerlink" href="#simupod-01" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p>or the coordinate grids from the Storage itself.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pr3</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">probe</span><span class="o">.</span><span class="n">new_storage</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">pr_shape</span><span class="p">,</span> <span class="n">psize</span><span class="o">=</span><span class="n">G</span><span class="o">.</span><span class="n">resolution</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">pr3</span><span class="o">.</span><span class="n">grids</span><span class="p">()</span>
@@ -690,10 +633,12 @@ from the propagator to model a probe,</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-02"><span class="std std-numref">Fig. 7</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="simupod-02">
+<figure class="highlights align-default" id="simupod-02">
 <a class="reference internal image-reference" href="../_images/simupod_02.png"><img alt="../_images/simupod_02.png" src="../_images/simupod_02.png" style="width: 72%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 7 </span><span class="caption-text">Square test illumination.</span><a class="headerlink" href="#simupod-02" title="Permalink to this image">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-number">Fig. 7 </span><span class="caption-text">Square test illumination.</span><a class="headerlink" href="#simupod-02" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p>In order to put some physics in the illumination we set the number of
 photons to 1 billion</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">pp</span> <span class="ow">in</span> <span class="p">[</span><span class="n">pr</span><span class="p">,</span> <span class="n">pr2</span><span class="p">,</span> <span class="n">pr3</span><span class="p">]:</span>
@@ -714,12 +659,14 @@ photons to 1 billion</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-03"><span class="std std-numref">Fig. 8</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="simupod-03">
+<figure class="highlights align-default" id="simupod-03">
 <a class="reference internal image-reference" href="../_images/simupod_03.png"><img alt="../_images/simupod_03.png" src="../_images/simupod_03.png" style="width: 80%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 8 </span><span class="caption-text">Logarithmic intensity of propagated illumination.</span><a class="headerlink" href="#simupod-03" title="Permalink to this image">¶</a></p>
-</div>
-</div>
-<div class="section" id="create-scan-pattern-and-object">
+<figcaption>
+<p><span class="caption-number">Fig. 8 </span><span class="caption-text">Logarithmic intensity of propagated illumination.</span><a class="headerlink" href="#simupod-03" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="create-scan-pattern-and-object">
 <h3>Create scan pattern and object<a class="headerlink" href="#create-scan-pattern-and-object" title="Permalink to this headline">¶</a></h3>
 <p>We use the <a class="reference internal" href="ptypy.core.html#module-ptypy.core.xy" title="ptypy.core.xy"><code class="xref py py-mod docutils literal notranslate"><span class="pre">ptypy.core.xy</span></code></a> module to create a scan pattern.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
@@ -727,7 +674,7 @@ photons to 1 billion</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span><span class="o">.</span><span class="n">spacing</span> <span class="o">=</span> <span class="n">fsize</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mi">8</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span><span class="o">.</span><span class="n">steps</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span><span class="o">.</span><span class="n">extent</span> <span class="o">=</span> <span class="n">fsize</span><span class="o">*</span><span class="mf">1.5</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="k">import</span> <span class="n">xy</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">xy</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">positions</span> <span class="o">=</span> <span class="n">xy</span><span class="o">.</span><span class="n">from_pars</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
@@ -735,17 +682,19 @@ photons to 1 billion</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-04"><span class="std std-numref">Fig. 9</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="simupod-04">
+<figure class="highlights align-default" id="simupod-04">
 <a class="reference internal image-reference" href="../_images/simupod_04.png"><img alt="../_images/simupod_04.png" src="../_images/simupod_04.png" style="width: 80%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 9 </span><span class="caption-text">Created scan pattern.</span><a class="headerlink" href="#simupod-04" title="Permalink to this image">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-number">Fig. 9 </span><span class="caption-text">Created scan pattern.</span><a class="headerlink" href="#simupod-04" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p>Next, we need to model a sample through an object transmisson function.
 We start of with a suited container which we call <em>obj</em>.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">P</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="s1">&#39;Cobj&#39;</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="s1">&#39;complex&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>As we have learned from the previous <a class="reference internal" href="#ptypyclasses"><span class="std std-ref">Tutorial: Data access - Storage, View, Container</span></a>,
-we can use <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.View" title="ptypy.core.classes.View"><code class="xref any py py-class docutils literal notranslate"><span class="pre">View</span></code></a>’s to create a Storage data buffer of the
+we can use <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.View" title="ptypy.core.classes.View"><code class="xref any py py-class docutils literal notranslate"><span class="pre">View</span></code></a>‘s to create a Storage data buffer of the
 right size.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">oar</span> <span class="o">=</span> <span class="n">View</span><span class="o">.</span><span class="n">DEFAULT_ACCESSRULE</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">oar</span><span class="o">.</span><span class="n">storageID</span> <span class="o">=</span> <span class="s1">&#39;S00&#39;</span>
@@ -777,18 +726,21 @@ with Container.<a class="reference internal" href="ptypy.core.html#ptypy.core.cl
 </div>
 <p>At last we fill the object Storage <code class="docutils literal notranslate"><span class="pre">S00</span></code> with a complex transmission.
 Again there is a convenience transmission function in the resources</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.resources</span> <span class="k">import</span> <span class="n">flower_obj</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.resources</span> <span class="kn">import</span> <span class="n">flower_obj</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">storage</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">storages</span><span class="p">[</span><span class="s1">&#39;S00&#39;</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">storage</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">flower_obj</span><span class="p">(</span><span class="n">storage</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="n">storage</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-05"><span class="std std-numref">Fig. 10</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="simupod-05">
+<figure class="highlights align-default" id="simupod-05">
 <a class="reference internal image-reference" href="../_images/simupod_05.png"><img alt="../_images/simupod_05.png" src="../_images/simupod_05.png" style="width: 72%;" /></a>
-</div>
-</div>
-<div class="section" id="creating-additional-views-and-the-pods">
+<figcaption>
+<p><span class="caption-number">Fig. 10 </span><span class="caption-text">Complex transmission function of the object.</span><a class="headerlink" href="#simupod-05" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="creating-additional-views-and-the-pods">
 <h3>Creating additional Views and the PODs<a class="headerlink" href="#creating-additional-views-and-the-pods" title="Permalink to this headline">¶</a></h3>
 <p>A single coherent propagation in PtyPy is represented by
 an instance of the <a class="reference internal" href="ptypy.core.html#ptypy.core.classes.POD" title="ptypy.core.classes.POD"><code class="xref py py-class docutils literal notranslate"><span class="pre">POD</span></code></a> class.</p>
@@ -888,10 +840,12 @@ Therefore we can use this command to plot the result.</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-06"><span class="std std-numref">Fig. 11</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="simupod-06">
+<figure class="highlights align-default" id="simupod-06">
 <a class="reference internal image-reference" href="../_images/simupod_06.png"><img alt="../_images/simupod_06.png" src="../_images/simupod_06.png" style="width: 72%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 11 </span><span class="caption-text">Simulated exit wave using a pod</span><a class="headerlink" href="#simupod-06" title="Permalink to this image">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-number">Fig. 11 </span><span class="caption-text">Simulated exit wave using a pod.</span><a class="headerlink" href="#simupod-06" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p>The diffraction plane is also conveniently accessible with</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pod</span><span class="o">.</span><span class="n">diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">pod</span><span class="o">.</span><span class="n">fw</span><span class="p">(</span><span class="n">pod</span><span class="o">.</span><span class="n">exit</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span>
 </pre></div>
@@ -902,9 +856,12 @@ Therefore we can use this command to plot the result.</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-07"><span class="std std-numref">Fig. 12</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="simupod-07">
+<figure class="highlights align-default" id="simupod-07">
 <a class="reference internal image-reference" href="../_images/simupod_07.png"><img alt="../_images/simupod_07.png" src="../_images/simupod_07.png" style="width: 72%;" /></a>
-</div>
+<figcaption>
+<p><span class="caption-number">Fig. 12 </span><span class="caption-text">First simulated diffraction image (without noise)</span><a class="headerlink" href="#simupod-07" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p>Creating the rest of the pods is now straight-forward
 since the data accesses are similar.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">obview</span> <span class="ow">in</span> <span class="n">objviews</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
@@ -946,16 +903,18 @@ since the data accesses are similar.</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#simupod-08"><span class="std std-numref">Fig. 13</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="simupod-08">
+<figure class="highlights align-default" id="simupod-08">
 <a class="reference internal image-reference" href="../_images/simupod_08.png"><img alt="../_images/simupod_08.png" src="../_images/simupod_08.png" style="width: 100%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 13 </span><span class="caption-text">Diffraction patterns with poisson statistics.</span><a class="headerlink" href="#simupod-08" title="Permalink to this image">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-number">Fig. 13 </span><span class="caption-text">Diffraction patterns with poisson statistics.</span><a class="headerlink" href="#simupod-08" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p><strong>Well done!</strong>
 We can move forward to create and run a reconstruction engine
 as in section <a class="reference internal" href="#basic-algorithm"><span class="std std-ref">A basic Difference-Map implementation</span></a> in <a class="reference internal" href="#ownengine"><span class="std std-ref">Tutorial: A reconstruction engine from scratch</span></a>
 or store the generated diffraction patterns as in the next section.</p>
-</div>
-<div class="section" id="storing-the-simulation">
+</section>
+<section id="storing-the-simulation">
 <span id="store"></span><h3>Storing the simulation<a class="headerlink" href="#storing-the-simulation" title="Permalink to this headline">¶</a></h3>
 <p>On unix system we choose the <code class="docutils literal notranslate"><span class="pre">/tmp</span></code> folder</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">save_path</span> <span class="o">=</span> <span class="s1">&#39;/tmp/ptypy/sim/&#39;</span>
@@ -994,9 +953,9 @@ format.</p>
 </div>
 <p>If you want to learn how to convert this “experiment” into ptypy data
 file (<code class="docutils literal notranslate"><span class="pre">.ptyd</span></code>), see to <a class="reference internal" href="data_management.html#subclassptyscan"><span class="std std-ref">Tutorial : Subclassing PtyScan</span></a></p>
-</div>
-</div>
-<div class="section" id="tutorial-a-reconstruction-engine-from-scratch">
+</section>
+</section>
+<section id="tutorial-a-reconstruction-engine-from-scratch">
 <span id="ownengine"></span><h2>Tutorial: A reconstruction engine from scratch<a class="headerlink" href="#tutorial-a-reconstruction-engine-from-scratch" title="Permalink to this headline">¶</a></h2>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -1012,16 +971,11 @@ needed to create an engine compatible with the state mixture
 expansion of ptychogrpahy as described in Thibault et. al 2013 <a class="footnote-reference brackets" href="#modes" id="id1">1</a> .</p>
 <p>First we import ptypy and the utility module</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ptypy</span>
-<span class="go">Message Passaging for Python (mpi4py) not found.</span>
-<span class="go">    CPU-parallelization disabled.</span>
-<span class="go">    Install python-mpi4py via the package repositories or with `pip install --user mpi4py`</span>
-<span class="go">Could not import experiment cSAXSScan from .cSAXS, Reason: No module named &#39;fabio&#39;</span>
-
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="k">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 </pre></div>
 </div>
-<div class="section" id="preparing-a-managing-ptycho-instance">
+<section id="preparing-a-managing-ptycho-instance">
 <h3>Preparing a managing Ptycho instance<a class="headerlink" href="#preparing-a-managing-ptycho-instance" title="Permalink to this headline">¶</a></h3>
 <p>We need to prepare a managing <a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Ptycho</span></code></a> instance.
 It requires a parameter tree, as specified in <a class="reference internal" href="parameters.html#parameters"><span class="std std-ref">Parameter tree structure</span></a></p>
@@ -1060,10 +1014,12 @@ all necessary basic <a class="reference internal" href="ptypy.core.html#ptypy.co
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ownengine-00"><span class="std std-numref">Fig. 14</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="ownengine-00">
+<figure class="highlights align-default" id="ownengine-00">
 <a class="reference internal image-reference" href="../_images/ownengine_00.png"><img alt="../_images/ownengine_00.png" src="../_images/ownengine_00.png" style="width: 100%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 14 </span><span class="caption-text">Plot of simulated diffraction data for the first two positions.</span><a class="headerlink" href="#ownengine-00" title="Permalink to this image">¶</a></p>
-</div>
+<figcaption>
+<p><span class="caption-number">Fig. 14 </span><span class="caption-text">Plot of simulated diffraction data for the first two positions.</span><a class="headerlink" href="#ownengine-00" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p>We don’t need to use PtyPy’s <a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Ptycho</span></code></a> class to arrive at this
 point. The structure <code class="docutils literal notranslate"><span class="pre">P</span></code> that we arrive with at the end of
 <a class="reference internal" href="#simupod"><span class="std std-ref">Tutorial: Modeling the experiment - Pod, Geometry</span></a> suffices completely.</p>
@@ -1074,12 +1030,14 @@ probes are initialized with an aperture like support.</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ownengine-01"><span class="std std-numref">Fig. 15</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="ownengine-01">
+<figure class="highlights align-default" id="ownengine-01">
 <a class="reference internal image-reference" href="../_images/ownengine_01.png"><img alt="../_images/ownengine_01.png" src="../_images/ownengine_01.png" style="width: 72%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 15 </span><span class="caption-text">Plot of the starting guess for the probe.</span><a class="headerlink" href="#ownengine-01" title="Permalink to this image">¶</a></p>
-</div>
-</div>
-<div class="section" id="a-basic-difference-map-implementation">
+<figcaption>
+<p><span class="caption-number">Fig. 15 </span><span class="caption-text">Plot of the starting guess for the probe.</span><a class="headerlink" href="#ownengine-01" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="a-basic-difference-map-implementation">
 <span id="basic-algorithm"></span><h3>A basic Difference-Map implementation<a class="headerlink" href="#a-basic-difference-map-implementation" title="Permalink to this headline">¶</a></h3>
 <p>Now we can start implementing a simple DM algorithm. We need three basic
 functions, one is the <code class="docutils literal notranslate"><span class="pre">fourier_update</span></code> that implements the Fourier
@@ -1175,9 +1133,9 @@ modulus constraint.</p>
 </div>
 <p>We start off with a small number of iterations.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">iterate</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
-<span class="go">437925.8954465127</span>
-<span class="go">315329.9133741297</span>
-<span class="go">237595.30759980966</span>
+<span class="go">438170.3264380576</span>
+<span class="go">315517.16234436736</span>
+<span class="go">237954.90075500667</span>
 </pre></div>
 </div>
 <p>We note that the error (here only displayed for 3 iterations) is
@@ -1187,36 +1145,40 @@ Let us have a look how the probe has developed.</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ownengine-02"><span class="std std-numref">Fig. 16</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="ownengine-02">
+<figure class="highlights align-default" id="ownengine-02">
 <a class="reference internal image-reference" href="../_images/ownengine_02.png"><img alt="../_images/ownengine_02.png" src="../_images/ownengine_02.png" style="width: 72%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 16 </span><span class="caption-text">Plot of the reconstructed probe after 9 iterations. We observe that
+<figcaption>
+<p><span class="caption-number">Fig. 16 </span><span class="caption-text">Plot of the reconstructed probe after 9 iterations. We observe that
 the actaul illumination of the sample must be larger than the initial
 guess.</span><a class="headerlink" href="#ownengine-02" title="Permalink to this image">¶</a></p>
-</div>
+</figcaption>
+</figure>
 <p>Looks like the probe is on a good way. How about the object?</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">S</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">3</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="s1">&#39;0,120:-120,120:-120&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ownengine-03"><span class="std std-numref">Fig. 17</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="ownengine-03">
+<figure class="highlights align-default" id="ownengine-03">
 <a class="reference internal image-reference" href="../_images/ownengine_03.png"><img alt="../_images/ownengine_03.png" src="../_images/ownengine_03.png" style="width: 72%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 17 </span><span class="caption-text">Plot of the reconstructed object after 9 iterations. It is not quite
+<figcaption>
+<p><span class="caption-number">Fig. 17 </span><span class="caption-text">Plot of the reconstructed object after 9 iterations. It is not quite
 clear what object is reconstructed</span><a class="headerlink" href="#ownengine-03" title="Permalink to this image">¶</a></p>
-</div>
+</figcaption>
+</figure>
 <p>Ok, let us do some more iterations. 36 will do.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">iterate</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="mi">36</span><span class="p">)</span>
-<span class="go">158631.80872048368</span>
-<span class="go">90873.59857044807</span>
-<span class="go">60259.642249397286</span>
-<span class="go">47858.53567352306</span>
-<span class="go">38054.726012312414</span>
-<span class="go">27981.4760841439</span>
-<span class="go">21942.433577168606</span>
-<span class="go">19407.761895954558</span>
-<span class="go">17767.303606259793</span>
-<span class="go">17031.943291125543</span>
-<span class="go">16984.65367362969</span>
-<span class="go">17246.07033631627</span>
+<span class="go">158915.27153488086</span>
+<span class="go">91916.97730865219</span>
+<span class="go">61074.06039295608</span>
+<span class="go">47990.177754398406</span>
+<span class="go">37926.09342086832</span>
+<span class="go">28904.497467175803</span>
+<span class="go">22488.8598904735</span>
+<span class="go">19680.60134584292</span>
+<span class="go">18666.331330559602</span>
+<span class="go">17917.54426299427</span>
+<span class="go">18070.198152618952</span>
+<span class="go">17842.483632624444</span>
 </pre></div>
 </div>
 <p>Error is still on a steady descent. Let us look at the final
@@ -1225,22 +1187,26 @@ reconstructed probe and object.</p>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="#ownengine-04"><span class="std std-numref">Fig. 18</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="ownengine-04">
+<figure class="highlights align-default" id="ownengine-04">
 <a class="reference internal image-reference" href="../_images/ownengine_04.png"><img alt="../_images/ownengine_04.png" src="../_images/ownengine_04.png" style="width: 72%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 18 </span><span class="caption-text">Plot of the reconstructed probe after a total of 45 iterations.
+<figcaption>
+<p><span class="caption-number">Fig. 18 </span><span class="caption-text">Plot of the reconstructed probe after a total of 45 iterations.
 It’s a moon !</span><a class="headerlink" href="#ownengine-04" title="Permalink to this image">¶</a></p>
 <div class="legend">
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">S</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">5</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="s1">&#39;0,120:-120,120:-120&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">S</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">5</span><span class="p">,</span> <span class="n">slices</span><span class="o">=</span><span class="s1">&#39;0,120:-120,120:-120&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-</div>
+</figcaption>
+</figure>
 <p>See <a class="reference internal" href="#ownengine-05"><span class="std std-numref">Fig. 19</span></a> for the plotted image.</p>
-<div class="highlights figure align-default" id="ownengine-05">
+<figure class="highlights align-default" id="ownengine-05">
 <a class="reference internal image-reference" href="../_images/ownengine_05.png"><img alt="../_images/ownengine_05.png" src="../_images/ownengine_05.png" style="width: 72%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 19 </span><span class="caption-text">Plot of the reconstructed object after a total of 45 iterations.
+<figcaption>
+<p><span class="caption-number">Fig. 19 </span><span class="caption-text">Plot of the reconstructed object after a total of 45 iterations.
 It’s a bunch of flowers !</span><a class="headerlink" href="#ownengine-05" title="Permalink to this image">¶</a></p>
-</div>
+</figcaption>
+</figure>
 <dl class="footnote brackets">
 <dt class="label" id="modes"><span class="brackets"><a class="fn-backref" href="#id1">1</a></span></dt>
 <dd><ol class="upperalpha simple" start="16">
@@ -1248,12 +1214,76 @@ It’s a bunch of flowers !</span><a class="headerlink" href="#ownengine-05" tit
 </ol>
 </dd>
 </dl>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
+            <div class="clearer"></div>
           </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../content.html">
+              <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
+            </a></p>
+<h3><a href="../content.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started with Ptypy</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Concepts and Classes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-data-access-storage-view-container">Tutorial: Data access - Storage, View, Container</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#a-single-storage-in-one-container">A single Storage in one Container</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#adding-views-as-a-way-to-access-data">Adding Views as a way to access data</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-modeling-the-experiment-pod-geometry">Tutorial: Modeling the experiment - Pod, Geometry</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#set-experimental-setup-geometry-and-create-propagator">Set experimental setup geometry and create propagator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#create-probing-illumination">Create probing illumination</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#create-scan-pattern-and-object">Create scan pattern and object</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#creating-additional-views-and-the-pods">Creating additional Views and the PODs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#storing-the-simulation">Storing the simulation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tutorial-a-reconstruction-engine-from-scratch">Tutorial: A reconstruction engine from scratch</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#preparing-a-managing-ptycho-instance">Preparing a managing Ptycho instance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#a-basic-difference-map-implementation">A basic Difference-Map implementation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="data_management.html">Data management</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameter tree structure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ptypy.html">ptypy package</a></li>
+</ul>
+
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="getting_started.html"
+                          title="previous chapter">Getting started with Ptypy</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="data_management.html"
+                          title="next chapter">Data management</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/rst/concept.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -1273,12 +1303,13 @@ It’s a bunch of flowers !</span><a class="headerlink" href="#ownengine-05" tit
         <li class="right" >
           <a href="getting_started.html" title="Getting started with Ptypy"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Concepts and Classes</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
     </div>
   </body>
 </html>

@@ -1,18 +1,18 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
-    <title>ptypy.io package &#8212; ptypy 0.4.0 documentation</title>
-    <link rel="stylesheet" href="../_static/header.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>ptypy.io package &#8212; ptypy 0.5.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/header.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -53,10 +53,467 @@
         <li class="right" >
           <a href="ptypy.experiment.html" title="ptypy.experiment package"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ptypy.io package</a></li> 
       </ul>
-    </div>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="ptypy-io-package">
+<h1>ptypy.io package<a class="headerlink" href="#ptypy-io-package" title="Permalink to this headline">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-ptypy.io.edfIO">
+<span id="ptypy-io-edfio-module"></span><h2>ptypy.io.edfIO module<a class="headerlink" href="#module-ptypy.io.edfIO" title="Permalink to this headline">¶</a></h2>
+<p>IO module for handling the file format EDF used by the ESRF beamline id19
+Provides read, write and readHeader functions.</p>
+<p>translated to python: April 2010, Dieter Hahn</p>
+<dl class="simple">
+<dt>Among other, contains the functions</dt><dd><p>readData
+writeData WHICH IS NOT YET IMPLEMENTED</p>
+</dd>
+</dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.io.edfIO.edfread">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.edfIO.</span></span><span class="sig-name descname"><span class="pre">edfread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doglob</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.edfIO.edfread" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>d,meta = edfread(filename)</dt><dd><p>reads array in edf file filename and returns it as a numpy array, along with metadata (from header).
+d and meta are lists if filename is a list of file names.</p>
+</dd>
+<dt>… = edfread(filename, doglob=True)</dt><dd><p>reads all matching files if filename contains unix-style wildcards, and returns lists.</p>
+</dd>
+<dt>… = edfread(filename, doglob=False)</dt><dd><p>ignores wildcards</p>
+</dd>
+<dt>… = edfread(filename, doglob=None) [default]</dt><dd><p>behaves like doglob=True, except that it returns a list only if filename contains wildcards,
+while doglob=True always returns a list, even if there is only one match.</p>
+</dd>
+<dt>… = edfread(filename, roi=(RowFrom, RowTo, ColumnFrom, ColumnTo))</dt><dd><p>returns a region of interest (applied on all files if gobbing or if filename is a list)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-ptypy.io.h5rw">
+<span id="ptypy-io-h5rw-module"></span><h2>ptypy.io.h5rw module<a class="headerlink" href="#module-ptypy.io.h5rw" title="Permalink to this headline">¶</a></h2>
+<p>Wrapper to store nearly anything in an hdf5 file.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.io.h5rw.h5append">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.h5rw.</span></span><span class="sig-name descname"><span class="pre">h5append</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">{'var1'=...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'var2'=...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">...}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.h5rw.h5append" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.h5rw.</span></span><span class="sig-name descname"><span class="pre">h5append</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var1=...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var2=...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">...</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.h5rw.</span></span><span class="sig-name descname"><span class="pre">h5append</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">...</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<dd><p>Appends variables var1, var2, … to file filename. The
+key-value arguments have precedence on the provided dictionary.</p>
+<p>supported variable types are:
+* scalars
+* numpy arrays
+* strings
+* lists
+* dictionaries</p>
+<p>(Setting the option UNSUPPORTED equal to ‘ignore’ eliminates
+unsupported types. Default is ‘fail’, which raises an error.)</p>
+<p>The file mode can be chosen according to the h5py documentation.
+It defaults to overwriting an existing file.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.io.h5rw.h5info">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.h5rw.</span></span><span class="sig-name descname"><span class="pre">h5info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.h5rw.h5info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints out a tree structure of given h5 file.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.io.h5rw.h5read">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.h5rw.</span></span><span class="sig-name descname"><span class="pre">h5read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.h5rw.h5read" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.h5rw.</span></span><span class="sig-name descname"><span class="pre">h5read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">...</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.h5rw.</span></span><span class="sig-name descname"><span class="pre">h5read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">(s1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">...)</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<dd><p>Read variables from a hdf5 file created with h5write and returns them as
+a dictionary.</p>
+<p>If specified, only variable named s1, s2, … are loaded.</p>
+<p>Variable names support slicing and group access. For instance, provided
+that the file contains the appropriate objects, the following syntax is
+valid:</p>
+<p>a = h5read(‘file.h5’, ‘myarray[2:4]’)
+a = h5read(‘file.h5’, ‘adict.thekeyIwant’)</p>
+<p>Another way of slicing, is with the slice keyword argument, which will take
+the provided slice object and apply it on the last variable name:</p>
+<p>a = h5read(‘file.h5’, ‘array1’, ‘array2’, slice=slice(1,2))
+# Will read array2[1:2]</p>
+<p>h5read(filename_with_wildcard, … , doglob=True)
+Reads sequentially all globbed filenames.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.io.h5rw.h5write">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.h5rw.</span></span><span class="sig-name descname"><span class="pre">h5write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">{'var1'=...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'var2'=...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">...}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.h5rw.h5write" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.h5rw.</span></span><span class="sig-name descname"><span class="pre">h5write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var1=...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var2=...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">...</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.h5rw.</span></span><span class="sig-name descname"><span class="pre">h5write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">...</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<dd><p>Writes variables var1, var2, … to file filename. The key-value
+arguments have precedence on the provided dictionary.</p>
+<p>supported variable types are:
+* scalars
+* numpy arrays
+* strings
+* lists
+* dictionaries</p>
+<p>(Setting the option UNSUPPORTED equal to ‘ignore’ eliminates
+unsupported types. Default is ‘fail’, which raises an error.)</p>
+<p>The file mode can be chosen according to the h5py documentation.
+It defaults to overwriting an existing file.</p>
+</dd></dl>
+
+</section>
+<section id="module-ptypy.io.imageIO">
+<span id="ptypy-io-imageio-module"></span><h2>ptypy.io.imageIO module<a class="headerlink" href="#module-ptypy.io.imageIO" title="Permalink to this headline">¶</a></h2>
+<p>Wrapper over Python Imaging Library to read images (+ metadata) and write images.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.io.imageIO.imread">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.imageIO.</span></span><span class="sig-name descname"><span class="pre">imread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doglob</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.imageIO.imread" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>d,meta = imread(filename)</dt><dd><p>reads array in image file and returns it as a numpy array, along with metadata (from header).
+d and meta are lists if filename is a list of file names.</p>
+</dd>
+<dt>… = imread(filename, doglob=True)</dt><dd><p>reads all matching files if filename contains unix-style wildcards, and returns lists.</p>
+</dd>
+<dt>… = imread(filename, doglob=False)</dt><dd><p>ignores wildcards</p>
+</dd>
+<dt>… = imread(filename, doglob=None) [default]</dt><dd><p>behaves like doglob=True, except that it returns a list only if filename contains wildcards,
+while doglob=True always returns a list, even if there is only one match.</p>
+</dd>
+<dt>… = imread(filename, roi=(RowFrom, RowTo, ColumnFrom, ColumnTo))</dt><dd><p>returns a region of interest (applied on all files if gobbing or if filename is a list)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-ptypy.io.image_read">
+<span id="ptypy-io-image-read-module"></span><h2>ptypy.io.image_read module<a class="headerlink" href="#module-ptypy.io.image_read" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.io.image_read.image_read">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.image_read.</span></span><span class="sig-name descname"><span class="pre">image_read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.image_read.image_read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Try to load image data from any file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – Name of the file. If filename contains a wildcard, load all files that match the pattern.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>(image, metadict) or (list of images, list of metadicts)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-ptypy.io.interaction">
+<span id="ptypy-io-interaction-module"></span><h2>ptypy.io.interaction module<a class="headerlink" href="#module-ptypy.io.interaction" title="Permalink to this headline">¶</a></h2>
+<p>Interaction module</p>
+<p>Provides the server and a basic client to interact with it.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="py class">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ptypy.io.interaction.</span></span><span class="sig-name descname"><span class="pre">Client</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Basic but complete client to interact with the server.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.DEFAULT">
+<span class="sig-name descname"><span class="pre">DEFAULT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'address':</span> <span class="pre">'tcp://127.0.0.1',</span> <span class="pre">'connection_timeout':</span> <span class="pre">3600000.0,</span> <span class="pre">'pinginterval':</span> <span class="pre">1,</span> <span class="pre">'poll_timeout':</span> <span class="pre">100.0,</span> <span class="pre">'port':</span> <span class="pre">5560}</span></em><a class="headerlink" href="#ptypy.io.interaction.Client.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.activate">
+<span class="sig-name descname"><span class="pre">activate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.activate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the thread.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.avail">
+<span class="sig-name descname"><span class="pre">avail</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.avail" title="Permalink to this definition">¶</a></dt>
+<dd><p>Queries the server for the name of objects available.
+! Synchronous call !</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.do">
+<span class="sig-name descname"><span class="pre">do</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">execstr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.do" title="Permalink to this definition">¶</a></dt>
+<dd><p>Modify and object using an exec string.
+This function returns the “ticket number” which identifies the object once
+it will have been transmitted. If timeout &gt; 0 and the requested object has
+been transmitted within timeout seconds, return a tuple (ticket, data).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.flush">
+<span class="sig-name descname"><span class="pre">flush</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.flush" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete all stored data (and accompanying status).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">evalstr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Requests an object (or part of it) using an eval string.
+This function returns the “ticket number” which identifies the object once
+it will have been transmitted. If timeout &gt; 0 and the requested object has
+been transmitted within timeout seconds, return a tuple (ticket, data).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.get_now">
+<span class="sig-name descname"><span class="pre">get_now</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">evalstr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.get_now" title="Permalink to this definition">¶</a></dt>
+<dd><p>Synchronous get. May be dangerous, but should be safe for small objects like parameters.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.newdata">
+<span class="sig-name descname"><span class="pre">newdata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ticket</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.newdata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Meant to be replaced, e.g. to send signals to a GUI.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.poll">
+<span class="sig-name descname"><span class="pre">poll</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ticket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.poll" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns true if the transaction for a given ticket is completed.
+If ticket and tag are None, returns true only if no transaction is pending</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.set">
+<span class="sig-name descname"><span class="pre">set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">varname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">varvalue</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets an object named varname to the value varvalue.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.stop_server">
+<span class="sig-name descname"><span class="pre">stop_server</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.stop_server" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send a SHUTDOWN command - is this a good idea?</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.unexpected_ticket">
+<span class="sig-name descname"><span class="pre">unexpected_ticket</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ticket</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.unexpected_ticket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to deal with warnings sent by the server.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Client.wait">
+<span class="sig-name descname"><span class="pre">wait</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ticket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.wait" title="Permalink to this definition">¶</a></dt>
+<dd><p>Blocks and return True only when the transaction for a given ticket is completed.
+If ticket is None, returns only when no more transaction are pending.
+If timeout is a positive number, wait will return False after timeout seconds if the ticket(s)
+had not been processed yet.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Server">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ptypy.io.interaction.</span></span><span class="sig-name descname"><span class="pre">Server</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Main ZMQ server class.</p>
+<p>Interaction server, meant to run asynchronously with process 0 to manage client requests.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>pars</strong> (<em>dict</em><em> or </em><a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) – Parameter set for the server.</p>
+</dd>
+<dt class="field-even">Keyword Arguments</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>address</strong> (<em>str</em>) – Primary address</p></li>
+<li><p><strong>port</strong> (<em>int</em>) – Primary port</p></li>
+<li><p><strong>connections</strong> (<em>int</em>) – number of ports to open on demand <em>behind</em> the primary port.</p></li>
+<li><p><strong>poll_timeout</strong> (<em>float</em>) – Network polling interval (in milliseconds!).</p></li>
+<li><p><strong>pinginterval</strong> (<em>float</em>) – Interval to check pings (in seconds).</p></li>
+<li><p><strong>pingtimeout</strong> (<em>float</em>) – Ping time out: client disconnected after this period (in seconds).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Server.DEFAULT">
+<span class="sig-name descname"><span class="pre">DEFAULT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'active':</span> <span class="pre">True,</span> <span class="pre">'address':</span> <span class="pre">'tcp://127.0.0.1',</span> <span class="pre">'connections':</span> <span class="pre">10,</span> <span class="pre">'pinginterval':</span> <span class="pre">2,</span> <span class="pre">'pingtimeout':</span> <span class="pre">10,</span> <span class="pre">'poll_timeout':</span> <span class="pre">10.0,</span> <span class="pre">'port':</span> <span class="pre">5560}</span></em><a class="headerlink" href="#ptypy.io.interaction.Server.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Server.activate">
+<span class="sig-name descname"><span class="pre">activate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.activate" title="Permalink to this definition">¶</a></dt>
+<dd><p>This needs to be run for the thread to initialize.
+Returns port where the server listens or None if Server failed</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Server.make_ID_pool">
+<span class="sig-name descname"><span class="pre">make_ID_pool</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.make_ID_pool" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Server.process_requests">
+<span class="sig-name descname"><span class="pre">process_requests</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tinterval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.process_requests" title="Permalink to this definition">¶</a></dt>
+<dd><p>Give permission to the serving thread to send objects and
+wait for it to complete (safer!)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Server.register">
+<span class="sig-name descname"><span class="pre">register</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.register" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exposes the content of an object for transmission and interaction.
+For now this is equivalent to Interactor.object[name] = obj, but maybe
+use weakref in the future?</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Server.send_error">
+<span class="sig-name descname"><span class="pre">send_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">error_message</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.send_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Queue an ERROR message for all connected clients.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Server.send_warning">
+<span class="sig-name descname"><span class="pre">send_warning</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">warning_message</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.send_warning" title="Permalink to this definition">¶</a></dt>
+<dd><p>Queue a warning message for all connected clients.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ptypy.io.interaction.Server.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.stop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-ptypy.io.json_rw">
+<span id="ptypy-io-json-rw-module"></span><h2>ptypy.io.json_rw module<a class="headerlink" href="#module-ptypy.io.json_rw" title="Permalink to this headline">¶</a></h2>
+<p>Wrapper to store nearly anything in a file using JSON encoding.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.io.json_rw.jread">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.json_rw.</span></span><span class="sig-name descname"><span class="pre">jread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.json_rw.jread" title="Permalink to this definition">¶</a></dt>
+<dd><p>h5read(filename)
+h5read(filename, s1, s2, …)
+h5read(filename, (s1,s2, …))</p>
+<p>Read variables from a JSON file created with jwrite and returns them as
+a dictionary.</p>
+<p>The following features are meant to have an interface identical to h5read.
+Note however that no time of memory is saved by “loading” only a subset
+of variables or slices.</p>
+<p>If specified, only variable named s1, s2, … are loaded.</p>
+<p>Variable names support slicing and group access. For instance, provided
+that the file contains the appropriate objects, the following syntax is
+valid:</p>
+<p>a = jread(‘file.h5’, ‘myarray[2:4]’)
+a = jread(‘file.h5’, ‘adict.thekeyIwant’)</p>
+<p>Another way of slicing is with the slice keyword argument which will take
+the provided slice object and apply it on the last variable name:</p>
+<p>a = jread(‘file.json’, ‘array1’, ‘array2’, slice=slice(1,2))
+# Will read array2[1:2]</p>
+<p>jread(filename_with_wildcard, … , doglob=True)
+Reads sequentially all globbed filenames.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.io.json_rw.jwrite">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.json_rw.</span></span><span class="sig-name descname"><span class="pre">jwrite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">{'var1'=...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'var2'=...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">...}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.json_rw.jwrite" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.json_rw.</span></span><span class="sig-name descname"><span class="pre">jwrite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var1=...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var2=...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">...</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.json_rw.</span></span><span class="sig-name descname"><span class="pre">jwrite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">...</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">...</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<dd><p>Writes variables var1, var2, … to file filename using JSON encoding.
+The key-value arguments have precedence on the provided dictionary.</p>
+<p>All JSON supported types are supported, as well as numpy arrays, which
+are replaced by a base64 encoding.</p>
+</dd></dl>
+
+</section>
+<section id="module-ptypy.io.rawIO">
+<span id="ptypy-io-rawio-module"></span><h2>ptypy.io.rawIO module<a class="headerlink" href="#module-ptypy.io.rawIO" title="Permalink to this headline">¶</a></h2>
+<p>read .raw images from FLI camera
+Created in Nov 2013
+TODO: add masking function to mask out hot/dead pixels of detector
+&#64;author: Bjoern Enders</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.io.rawIO.rawread">
+<span class="sig-prename descclassname"><span class="pre">ptypy.io.rawIO.</span></span><span class="sig-name descname"><span class="pre">rawread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doglob</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.rawIO.rawread" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>d,meta = rawread(filename)</dt><dd><p>reads array in CDF file filename and returns it as a numpy array, along with metadata (from header).
+d and meta are lists if filename is a list of file names.</p>
+</dd>
+<dt>… = rawread(filename, doglob=True)</dt><dd><p>reads all matching files if filename contains unix-style wildcards, and returns lists.</p>
+</dd>
+<dt>… = rawread(filename, doglob=False)</dt><dd><p>ignores wildcards</p>
+</dd>
+<dt>… = rawread(filename, doglob=None) [default]</dt><dd><p>behaves like doglob=True, except that it returns a list only if filename contains wildcards,
+while doglob=True always returns a list, even if there is only one match.</p>
+</dd>
+<dt>… = rawread(filename, roi=(RowFrom, RowTo, ColumnFrom, ColumnTo))</dt><dd><p>returns a region of interest (applied on all files if gobbing or if filename is a list)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-ptypy.io">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ptypy.io" title="Permalink to this headline">¶</a></h2>
+<p>Input/Output utilities.</p>
+<p>This file is part of the PTYPY package.</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">copyright</dt>
+<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
+</dd>
+<dt class="field-even">license</dt>
+<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../content.html">
@@ -85,12 +542,16 @@
 </li>
 </ul>
 
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="ptypy.experiment.html"
-                        title="previous chapter">ptypy.experiment package</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="ptypy.resources.html"
-                        title="next chapter">ptypy.resources package</a></p>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="ptypy.experiment.html"
+                          title="previous chapter">ptypy.experiment package</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="ptypy.resources.html"
+                          title="next chapter">ptypy.resources package</a></p>
+  </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -102,462 +563,12 @@
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
-
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
-            
-  <div class="section" id="ptypy-io-package">
-<h1>ptypy.io package<a class="headerlink" href="#ptypy-io-package" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="submodules">
-<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
-</div>
-<div class="section" id="module-ptypy.io.edfIO">
-<span id="ptypy-io-edfio-module"></span><h2>ptypy.io.edfIO module<a class="headerlink" href="#module-ptypy.io.edfIO" title="Permalink to this headline">¶</a></h2>
-<p>IO module for handling the file format EDF used by the ESRF beamline id19
-Provides read, write and readHeader functions.</p>
-<p>translated to python: April 2010, Dieter Hahn</p>
-<dl class="simple">
-<dt>Among other, contains the functions</dt><dd><p>readData
-writeData WHICH IS NOT YET IMPLEMENTED</p>
-</dd>
-</dl>
-<dl class="function">
-<dt id="ptypy.io.edfIO.edfread">
-<code class="sig-prename descclassname">ptypy.io.edfIO.</code><code class="sig-name descname">edfread</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">doglob=None</em>, <em class="sig-param">roi=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.edfIO.edfread" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>d,meta = edfread(filename)</dt><dd><p>reads array in edf file filename and returns it as a numpy array, along with metadata (from header).
-d and meta are lists if filename is a list of file names.</p>
-</dd>
-<dt>… = edfread(filename, doglob=True)</dt><dd><p>reads all matching files if filename contains unix-style wildcards, and returns lists.</p>
-</dd>
-<dt>… = edfread(filename, doglob=False)</dt><dd><p>ignores wildcards</p>
-</dd>
-<dt>… = edfread(filename, doglob=None) [default]</dt><dd><p>behaves like doglob=True, except that it returns a list only if filename contains wildcards,
-while doglob=True always returns a list, even if there is only one match.</p>
-</dd>
-<dt>… = edfread(filename, roi=(RowFrom, RowTo, ColumnFrom, ColumnTo))</dt><dd><p>returns a region of interest (applied on all files if gobbing or if filename is a list)</p>
-</dd>
-</dl>
-</dd></dl>
-
-</div>
-<div class="section" id="module-ptypy.io.h5rw">
-<span id="ptypy-io-h5rw-module"></span><h2>ptypy.io.h5rw module<a class="headerlink" href="#module-ptypy.io.h5rw" title="Permalink to this headline">¶</a></h2>
-<p>Wrapper to store nearly anything in an hdf5 file.</p>
-<p>This file is part of the PTYPY package.</p>
-<blockquote>
-<div><dl class="field-list simple">
-<dt class="field-odd">copyright</dt>
-<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
-</dd>
-<dt class="field-even">license</dt>
-<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
-</dd>
-</dl>
-</div></blockquote>
-<dl class="function">
-<dt id="ptypy.io.h5rw.h5write">
-<code class="sig-prename descclassname">ptypy.io.h5rw.</code><code class="sig-name descname">h5write</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">{'var1'=...</em>, <em class="sig-param">'var2'=...</em>, <em class="sig-param">...}</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.h5rw.h5write" title="Permalink to this definition">¶</a></dt>
-<dd><p>h5write(filename, var1=…, var2=…, …)
-h5write(filename, dict, var1=…, var2=…)</p>
-<p>Writes variables var1, var2, … to file filename. The key-value
-arguments have precedence on the provided dictionary.</p>
-<p>supported variable types are:
-* scalars
-* numpy arrays
-* strings
-* lists
-* dictionaries</p>
-<p>(Setting the option UNSUPPORTED equal to ‘ignore’ eliminates
-unsupported types. Default is ‘fail’, which raises an error.)</p>
-<p>The file mode can be chosen according to the h5py documentation.
-It defaults to overwriting an existing file.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="ptypy.io.h5rw.h5append">
-<code class="sig-prename descclassname">ptypy.io.h5rw.</code><code class="sig-name descname">h5append</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">{'var1'=...</em>, <em class="sig-param">'var2'=...</em>, <em class="sig-param">...}</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.h5rw.h5append" title="Permalink to this definition">¶</a></dt>
-<dd><p>h5append(filename, var1=…, var2=…, …)
-h5append(filename, dict, var1=…, var2=…)</p>
-<p>Appends variables var1, var2, … to file filename. The
-key-value arguments have precedence on the provided dictionary.</p>
-<p>supported variable types are:
-* scalars
-* numpy arrays
-* strings
-* lists
-* dictionaries</p>
-<p>(Setting the option UNSUPPORTED equal to ‘ignore’ eliminates
-unsupported types. Default is ‘fail’, which raises an error.)</p>
-<p>The file mode can be chosen according to the h5py documentation.
-It defaults to overwriting an existing file.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="ptypy.io.h5rw.h5read">
-<code class="sig-prename descclassname">ptypy.io.h5rw.</code><code class="sig-name descname">h5read</code><span class="sig-paren">(</span><em class="sig-param">filename</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.h5rw.h5read" title="Permalink to this definition">¶</a></dt>
-<dd><p>h5read(filename, s1, s2, …)
-h5read(filename, (s1,s2, …))</p>
-<p>Read variables from a hdf5 file created with h5write and returns them as
-a dictionary.</p>
-<p>If specified, only variable named s1, s2, … are loaded.</p>
-<p>Variable names support slicing and group access. For instance, provided
-that the file contains the appropriate objects, the following syntax is
-valid:</p>
-<p>a = h5read(‘file.h5’, ‘myarray[2:4]’)
-a = h5read(‘file.h5’, ‘adict.thekeyIwant’)</p>
-<p>Another way of slicing, is with the slice keyword argument, which will take
-the provided slice object and apply it on the last variable name:</p>
-<p>a = h5read(‘file.h5’, ‘array1’, ‘array2’, slice=slice(1,2))
-# Will read array2[1:2]</p>
-<p>h5read(filename_with_wildcard, … , doglob=True)
-Reads sequentially all globbed filenames.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="ptypy.io.h5rw.h5info">
-<code class="sig-prename descclassname">ptypy.io.h5rw.</code><code class="sig-name descname">h5info</code><span class="sig-paren">(</span><em class="sig-param">filename</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.h5rw.h5info" title="Permalink to this definition">¶</a></dt>
-<dd><p>Prints out a tree structure of given h5 file.</p>
-</dd></dl>
-
-</div>
-<div class="section" id="module-ptypy.io.imageIO">
-<span id="ptypy-io-imageio-module"></span><h2>ptypy.io.imageIO module<a class="headerlink" href="#module-ptypy.io.imageIO" title="Permalink to this headline">¶</a></h2>
-<p>Wrapper over Python Imaging Library to read images (+ metadata) and write images.</p>
-<dl class="function">
-<dt id="ptypy.io.imageIO.imread">
-<code class="sig-prename descclassname">ptypy.io.imageIO.</code><code class="sig-name descname">imread</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">doglob=None</em>, <em class="sig-param">roi=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.imageIO.imread" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>d,meta = imread(filename)</dt><dd><p>reads array in image file and returns it as a numpy array, along with metadata (from header).
-d and meta are lists if filename is a list of file names.</p>
-</dd>
-<dt>… = imread(filename, doglob=True)</dt><dd><p>reads all matching files if filename contains unix-style wildcards, and returns lists.</p>
-</dd>
-<dt>… = imread(filename, doglob=False)</dt><dd><p>ignores wildcards</p>
-</dd>
-<dt>… = imread(filename, doglob=None) [default]</dt><dd><p>behaves like doglob=True, except that it returns a list only if filename contains wildcards,
-while doglob=True always returns a list, even if there is only one match.</p>
-</dd>
-<dt>… = imread(filename, roi=(RowFrom, RowTo, ColumnFrom, ColumnTo))</dt><dd><p>returns a region of interest (applied on all files if gobbing or if filename is a list)</p>
-</dd>
-</dl>
-</dd></dl>
-
-</div>
-<div class="section" id="module-ptypy.io.image_read">
-<span id="ptypy-io-image-read-module"></span><h2>ptypy.io.image_read module<a class="headerlink" href="#module-ptypy.io.image_read" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="ptypy.io.image_read.image_read">
-<code class="sig-prename descclassname">ptypy.io.image_read.</code><code class="sig-name descname">image_read</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.image_read.image_read" title="Permalink to this definition">¶</a></dt>
-<dd><p>Try to load image data from any file.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – Name of the file. If filename contains a wildcard, load all files that match the pattern.</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p></p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>(image, metadict) or (list of images, list of metadicts)</p>
-</dd>
-</dl>
-</dd></dl>
-
-</div>
-<div class="section" id="module-ptypy.io.interaction">
-<span id="ptypy-io-interaction-module"></span><h2>ptypy.io.interaction module<a class="headerlink" href="#module-ptypy.io.interaction" title="Permalink to this headline">¶</a></h2>
-<p>Interaction module</p>
-<p>Provides the server and a basic client to interact with it.</p>
-<p>This file is part of the PTYPY package.</p>
-<blockquote>
-<div><dl class="field-list simple">
-<dt class="field-odd">copyright</dt>
-<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
-</dd>
-<dt class="field-even">license</dt>
-<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
-</dd>
-</dl>
-</div></blockquote>
-<dl class="class">
-<dt id="ptypy.io.interaction.Server">
-<em class="property">class </em><code class="sig-prename descclassname">ptypy.io.interaction.</code><code class="sig-name descname">Server</code><span class="sig-paren">(</span><em class="sig-param">pars=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Main ZMQ server class.</p>
-<p>Interaction server, meant to run asynchronously with process 0 to manage client requests.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>pars</strong> (<em>dict</em><em> or </em><a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><em>Param</em></a>) – Parameter set for the server.</p>
-</dd>
-<dt class="field-even">Keyword Arguments</dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>address</strong> (<em>str</em>) – Primary address</p></li>
-<li><p><strong>port</strong> (<em>int</em>) – Primary port</p></li>
-<li><p><strong>connections</strong> (<em>int</em>) – number of ports to open on demand <em>behind</em> the primary port.</p></li>
-<li><p><strong>poll_timeout</strong> (<em>float</em>) – Network polling interval (in milliseconds!).</p></li>
-<li><p><strong>pinginterval</strong> (<em>float</em>) – Interval to check pings (in seconds).</p></li>
-<li><p><strong>pingtimeout</strong> (<em>float</em>) – Ping time out: client disconnected after this period (in seconds).</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="attribute">
-<dt id="ptypy.io.interaction.Server.DEFAULT">
-<code class="sig-name descname">DEFAULT</code><em class="property"> = {'active': True, 'address': 'tcp://127.0.0.1', 'connections': 10, 'pinginterval': 2, 'pingtimeout': 10, 'poll_timeout': 10.0, 'port': 5560}</em><a class="headerlink" href="#ptypy.io.interaction.Server.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Server.activate">
-<code class="sig-name descname">activate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.activate" title="Permalink to this definition">¶</a></dt>
-<dd><p>This needs to be run for the thread to initialize.
-Returns port where the server listens or None if Server failed</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Server.make_ID_pool">
-<code class="sig-name descname">make_ID_pool</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.make_ID_pool" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Server.process_requests">
-<code class="sig-name descname">process_requests</code><span class="sig-paren">(</span><em class="sig-param">tinterval=0.001</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.process_requests" title="Permalink to this definition">¶</a></dt>
-<dd><p>Give permission to the serving thread to send objects and
-wait for it to complete (safer!)</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Server.register">
-<code class="sig-name descname">register</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">name</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.register" title="Permalink to this definition">¶</a></dt>
-<dd><p>Exposes the content of an object for transmission and interaction.
-For now this is equivalent to Interactor.object[name] = obj, but maybe
-use weakref in the future?</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Server.send_error">
-<code class="sig-name descname">send_error</code><span class="sig-paren">(</span><em class="sig-param">error_message</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.send_error" title="Permalink to this definition">¶</a></dt>
-<dd><p>Queue an ERROR message for all connected clients.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Server.send_warning">
-<code class="sig-name descname">send_warning</code><span class="sig-paren">(</span><em class="sig-param">warning_message</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.send_warning" title="Permalink to this definition">¶</a></dt>
-<dd><p>Queue a warning message for all connected clients.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Server.stop">
-<code class="sig-name descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Server.stop" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="ptypy.io.interaction.Client">
-<em class="property">class </em><code class="sig-prename descclassname">ptypy.io.interaction.</code><code class="sig-name descname">Client</code><span class="sig-paren">(</span><em class="sig-param">pars=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Basic but complete client to interact with the server.</p>
-<dl class="attribute">
-<dt id="ptypy.io.interaction.Client.DEFAULT">
-<code class="sig-name descname">DEFAULT</code><em class="property"> = {'address': 'tcp://127.0.0.1', 'connection_timeout': 3600000.0, 'pinginterval': 1, 'poll_timeout': 100.0, 'port': 5560}</em><a class="headerlink" href="#ptypy.io.interaction.Client.DEFAULT" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.activate">
-<code class="sig-name descname">activate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.activate" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create the thread.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.avail">
-<code class="sig-name descname">avail</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.avail" title="Permalink to this definition">¶</a></dt>
-<dd><p>Queries the server for the name of objects available.
-! Synchronous call !</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.do">
-<code class="sig-name descname">do</code><span class="sig-paren">(</span><em class="sig-param">execstr</em>, <em class="sig-param">timeout=0</em>, <em class="sig-param">tag=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.do" title="Permalink to this definition">¶</a></dt>
-<dd><p>Modify and object using an exec string.
-This function returns the “ticket number” which identifies the object once
-it will have been transmitted. If timeout &gt; 0 and the requested object has
-been transmitted within timeout seconds, return a tuple (ticket, data).</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.flush">
-<code class="sig-name descname">flush</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.flush" title="Permalink to this definition">¶</a></dt>
-<dd><p>Delete all stored data (and accompanying status).</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.get">
-<code class="sig-name descname">get</code><span class="sig-paren">(</span><em class="sig-param">evalstr</em>, <em class="sig-param">timeout=0</em>, <em class="sig-param">tag=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.get" title="Permalink to this definition">¶</a></dt>
-<dd><p>Requests an object (or part of it) using an eval string.
-This function returns the “ticket number” which identifies the object once
-it will have been transmitted. If timeout &gt; 0 and the requested object has
-been transmitted within timeout seconds, return a tuple (ticket, data).</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.get_now">
-<code class="sig-name descname">get_now</code><span class="sig-paren">(</span><em class="sig-param">evalstr</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.get_now" title="Permalink to this definition">¶</a></dt>
-<dd><p>Synchronous get. May be dangerous, but should be safe for small objects like parameters.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.newdata">
-<code class="sig-name descname">newdata</code><span class="sig-paren">(</span><em class="sig-param">ticket</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.newdata" title="Permalink to this definition">¶</a></dt>
-<dd><p>Meant to be replaced, e.g. to send signals to a GUI.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.poll">
-<code class="sig-name descname">poll</code><span class="sig-paren">(</span><em class="sig-param">ticket=None</em>, <em class="sig-param">tag=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.poll" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns true if the transaction for a given ticket is completed.
-If ticket and tag are None, returns true only if no transaction is pending</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.set">
-<code class="sig-name descname">set</code><span class="sig-paren">(</span><em class="sig-param">varname</em>, <em class="sig-param">varvalue</em>, <em class="sig-param">timeout=0</em>, <em class="sig-param">tag=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.set" title="Permalink to this definition">¶</a></dt>
-<dd><p>Sets an object named varname to the value varvalue.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.stop">
-<code class="sig-name descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.stop" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.stop_server">
-<code class="sig-name descname">stop_server</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.stop_server" title="Permalink to this definition">¶</a></dt>
-<dd><p>Send a SHUTDOWN command - is this a good idea?</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.unexpected_ticket">
-<code class="sig-name descname">unexpected_ticket</code><span class="sig-paren">(</span><em class="sig-param">ticket</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.unexpected_ticket" title="Permalink to this definition">¶</a></dt>
-<dd><p>Used to deal with warnings sent by the server.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="ptypy.io.interaction.Client.wait">
-<code class="sig-name descname">wait</code><span class="sig-paren">(</span><em class="sig-param">ticket=None</em>, <em class="sig-param">tag=None</em>, <em class="sig-param">timeout=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.interaction.Client.wait" title="Permalink to this definition">¶</a></dt>
-<dd><p>Blocks and return True only when the transaction for a given ticket is completed.
-If ticket is None, returns only when no more transaction are pending.
-If timeout is a positive number, wait will return False after timeout seconds if the ticket(s)
-had not been processed yet.</p>
-</dd></dl>
-
-</dd></dl>
-
-</div>
-<div class="section" id="module-ptypy.io.json_rw">
-<span id="ptypy-io-json-rw-module"></span><h2>ptypy.io.json_rw module<a class="headerlink" href="#module-ptypy.io.json_rw" title="Permalink to this headline">¶</a></h2>
-<p>Wrapper to store nearly anything in a file using JSON encoding.</p>
-<p>This file is part of the PTYPY package.</p>
-<blockquote>
-<div><dl class="field-list simple">
-<dt class="field-odd">copyright</dt>
-<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
-</dd>
-<dt class="field-even">license</dt>
-<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
-</dd>
-</dl>
-</div></blockquote>
-<dl class="function">
-<dt id="ptypy.io.json_rw.jwrite">
-<code class="sig-prename descclassname">ptypy.io.json_rw.</code><code class="sig-name descname">jwrite</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">{'var1'=...</em>, <em class="sig-param">'var2'=...</em>, <em class="sig-param">...}</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.json_rw.jwrite" title="Permalink to this definition">¶</a></dt>
-<dd><p>jwrite(filename, var1=…, var2=…, …)
-jwrite(filename, dict, var1=…, var2=…)</p>
-<p>Writes variables var1, var2, … to file filename using JSON encoding.
-The key-value arguments have precedence on the provided dictionary.</p>
-<p>All JSON supported types are supported, as well as numpy arrays, which
-are replaced by a base64 encoding.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="ptypy.io.json_rw.jread">
-<code class="sig-prename descclassname">ptypy.io.json_rw.</code><code class="sig-name descname">jread</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.json_rw.jread" title="Permalink to this definition">¶</a></dt>
-<dd><p>h5read(filename)
-h5read(filename, s1, s2, …)
-h5read(filename, (s1,s2, …))</p>
-<p>Read variables from a JSON file created with jwrite and returns them as
-a dictionary.</p>
-<p>The following features are meant to have an interface identical to h5read.
-Note however that no time of memory is saved by “loading” only a subset
-of variables or slices.</p>
-<p>If specified, only variable named s1, s2, … are loaded.</p>
-<p>Variable names support slicing and group access. For instance, provided
-that the file contains the appropriate objects, the following syntax is
-valid:</p>
-<p>a = jread(‘file.h5’, ‘myarray[2:4]’)
-a = jread(‘file.h5’, ‘adict.thekeyIwant’)</p>
-<p>Another way of slicing is with the slice keyword argument which will take
-the provided slice object and apply it on the last variable name:</p>
-<p>a = jread(‘file.json’, ‘array1’, ‘array2’, slice=slice(1,2))
-# Will read array2[1:2]</p>
-<p>jread(filename_with_wildcard, … , doglob=True)
-Reads sequentially all globbed filenames.</p>
-</dd></dl>
-
-</div>
-<div class="section" id="module-ptypy.io.rawIO">
-<span id="ptypy-io-rawio-module"></span><h2>ptypy.io.rawIO module<a class="headerlink" href="#module-ptypy.io.rawIO" title="Permalink to this headline">¶</a></h2>
-<p>read .raw images from FLI camera
-Created in Nov 2013
-TODO: add masking function to mask out hot/dead pixels of detector
-&#64;author: Bjoern Enders</p>
-<dl class="function">
-<dt id="ptypy.io.rawIO.rawread">
-<code class="sig-prename descclassname">ptypy.io.rawIO.</code><code class="sig-name descname">rawread</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">doglob=None</em>, <em class="sig-param">roi=None</em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.io.rawIO.rawread" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>d,meta = rawread(filename)</dt><dd><p>reads array in CDF file filename and returns it as a numpy array, along with metadata (from header).
-d and meta are lists if filename is a list of file names.</p>
-</dd>
-<dt>… = rawread(filename, doglob=True)</dt><dd><p>reads all matching files if filename contains unix-style wildcards, and returns lists.</p>
-</dd>
-<dt>… = rawread(filename, doglob=False)</dt><dd><p>ignores wildcards</p>
-</dd>
-<dt>… = rawread(filename, doglob=None) [default]</dt><dd><p>behaves like doglob=True, except that it returns a list only if filename contains wildcards,
-while doglob=True always returns a list, even if there is only one match.</p>
-</dd>
-<dt>… = rawread(filename, roi=(RowFrom, RowTo, ColumnFrom, ColumnTo))</dt><dd><p>returns a region of interest (applied on all files if gobbing or if filename is a list)</p>
-</dd>
-</dl>
-</dd></dl>
-
-</div>
-<div class="section" id="module-ptypy.io">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ptypy.io" title="Permalink to this headline">¶</a></h2>
-<p>Input/Output utilities.</p>
-<p>This file is part of the PTYPY package.</p>
-<blockquote>
-<div><dl class="field-list simple">
-<dt class="field-odd">copyright</dt>
-<dd class="field-odd"><p>Copyright 2014 by the PTYPY team, see AUTHORS.</p>
-</dd>
-<dt class="field-even">license</dt>
-<dd class="field-even"><p>GPLv2, see LICENSE for details.</p>
-</dd>
-</dl>
-</div></blockquote>
-</div>
-</div>
-
-
-          </div>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -577,13 +588,14 @@ while doglob=True always returns a list, even if there is only one match.</p>
         <li class="right" >
           <a href="ptypy.experiment.html" title="ptypy.experiment package"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ptypy.io package</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
     </div>
   </body>
 </html>

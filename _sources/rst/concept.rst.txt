@@ -57,11 +57,6 @@ Import some modules
    >>> import matplotlib as mpl
    >>> import numpy as np
    >>> import ptypy
-   Message Passaging for Python (mpi4py) not found.
-       CPU-parallelization disabled.
-       Install python-mpi4py via the package repositories or with `pip install --user mpi4py`
-   Could not import experiment cSAXSScan from .cSAXS, Reason: No module named 'fabio'
-   
    >>> from ptypy import utils as u
    >>> from ptypy.core import View, Container, Storage, Base
    >>> plt = mpl.pyplot
@@ -262,7 +257,7 @@ and the corresponding *numpy* syntax, ptypy offers acces through a
    >>> from ptypy.core.classes import DEFAULT_ACCESSRULE
    >>> ar = DEFAULT_ACCESSRULE.copy()
    >>> print(ar)
-   * id3VMUK3075G           : ptypy.utils.parameters.Param(6)
+   * id3VIQ862Q1G           : ptypy.utils.parameters.Param(6)
      * storageID            : None
      * shape                : None
      * coord                : None
@@ -576,11 +571,6 @@ We start again with importing some modules.
    >>> import matplotlib as mpl
    >>> import numpy as np
    >>> import ptypy
-   Message Passaging for Python (mpi4py) not found.
-       CPU-parallelization disabled.
-       Install python-mpi4py via the package repositories or with `pip install --user mpi4py`
-   Could not import experiment cSAXSScan from .cSAXS, Reason: No module named 'fabio'
-   
    >>> from ptypy import utils as u
    >>> from ptypy.core import View, Container, Storage, Base, POD
    >>> plt = mpl.pyplot
@@ -859,6 +849,7 @@ See :numref:`simupod_05` for the plotted image.
    :figclass: highlights
    :name: simupod_05
 
+   Complex transmission function of the object.
 
 Creating additional Views and the PODs
 --------------------------------------
@@ -989,7 +980,7 @@ See :numref:`simupod_06` for the plotted image.
    :figclass: highlights
    :name: simupod_06
 
-   Simulated exit wave using a pod
+   Simulated exit wave using a pod.
 
 The diffraction plane is also conveniently accessible with
 
@@ -1011,7 +1002,7 @@ See :numref:`simupod_07` for the plotted image.
    :figclass: highlights
    :name: simupod_07
 
-
+   First simulated diffraction image (without noise)
 
 Creating the rest of the pods is now straight-forward
 since the data accesses are similar.
@@ -1150,11 +1141,6 @@ First we import ptypy and the utility module
 ::
 
    >>> import ptypy
-   Message Passaging for Python (mpi4py) not found.
-       CPU-parallelization disabled.
-       Install python-mpi4py via the package repositories or with `pip install --user mpi4py`
-   Could not import experiment cSAXSScan from .cSAXS, Reason: No module named 'fabio'
-   
    >>> from ptypy import utils as u
    >>> import numpy as np
 
@@ -1348,9 +1334,9 @@ We start off with a small number of iterations.
 ::
 
    >>> iterate(P, 9)
-   437925.8954465127
-   315329.9133741297
-   237595.30759980966
+   438170.3264380576
+   315517.16234436736
+   237954.90075500667
    
 
 We note that the error (here only displayed for 3 iterations) is
@@ -1393,18 +1379,18 @@ Ok, let us do some more iterations. 36 will do.
 ::
 
    >>> iterate(P, 36)
-   158631.80872048368
-   90873.59857044807
-   60259.642249397286
-   47858.53567352306
-   38054.726012312414
-   27981.4760841439
-   21942.433577168606
-   19407.761895954558
-   17767.303606259793
-   17031.943291125543
-   16984.65367362969
-   17246.07033631627
+   158915.27153488086
+   91916.97730865219
+   61074.06039295608
+   47990.177754398406
+   37926.09342086832
+   28904.497467175803
+   22488.8598904735
+   19680.60134584292
+   18666.331330559602
+   17917.54426299427
+   18070.198152618952
+   17842.483632624444
    
 
 Error is still on a steady descent. Let us look at the final

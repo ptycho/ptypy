@@ -1,18 +1,18 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
-    <title>Getting started with Ptypy &#8212; ptypy 0.4.0 documentation</title>
-    <link rel="stylesheet" href="../_static/header.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
-    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Getting started with Ptypy &#8212; ptypy 0.5.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/header.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../_static/ptypyicon.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -53,153 +53,24 @@
         <li class="right" >
           <a href="../content.html" title="Quicklinks"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Getting started with Ptypy</a></li> 
       </ul>
-    </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-            <p class="logo"><a href="../content.html">
-              <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
-            </a></p>
-<h3><a href="../content.html">Table of Contents</a></h3>
-<ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting started with Ptypy</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#general-installation-instructions">General installation instructions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#installation-on-debian-ubuntu">Installation on Debian/Ubuntu</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#installation-on-windows">Installation on Windows</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#quickstart-with-a-minimal-script">Quickstart with a minimal script</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#preparing-the-parameter-tree">Preparing the parameter tree</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#running-ptypy">Running ptypy</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#utilies-binaries-for-convenience">Utilies/Binaries for convenience</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#plotting-from-a-reconstruction-dump-file-ptyr">Plotting from a reconstruction/dump file (*.ptyr)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#inspecting-a-hdf5-compatible-file">Inspecting a hdf5 compatible file</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#create-a-new-template-for-a-reconstruction-script">Create a new template for a reconstruction script</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#run-a-plotclient-in-a-separate-process">Run a plotclient in a separate process</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#more-script-templates">More script templates</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#all-in-one">All-in-one</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#creating-a-ptyd-data-file">Creating a .ptyd data-file</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#loading-a-data-file-to-run-a-reconstruction">Loading a data file to run a reconstruction</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="concept.html">Concepts and Classes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="data_management.html">Data management</a></li>
-<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameter tree structure</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ptypy.html">ptypy package</a></li>
-</ul>
-
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="../content.html"
-                        title="previous chapter">Quicklinks</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="concept.html"
-                        title="next chapter">Concepts and Classes</a></p>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/rst/getting_started.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
+    </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="getting-started-with-ptypy">
+  <section id="getting-started-with-ptypy">
 <span id="getting-started"></span><h1>Getting started with Ptypy<a class="headerlink" href="#getting-started-with-ptypy" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="installation">
+<section id="installation">
 <span id="id1"></span><h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="general-installation-instructions">
+<section id="general-installation-instructions">
 <h3>General installation instructions<a class="headerlink" href="#general-installation-instructions" title="Permalink to this headline">¶</a></h3>
-<p>Being a python package, <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a> depends on a number of other
-packages which are listed below.
-Once its dependecies are met, ptypy should work <em>out-of-the-box</em>.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>PtyPy is developed for Python 2.7.x and is currently incompatible
-with Python 3.x. Python 3 support is planned in future releases.</p>
-</div>
-<div class="section" id="essential-packages">
-<h4>Essential packages<a class="headerlink" href="#essential-packages" title="Permalink to this headline">¶</a></h4>
-<ul class="simple">
-<li><p><a class="reference external" href="https://pypi.python.org/pypi/numpy/1.9.2">NumPy</a>
-(homepage: <a class="reference external" href="http://www.numpy.org">http://www.numpy.org</a>)</p></li>
-<li><p><a class="reference external" href="https://pypi.python.org/pypi/scipy/0.15.1">SciPy</a>
-(homepage: <a class="reference external" href="http://www.scipy.org">http://www.scipy.org</a>)</p></li>
-<li><p><a class="reference external" href="https://pypi.python.org/pypi/scipy/2.5.0">h5py</a>
-(homepage: <a class="reference external" href="http://www.h5py.org">http://www.h5py.org</a>)</p></li>
-</ul>
-</div>
-<div class="section" id="recommended-packages-for-additional-functionality">
-<h4>Recommended packages for additional functionality<a class="headerlink" href="#recommended-packages-for-additional-functionality" title="Permalink to this headline">¶</a></h4>
-<p>Please note that PtyPy is an alpha release and lacks rigorous import
-checking. There may be parts of code that implicitly ask for any of the
-packages listed here. Therefore, we recommend to install these packages.</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://pypi.python.org/pypi/matplotlib/1.4.3">Matplotlib</a>
-for any kind of plotting or image generation
-(homepage: <a class="reference external" href="http://www.matplotlib.org">http://www.matplotlib.org</a>) and python bindings for
-<a class="reference external" href="https://pypi.python.org/pypi/PyQt4/4.11.3">QT4</a></p></li>
-<li><p><a class="reference external" href="https://pypi.python.org/pypi/mpi4py/1.3.1">mpi4py</a>
-for CPU-node parallelisation,  contains python bindings for the
-<a class="reference external" href="http://www.mcs.anl.gov/research/projects/mpi/">Message Passaging Interface</a>,
-(homepage: <a class="reference external" href="https://bitbucket.org/mpi4py/mpi4py/">https://bitbucket.org/mpi4py/mpi4py/</a>)</p></li>
-<li><p><a class="reference external" href="https://pypi.python.org/pypi/pyzmq/14.6.0">pyzmq</a>
-for a threaded server on the main node to perfrom asynchronous
-client-server communication, contains python bindings for the
-ZeroMQ protocol,
-(homepage: <a class="reference external" href="http://github.com/zeromq/pyzmq">http://github.com/zeromq/pyzmq</a>).
-This package is needed for non-blocking plots of the reconstruction run
-(e.g. for <a class="reference internal" href="#plotclient"><span class="std std-ref">Run a plotclient in a separate process</span></a>).</p></li>
-</ul>
-</div>
-<div class="section" id="optional-packages">
-<h4>Optional packages<a class="headerlink" href="#optional-packages" title="Permalink to this headline">¶</a></h4>
-<p>Other very useful packages are</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://pypi.python.org/pypi/ipython/3.1.0">Ipython</a>
-(homepage: <a class="reference external" href="http://www.ipython.org">http://www.ipython.org</a>)</p></li>
-</ul>
-</div>
-</div>
-<div class="section" id="installation-on-debian-ubuntu">
-<h3>Installation on Debian/Ubuntu<a class="headerlink" href="#installation-on-debian-ubuntu" title="Permalink to this headline">¶</a></h3>
-<p>PtyPy is developed on the current LTS version of Ubuntu which is the
-recommended operating system for PtyPy</p>
-<div class="section" id="prerequisites">
-<h4>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h4>
-<p>Many of the required python packages are
-available in the repositories. Just type (with sudo rights)</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo apt-get install python-numpy python-scipy python-h5py\
-$ python-matplotlib python-mpi4py python-pyzmq
-</pre></div>
-</div>
-</div>
-<div class="section" id="get-ptypy">
-<h4>Get ptypy<a class="headerlink" href="#get-ptypy" title="Permalink to this headline">¶</a></h4>
-<p>Download and unpack <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a> from the sources:</p>
+<p>Download and unpack <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a> from the sources. For example, on Linux
+systems you can do:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ wget https://github.com/ptycho/ptypy/archive/master.zip
 $ unzip master.zip -d /tmp/; rm master.zip
 </pre></div>
@@ -208,112 +79,96 @@ $ unzip master.zip -d /tmp/; rm master.zip
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone https://github.com/ptycho/ptypy.git /tmp/ptypy-master
 </pre></div>
 </div>
-<p>CD into the download directory (e.g. /tmp/ptypy-master) and install PtyPy with</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python setup.py install --user
+<p>which will unpack the master branch of ptypy into <cite>/tmp/ptypy-master</cite> but
+you are of course free to place the software wherever it is convenient for you.
+In principle, next you only have to navigate to that directory and install with</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install .
 </pre></div>
 </div>
-<p>The local <code class="docutils literal notranslate"><span class="pre">--user</span></code> install is recommended instead of a system-wide
-<code class="docutils literal notranslate"><span class="pre">sudo</span></code> install. It makes it easier to quickly apply fixes yourself.
-However, for an all-user system-wide install, type</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo python setup.py install
-</pre></div>
-</div>
-</div>
-</div>
-<div class="section" id="installation-on-windows">
-<h3>Installation on Windows<a class="headerlink" href="#installation-on-windows" title="Permalink to this headline">¶</a></h3>
-<p>These installation instructions were contributed by M. Stockmar and tested
-with <em>Windows 8.1 Enterprise (64 bit)</em> on a core i7 Thinkpad w520
-in February 2015.
-No python was installed before on that machine.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>There might be also simpler ways to get a full scientific python
-suite for 32 bit Windows. Please let us know if you managed to get
-<a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a> running on a system not listed here.</p>
-</div>
-<div class="section" id="id2">
-<h4>Prerequisites<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h4>
-<ul>
-<li><p>Download and install python 2.7.x from <a class="reference external" href="http://www.python.org">http://www.python.org</a>
-(Make sure you have the 64 bit version)
-Click <em>yes</em> when asked to add python to the path environment variable.</p></li>
-<li><p>Go to the command line and install wheel:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install wheel
-</pre></div>
-</div>
-</li>
-<li><p>Install Microsoft’s implementation for MPI to use multiple CPUs from
-<a class="reference external" href="https://msdn.microsoft.com/en-us/library/bb524831(v=vs.85).aspx">https://msdn.microsoft.com/en-us/library/bb524831(v=vs.85).aspx</a>
-Other MPI implementations may work as well but were not tested.</p></li>
-<li><p>Install the QT-Framework if you don’t have it already.
-<a class="reference external" href="http://qt-project.org/">http://qt-project.org/</a></p></li>
+<p>However, since <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a> depends on a number of other packages, we recommend
+installing it in a virtual environment using the
+<a class="reference external" href="https://www.anaconda.com/">anaconda</a> package manager. Conveniently, this
+installation route allows you to install <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a> across platforms.</p>
+<section id="essential-install">
+<h4>Essential install<a class="headerlink" href="#essential-install" title="Permalink to this headline">¶</a></h4>
+<p>Only three Python packages are essential for <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a> to work:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://pypi.python.org/pypi/numpy">NumPy</a>
+(homepage: <a class="reference external" href="http://www.numpy.org">http://www.numpy.org</a>)</p></li>
+<li><p><a class="reference external" href="https://pypi.python.org/pypi/scipy">SciPy</a>
+(homepage: <a class="reference external" href="http://www.scipy.org">http://www.scipy.org</a>)</p></li>
+<li><p><a class="reference external" href="https://pypi.python.org/pypi/h5py">h5py</a>
+(homepage: <a class="reference external" href="http://www.h5py.org">http://www.h5py.org</a>)</p></li>
 </ul>
+<p>Install the essential version like so</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ conda env create -f dependencies_core.yml
+$ conda activate ptypy_core
+(ptypy_core)$ pip install .
+</pre></div>
 </div>
-<div class="section" id="download-all-other-binaries">
-<h4>Download all other binaries<a class="headerlink" href="#download-all-other-binaries" title="Permalink to this headline">¶</a></h4>
-<p>The binaries will be downloaded from a <a class="reference external" href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">website</a>
-which offers various builds for different python versions for Windows (both 32 and 64 bit) in
-the form of a <a class="reference external" href="https://pypi.python.org/pypi/wheel">python wheel</a>.
-Make sure you choose the correct version for your windows and system.</p>
-<p>Numpy and some other builds are linked against the
-Intel Math Kernel Library (MKL) which is supposed to be fast.</p>
-<ul>
-<li><p>First make sure you have the Microsoft Visual C++ 2010 redistributable package (maybe also the 2008 version).</p>
-<ul>
-<li><div class="line-block">
-<div class="line">2010 (64 bit, for 32 bit version check the website):</div>
-<div class="line"><a class="reference external" href="http://www.microsoft.com/en-us/download/details.aspx?id=14632">http://www.microsoft.com/en-us/download/details.aspx?id=14632</a></div>
-</div>
-</li>
-<li><div class="line-block">
-<div class="line">2008 (64 bit, for 32 bit check the website):</div>
-<div class="line"><a class="reference external" href="http://www.microsoft.com/en-us/download/details.aspx?id=15336">http://www.microsoft.com/en-us/download/details.aspx?id=15336</a></div>
-</div>
-</li>
+</section>
+<section id="recommended-install-for-additional-functionality">
+<h4>Recommended install for additional functionality<a class="headerlink" href="#recommended-install-for-additional-functionality" title="Permalink to this headline">¶</a></h4>
+<p>Please note that <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a> is an alpha release and lacks rigorous import
+checking. There may be parts of code that implicitly ask for any of the
+packages listed here. Therefore, we recommend to install these packages.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://pypi.python.org/pypi/matplotlib">Matplotlib</a>
+for any kind of plotting or image generation
+(homepage: <a class="reference external" href="http://www.matplotlib.org">http://www.matplotlib.org</a>)</p></li>
+<li><p><a class="reference external" href="https://pypi.python.org/pypi/mpi4py">mpi4py</a>
+for CPU-node parallelization, contains python bindings for the
+<a class="reference external" href="http://www.mcs.anl.gov/research/projects/mpi/">Message Passaging Interface</a>,
+(homepage: <a class="reference external" href="https://bitbucket.org/mpi4py/mpi4py/">https://bitbucket.org/mpi4py/mpi4py/</a>)</p></li>
+<li><p><a class="reference external" href="https://pypi.python.org/pypi/pyzmq">pyzmq</a>
+for a threaded server on the main node to perfrom asynchronous
+client-server communication, contains python bindings for the
+ZeroMQ protocol,
+(homepage: <a class="reference external" href="http://github.com/zeromq/pyzmq">http://github.com/zeromq/pyzmq</a>).
+This package is needed for non-blocking plots of the reconstruction run
+(e.g. for <a class="reference internal" href="#plotclient"><span class="std std-ref">Run a plotclient in a separate process</span></a>).</p></li>
 </ul>
-</li>
-<li><p>Now, go to to <a class="reference external" href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">http://www.lfd.uci.edu/~gohlke/pythonlibs/</a>
-and download the latest pip binaries and update pip:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python.exe pip-6.0.8-py2.py3-none-any.whl/pip install pip-6.0.8-py2.py3-none-any.whl.
+<p>Install the recommended version like so</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ conda env create -f dependencies_full.yml
+$ conda activate ptypy_full
+(ptypy_full)$ pip install .
 </pre></div>
 </div>
-<p>(The file name might change slightly if a newer version of pip is available)</p>
-</li>
-<li><p>Then download all the other binaries as whl-files.
-A whl-file can be installed via command line according to:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install filename.whl
+</section>
+<section id="recommended-install-for-gpu-support">
+<h4>Recommended install for GPU support<a class="headerlink" href="#recommended-install-for-gpu-support" title="Permalink to this headline">¶</a></h4>
+<p>We support an accelerated version of <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a> for CUDA-capable
+GPUs based on our own kernels and the
+<a class="reference external" href="https://pypi.org/project/pycuda/">PyCUDA</a> package.</p>
+<p>Install the dependencies for this version like so.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ conda env create -f accelerate/cuda_pycuda/dependencies.yml
+$ conda activate ptypy_pycuda
+(ptypy_pycuda)$ pip install .
 </pre></div>
 </div>
-<p>Download and install the binaries in the following order:</p>
-<ol class="arabic simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">numpy</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pillow</span></code> (replacement for PIL)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">matplotlib</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">ipython</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">h5py</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">scipy</span></code> (may install additional packages as well)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">mpi4py</span></code> (choose the one for MS MPI if you have installed MS MPI)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pyzmq</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pyqt4</span></code> (QT framework was installed before on the testing machine)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pyside</span></code></p></li>
-</ol>
-</li>
+<p>While we use <a class="reference external" href="https://pypi.org/project/reikna/">Reikna</a> to
+provide a filtered FFT, i.e. a FFT that is fused with a pointwise
+matrix multiplication, you can optionally also install a version
+based on cufft and callbacks. Due to the nature of this extension it
+needs to be built for fixed array sizes externally.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ conda activate ptypy_pycuda
+(ptypy_pycuda)$ cd cufft
+(ptypy_pycuda)$ conda env update --file dependencies.yml --name ptypy_pycuda
+(ptypy_pycuda)$ pip install .
+</pre></div>
+</div>
+</section>
+<section id="optional-packages">
+<h4>Optional packages<a class="headerlink" href="#optional-packages" title="Permalink to this headline">¶</a></h4>
+<p>Other very useful packages are</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://pypi.python.org/pypi/ipython">Ipython</a>
+(homepage: <a class="reference external" href="http://www.ipython.org">http://www.ipython.org</a>)</p></li>
 </ul>
-</div>
-<div class="section" id="id3">
-<h4>Get ptypy<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h4>
-<p>Download PtyPy from <a class="reference external" href="https://github.com/ptycho/ptypy/archive/master.zip">https://github.com/ptycho/ptypy/archive/master.zip</a>
-and unzip to any directory, for example <code class="docutils literal notranslate"><span class="pre">C:\Temp</span></code>.
-Change into that directly and install from commandline:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd C:\Temp\ptypy-master
-$ python setup.py install
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-<div class="section" id="quickstart-with-a-minimal-script">
+</section>
+</section>
+</section>
+<section id="quickstart-with-a-minimal-script">
 <span id="quickstart"></span><h2>Quickstart with a minimal script<a class="headerlink" href="#quickstart-with-a-minimal-script" title="Permalink to this headline">¶</a></h2>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -325,7 +180,7 @@ You are encouraged to modify the parameters and rerun the tutorial with:</p>
 </div>
 </div>
 <p>This tutorial explains the minimal settings to get a reconstruction
-runnig in PtyPy. A PtyPy script consists of two parts:</p>
+runnig in <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a>. A PtyPy script consists of two parts:</p>
 <ul class="simple">
 <li><p>Creation of a parameter tree with parameters
 as listed in <a class="reference internal" href="parameters.html#parameters"><span class="std std-ref">Parameter tree structure</span></a> and</p></li>
@@ -333,34 +188,25 @@ as listed in <a class="reference internal" href="parameters.html#parameters"><sp
 specifying a level that determines how much the Ptycho
 instance will do.</p></li>
 </ul>
-<div class="section" id="preparing-the-parameter-tree">
+<section id="preparing-the-parameter-tree">
 <h3>Preparing the parameter tree<a class="headerlink" href="#preparing-the-parameter-tree" title="Permalink to this headline">¶</a></h3>
 <p>We begin with opening an empty python file of arbitrary name
 in an editor of your choice, e.g.:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">::</span>
-</pre></div>
-</div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1">#</span>
-<span class="go">$ gedit minimal_script.py</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ gedit minimal_script.py
 </pre></div>
 </div>
 <p>Next we create an empty parameter tree. In PtyPy, parameters
 are managed by the <a class="reference internal" href="ptypy.utils.html#ptypy.utils.parameters.Param" title="ptypy.utils.parameters.Param"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Param</span></code></a> class which is a convenience class subclassing Python’s
 dict type. It is designed in such a way that dictionary items can be accessed also as
 class attributes, making the scripts and code much more readable.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="k">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
-<span class="go">Message Passaging for Python (mpi4py) not found.</span>
-<span class="go">    CPU-parallelization disabled.</span>
-<span class="go">    Install python-mpi4py via the package repositories or with `pip install --user mpi4py`</span>
-<span class="go">Could not import experiment cSAXSScan from .cSAXS, Reason: No module named &#39;fabio&#39;</span>
-
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>  <span class="c1"># root level</span>
 </pre></div>
 </div>
 <p>We set the verbosity to a high level, in order to have information on the
 reconstruction process printed to the terminal.
 See <a class="reference internal" href="parameters.html#ptycho.verbose_level" title="ptycho.verbose_level"><code class="xref py py-data docutils literal notranslate"><span class="pre">verbose_level</span></code></a>.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="mi">3</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="s2">&quot;info&quot;</span>
 </pre></div>
 </div>
 <p>We limit this reconstruction to single precision. The other choice is to
@@ -378,7 +224,7 @@ run name may differ from the one that this tutorial was created with)</p>
 <p>Next, we set the home path. The <a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Ptycho</span></code></a> instance will use this
 path as base for any other relative file path (e.g <code class="xref py py-data docutils literal notranslate"><span class="pre">io.autosave.path</span></code>
 or <a class="reference internal" href="parameters.html#ptycho.io.rfile" title="ptycho.io.rfile"><code class="xref py py-data docutils literal notranslate"><span class="pre">io.rfile</span></code></a>). Relative paths lack a leading “/”
-(or “C:&quot; on windows). Make sure to replace all “/” with “&quot;
+(or “C:\” on windows). Make sure to replace all “/” with “\”
 if you run the scripts on a Windows system.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">home</span> <span class="o">=</span> <span class="s2">&quot;/tmp/ptypy/&quot;</span>
@@ -449,33 +295,32 @@ management is described in detail in <a class="reference internal" href="data_ma
 <span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">numiter_contiguous</span> <span class="o">=</span> <span class="mi">5</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="running-ptypy">
+</section>
+<section id="running-ptypy">
 <h3>Running ptypy<a class="headerlink" href="#running-ptypy" title="Permalink to this headline">¶</a></h3>
 <p>We import the <a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Ptycho</span></code></a> class and pass the tree <code class="docutils literal notranslate"><span class="pre">p</span></code> at level 5.
 This level tells <a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Ptycho</span></code></a> to initialize everything and start the reconstruction
 using all reconstruction engines in <code class="docutils literal notranslate"><span class="pre">p.engines</span></code> immediately upon construction.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="k">import</span> <span class="n">Ptycho</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">Ptycho</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>From the terminal log, we note that there was an autosave every 20
 iterations and the error reduced from iteration to iteration.</p>
-</div>
-</div>
-<div class="section" id="utilies-binaries-for-convenience">
+</section>
+</section>
+<section id="utilies-binaries-for-convenience">
 <span id="morescripts"></span><h2>Utilies/Binaries for convenience<a class="headerlink" href="#utilies-binaries-for-convenience" title="Permalink to this headline">¶</a></h2>
 <p>PtyPy provides a few utility scripts to make life easier for you,
 the user. They are located in <code class="docutils literal notranslate"><span class="pre">[ptypy_root]/scripts</span></code>.
-In case of a user install on
-Ubuntu Linux, they are copied to <code class="docutils literal notranslate"><span class="pre">~/.local/bin</span></code></p>
+In case of an install with conda, these are copied to <code class="docutils literal notranslate"><span class="pre">&lt;conda_env_dir&gt;/bin</span></code></p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Due to the early stage of developmnet,
 these scripts may see substantial changes in further releases, i.e.
 the call signature may change.</p>
 </div>
-<div class="section" id="plotting-from-a-reconstruction-dump-file-ptyr">
+<section id="plotting-from-a-reconstruction-dump-file-ptyr">
 <h3>Plotting from a reconstruction/dump file (*.ptyr)<a class="headerlink" href="#plotting-from-a-reconstruction-dump-file-ptyr" title="Permalink to this headline">¶</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">ptypy.plot</span></code> is an automatic plotting script that installs on Unix systems
 It has the syntax</p>
@@ -487,12 +332,14 @@ It has the syntax</p>
 </pre></div>
 </div>
 <p>and the image looks like this (<a class="reference internal" href="#minimal-result"><span class="std std-numref">Fig. 1</span></a>)</p>
-<div class="highlights figure align-default" id="minimal-result">
+<figure class="highlights align-default" id="minimal-result">
 <a class="reference internal image-reference" href="../_images/minimal_result.png"><img alt="../_images/minimal_result.png" src="../_images/minimal_result.png" style="width: 90%;" /></a>
-<p class="caption"><span class="caption-number">Fig. 1 </span><span class="caption-text">Example plot made with <code class="docutils literal notranslate"><span class="pre">ptypy.plot</span></code> using the <em>default</em> layput</span><a class="headerlink" href="#minimal-result" title="Permalink to this image">¶</a></p>
-</div>
-</div>
-<div class="section" id="inspecting-a-hdf5-compatible-file">
+<figcaption>
+<p><span class="caption-number">Fig. 1 </span><span class="caption-text">Example plot made with <code class="docutils literal notranslate"><span class="pre">ptypy.plot</span></code> using the <em>default</em> layput</span><a class="headerlink" href="#minimal-result" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="inspecting-a-hdf5-compatible-file">
 <h3>Inspecting a hdf5 compatible file<a class="headerlink" href="#inspecting-a-hdf5-compatible-file" title="Permalink to this headline">¶</a></h3>
 <p>Sometimes we want to quickly inspect what is in a <em>hdf5</em> file
 that was created by PtyPy. For such cases, we can use <code class="docutils literal notranslate"><span class="pre">ptypy.inspect</span></code>.</p>
@@ -500,13 +347,14 @@ that was created by PtyPy. For such cases, we can use <code class="docutils lite
 </pre></div>
 </div>
 <p>For example, a quick view at the top level can be realized with</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ptypy.inspect /tmp/ptypy/recons/minimal/minimal_DM.ptyr -d 1
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ptypy.inspect /tmp/ptypy/recons/minimal/minimal_DM_0040.ptyr -d 1
 </pre></div>
 </div>
 <p>which has the following the output:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">content</span> <span class="p">[</span><span class="n">Param</span> <span class="mi">4</span><span class="p">]:</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">content</span> <span class="p">[</span><span class="n">Param</span> <span class="mi">5</span><span class="p">]:</span>
     <span class="o">*</span> <span class="n">obj</span> <span class="p">[</span><span class="nb">dict</span> <span class="mi">1</span><span class="p">]:</span>
     <span class="o">*</span> <span class="n">pars</span> <span class="p">[</span><span class="n">Param</span> <span class="mi">9</span><span class="p">]:</span>
+    <span class="o">*</span> <span class="n">positions</span> <span class="p">[</span><span class="nb">dict</span> <span class="mi">1</span><span class="p">]:</span>
     <span class="o">*</span> <span class="n">probe</span> <span class="p">[</span><span class="nb">dict</span> <span class="mi">1</span><span class="p">]:</span>
     <span class="o">*</span> <span class="n">runtime</span> <span class="p">[</span><span class="n">Param</span> <span class="mi">8</span><span class="p">]:</span>
 <span class="o">*</span> <span class="n">header</span> <span class="p">[</span><span class="nb">dict</span> <span class="mi">2</span><span class="p">]:</span>
@@ -519,18 +367,25 @@ that was created by PtyPy. For such cases, we can use <code class="docutils lite
 </pre></div>
 </div>
 <p>which has the following the output:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">S00G00</span> <span class="p">[</span><span class="nb">dict</span> <span class="mi">13</span><span class="p">]:</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">SMF</span> <span class="p">[</span><span class="nb">dict</span> <span class="mi">20</span><span class="p">]:</span>
     <span class="o">*</span> <span class="n">DataTooSmall</span> <span class="p">[</span><span class="n">scalar</span> <span class="o">=</span> <span class="kc">False</span><span class="p">]</span>
-    <span class="o">*</span> <span class="n">ID</span> <span class="p">[</span><span class="n">string</span> <span class="o">=</span> <span class="s2">&quot;S00G00&quot;</span><span class="p">]</span>
-    <span class="o">*</span> <span class="n">_center</span> <span class="p">[</span><span class="n">array</span> <span class="o">=</span> <span class="p">[</span><span class="mi">64</span> <span class="mi">64</span><span class="p">]]</span>
-    <span class="o">*</span> <span class="n">_origin</span> <span class="p">[</span><span class="n">array</span> <span class="o">=</span> <span class="p">[</span> <span class="o">-</span><span class="mf">4.07172778e-06</span>  <span class="o">-</span><span class="mf">4.07172778e-06</span><span class="p">]]</span>
-    <span class="o">*</span> <span class="n">_pool</span> <span class="p">[</span><span class="n">Param</span> <span class="mi">0</span><span class="p">]:</span>
-    <span class="o">*</span> <span class="n">_psize</span> <span class="p">[</span><span class="n">array</span> <span class="o">=</span> <span class="p">[</span>  <span class="mf">6.36207466e-08</span>   <span class="mf">6.36207466e-08</span><span class="p">]]</span>
+    <span class="o">*</span> <span class="n">ID</span> <span class="p">[</span><span class="n">string</span> <span class="o">=</span> <span class="s2">&quot;SMF&quot;</span><span class="p">]</span>
+    <span class="o">*</span> <span class="n">_center</span> <span class="p">[</span><span class="n">array</span> <span class="o">=</span> <span class="p">[</span><span class="mf">64.</span> <span class="mf">64.</span><span class="p">]]</span>
+    <span class="o">*</span> <span class="n">_energy</span> <span class="p">[</span><span class="n">scalar</span> <span class="o">=</span> <span class="mf">7.2</span><span class="p">]</span>
+    <span class="o">*</span> <span class="n">_origin</span> <span class="p">[</span><span class="n">array</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mf">3.59918584e-06</span> <span class="o">-</span><span class="mf">3.59918584e-06</span><span class="p">]]</span>
+    <span class="o">*</span> <span class="n">_pool</span> <span class="p">[</span><span class="nb">dict</span> <span class="mi">0</span><span class="p">]:</span>
+    <span class="o">*</span> <span class="n">_psize</span> <span class="p">[</span><span class="n">array</span> <span class="o">=</span> <span class="p">[</span><span class="mf">5.62372787e-08</span> <span class="mf">5.62372787e-08</span><span class="p">]]</span>
+    <span class="o">*</span> <span class="n">_record</span> <span class="p">[</span><span class="n">scalar</span> <span class="o">=</span> <span class="p">(</span><span class="sa">b</span><span class="s1">&#39;SMF&#39;</span><span class="p">,)]</span>
+    <span class="o">*</span> <span class="n">_recs</span> <span class="p">[</span><span class="nb">dict</span> <span class="mi">0</span><span class="p">]:</span>
     <span class="o">*</span> <span class="n">data</span> <span class="p">[</span><span class="mi">1</span><span class="n">x128x128</span> <span class="n">complex64</span> <span class="n">array</span><span class="p">]</span>
+    <span class="o">*</span> <span class="n">distributed</span> <span class="p">[</span><span class="n">scalar</span> <span class="o">=</span> <span class="kc">False</span><span class="p">]</span>
     <span class="o">*</span> <span class="n">fill_value</span> <span class="p">[</span><span class="n">scalar</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">]</span>
+    <span class="o">*</span> <span class="n">grids</span> <span class="p">[</span><span class="nb">tuple</span> <span class="o">=</span> <span class="mi">2</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="n">x128x128</span> <span class="n">float64</span> <span class="n">array</span><span class="p">]]</span>
     <span class="o">*</span> <span class="n">layermap</span> <span class="p">[</span><span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
     <span class="o">*</span> <span class="n">model_initialized</span> <span class="p">[</span><span class="n">scalar</span> <span class="o">=</span> <span class="kc">True</span><span class="p">]</span>
     <span class="o">*</span> <span class="n">nlayers</span> <span class="p">[</span><span class="n">scalar</span> <span class="o">=</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="o">*</span> <span class="n">numID</span> <span class="p">[</span><span class="n">scalar</span> <span class="o">=</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="o">*</span> <span class="n">padding</span> <span class="p">[</span><span class="n">scalar</span> <span class="o">=</span> <span class="mi">0</span><span class="p">]</span>
     <span class="o">*</span> <span class="n">padonly</span> <span class="p">[</span><span class="n">scalar</span> <span class="o">=</span> <span class="kc">False</span><span class="p">]</span>
     <span class="o">*</span> <span class="n">shape</span> <span class="p">[</span><span class="nb">tuple</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">)]</span>
 </pre></div>
@@ -540,127 +395,12 @@ are encouraged to try:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ptypy.inspect /tmp/ptypy/recons/minimal/minimal_DM.ptyr
 </pre></div>
 </div>
-</div>
-<div class="section" id="create-a-new-template-for-a-reconstruction-script">
+</section>
+<section id="create-a-new-template-for-a-reconstruction-script">
 <h3>Create a new template for a reconstruction script<a class="headerlink" href="#create-a-new-template-for-a-reconstruction-script" title="Permalink to this headline">¶</a></h3>
-<p>In cases where we want to create a new reconstruction script from scratch,
-it may be cumbersome to write each and every parameter that we want to
-change. But, with the help of <code class="docutils literal notranslate"><span class="pre">ptypy.new</span></code>, we can create a python
-script which is prefilled with defaults:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ptypy.new [-h] [-u ULEVEL] [--short-doc] [--long-doc] pyfile
-</pre></div>
-</div>
-<p>In the folder <code class="docutils literal notranslate"><span class="pre">[ptypy_root]/templates</span></code> you find two scripts
-that where auto-generated with the following calls:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ptypy.new -u 0 --long-doc pars_few_alldoc.py
-$ ptypy.new -u 2  pars_all_nodoc.py
-</pre></div>
-</div>
-<p>And here is a quick view of the first one with much documentation
-(only the first 50 lines).</p>
-<div class="highlight-python notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
- 2
- 3
- 4
- 5
- 6
- 7
- 8
- 9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This template was autogenerated using an EvalDescriptor instance.</span>
-<span class="sd">It is only a template and not a working reconstruction script.</span>
-<span class="sd">&quot;&quot;&quot;</span>
-
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">ptypy</span>
-<span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">Ptycho</span>
-<span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
-
-<span class="c1">### Ptypy parameter tree ###</span>
-
-<span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-
-
-<span class="c1"># Verbosity level</span>
-<span class="c1"># Verbosity level for information logging.</span>
-<span class="c1"># - ``0``: Only critical errors</span>
-<span class="c1"># - ``1``: All errors</span>
-<span class="c1"># - ``2``: Warning</span>
-<span class="c1"># - ``3``: Process Information</span>
-<span class="c1"># - ``4``: Object Information</span>
-<span class="c1"># - ``5``: Debug</span>
-<span class="n">p</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="mi">1</span>
-
-<span class="c1"># Reconstruction identifier</span>
-<span class="c1"># Reconstruction run identifier. If ``None``, the run name will</span>
-<span class="c1"># be constructed at run time from other information.</span>
-<span class="n">p</span><span class="o">.</span><span class="n">run</span> <span class="o">=</span> <span class="bp">None</span>
-
-<span class="c1"># Prepared data file path</span>
-<span class="c1"># If source was ``None`` or ``&#39;file&#39;``, data will be loaded from this file and processing as</span>
-<span class="c1"># well as saving is deactivated. If source is the name of an experiment recipe or path to a</span>
-<span class="c1"># file, data will be saved to this file</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scandata</span><span class="o">.</span><span class="n">PtyScan</span><span class="o">.</span><span class="n">dfile</span> <span class="o">=</span> <span class="bp">None</span>
-
-<span class="c1"># Determine if center in data is calculated automatically</span>
-<span class="c1"># - ``False``, no automatic centering</span>
-<span class="c1"># - ``None``, only if :py:data:`center` is ``None``</span>
-<span class="c1"># - ``True``, it will be enforced</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scandata</span><span class="o">.</span><span class="n">PtyScan</span><span class="o">.</span><span class="n">auto_center</span> <span class="o">=</span> <span class="bp">None</span>
-
-<span class="c1"># Detector pixel size</span>
-<span class="c1"># Dimensions of the detector pixels (in meters)</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scandata</span><span class="o">.</span><span class="n">PtyScan</span><span class="o">.</span><span class="n">psize</span> <span class="o">=</span> <span class="mf">0.000172</span>
-
-<span class="c1"># Sample to detector distance</span>
-<span class="c1"># In meters.</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scandata</span><span class="o">.</span><span class="n">PtyScan</span><span class="o">.</span><span class="n">distance</span> <span class="o">=</span> <span class="mf">7.19</span>
-
-</pre></div>
-</td></tr></table></div>
-</div>
-<div class="section" id="run-a-plotclient-in-a-separate-process">
+<p>[WIP] Due to wildcards and links in the parameter tree, this section will be reworked.</p>
+</section>
+<section id="run-a-plotclient-in-a-separate-process">
 <span id="plotclient"></span><h3>Run a plotclient in a separate process<a class="headerlink" href="#run-a-plotclient-in-a-separate-process" title="Permalink to this headline">¶</a></h3>
 <p>PtyPy supports a Client/Server approach. That means that the
 reconstruction process runs on a remote server (cluster) while we can
@@ -676,265 +416,234 @@ to use the plotting utility <code class="docutils literal notranslate"><span cla
 <p>None of the options are currently implemented. The plotting client receives all
 information from the server it connects to. Work in progress ..</p>
 </div>
-</div>
-</div>
-<div class="section" id="more-script-templates">
+</section>
+</section>
+<section id="more-script-templates">
 <h2>More script templates<a class="headerlink" href="#more-script-templates" title="Permalink to this headline">¶</a></h2>
 <p>Besides the script from which section <a class="reference internal" href="#quickstart"><span class="std std-ref">Quickstart with a minimal script</span></a> was generated,
 there is a trinity of similar scripts at your disposal that
 you can temper with.</p>
-<div class="section" id="all-in-one">
+<section id="all-in-one">
 <h3>All-in-one<a class="headerlink" href="#all-in-one" title="Permalink to this headline">¶</a></h3>
-<p>We encourage you to use the script <code class="docutils literal notranslate"><span class="pre">[ptypy_root]/templates/minimal_prep_and_run.py</span></code>
+<p>We encourage you to use the script <code class="docutils literal notranslate"><span class="pre">[ptypy_root]/templates/ptypy_minimal_prep_and_run.py</span></code>
 and modify the <em>recipe</em> part of the data parameter branch.
 Observe what changes in the reconstruction when scan parameters change.</p>
-<div class="highlight-python notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
- 2
- 3
- 4
- 5
- 6
- 7
- 8
- 9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This script is a test for ptychographic reconstruction in the absence</span>
-<span class="sd">of actual data. It uses the test Scan class</span>
-<span class="sd">`ptypy.core.data.MoonFlowerScan` to provide &quot;data&quot;.</span>
-<span class="sd">&quot;&quot;&quot;</span>
-
-<span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">Ptycho</span>
-<span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
-<span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-
-<span class="c1"># for verbose output</span>
-<span class="n">p</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="mi">3</span>
-
-<span class="c1"># set home path</span>
-<span class="n">p</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">home</span> <span class="o">=</span> <span class="s2">&quot;/tmp/ptypy/&quot;</span>
-<span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">autosave</span> <span class="o">=</span> <span class="bp">None</span>
-
-<span class="c1"># max 200 frames (128x128px) of diffraction data</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="c1"># now you have to specify which ScanModel to use with scans.XX.name,</span>
-<span class="c1"># just as you have to give &#39;name&#39; for engines and PtyScan subclasses.</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Vanilla&#39;</span> <span class="c1"># or &#39;Full&#39;</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;MoonFlowerScan&#39;</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="mi">128</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">num_frames</span> <span class="o">=</span> <span class="mi">200</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">save</span> <span class="o">=</span> <span class="bp">None</span>
-
-<span class="hll"><span class="c1"># position distance in fraction of illumination frame</span>
-</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">density</span> <span class="o">=</span> <span class="mf">0.2</span>
-<span class="hll"><span class="c1"># total number of photon in empty beam</span>
-</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">photons</span> <span class="o">=</span> <span class="mf">1e8</span>
-<span class="hll"><span class="c1"># Gaussian FWHM of possible detector blurring</span>
-</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">psf</span> <span class="o">=</span> <span class="mf">0.</span>
-
-<span class="c1"># attach a reconstrucion engine</span>
-<span class="n">p</span><span class="o">.</span><span class="n">engines</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;DM&#39;</span>
-<span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">80</span>
-
-<span class="c1"># prepare and run</span>
-<span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="lineno"> 1 </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="lineno"> 2 </span><span class="sd">This script is a test for ptychographic reconstruction in the absence</span>
+<span class="lineno"> 3 </span><span class="sd">of actual data. It uses the test Scan class</span>
+<span class="lineno"> 4 </span><span class="sd">`ptypy.core.data.MoonFlowerScan` to provide &quot;data&quot;.</span>
+<span class="lineno"> 5 </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="lineno"> 6 </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">Ptycho</span>
+<span class="lineno"> 7 </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
+<span class="lineno"> 8 </span>
+<span class="lineno"> 9 </span><span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="lineno">10 </span><span class="n">tmpdir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">()</span>
+<span class="lineno">11 </span>
+<span class="lineno">12 </span><span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">13 </span>
+<span class="lineno">14 </span><span class="c1"># for verbose output</span>
+<span class="lineno">15 </span><span class="n">p</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="s2">&quot;info&quot;</span>
+<span class="lineno">16 </span>
+<span class="lineno">17 </span><span class="c1"># set home path</span>
+<span class="lineno">18 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">19 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">home</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">tmpdir</span><span class="p">,</span> <span class="s2">&quot;ptypy&quot;</span><span class="p">])</span>
+<span class="lineno">20 </span>
+<span class="lineno">21 </span><span class="c1"># saving intermediate results</span>
+<span class="lineno">22 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">autosave</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">(</span><span class="n">active</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="lineno">23 </span>
+<span class="lineno">24 </span><span class="c1"># opens plotting GUI if interaction set to active)</span>
+<span class="lineno">25 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">autoplot</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">(</span><span class="n">active</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="lineno">26 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">interaction</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">(</span><span class="n">active</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="lineno">27 </span>
+<span class="lineno">28 </span><span class="c1"># max 200 frames (128x128px) of diffraction data</span>
+<span class="lineno">29 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">30 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">31 </span><span class="c1"># now you have to specify which ScanModel to use with scans.XX.name,</span>
+<span class="lineno">32 </span><span class="c1"># just as you have to give &#39;name&#39; for engines and PtyScan subclasses.</span>
+<span class="lineno">33 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;BlockVanilla&#39;</span> <span class="c1"># or &#39;BlockFull&#39;</span>
+<span class="lineno">34 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">35 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;MoonFlowerScan&#39;</span>
+<span class="lineno">36 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="mi">128</span>
+<span class="lineno">37 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">num_frames</span> <span class="o">=</span> <span class="mi">200</span>
+<span class="lineno">38 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">save</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="lineno">39 </span>
+<span class="lineno">40 </span><span class="c1"># position distance in fraction of illumination frame</span>
+<span class="lineno">41 </span><span class="hll"><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">density</span> <span class="o">=</span> <span class="mf">0.2</span>
+</span><span class="lineno">42 </span><span class="c1"># total number of photon in empty beam</span>
+<span class="lineno">43 </span><span class="hll"><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">photons</span> <span class="o">=</span> <span class="mf">1e8</span>
+</span><span class="lineno">44 </span><span class="c1"># Gaussian FWHM of possible detector blurring</span>
+<span class="lineno">45 </span><span class="hll"><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">psf</span> <span class="o">=</span> <span class="mf">0.</span>
+</span><span class="lineno">46 </span>
+<span class="lineno">47 </span><span class="c1"># attach a reconstrucion engine</span>
+<span class="lineno">48 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">49 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">50 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;DM&#39;</span>
+<span class="lineno">51 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">80</span>
+<span class="lineno">52 </span>
+<span class="lineno">53 </span><span class="c1"># prepare and run</span>
+<span class="lineno">54 </span><span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
-</td></tr></table></div>
 </div>
-<div class="section" id="creating-a-ptyd-data-file">
+</section>
+<section id="creating-a-ptyd-data-file">
 <h3>Creating a .ptyd data-file<a class="headerlink" href="#creating-a-ptyd-data-file" title="Permalink to this headline">¶</a></h3>
-<p>We encourage you to use this script <code class="docutils literal notranslate"><span class="pre">[ptypy_root]/templates/make_sample_ptyd.py</span></code>
+<p>We encourage you to use this script <code class="docutils literal notranslate"><span class="pre">[ptypy_root]/templates/ptypy_make_sample_ptyd.py</span></code>
 to create various different samples and see what happens if the data
 processing parameters are changed. If you have become curious, move
-forward to <a class="reference internal" href="data_management.html#ptypy-data"><span class="std std-ref">Data management</span></a> and take a look at PtyPy’s data management.
+forward to <a class="reference internal" href="data_management.html#ptypy-data"><span class="std std-ref">Data management</span></a> and take a look at <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a>’s data management.
 Check out the data parameter branch <code class="xref py py-data docutils literal notranslate"><span class="pre">scan.data</span></code> for detailed parameter
 descriptions.</p>
-<div class="highlight-python notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
- 2
- 3
- 4
- 5
- 6
- 7
- 8
- 9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This script creates a sample *.ptyd data file using the built-in</span>
-<span class="sd">test Scan `ptypy.core.data.MoonFlowerScan`</span>
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">import</span> <span class="nn">ptypy</span>
-<span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
-<span class="kn">from</span> <span class="nn">ptypy.core.data</span> <span class="kn">import</span> <span class="n">MoonFlowerScan</span>
-<span class="c1"># for verbose output</span>
-<span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">set_level</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
-
-<span class="c1"># create data parameter branch</span>
-<span class="n">data</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">dfile</span> <span class="o">=</span> <span class="s1">&#39;sample.ptyd&#39;</span>
-</span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">num_frames</span> <span class="o">=</span> <span class="mi">200</span>
-</span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">save</span> <span class="o">=</span> <span class="s1">&#39;append&#39;</span>
-</span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="bp">None</span>
-</span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">auto_center</span> <span class="o">=</span> <span class="bp">None</span>
-</span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">rebin</span> <span class="o">=</span> <span class="bp">None</span>
-</span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">orientation</span> <span class="o">=</span> <span class="bp">None</span>
-</span><span class="hll">
-</span><span class="hll"><span class="c1"># create PtyScan instance</span>
-</span><span class="hll"><span class="n">MF</span> <span class="o">=</span> <span class="n">MoonFlowerScan</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-</span><span class="hll">
-</span><span class="hll"><span class="n">MF</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
-</span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
-    <span class="c1"># autoprocess data</span>
-    <span class="n">msg</span> <span class="o">=</span> <span class="n">MF</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
-    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
-    <span class="c1"># logs the out put of .auto() to terminal prompt</span>
-    <span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">msg</span><span class="p">),</span> <span class="n">extra</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;allprocesses&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">})</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="lineno"> 1 </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="lineno"> 2 </span><span class="sd">This script creates a sample *.ptyd data file using the built-in</span>
+<span class="lineno"> 3 </span><span class="sd">test Scan `ptypy.core.data.MoonFlowerScan`</span>
+<span class="lineno"> 4 </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="lineno"> 5 </span><span class="kn">import</span> <span class="nn">time</span>
+<span class="lineno"> 6 </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
+<span class="lineno"> 7 </span><span class="kn">from</span> <span class="nn">ptypy.core.data</span> <span class="kn">import</span> <span class="n">MoonFlowerScan</span>
+<span class="lineno"> 8 </span><span class="c1"># for verbose output</span>
+<span class="lineno"> 9 </span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">set_level</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">)</span>
+<span class="lineno">10 </span>
+<span class="lineno">11 </span><span class="c1"># create data parameter branch</span>
+<span class="lineno">12 </span><span class="hll"><span class="n">data</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+</span><span class="lineno">13 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">dfile</span> <span class="o">=</span> <span class="s1">&#39;sample.ptyd&#39;</span>
+</span><span class="lineno">14 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">num_frames</span> <span class="o">=</span> <span class="mi">200</span>
+</span><span class="lineno">15 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">save</span> <span class="o">=</span> <span class="s1">&#39;append&#39;</span>
+</span><span class="lineno">16 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span class="lineno">17 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">auto_center</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span class="lineno">18 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">rebin</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span class="lineno">19 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">orientation</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span class="lineno">20 </span>
+<span class="lineno">21 </span><span class="c1"># create PtyScan instance</span>
+<span class="lineno">22 </span><span class="n">MF</span> <span class="o">=</span> <span class="n">MoonFlowerScan</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="lineno">23 </span>
+<span class="lineno">24 </span><span class="n">MF</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
+<span class="lineno">25 </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+<span class="lineno">26 </span>    <span class="c1"># autoprocess data</span>
+<span class="lineno">27 </span>    <span class="n">msg</span> <span class="o">=</span> <span class="n">MF</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+<span class="lineno">28 </span>    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="lineno">29 </span>    <span class="c1"># logs the out put of .auto() to terminal prompt</span>
+<span class="lineno">30 </span>    <span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">msg</span><span class="p">),</span> <span class="n">extra</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;allprocesses&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
 </pre></div>
-</td></tr></table></div>
 </div>
-<div class="section" id="loading-a-data-file-to-run-a-reconstruction">
+</section>
+<section id="loading-a-data-file-to-run-a-reconstruction">
 <h3>Loading a data file to run a reconstruction<a class="headerlink" href="#loading-a-data-file-to-run-a-reconstruction" title="Permalink to this headline">¶</a></h3>
 <p>The script <code class="docutils literal notranslate"><span class="pre">[ptypy_root]/templates/minimal_load_and_run.py</span></code>
 should resembles the case of data analysis after the experiment has taken
 place. Take a challenging sample data from before
 and alter the reconstruction parameters and algorithms to find out if you
 can make the recontruction converge. Check out the engine parameter
-branch <code class="xref py py-data docutils literal notranslate"><span class="pre">engine</span></code> for detailed parameter descriptions.</p>
-<div class="highlight-python notranslate"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
- 2
- 3
- 4
- 5
- 6
- 7
- 8
- 9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This script is a test for ptychographic reconstruction after an</span>
-<span class="sd">experiment has been carried out and the data is available in ptypy&#39;s</span>
-<span class="sd">data file format in the current directory as &quot;sample.ptyd&quot;. Use together</span>
-<span class="sd">with `make_sample_ptyd.py`.</span>
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">import</span> <span class="nn">ptypy</span>
-<span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">Ptycho</span>
-<span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
-
-<span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="n">p</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="mi">3</span>
-<span class="n">p</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">home</span> <span class="o">=</span> <span class="s2">&quot;/tmp/ptypy/&quot;</span>
-
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Vanilla&#39;</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;PtydScan&#39;</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="s1">&#39;file&#39;</span>
-<span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dfile</span> <span class="o">=</span> <span class="s1">&#39;sample.ptyd&#39;</span>
-
-<span class="n">p</span><span class="o">.</span><span class="n">engines</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;DM&#39;</span>
-<span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">80</span>
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">p.engines.engine01 = u.Param()</span>
-<span class="sd">p.engines.engine01.name = &#39;ML&#39;</span>
-<span class="sd">p.engines.engine01.numiter = 20</span>
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+branch <a class="reference internal" href="parameters.html#id3" title="engine"><code class="xref py py-data docutils literal notranslate"><span class="pre">engine</span></code></a> for detailed parameter descriptions.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="lineno"> 1 </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="lineno"> 2 </span><span class="sd">This script is a test for ptychographic reconstruction after an</span>
+<span class="lineno"> 3 </span><span class="sd">experiment has been carried out and the data is available in ptypy&#39;s</span>
+<span class="lineno"> 4 </span><span class="sd">data file format in the current directory as &quot;sample.ptyd&quot;. Use together</span>
+<span class="lineno"> 5 </span><span class="sd">with `ptypy_make_sample_ptyd.py`.</span>
+<span class="lineno"> 6 </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="lineno"> 7 </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">Ptycho</span>
+<span class="lineno"> 8 </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
+<span class="lineno"> 9 </span>
+<span class="lineno">10 </span><span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="lineno">11 </span><span class="n">tmpdir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">()</span>
+<span class="lineno">12 </span>
+<span class="lineno">13 </span><span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">14 </span><span class="n">p</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="s2">&quot;info&quot;</span>
+<span class="lineno">15 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">16 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">home</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">tmpdir</span><span class="p">,</span> <span class="s2">&quot;ptypy&quot;</span><span class="p">])</span>
+<span class="lineno">17 </span>
+<span class="lineno">18 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">19 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">20 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">21 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;BlockVanilla&#39;</span>
+<span class="lineno">22 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;PtydScan&#39;</span>
+<span class="lineno">23 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="s1">&#39;file&#39;</span>
+<span class="lineno">24 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dfile</span> <span class="o">=</span> <span class="s1">&#39;sample.ptyd&#39;</span>
+<span class="lineno">25 </span>
+<span class="lineno">26 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">27 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">28 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;DM&#39;</span>
+<span class="lineno">29 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">80</span>
+<span class="lineno">30 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine01</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="lineno">31 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine01</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;ML&#39;</span>
+<span class="lineno">32 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine01</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="lineno">33 </span>
+<span class="lineno">34 </span><span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
-</td></tr></table></div>
 </div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
+            <div class="clearer"></div>
           </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../content.html">
+              <img class="logo" src="../_static/logo_100px.png" alt="Logo"/>
+            </a></p>
+<h3><a href="../content.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting started with Ptypy</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#general-installation-instructions">General installation instructions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#quickstart-with-a-minimal-script">Quickstart with a minimal script</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#preparing-the-parameter-tree">Preparing the parameter tree</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#running-ptypy">Running ptypy</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#utilies-binaries-for-convenience">Utilies/Binaries for convenience</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#plotting-from-a-reconstruction-dump-file-ptyr">Plotting from a reconstruction/dump file (*.ptyr)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#inspecting-a-hdf5-compatible-file">Inspecting a hdf5 compatible file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#create-a-new-template-for-a-reconstruction-script">Create a new template for a reconstruction script</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-a-plotclient-in-a-separate-process">Run a plotclient in a separate process</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#more-script-templates">More script templates</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#all-in-one">All-in-one</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#creating-a-ptyd-data-file">Creating a .ptyd data-file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loading-a-data-file-to-run-a-reconstruction">Loading a data file to run a reconstruction</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="concept.html">Concepts and Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_management.html">Data management</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameter tree structure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ptypy.html">ptypy package</a></li>
+</ul>
+
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="../content.html"
+                          title="previous chapter">Quicklinks</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="concept.html"
+                          title="next chapter">Concepts and Classes</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/rst/getting_started.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -954,12 +663,13 @@ branch <code class="xref py py-data docutils literal notranslate"><span class="p
         <li class="right" >
           <a href="../content.html" title="Quicklinks"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.4.0 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Getting started with Ptypy</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
     </div>
   </body>
 </html>
