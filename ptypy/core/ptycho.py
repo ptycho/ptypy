@@ -407,9 +407,9 @@ class Ptycho(Base):
         self.data_type = p.data_type
         assert p.data_type in ['single', 'double']
         self.FType = np.dtype(
-            'f' + str(np.dtype(np.typeDict[p.data_type]).itemsize)).type
+            'f' + str(np.dtype(np.sctypeDict[p.data_type]).itemsize)).type
         self.CType = np.dtype(
-            'c' + str(2 * np.dtype(np.typeDict[p.data_type]).itemsize)).type
+            'c' + str(2 * np.dtype(np.sctypeDict[p.data_type]).itemsize)).type
         logger.info(_('Data type', self.data_type))
         # Check if there is already a runtime container
         if not hasattr(self, 'runtime'):
