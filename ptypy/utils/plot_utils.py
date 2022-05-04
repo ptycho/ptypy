@@ -128,12 +128,15 @@ except ImportError:
                     print(message)
                 time.sleep(timeout)
 
+# BD: With version 9.1.0 of PIL, _MODE_CONV has been removed, 
+#     see here: https://github.com/python-pillow/Pillow/pull/6057
+#     can't see a reason why this is still needed, therefore commenting it out
 # FIXME: Is this still needed?
 # Fix tif import problem
-Image._MODE_CONV['I;16'] = (Image._ENDIAN + 'u2', None)
+#Image._MODE_CONV['I;16'] = (Image._ENDIAN + 'u2', None)
 
 # Grayscale + alpha should also work
-Image._MODE_CONV['LA'] = (Image._ENDIAN + 'u1', 2)
+#Image._MODE_CONV['LA'] = (Image._ENDIAN + 'u1', 2)
 
 
 def complex2hsv(cin, vmin=0., vmax=None):
