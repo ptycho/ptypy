@@ -11,15 +11,16 @@
 using std::sqrt;
 using thrust::complex;
 
-extern "C" __global__ void fmag_all_update(complex<OUT_TYPE>* f,
-                                           const IN_TYPE* fmask,
-                                           const IN_TYPE* fmag,
-                                           const IN_TYPE* fdev,
-                                           const IN_TYPE* err_fmag,
-                                           const int* addr_info,
-                                           IN_TYPE pbound_,
-                                           int A,
-                                           int B)
+template <bool doMult, class FType>
+inline __device__ void fmag_all_update_impl(FType* f,
+                                            const IN_TYPE* fmask,
+                                            const IN_TYPE* fmag,
+                                            const IN_TYPE* fdev,
+                                            const IN_TYPE* err_fmag,
+                                            const int* addr_info,
+                                            IN_TYPE pbound_,
+                                            int A,
+                                            int B)
 {
   int batch = blockIdx.x;
   int tx = threadIdx.x;
@@ -55,8 +56,38 @@ extern "C" __global__ void fmag_all_update(complex<OUT_TYPE>* f,
         MATH_TYPE fdevv = fdev[a * A + b];
         MATH_TYPE fm = (MATH_TYPE(1) - m) +
                    m * ((fmagv + fdevv * renorm) / (fmagv + fdevv + MATH_TYPE(1e-7)));
-        f[a * A + b] *= fm;
+        if (doMult)  // compile-time constant, so only one branch ends up in kernel
+          f[a * A + b] *= fm;
+        else
+          f[a * A + b] = fm;
       }
     }
   }
+}
+
+extern "C" __global__ void fmag_all_update(complex<OUT_TYPE>* f,
+                                           const IN_TYPE* fmask,
+                                           const IN_TYPE* fmag,
+                                           const IN_TYPE* fdev,
+                                           const IN_TYPE* err_fmag,
+                                           const int* addr_info,
+                                           IN_TYPE pbound_,
+                                           int A,
+                                           int B)
+{
+  fmag_all_update_impl<true>(f, fmask, fmag, fdev, err_fmag, addr_info, pbound_, A, B);
+}
+
+
+extern "C" __global__ void fmag_all_update_nomult(OUT_TYPE* f,
+                                           const IN_TYPE* fmask,
+                                           const IN_TYPE* fmag,
+                                           const IN_TYPE* fdev,
+                                           const IN_TYPE* err_fmag,
+                                           const int* addr_info,
+                                           IN_TYPE pbound_,
+                                           int A,
+                                           int B)
+{
+  fmag_all_update_impl<false>(f, fmask, fmag, fdev, err_fmag, addr_info, pbound_, A, B);
 }

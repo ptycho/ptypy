@@ -19,7 +19,7 @@ INT_TYPE = np.int32
 class FourierUpdateKernelTest(PyCudaTest):
 
 
-    def test_fmag_all_update_UNITY(self):
+    def fmag_update_all_UNITY_tester(self, mult):
         '''
         setup
         '''
@@ -92,6 +92,9 @@ class FourierUpdateKernelTest(PyCudaTest):
         nFUK.fourier_error(f, addr, fmag, mask, mask_sum)
         nFUK.error_reduce(addr, err_fmag)
         # print(np.sqrt(pbound_set/err_fmag))
+        if not mult:
+            f = np.real(f)
+
         f_d = gpuarray.to_gpu(f)
         fmag_d = gpuarray.to_gpu(fmag)
         mask_d = gpuarray.to_gpu(mask)
@@ -103,10 +106,11 @@ class FourierUpdateKernelTest(PyCudaTest):
         FUK.gpu.fdev = gpuarray.to_gpu(nFUK.npy.fdev)
         FUK.gpu.ferr = gpuarray.to_gpu(nFUK.npy.ferr)
 
-        FUK.fmag_all_update(f_d, addr_d, fmag_d, mask_d, err_fmag_d, pbound=pbound_set)
+
+        FUK.fmag_all_update(f_d, addr_d, fmag_d, mask_d, err_fmag_d, pbound=pbound_set, mult=mult)
 
 
-        nFUK.fmag_all_update(f, addr, fmag, mask, err_fmag, pbound=pbound_set)
+        nFUK.fmag_all_update(f, addr, fmag, mask, err_fmag, pbound=pbound_set, mult=mult)
         expected_f = f
         measured_f = f_d.get()
         np.testing.assert_allclose(expected_f, measured_f, rtol=1e-6, err_msg="Numpy f "
@@ -114,7 +118,13 @@ class FourierUpdateKernelTest(PyCudaTest):
                                                                                                                                repr(measured_f),
                                                                                                                                repr(mask)))
 
-    def test_fmag_update_nopbound_UNITY(self):
+    def test_fmag_update_all_UNITY(self):
+        self.fmag_update_all_UNITY_tester(True)
+
+    def test_fmag_update_all_nomult_UNITY(self):
+        self.fmag_update_all_UNITY_tester(False)
+
+    def fmag_update_nopbound_UNITY_tester(self, mult):
         '''
         setup
         '''
@@ -186,6 +196,8 @@ class FourierUpdateKernelTest(PyCudaTest):
         nFUK.fourier_error(f, addr, fmag, mask, mask_sum)
         nFUK.error_reduce(addr, err_fmag)
         # print(np.sqrt(pbound_set/err_fmag))
+        if not mult:
+            f = np.abs(f)**2
         f_d = gpuarray.to_gpu(f)
         fmag_d = gpuarray.to_gpu(fmag)
         mask_d = gpuarray.to_gpu(mask)
@@ -196,8 +208,8 @@ class FourierUpdateKernelTest(PyCudaTest):
         FUK.gpu.fdev = gpuarray.to_gpu(nFUK.npy.fdev)
         FUK.gpu.ferr = gpuarray.to_gpu(nFUK.npy.ferr)
 
-        FUK.fmag_update_nopbound(f_d, addr_d, fmag_d, mask_d)
-        nFUK.fmag_update_nopbound(f, addr, fmag, mask)
+        FUK.fmag_update_nopbound(f_d, addr_d, fmag_d, mask_d, mult=mult)
+        nFUK.fmag_update_nopbound(f, addr, fmag, mask, mult=mult)
 
         expected_f = f
         measured_f = f_d.get()
@@ -205,9 +217,13 @@ class FourierUpdateKernelTest(PyCudaTest):
                                                                       "is \n%s, \nbut gpu f is \n %s, \n mask is:\n %s \n" %  (repr(expected_f),
                                                                                                                                repr(measured_f),
                                                                                                                                repr(mask)))
+    def test_fmag_update_nopbound_UNITY(self):
+        self.fmag_update_nopbound_UNITY_tester(True)
 
+    def test_fmag_update_nopbound_nomult_UNITY(self):
+        self.fmag_update_nopbound_UNITY_tester(False)
 
-    def test_fourier_error_UNITY(self):
+    def fourier_error_UNITY_tester(self, aux_is_int):
         '''
         setup
         '''
@@ -266,6 +282,9 @@ class FourierUpdateKernelTest(PyCudaTest):
         '''
         mask_sum = mask.sum(-1).sum(-1)
 
+        if aux_is_int:
+            f = np.abs(f)**2
+
         from ptypy.accelerate.base.kernels import FourierUpdateKernel as npFourierUpdateKernel
         f_d = gpuarray.to_gpu(f)
         fmag_d = gpuarray.to_gpu(fmag)
@@ -279,8 +298,8 @@ class FourierUpdateKernelTest(PyCudaTest):
         nFUK.allocate()
         FUK.allocate()
 
-        nFUK.fourier_error(f, addr, fmag, mask, mask_sum)
-        FUK.fourier_error(f_d, addr_d, fmag_d, mask_d, mask_sum_d)
+        nFUK.fourier_error(f, addr, fmag, mask, mask_sum, aux_is_intensity=aux_is_int)
+        FUK.fourier_error(f_d, addr_d, fmag_d, mask_d, mask_sum_d, aux_is_intensity=aux_is_int)
 
         expected_fdev = nFUK.npy.fdev
         measured_fdev = FUK.gpu.fdev.get()
@@ -296,7 +315,14 @@ class FourierUpdateKernelTest(PyCudaTest):
                                                                             "is \n%s, \nbut gpu ferr is \n %s, \n " % (
                                                                             repr(expected_ferr),
                                                                             repr(measured_ferr)))
-    def test_fourier_deviation_UNITY(self):
+
+    def test_fourier_error_UNITY(self):
+        self.fourier_error_UNITY_tester(False)
+
+    def test_fourier_error_aux_is_intensity_UNITY(self):
+        self.fourier_error_UNITY_tester(True)
+
+    def fourier_deviation_UNITY_tester(self, aux_is_int):
         '''
         setup - using the fourier_error as reference, so we need mask, etc.
         '''
@@ -355,6 +381,9 @@ class FourierUpdateKernelTest(PyCudaTest):
         '''
         mask_sum = mask.sum(-1).sum(-1)
 
+        if aux_is_int:
+            f = np.abs(f)**2
+
         from ptypy.accelerate.base.kernels import FourierUpdateKernel as npFourierUpdateKernel
         f_d = gpuarray.to_gpu(f)
         fmag_d = gpuarray.to_gpu(fmag)
@@ -366,8 +395,8 @@ class FourierUpdateKernelTest(PyCudaTest):
         nFUK.allocate()
         FUK.allocate()
 
-        nFUK.fourier_deviation(f, addr, fmag)
-        FUK.fourier_deviation(f_d, addr_d, fmag_d)
+        nFUK.fourier_deviation(f, addr, fmag, aux_is_intensity=aux_is_int)
+        FUK.fourier_deviation(f_d, addr_d, fmag_d, aux_is_intensity=aux_is_int)
 
         expected_fdev = nFUK.npy.fdev
         measured_fdev = FUK.gpu.fdev.get()
@@ -376,7 +405,11 @@ class FourierUpdateKernelTest(PyCudaTest):
                                                                             repr(expected_fdev),
                                                                             repr(measured_fdev)))
 
+    def test_fourier_deviation_UNITY(self):
+        self.fourier_deviation_UNITY_tester(False)
 
+    def test_fourier_deviation_aux_is_intensity_UNITY(self):
+        self.fourier_deviation_UNITY_tester(True)
 
     def test_error_reduce_UNITY(self):
         '''
@@ -522,7 +555,7 @@ class FourierUpdateKernelTest(PyCudaTest):
                                                                    "is not behaving as expected.")
 
 
-    def log_likelihood_UNITY_tester(self, use_version2=False):
+    def log_likelihood_UNITY_tester(self, use_version2=False, aux_is_int=False):
         '''
         setup
         '''
@@ -579,6 +612,10 @@ class FourierUpdateKernelTest(PyCudaTest):
         '''
         test
         '''
+
+        if aux_is_int:
+            f = np.abs(f)**2
+
         mask_sum = mask.sum(-1).sum(-1)
         LLerr = np.zeros_like(mask_sum, dtype=np.float32)
         f_d = gpuarray.to_gpu(f)
@@ -590,14 +627,14 @@ class FourierUpdateKernelTest(PyCudaTest):
         from ptypy.accelerate.base.kernels import FourierUpdateKernel as npFourierUpdateKernel
         nFUK = npFourierUpdateKernel(f, nmodes=total_number_modes)
         nFUK.allocate()
-        nFUK.log_likelihood(f, addr, fmag, mask, LLerr)
+        nFUK.log_likelihood(f, addr, fmag, mask, LLerr, aux_is_intensity=aux_is_int)
 
         FUK = FourierUpdateKernel(f, nmodes=total_number_modes)
         FUK.allocate()
         if use_version2:
-            FUK.log_likelihood2(f_d, addr_d, fmag_d, mask_d, LLerr_d)
+            FUK.log_likelihood2(f_d, addr_d, fmag_d, mask_d, LLerr_d, aux_is_intensity=aux_is_int)
         else:
-            FUK.log_likelihood(f_d, addr_d, fmag_d, mask_d, LLerr_d)
+            FUK.log_likelihood(f_d, addr_d, fmag_d, mask_d, LLerr_d, aux_is_intensity=aux_is_int)
 
         expected_err_phot = LLerr
         measured_err_phot = LLerr_d.get()
@@ -607,12 +644,18 @@ class FourierUpdateKernelTest(PyCudaTest):
                                                                                  repr(expected_err_phot),
                                                                                  repr(measured_err_phot)), rtol=1e-5)
     def test_log_likelihood_UNITY(self):
-        self.log_likelihood_UNITY_tester(False)
+        self.log_likelihood_UNITY_tester(False, False)
 
     def test_log_likelihood2_UNITY(self):
-        self.log_likelihood_UNITY_tester(True)
+        self.log_likelihood_UNITY_tester(True, False)
 
-    def test_exit_error_UNITY(self):
+    def test_log_likelihood_aux_is_intensity_UNITY(self):
+        self.log_likelihood_UNITY_tester(False, True)
+
+    def test_log_likelihood2_aux_is_intensity_UNITY(self):
+        self.log_likelihood_UNITY_tester(True, True)
+
+    def exit_error_UNITY_tester(self, aux_is_int):
         '''
         setup
         '''
@@ -659,6 +702,10 @@ class FourierUpdateKernelTest(PyCudaTest):
         '''
         test
         '''
+        
+        if aux_is_int:
+            aux = np.abs(aux)**2
+
         from ptypy.accelerate.base.kernels import FourierUpdateKernel as npFourierUpdateKernel
         aux_d = gpuarray.to_gpu(aux)
         addr_d = gpuarray.to_gpu(addr)
@@ -669,8 +716,8 @@ class FourierUpdateKernelTest(PyCudaTest):
         nFUK.allocate()
         FUK.allocate()
 
-        nFUK.exit_error(aux, addr, )
-        FUK.exit_error(aux_d, addr_d)
+        nFUK.exit_error(aux, addr, aux_is_intensity=aux_is_int)
+        FUK.exit_error(aux_d, addr_d, aux_is_intensity=aux_is_int)
 
         expected_ferr = nFUK.npy.ferr
         measured_ferr = FUK.gpu.ferr.get()
@@ -680,6 +727,12 @@ class FourierUpdateKernelTest(PyCudaTest):
                                                                             repr(expected_ferr),
                                                                             repr(measured_ferr)), rtol=1e-7)
 
+
+    def test_exit_error_UNITY(self):
+        self.exit_error_UNITY_tester(False)
+
+    def test_exit_error_aux_is_intensity_UNITY(self):
+        self.exit_error_UNITY_tester(True)
 
 if __name__ == '__main__':
     unittest.main()

@@ -386,7 +386,7 @@ class Geo(Base):
         """
         if self.resample == 1:
             return c
-        return u.zoom(c, self.resample, order=0) / (self.resample**2)
+        return u.repeat_2d(c, self.resample)[0] / (self.resample**2)
 
     def downsample(self, a):
         """
@@ -394,7 +394,7 @@ class Geo(Base):
         """
         if self.resample == 1:
             return a
-        return u.rebin_2d(a, self.resample)[0]
+        return u.rebin_2d(a, self.resample)[0] * (self.resample**2)
 
     def __str__(self):
         keys = list(self.p.keys())
