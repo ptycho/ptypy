@@ -923,6 +923,14 @@ class _Full(object):
     choices = ['achromatic', 'linear', 'irregular']
     userlevel = 2
 
+    [coherence.add_background_mode]
+    default = False
+    help = Adding additional probe and object modes to model incoherent background
+    doc = If True, an additional probe mode will be created and linked to an additional empty object mode (ones).
+          This can help to deal with a background due to parasitic scattering.
+    type = bool
+    userlevel = 2
+
     [resolution]
     default = None
     help = Will force the reconstruction to adapt to the given resolution, this might lead to cropping/padding in diffraction space which could reduce performance.
@@ -953,6 +961,11 @@ class _Full(object):
 
         object_id = 'S' + self.label
         probe_id = 'S' + self.label
+
+        # Additional probe/object modes to model incoherent background
+        if self.p.coherence.add_background_mode:
+            self.p.coherence.num_probe_modes += 1
+            self.p.coherence.num_object_modes += 1
 
         # Loop through diffraction patterns
         for i in range(len(self.new_diff_views)):
@@ -1006,6 +1019,16 @@ class _Full(object):
                         # layermap access
                         exit_index = index * 10000 + pm * 100 + om
 
+                        # Break link between background probe mode and valid object modes
+                        # Breal link between backgrpund object mode and valid probe modes
+                        if self.p.coherence.add_background_mode:
+                            bgmode_probe = self.p.coherence.num_probe_modes - 1
+                            bgmode_object = self.p.coherence.num_object_modes - 1
+                            if (pm == bgmode_probe) and (om != bgmode_object):
+                                continue
+                            if (pm != bgmode_probe) and (om == bgmode_object):
+                                continue
+
                         # Create views
                         # Please note that mostly references are passed,
                         # i.e. the views do mostly not own the accessrule
@@ -1046,10 +1069,18 @@ class _Full(object):
                                   views=views,
                                   geometry=geometry)  # , meta=meta)
 
+                        # Force background pods to be empty (this has no effect in accelerated/serialized engines)
+                        if self.p.coherence.add_background_mode:
+                            bgmode_probe = self.p.coherence.num_probe_modes - 1
+                            bgmode_object = self.p.coherence.num_object_modes - 1
+                            if (pm == bgmode_probe) and (om == bgmode_object):
+                                pod.is_empty = True
+
                         new_pods.append(pod)
 
                         pod.probe_weight = 1.0
                         pod.object_weight = 1.0
+
 
         return new_pods, new_probe_ids, new_object_ids
 
