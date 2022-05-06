@@ -171,18 +171,26 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.accumulate_type = accumulate_type
         self.math_type = math_type
         self.queue = queue_thread
-        self.fmag_all_update_cuda = load_kernel("fmag_all_update", {
-            'IN_TYPE': 'float',
-            'OUT_TYPE': 'float',
-            'MATH_TYPE': self.math_type
-        })
+        self.fmag_all_update_cuda, self.fmag_all_update_nomult_cuda = load_kernel(
+            ["fmag_all_update", "fmag_all_update_nomult"], 
+            {
+                'IN_TYPE': 'float',
+                'OUT_TYPE': 'float',
+                'MATH_TYPE': self.math_type
+            }, 
+            "fmag_all_update.cu")
         self.fmag_update_nopbound_cuda = None
+        self.fmag_update_nopbound_nomult_cuda = None
         self.fourier_deviation_cuda = None
-        self.fourier_error_cuda = load_kernel("fourier_error", {
-            'IN_TYPE': 'float',
-            'OUT_TYPE': 'float',
-            'MATH_TYPE': self.math_type
-        })
+        self.fourier_deviation_auxintensity_cuda = None
+        self.fourier_error_cuda, self.fourier_error_auxintensity_cuda = load_kernel(
+            ["fourier_error", "fourier_error_auxintensity"], 
+            {
+                'IN_TYPE': 'float',
+                'OUT_TYPE': 'float',
+                'MATH_TYPE': self.math_type
+            },
+            "fourier_error.cu")
         self.fourier_error2_cuda = None
         self.error_reduce_cuda = load_kernel("error_reduce", {
             'IN_TYPE': 'float',
@@ -192,18 +200,23 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
             'BDIM_Y': 32,
         })
         self.fourier_update_cuda = None
-        self.log_likelihood_cuda, self.log_likelihood2_cuda = load_kernel(
-            ("log_likelihood", "log_likelihood2"), {
+        self.log_likelihood_cuda, self.log_likelihood_auxintensity_cuda, \
+            self.log_likelihood2_cuda, self.log_likelihood2_auxintensity_cuda = \
+            load_kernel(
+                ("log_likelihood", "log_likelihood_auxintensity", "log_likelihood2", "log_likelihood2_auxintensity"), {
                 'IN_TYPE': 'float',
                 'OUT_TYPE': 'float',
                 'MATH_TYPE': self.math_type
             },
             "log_likelihood.cu")
-        self.exit_error_cuda = load_kernel("exit_error", {
-            'IN_TYPE': 'float',
-            'OUT_TYPE': 'float',
-            'MATH_TYPE': self.math_type
-        })
+        self.exit_error_cuda, self.exit_error_auxintensity_cuda = load_kernel(
+            ["exit_error", "exit_error_auxintensity"], 
+            {
+                'IN_TYPE': 'float',
+                'OUT_TYPE': 'float',
+                'MATH_TYPE': self.math_type
+            },
+            "exit_error.cu")
 
         self.gpu = Adict()
         self.gpu.fdev = None
@@ -213,24 +226,26 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
         self.gpu.fdev = gpuarray.zeros(self.fshape, dtype=np.float32)
         self.gpu.ferr = gpuarray.zeros(self.fshape, dtype=np.float32)
 
-    def fourier_error(self, f, addr, fmag, fmask, mask_sum):
+    def fourier_error(self, f, addr, fmag, fmask, mask_sum, aux_is_intensity=False):
+        assert (aux_is_intensity and f.dtype == np.float32) or (not aux_is_intensity and f.dtype == np.complex64)
         fdev = self.gpu.fdev
         ferr = self.gpu.ferr
         if True:
+            kernel = self.fourier_error_cuda if not aux_is_intensity else self.fourier_error_auxintensity_cuda
             # version going over all modes in a single thread (faster)
-            self.fourier_error_cuda(np.int32(self.nmodes),
-                                    f,
-                                    fmask,
-                                    fmag,
-                                    fdev,
-                                    ferr,
-                                    mask_sum,
-                                    addr,
-                                    np.int32(self.fshape[1]),
-                                    np.int32(self.fshape[2]),
-                                    block=(32, 32, 1),
-                                    grid=(int(fmag.shape[0]), 1, 1),
-                                    stream=self.queue)
+            kernel(np.int32(self.nmodes),
+                   f,
+                   fmask,
+                   fmag,
+                   fdev,
+                   ferr,
+                   mask_sum,
+                   addr,
+                   np.int32(self.fshape[1]),
+                   np.int32(self.fshape[2]),
+                   block=(32, 32, 1),
+                   grid=(int(fmag.shape[0]), 1, 1),
+                   stream=self.queue)
         else:
             # version using one thread per mode + shared mem reduction (slower)
             if self.fourier_error2_cuda is None:
@@ -258,26 +273,31 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                      shared=int(bx*by*bz*4),
                                      stream=self.queue)
 
-    def fourier_deviation(self, f, addr, fmag):
+    def fourier_deviation(self, f, addr, fmag, aux_is_intensity=False):
+        assert (aux_is_intensity and f.dtype == np.float32) or (not aux_is_intensity and f.dtype == np.complex64)
         fdev = self.gpu.fdev
         if self.fourier_deviation_cuda is None:
-            self.fourier_deviation_cuda = load_kernel("fourier_deviation",{
-                'IN_TYPE': 'float',
-                'OUT_TYPE': 'float',
-                'MATH_TYPE': self.math_type
-            })
+            self.fourier_deviation_cuda, self.fourier_deviation_auxintensity_cuda = load_kernel(
+                ["fourier_deviation", "fourier_deviation_auxintensity"],
+                {
+                    'IN_TYPE': 'float',
+                    'OUT_TYPE': 'float',
+                    'MATH_TYPE': self.math_type
+                },
+                "fourier_deviation.cu")
+        kernel = self.fourier_deviation_auxintensity_cuda if aux_is_intensity else self.fourier_deviation_cuda
         bx = 64
         by = 1
-        self.fourier_deviation_cuda(np.int32(self.nmodes),
-                                f,
-                                fmag,
-                                fdev,
-                                addr,
-                                np.int32(self.fshape[1]),
-                                np.int32(self.fshape[2]),
-                                block=(bx, by, 1),
-                                grid=(1, int((self.fshape[2] + by - 1)//by), int(fmag.shape[0])),
-                                stream=self.queue)
+        kernel(np.int32(self.nmodes),
+               f,
+               fmag,
+               fdev,
+               addr,
+               np.int32(self.fshape[1]),
+               np.int32(self.fshape[2]),
+               block=(bx, by, 1),
+               grid=(1, int((self.fshape[2] + by - 1)//by), int(fmag.shape[0])),
+               stream=self.queue)
 
 
     def error_reduce(self, addr, err_sum):
@@ -289,43 +309,50 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                grid=(int(err_sum.shape[0]), 1, 1),
                                stream=self.queue)
 
-    def fmag_all_update(self, f, addr, fmag, fmask, err_fmag, pbound=0.0):
+    def fmag_all_update(self, f, addr, fmag, fmask, err_fmag, pbound=0.0, mult=True):
+        assert (mult and f.dtype == np.complex64) or (not mult and f.dtype == np.float32)
+
         fdev = self.gpu.fdev
-        self.fmag_all_update_cuda(f,
-                                  fmask,
-                                  fmag,
-                                  fdev,
-                                  err_fmag,
-                                  addr,
-                                  np.float32(pbound),
-                                  np.int32(self.fshape[1]),
-                                  np.int32(self.fshape[2]),
-                                  block=(32, 32, 1),
-                                  grid=(int(fmag.shape[0]*self.nmodes), 1, 1),
-                                  stream=self.queue)
+        kernel = self.fmag_all_update_cuda if mult else self.fmag_all_update_nomult_cuda
+        kernel(f,
+               fmask,
+               fmag,
+               fdev,
+               err_fmag,
+               addr,
+               np.float32(pbound),
+               np.int32(self.fshape[1]),
+               np.int32(self.fshape[2]),
+               block=(32, 32, 1),
+               grid=(int(fmag.shape[0]*self.nmodes), 1, 1),
+               stream=self.queue)
     
-    def fmag_update_nopbound(self, f, addr, fmag, fmask):
+    def fmag_update_nopbound(self, f, addr, fmag, fmask, mult=True):
+        assert (mult and f.dtype == np.complex64) or (not mult and f.dtype == np.float32)
         fdev = self.gpu.fdev
         bx = 64
         by = 1
         if self.fmag_update_nopbound_cuda is None:
-            self.fmag_update_nopbound_cuda = load_kernel("fmag_update_nopbound", {
-                'IN_TYPE': 'float',
-                'OUT_TYPE': 'float',
-                'MATH_TYPE': self.math_type
-            })
-        self.fmag_update_nopbound_cuda(f,
-                                  fmask,
-                                  fmag,
-                                  fdev,
-                                  addr,
-                                  np.int32(self.fshape[1]),
-                                  np.int32(self.fshape[2]),
-                                  block=(bx, by, 1),
-                                  grid=(1, 
-                                    int((self.fshape[2] + by - 1) // by), 
-                                    int(fmag.shape[0]*self.nmodes)),
-                                  stream=self.queue)
+            self.fmag_update_nopbound_cuda, self.fmag_update_nopbound_nomult_cuda = load_kernel(
+                ["fmag_update_nopbound","fmag_update_nopbound_nomult"], 
+                {
+                    'IN_TYPE': 'float',
+                    'OUT_TYPE': 'float',
+                    'MATH_TYPE': self.math_type
+                }, "fmag_update_nopbound.cu")
+        kernel = self.fmag_update_nopbound_cuda if mult else self.fmag_update_nopbound_nomult_cuda
+        kernel(f,
+               fmask,
+               fmag,
+               fdev,
+               addr,
+               np.int32(self.fshape[1]),
+               np.int32(self.fshape[2]),
+               block=(bx, by, 1),
+               grid=(1, 
+                  int((self.fshape[2] + by - 1) // by), 
+                  int(fmag.shape[0]*self.nmodes)),
+               stream=self.queue)
 
     # Note: this was a test to join the kernels, but it's > 2x slower!
     def fourier_update(self, f, addr, fmag, fmask, mask_sum, err_fmag, pbound=0):
@@ -359,53 +386,61 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                  shared=smem,
                                  stream=self.queue)
 
-    def log_likelihood(self, b_aux, addr, mag, mask, err_phot):
+    def log_likelihood(self, b_aux, addr, mag, mask, err_phot, aux_is_intensity=False):
+        assert (aux_is_intensity and b_aux.dtype == np.float32) or (not aux_is_intensity and b_aux.dtype == np.complex64)
         ferr = self.gpu.ferr
-        self.log_likelihood_cuda(np.int32(self.nmodes),
-                                 b_aux,
-                                 mask,
-                                 mag,
-                                 addr,
-                                 ferr,
-                                 np.int32(self.fshape[1]),
-                                 np.int32(self.fshape[2]),
-                                 block=(32, 32, 1),
-                                 grid=(int(mag.shape[0]), 1, 1),
-                                 stream=self.queue)
+        kernel = self.log_likelihood_cuda if not aux_is_intensity else self.log_likelihood_auxintensity_cuda
+        kernel(np.int32(self.nmodes),
+               b_aux,
+               mask,
+               mag,
+               addr,
+               ferr,
+               np.int32(self.fshape[1]),
+               np.int32(self.fshape[2]),
+               block=(32, 32, 1),
+               grid=(int(mag.shape[0]), 1, 1),
+               stream=self.queue)
         # TODO: we might want to move this call outside of here
         self.error_reduce(addr, err_phot)
 
-    def log_likelihood2(self, b_aux, addr, mag, mask, err_phot):
+    def log_likelihood2(self, b_aux, addr, mag, mask, err_phot, aux_is_intensity=False):
+        assert (aux_is_intensity and b_aux.dtype == np.float32) or (not aux_is_intensity and b_aux.dtype == np.complex64)
         ferr = self.gpu.ferr
         bx = 64
         by = 1
-        self.log_likelihood2_cuda(np.int32(self.nmodes),
-                                 b_aux,
-                                 mask,
-                                 mag,
-                                 addr,
-                                 ferr,
-                                 np.int32(self.fshape[1]),
-                                 np.int32(self.fshape[2]),
-                                 block=(bx, by, 1),
-                                 grid=(1, int((self.fshape[1] + by - 1) // by), int(mag.shape[0])),
-                                 stream=self.queue)
+        kernel = self.log_likelihood2_cuda if not aux_is_intensity else self.log_likelihood2_auxintensity_cuda
+        kernel(np.int32(self.nmodes),
+               b_aux,
+               mask,
+               mag,
+               addr,
+               ferr,
+               np.int32(self.fshape[1]),
+               np.int32(self.fshape[2]),
+               block=(bx, by, 1),
+               grid=(1, int((self.fshape[1] + by - 1) // by), int(mag.shape[0])),
+               stream=self.queue)
         # TODO: we might want to move this call outside of here
         self.error_reduce(addr, err_phot)
 
-    def exit_error(self, aux, addr):
+    def exit_error(self, aux, addr, aux_is_intensity=False):
+        assert (aux_is_intensity and aux.dtype == np.float32) or \
+            (not aux_is_intensity and aux.dtype == np.complex64)
+
         sh = addr.shape
         maxz = sh[0]
         ferr = self.gpu.ferr
-        self.exit_error_cuda(np.int32(self.nmodes),
-                             aux,
-                             ferr,
-                             addr,
-                             np.int32(self.fshape[1]),
-                             np.int32(self.fshape[2]),
-                             block=(32, 32, 1),
-                             grid=(int(maxz), 1, 1),
-                             stream=self.queue)
+        kernel = self.exit_error_auxintensity_cuda if aux_is_intensity else self.exit_error_cuda
+        kernel(np.int32(self.nmodes),
+               aux,
+               ferr,
+               addr,
+               np.int32(self.fshape[1]),
+               np.int32(self.fshape[2]),
+               block=(32, 32, 1),
+               grid=(int(maxz), 1, 1),
+               stream=self.queue)
 
     # DEPRECATED?
     def execute(self, kernel_name=None, compare=False, sync=False):
