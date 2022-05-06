@@ -70,6 +70,23 @@ class ML(PositionCorrectionEngine):
     lowlim = 0.0
     help = Amplitude of the Gaussian prior if used
 
+    [reg_Huber]
+    default = False
+    type = bool
+    help = Whether to use a Huber regularizer
+
+    [reg_Huber_amplitude]
+    default = .01
+    type = float
+    lowlim = 0.0
+    help = Amplitude of the Huber regularizer if used
+
+    [reg_Huber_scale]
+    default = .01
+    type = float
+    lowlim = 0.0
+    help = Scale of the Huber regularizer if used
+
     [smooth_gradient]
     default = 0.0
     type = float
@@ -387,6 +404,8 @@ class BaseModel(object):
 
         if self.p.reg_del2:
             self.regularizer = Regul_del2(self.p.reg_del2_amplitude)
+        elif self.p.reg_Huber:
+            self.regularizer = Regul_Huber(amplitude=self.p.reg_Huber_amplitude, scale=self.p.reg_Huber_scale)
         else:
             self.regularizer = None
 
@@ -409,9 +428,7 @@ class BaseModel(object):
                 'Rescaling regularization amplitude using '
                 'the Poisson distribution assumption.')
             logger.debug('Factor: %8.5g' % reg_rescale)
-
-            # TODO remove usage of .p. access
-            self.regularizer.amplitude = self.p.reg_del2_amplitude * reg_rescale
+            self.regularizer.amplitude *= reg_rescale
 
     def __del__(self):
         """
@@ -1275,6 +1292,89 @@ class Regul_del2(object):
                                + u.norm2(hdel_yb))
 
         self.coeff = np.array([c0, c1, c2])
+        return self.coeff
+
+
+class Regul_Huber(object):
+    """\
+    Huber regularizer.
+
+    See https://en.wikipedia.org/wiki/Huber_loss#Pseudo-Huber_loss_function
+    This class applies to any numpy array.
+    """
+    def __init__(self, amplitude, scale, axes=[-2, -1]):
+        # Regul.__init__(self, axes)
+        self.axes = axes
+        self.amplitude = amplitude
+        self.scale = scale
+        self.delxy = None
+        self.fpxy = None
+        self.g = None
+        self.LL = None
+
+    def grad(self, x):
+        """
+        Compute and return the regularizer gradient given the array x.
+        """
+        ax0, ax1 = self.axes
+        del_xf = u.delxf(x, axis=ax0)
+        del_yf = u.delxf(x, axis=ax1)
+        del_xb = u.delxb(x, axis=ax0)
+        del_yb = u.delxb(x, axis=ax1)
+
+        fp_xb = np.sqrt(self.scale + u.abs2(del_xb))
+        fp_yb = np.sqrt(self.scale + u.abs2(del_yb))
+        fp_xf = np.sqrt(self.scale + u.abs2(del_xf))
+        fp_yf = np.sqrt(self.scale + u.abs2(del_yf))
+
+        self.delxy = [del_xf, del_yf, del_xb, del_yb]
+        self.fpxy = [fp_xf, fp_yf, fp_xb, fp_yb]
+
+        self.g = self.amplitude * (del_xb / fp_xb + del_yb / fp_yb - del_xf / fp_xf - del_yf / fp_yf)
+
+        self.LL = self.amplitude * (fp_xb.sum() + fp_yb.sum() + fp_xf.sum() + fp_yf.sum())
+
+        return self.g
+
+    def poly_line_coeffs(self, h, x=None):
+        ax0, ax1 = self.axes
+        if x is None:
+            del_xf, del_yf, del_xb, del_yb = self.delxy
+            fp_xf, fp_yf, fp_xb, fp_yb = self.fpxy
+            c0 = self.LL
+        else:
+            del_xf = u.delxf(x, axis=ax0)
+            del_yf = u.delxf(x, axis=ax1)
+            del_xb = u.delxb(x, axis=ax0)
+            del_yb = u.delxb(x, axis=ax1)
+            fp_xb = np.sqrt(self.scale + u.abs2(del_xb))
+            fp_yb = np.sqrt(self.scale + u.abs2(del_yb))
+            fp_xf = np.sqrt(self.scale + u.abs2(del_xf))
+            fp_yf = np.sqrt(self.scale + u.abs2(del_yf))
+            c0 = self.amplitude * (fp_xb.sum() + fp_yb.sum() + fp_xf.sum() + fp_yf.sum())
+
+        hdel_xf = u.delxf(h, axis=ax0)
+        hdel_yf = u.delxf(h, axis=ax1)
+        hdel_xb = u.delxb(h, axis=ax0)
+        hdel_yb = u.delxb(h, axis=ax1)
+
+        c1 = self.amplitude * np.real(np.vdot(del_xf / fp_xf, hdel_xf)
+                                          + np.vdot(del_yf / fp_yf, hdel_yf)
+                                          + np.vdot(del_xb / fp_xb, hdel_xb)
+                                          + np.vdot(del_yb / fp_yb, hdel_yb))
+
+        c2 = .5 * self.amplitude * np.real(np.vdot(hdel_xf / fp_xf, hdel_xf)
+                                           + np.vdot(hdel_yf / fp_yf, hdel_yf)
+                                           + np.vdot(hdel_xb / fp_xb, hdel_xb)
+                                           + np.vdot(hdel_yb / fp_yb, hdel_yb))
+
+        c2 -= .5 * self.amplitude * ((np.real(del_xf * hdel_xf.conj() / fp_xf) ** 2 / fp_xf).sum()
+                                     + (np.real(del_yf * hdel_yf.conj() / fp_yf) ** 2 / fp_yf).sum()
+                                     + (np.real(del_xb * hdel_xb.conj() / fp_xb) ** 2 / fp_xb).sum()
+                                     + (np.real(del_yb * hdel_yb.conj() / fp_yb) ** 2 / fp_yb).sum())
+
+        self.coeff = np.array([c0, c1, c2])
+
         return self.coeff
 
 
