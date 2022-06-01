@@ -9,6 +9,8 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
+import sys
+sys.path.insert(0, "/home/uef75971/ptypy/")
 
 #from ptypy import utils as u
 from ptypy.utils.verbose import logger
@@ -147,6 +149,8 @@ class LBFGS(ML):
             self.pr_s[i] = self.pr.copy(self.pr.ID + '_s' + str(i), fill=0.)
             self.pr_y[i] = self.pr.copy(self.pr.ID + '_y' + str(i), fill=0.)
 
+
+
     def engine_prepare(self):
         """
         Last minute initialization, everything, that needs to be recalculated,
@@ -162,7 +166,6 @@ class LBFGS(ML):
         tc = 0.
         ta = time.time()
         for it in range(num):
-
             #######################################
             # Compute new gradient (same as ML)
             #######################################
@@ -202,6 +205,9 @@ class LBFGS(ML):
             # Smoothing preconditioner decay (once per iteration)
             if self.smooth_gradient:
                 self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
+                for name, s in new_ob_grad.storages.items():
+                    s.data[:] = self.smooth_gradient(s.data)
+
 
             ############################
             # LBFGS Two Loop Recursion
@@ -235,7 +241,6 @@ class LBFGS(ML):
                 # Compute and store rho
                 self.rho[mi-1] = 1. / ( np.real(Cdot(self.ob_y[mi-1], self.ob_s[mi-1]))
                                         + np.real(Cdot(self.pr_y[mi-1], self.pr_s[mi-1])) )
-
                 # BFGS update
                 self.ob_h << new_ob_grad
                 self.pr_h << new_pr_grad
@@ -243,6 +248,7 @@ class LBFGS(ML):
                 for i in reversed(range(mi)):
                     self.alpha[i] = self.rho[i]*( np.real(Cdot(self.ob_s[i], self.ob_h))
                                                   + np.real(Cdot(self.pr_s[i], self.pr_h)) )
+
                     #TODO: support operand * for 'float' and 'Container'
                     # (reusing self.ob_grad here is not efficient)
                     # self.ob_h -= self.alpha[i]*self.ob_y[i]
@@ -262,6 +268,7 @@ class LBFGS(ML):
                 c_denom = Cnorm2(self.ob_y[mi-1]) + Cnorm2(self.pr_y[mi-1])
                 self.ob_h *= (c_num/c_denom)
                 self.pr_h *= (c_num/c_denom)
+
 
                 # Compute left-hand side of BFGS product
                 for i in range(mi):
@@ -294,6 +301,7 @@ class LBFGS(ML):
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
+
 
             if np.isinf(B).any() or np.isnan(B).any():
                 logger.warning(
