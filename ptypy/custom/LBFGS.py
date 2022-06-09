@@ -9,8 +9,6 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
-import sys
-sys.path.insert(0, "/home/uef75971/ptypy/")
 
 #from ptypy import utils as u
 from ptypy.utils.verbose import logger
