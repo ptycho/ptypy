@@ -12,8 +12,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
-import sys
-sys.path.insert(0, "/home/uef75971/ptypy/")
 import time
 
 from ptypy.custom.LBFGS import LBFGS
