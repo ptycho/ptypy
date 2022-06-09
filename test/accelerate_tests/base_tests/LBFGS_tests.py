@@ -6,8 +6,6 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import unittest
-import sys
-sys.path.insert(0, "/home/uef75971/ptypy/")
 
 from test import utils as tu
 from ptypy import utils as u
