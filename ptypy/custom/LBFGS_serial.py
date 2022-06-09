@@ -19,6 +19,7 @@ import time
 from ptypy.custom.LBFGS import LBFGS
 from ptypy.engines.ML import ML, BaseModel
 # from .projectional_serial import serialize_array_access
+from ptypy.accelerate.base.engines.ML_serial import ML_serial, GaussianModel
 from ptypy.accelerate.base.engines.projectional_serial import serialize_array_access
 from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
@@ -32,7 +33,7 @@ from ptypy.accelerate.base import address_manglers
 __all__ = ['LBFGS_serial']
 
 @register()
-class LBFGS_serial(LBFGS):
+class LBFGS_serial(LBFGS, ML_serial):
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -40,8 +41,14 @@ class LBFGS_serial(LBFGS):
         """
         super(LBFGS_serial, self).__init__(ptycho_parent, pars)
 
-        self.kernels = {}
-        self.diff_info = {}
+        self.cdotr_ob_ys = [0] * self.p.bfgs_memory_size
+        self.cdotr_pr_ys = [0] * self.p.bfgs_memory_size
+        self.cdotr_ob_sh = [0] * self.p.bfgs_memory_size
+        self.cdotr_pr_sh = [0] * self.p.bfgs_memory_size
+        self.cdotr_ob_yh = [0] * self.p.bfgs_memory_size
+        self.cdotr_pr_yh = [0] * self.p.bfgs_memory_size
+        self.cn2_ob_y = [0] * self.p.bfgs_memory_size
+        self.cn2_pr_y = [0] * self.p.bfgs_memory_size
 
     def engine_initialize(self):
         """
@@ -49,28 +56,7 @@ class LBFGS_serial(LBFGS):
         """
         super(LBFGS_serial, self).engine_initialize()
 
-        ob_num = len(self.ob.storages)
-        for s_ob in self.ob.storages.values():
-            obj_shape = s_ob.data.shape
-            obj_dtype = s_ob.data.dtype
-        self.ob_s = np.zeros((self.p.bfgs_memory_size, *obj_shape), dtype=obj_dtype)
-        self.ob_y = np.zeros((self.p.bfgs_memory_size, *obj_shape), dtype=obj_dtype)
-
-        pr_num = len(self.pr.storages)
-        for s_pr in self.pr.storages.values():
-            pr_shape = s_pr.data.shape
-            pr_dtype = s_pr.data.dtype
-        self.pr_s = np.zeros((self.p.bfgs_memory_size, *pr_shape), dtype=pr_dtype)
-        self.pr_y = np.zeros((self.p.bfgs_memory_size, *pr_shape), dtype=pr_dtype)
-
-        # Other BFGS memories
-        self.rho = np.zeros(self.p.bfgs_memory_size)
-        self.alpha = np.zeros(self.p.bfgs_memory_size)
-
-        self._setup_kernels()
-
     def _initialize_model(self):
-
         # Create noise model
         if self.p.ML_type.lower() == "gaussian":
             self.ML_model = GaussianModel(self)
@@ -81,88 +67,8 @@ class LBFGS_serial(LBFGS):
         else:
             raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
 
-    def _setup_kernels(self):
-        """
-        Setup kernels, one for each scan. Derive scans from ptycho class
-        """
-        # get the scans
-        for label, scan in self.ptycho.model.scans.items():
-
-            kern = u.Param()
-            kern.scanmodel = type(scan).__name__
-            self.kernels[label] = kern
-
-            # TODO: needs to be adapted for broad bandwidth
-            geo = scan.geometries[0]
-
-            # Get info to shape buffer arrays
-            fpc = scan.max_frames_per_block
-
-            # TODO : make this more foolproof
-            try:
-                nmodes = scan.p.coherence.num_probe_modes
-            except:
-                nmodes = 1
-
-            # create buffer arrays
-            ash = (fpc * nmodes,) + tuple(geo.shape)
-            aux = np.zeros(ash, dtype=np.complex64)
-            kern.aux = aux
-            kern.a = np.zeros(ash, dtype=np.complex64)
-            kern.b = np.zeros(ash, dtype=np.complex64)
-
-            # setup kernels, one for each SCAN.
-            kern.GDK = GradientDescentKernel(aux, nmodes)
-            kern.GDK.allocate()
-
-            kern.POK = PoUpdateKernel()
-            kern.POK.allocate()
-
-            kern.AWK = AuxiliaryWaveKernel()
-            kern.AWK.allocate()
-
-            kern.FW = geo.propagator.fw
-            kern.BW = geo.propagator.bw
-            kern.resolution = geo.resolution[0]
-
-            if self.do_position_refinement:
-                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution)
-                kern.PCK.allocate()
-
     def engine_prepare(self):
-
-
-        ## Serialize new data ##
-
-        for label, d in self.ptycho.new_data:
-            prep = u.Param()
-            prep.label = label
-            self.diff_info[d.ID] = prep
-            prep.err_phot = np.zeros((d.data.shape[0],), dtype=np.float32)
-            # set floating intensity coefficients to 1.0
-            # they get overridden if self.p.floating_intensities=True
-            prep.float_intens_coeff = np.ones((d.data.shape[0],), dtype=np.float32)
-
-        # Unfortunately this needs to be done for all pods, since
-        # the shape of the probe / object was modified.
-        # TODO: possible scaling issue
-        for label, d in self.di.storages.items():
-            prep = self.diff_info[d.ID]
-            prep.view_IDs, prep.poe_IDs, prep.addr = serialize_array_access(d)
-            # Re-create exit addresses when gradient models (single exit buffer per view) are used
-            # TODO: this should not be necessary, kernels should not use exit wave information
-            if self.kernels[prep.label].scanmodel in ("GradFull", "BlockGradFull"):
-                for i,addr in enumerate(prep.addr):
-                    nmodes = len(addr[:,2,0])
-                    for j,ea in enumerate(addr[:,2,0]):
-                        prep.addr[i,j,2,0] = i*nmodes+j
-            prep.I = d.data
-            if self.do_position_refinement:
-                prep.original_addr = np.zeros_like(prep.addr)
-                prep.original_addr[:] = prep.addr
-                prep.ma = self.ma.S[d.ID].data
-
-        self.ML_model.prepare()
+        super(LBFGS_serial, self).engine_prepare()
 
     def _get_smooth_gradient(self, data, sigma):
         return self.smooth_gradient(data)
@@ -173,8 +79,7 @@ class LBFGS_serial(LBFGS):
         if self.smooth_gradient:
             self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
             for name, s in new_ob_grad.storages.items():
-                # s.data[:] = self._get_smooth_gradient(s.data, self.smooth_gradient.sigma)
-                s.data[:] = self.smooth_gradient(s.data)
+                s.data[:] = self._get_smooth_gradient(s.data, self.smooth_gradient.sigma)
 
         norm = Cnorm2(new_ob_grad)
         dot = np.real(Cdot(new_ob_grad, self.ob_grad))
@@ -196,6 +101,22 @@ class LBFGS_serial(LBFGS):
 
         return norm, dot
 
+    def _replace_ob_pr_ysh(self, mi):
+        self.cdotr_ob_ys[mi-1] = np.real(Cdot(self.ob_y[mi-1],
+            self.ob_s[mi-1]))
+        self.cdotr_pr_ys[mi-1] = np.real(Cdot(self.pr_y[mi-1],
+            self.pr_s[mi-1]))
+        self.cn2_ob_y[mi-1] = Cnorm2(self.ob_y[mi-1])
+        self.cn2_pr_y[mi-1] = Cnorm2(self.pr_y[mi-1])
+
+        for i in reversed(range(mi)):
+            self.cdotr_ob_sh[i] = np.real(Cdot(self.ob_s[i], self.ob_h))
+            self.cdotr_pr_sh[i] = np.real(Cdot(self.pr_s[i], self.pr_h))
+
+    def _replace_ob_pr_yh(self, mi):
+        for i in range(mi):
+            self.cdotr_ob_yh[i] = np.real(Cdot(self.ob_y[i], self.ob_h))
+            self.cdotr_pr_yh[i] = np.real(Cdot(self.pr_y[i], self.pr_h))
 
     def engine_iterate(self, num=1):
         """
@@ -214,8 +135,6 @@ class LBFGS_serial(LBFGS):
 
             cn2_new_pr_grad, cdotr_pr_grad = self._replace_pr_grad()
             cn2_new_ob_grad, cdotr_ob_grad = self._replace_ob_grad()
-
-            breakpoint()
 
             # probe/object rescaling
             if self.p.scale_precond:
@@ -242,7 +161,7 @@ class LBFGS_serial(LBFGS):
                 self.ob_h -= self.ob_grad_new
 
                 # Probe steepest-descent step
-                self.pr_grad *= self.scale_p_o # probe preconditioning
+                self.pr_grad_new *= self.scale_p_o # probe preconditioning
                 self.pr_h -= self.pr_grad_new
 
             else: # Two-loop LBFGS recursion
@@ -251,66 +170,72 @@ class LBFGS_serial(LBFGS):
                 mi = min(self.curiter, self.p.bfgs_memory_size)
 
                 # Remember last object update and gradient difference
-                for s in self.ob_h.storages.values():
-                    self.ob_s[mi-1][:] = s.data
-                for s in self.ob_grad_new.storages.values():
-                    self.ob_y[mi-1][:] = s.data
-                for s in self.ob_grad.storages.values():
-                    self.ob_y[mi-1][:] -= s.data
+                self.ob_s[mi-1] << self.ob_h
+                self.ob_y[mi-1] << self.ob_grad_new
+                self.ob_y[mi-1] -= self.ob_grad
 
                 # Remember last probe update and gradient difference
                 self.pr_h /= np.sqrt(self.scale_p_o) # probe preconditioning
-                for s in self.pr_h.storages.values():
-                    self.pr_s[mi-1][:] = s.data
-                self.pr_grad *= np.sqrt(self.scale_p_o) # probe preconditioning
-                for s in self.pr_grad_new.storages.values():
-                    self.pr_y[mi-1][:] = s.data
-                for s in self.pr_grad.storages.values():
-                    self.pr_y[mi-1][:] -= s.data
-
-                # Compute and store rho
-                denom1 = np.vdot(self.ob_y[mi-1], self.ob_s[mi-1]).real
-                denom2 = np.vdot(self.pr_y[mi-1], self.pr_s[mi-1]).real
-                self.rho[mi-1] = 1. / (denom1 + denom2)
+                self.pr_s[mi-1] << self.pr_h
+                self.pr_grad_new *= np.sqrt(self.scale_p_o) # probe preconditioning
+                self.pr_y[mi-1] << self.pr_grad_new
+                self.pr_y[mi-1] -= self.pr_grad
 
                 # BFGS update
                 self.ob_h << self.ob_grad_new
                 self.pr_h << self.pr_grad_new
 
+                # Compute and store rho
+                self._replace_ob_pr_ysh(mi)
+                self.rho[mi-1] = 1. / (self.cdotr_ob_ys[mi-1] +
+                        self.cdotr_pr_ys[mi-1])
+
                 # Compute right-hand side of BGFS product
                 for i in reversed(range(mi)):
-                    for s in self.ob_h.storages.values():
-                        sq1 = np.vdot(self.ob_s[i], s.data).real
-                    for s in self.pr_h.storages.values():
-                        sq2 = np.vdot(self.pr_s[i], s.data).real
-                    self.alpha[i] = self.rho[i] * (sq1 + sq2)
+                    self.alpha[i] = self.rho[i] * (self.cdotr_ob_sh[i] +
+                            self.cdotr_pr_sh[i])
 
-                    for s in self.ob_h.storages.values():
-                        s.data[:] = s.data - self.alpha[i]*self.ob_y[i]
-                    for s in self.pr_h.storages.values():
-                        s.data[:] = s.data - self.alpha[i]*self.pr_y[i]
+                    #TODO: support operand * for 'float' and 'Container'
+                    # (reusing self.ob_grad here is not efficient)
+                    # self.ob_h -= self.alpha[i]*self.ob_y[i]
+                    self.ob_grad << self.ob_y[i]
+                    self.ob_grad *= self.alpha[i]
+                    self.ob_h -= self.ob_grad
+                    #TODO: support operand * for 'float' and 'Container'
+                    # (reusing self.pr_grad here is not efficient)
+                    # self.pr_h -= self.alpha[i]*self.pr_y[i]
+                    self.pr_grad << self.pr_y[i]
+                    self.pr_grad *= self.alpha[i]
+                    self.pr_h -= self.pr_grad
+
 
                 # Compute centre of BFGS product (scaled identity)
-                c_num = np.vdot(self.ob_s[mi-1], self.ob_y[mi-1]).real +\
-                        np.vdot(self.pr_s[mi-1], self.pr_y[mi-1]).real
-                c_denom = np.vdot(self.ob_y[mi-1], self.ob_y[mi-1]).real +\
-                        np.vdot(self.pr_y[mi-1], self.pr_y[mi-1]).real
+                c_num = self.cdotr_ob_ys[mi-1] + self.cdotr_pr_ys[mi-1]
+                c_denom = self.cn2_ob_y[mi-1] + self.cn2_pr_y[mi-1]
                 gamma = c_num/c_denom
                 self.ob_h *= gamma
                 self.pr_h *= gamma
 
                 # Compute left-hand side of BFGS product
+                self._replace_ob_pr_yh(mi)
                 for i in range(mi):
-                    for s in self.ob_h.storages.values():
-                        yr1 = np.vdot(self.ob_y[i], s.data).real
-                    for s in self.pr_h.storages.values():
-                        yr2 = np.vdot(self.pr_y[i], s.data).real
-                    beta = self.rho[i] * (yr1 + yr2)
+                    beta = self.rho[i] * (self.cdotr_ob_yh[i] +
+                            self.cdotr_pr_yh[i])
 
-                    for s in self.ob_h.storages.values():
-                        s.data[:] = s.data + (self.alpha[i]-beta)*self.ob_s[i]
-                    for s in self.pr_h.storages.values():
-                        s.data[:] = s.data - (self.alpha[i]-beta)*self.pr_s[i]
+
+                    #TODO: support operand * for 'float' and 'Container'
+                    # (reusing self.ob_grad here is not efficient)
+                    # self.ob_h += (self.alpha[i]-beta)*self.ob_s[i]
+                    self.ob_grad << self.ob_s[i]
+                    self.ob_grad *= (self.alpha[i]-beta)
+                    self.ob_h += self.ob_grad
+
+                    #TODO: support operand * for 'float' and 'Container'
+                    # (reusing self.pr_grad here is not efficient)
+                    # self.pr_h += (self.alpha[i]-beta)*self.pr_s[i]
+                    self.pr_grad << self.pr_s[i]
+                    self.pr_grad *= (self.alpha[i]-beta)
+                    self.pr_h += self.pr_grad
 
                 # Flip step direction for minimisation
                 self.ob_h *= -1
@@ -321,6 +246,9 @@ class LBFGS_serial(LBFGS):
             # update current gradients with new gradients
             self.ob_grad << self.ob_grad_new
             self.pr_grad << self.pr_grad_new
+
+            self.cn2_ob_grad = cn2_new_ob_grad
+            self.cn2_pr_grad = cn2_new_pr_grad
 
             # linesearch (same as ML)
             t2 = time.time()
@@ -343,14 +271,12 @@ class LBFGS_serial(LBFGS):
             self.pr += self.pr_h
 
             # Roll memory for overwriting
-            ob_sz = np.prod(self.ob_s.shape[-3:])
-            pr_sz = np.prod(self.pr_s.shape[-3:])
             if self.curiter >= self.p.bfgs_memory_size:
-                self.ob_s = np.roll(self.ob_s, -ob_sz)
-                self.pr_s = np.roll(self.pr_s, -pr_sz)
-                self.ob_y = np.roll(self.ob_y, -ob_sz)
-                self.pr_y = np.roll(self.pr_y, -pr_sz)
-                self.rho = np.roll(self.rho, -1)
+                self.ob_s.append(self.ob_s.pop(0))
+                self.pr_s.append(self.pr_s.pop(0))
+                self.ob_y.append(self.ob_y.pop(0))
+                self.pr_y.append(self.pr_y.pop(0))
+                self.rho = np.roll(self.rho,-1)
 
             # Position correction
             self.position_update()
@@ -365,280 +291,5 @@ class LBFGS_serial(LBFGS):
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
 
-    def position_update(self):
-        """
-        Position refinement
-        """
-        if not self.do_position_refinement:
-            return
-        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
-        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
-
-        # Update positions
-        if do_update_pos:
-            """
-            Iterates through all positions and refines them by a given algorithm.
-            """
-            log(4, "----------- START POS REF -------------")
-            for dID in self.di.S.keys():
-
-                prep = self.diff_info[dID]
-                pID, oID, eID = prep.poe_IDs
-                ob = self.ob.S[oID].data
-                pr = self.pr.S[pID].data
-                kern = self.kernels[prep.label]
-                aux = kern.aux
-                addr = prep.addr
-                original_addr = prep.original_addr
-                mangled_addr = addr.copy()
-                w = prep.weights
-                I = prep.I
-                err_phot = prep.err_phot
-
-                PCK = kern.PCK
-                FW = kern.FW
-
-                # Keep track of object boundaries
-                max_oby = ob.shape[-2] - aux.shape[-2] - 1
-                max_obx = ob.shape[-1] - aux.shape[-1] - 1
-
-                # We need to re-calculate the current error
-                PCK.build_aux(aux, addr, ob, pr)
-                aux[:] = FW(aux)
-                PCK.log_likelihood_ml(aux, addr, I, w, err_phot)
-                error_state = np.zeros_like(err_phot)
-                error_state[:] = err_phot
-                PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
-
-                log(4, 'Position refinement trial: iteration %s' % (self.curiter))
-                for i in range(PCK.mangler.nshifts):
-                    PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
-                    PCK.build_aux(aux, mangled_addr, ob, pr)
-                    aux[:] = FW(aux)
-                    PCK.log_likelihood_ml(aux, mangled_addr, I, w, err_phot)
-                    PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_phot)
-
-                prep.err_phot = error_state
-                prep.addr = addr
-
-    def _post_iterate_update(self):
-        """
-        Enables modification at the end of each LBFGS iteration.
-        """
-
     def engine_finalize(self):
-        """
-        try deleting ever helper contianer
-        """
-        if self.do_position_refinement and self.p.position_refinement.record:
-            for label, d in self.di.storages.items():
-                prep = self.diff_info[d.ID]
-                res = self.kernels[prep.label].resolution
-                for i,view in enumerate(d.views):
-                    for j,(pname, pod) in enumerate(view.pods.items()):
-                        delta = (prep.addr[i][j][1][1:] - prep.original_addr[i][j][1][1:]) * res
-                        pod.ob_view.coord += delta
-                        pod.ob_view.storage.update_views(pod.ob_view)
-            self.ptycho.record_positions = True
-
-        # Save floating intensities into runtime
-        float_intens_coeff = {}
-        for label, d in self.di.storages.items():
-            prep = self.diff_info[d.ID]
-            float_intens_coeff[label] = prep.float_intens_coeff
-        self.ptycho.runtime["float_intens"] = parallel.gather_dict(float_intens_coeff)
-
-        del self.ob_s
-        del self.ob_y
-        del self.pr_s
-        del self.pr_y
-
-class BaseModelSerial(BaseModel):
-    """
-    Base class for log-likelihood models.
-    """
-
-    def __del__(self):
-        """
-        Clean up routine
-        """
-        pass
-
-
-class GaussianModel(BaseModelSerial):
-    """
-    Gaussian noise model.
-    TODO: feed actual statistical weights instead of using the Poisson statistic heuristic.
-    """
-
-    def __init__(self, MLengine):
-        """
-        Core functions for ML computation using a Gaussian model.
-        """
-        super(GaussianModel, self).__init__(MLengine)
-
-    def prepare(self):
-
-        super(GaussianModel, self).prepare()
-
-        for label, d in self.engine.ptycho.new_data:
-            prep = self.engine.diff_info[d.ID]
-            prep.weights = (self.Irenorm * self.engine.ma.S[d.ID].data
-                            / (1. / self.Irenorm + d.data)).astype(d.data.dtype)
-
-    def __del__(self):
-        """
-        Clean up routine
-        """
-        super(GaussianModel, self).__del__()
-
-    def new_grad(self):
-        """
-        Compute a new gradient direction according to a Gaussian noise model.
-
-        Note: The negative log-likelihood and local errors are also computed
-        here.
-        """
-        ob_grad = self.engine.ob_grad_new
-        pr_grad = self.engine.pr_grad_new
-        ob_grad << 0.
-        pr_grad << 0.
-
-        # We need an array for MPI
-        LL = np.array([0.])
-        error_dct = {}
-
-        for dID in self.di.S.keys():
-            prep = self.engine.diff_info[dID]
-            # find probe, object in exit ID in dependence of dID
-            pID, oID, eID = prep.poe_IDs
-
-            # references for kernels
-            kern = self.engine.kernels[prep.label]
-            GDK = kern.GDK
-            AWK = kern.AWK
-            POK = kern.POK
-
-            aux = kern.aux
-
-            FW = kern.FW
-            BW = kern.BW
-
-            # get addresses and auxilliary array
-            addr = prep.addr
-            w = prep.weights
-            err_phot = prep.err_phot
-            fic = prep.float_intens_coeff
-
-            # local references
-            ob = self.engine.ob.S[oID].data
-            obg = ob_grad.S[oID].data
-            pr = self.engine.pr.S[pID].data
-            prg = pr_grad.S[pID].data
-            I = prep.I
-
-            # make propagated exit (to buffer)
-            AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
-
-            # forward prop
-            aux[:] = FW(aux)
-
-            GDK.make_model(aux, addr)
-
-            if self.p.floating_intensities:
-                GDK.floating_intensity(addr, w, I, fic)
-
-            GDK.main(aux, addr, w, I)
-            GDK.error_reduce(addr, err_phot)
-            aux[:] = BW(aux)
-
-            POK.ob_update_ML(addr, obg, pr, aux)
-            POK.pr_update_ML(addr, prg, ob, aux)
-
-        for dID, prep in self.engine.diff_info.items():
-            err_phot = prep.err_phot
-            LL += err_phot.sum()
-            err_phot /= np.prod(prep.weights.shape[-2:])
-            err_fourier = np.zeros_like(err_phot)
-            err_exit = np.zeros_like(err_phot)
-            errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
-            error_dct.update(zip(prep.view_IDs, errs))
-
-        # MPI reduction of gradients
-        ob_grad.allreduce()
-        pr_grad.allreduce()
-        parallel.allreduce(LL)
-
-        # Object regularizer
-        if self.regularizer:
-            for name, s in self.engine.ob.storages.items():
-                ob_grad.storages[name].data += self.regularizer.grad(s.data)
-                LL += self.regularizer.LL
-
-        self.LL = LL / self.tot_measpts
-        return error_dct
-
-    def poly_line_coeffs(self, c_ob_h, c_pr_h):
-        """
-        Compute the coefficients of the polynomial for line minimization
-        in direction h
-        """
-
-        B = np.zeros((3,), dtype=np.longdouble)
-        Brenorm = 1. / self.LL[0] ** 2
-
-        # Outer loop: through diffraction patterns
-        for dID in self.di.S.keys():
-            prep = self.engine.diff_info[dID]
-
-            # find probe, object in exit ID in dependence of dID
-            pID, oID, eID = prep.poe_IDs
-
-            # references for kernels
-            kern = self.engine.kernels[prep.label]
-            GDK = kern.GDK
-            AWK = kern.AWK
-
-            f = kern.aux
-            a = kern.a
-            b = kern.b
-
-            FW = kern.FW
-
-            # get addresses and auxilliary array
-            addr = prep.addr
-            w = prep.weights
-            fic = prep.float_intens_coeff
-
-            # local references
-            ob = self.ob.S[oID].data
-            ob_h = c_ob_h.S[oID].data
-            pr = self.pr.S[pID].data
-            pr_h = c_pr_h.S[pID].data
-            I = self.di.S[dID].data
-
-            # make propagated exit (to buffer)
-            AWK.build_aux_no_ex(f, addr, ob, pr, add=False)
-            AWK.build_aux_no_ex(a, addr, ob_h, pr, add=False)
-            AWK.build_aux_no_ex(a, addr, ob, pr_h, add=True)
-            AWK.build_aux_no_ex(b, addr, ob_h, pr_h, add=False)
-
-            # forward prop
-            f[:] = FW(f)
-            a[:] = FW(a)
-            b[:] = FW(b)
-
-            GDK.make_a012(f, a, b, addr, I, fic)
-            GDK.fill_b(addr, Brenorm, w, B)
-
-        parallel.allreduce(B)
-
-        # Object regularizer
-        if self.regularizer:
-            for name, s in self.ob.storages.items():
-                B += Brenorm * self.regularizer.poly_line_coeffs(
-                    c_ob_h.storages[name].data, s.data)
-
-        self.B = B
-
-        return B
+        super(LBFGS_serial, self).engine_finalize()
