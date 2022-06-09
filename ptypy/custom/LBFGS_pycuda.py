@@ -11,9 +11,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: GPLv2, see LICENSE for details.
 """
-import sys
-sys.path.insert(0, "/home/uef75971/ptypy/")
-import time
 import numpy as np
 from pycuda import gpuarray
 import pycuda.driver as cuda
