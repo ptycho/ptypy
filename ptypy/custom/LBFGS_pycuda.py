@@ -168,7 +168,7 @@ class LBFGS_pycuda(LBFGS_serial, ML_pycuda):
         """
         Compute `num` iterations.
         """
-        error_dct = super().engine_iterate()
+        error_dct = super().engine_iterate(num)
         # copy all data back to cpu
         self._set_pr_ob_ref_for_data(dev='cpu', container=None, sync_copy=True)
         return error_dct
