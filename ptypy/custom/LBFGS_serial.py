@@ -67,6 +67,14 @@ class LBFGS_serial(LBFGS, ML_serial):
     def _get_smooth_gradient(self, data, sigma):
         return self.smooth_gradient(data)
 
+    def _smooth_gradient(self):
+        new_ob_grad = self.ob_grad_new
+        # Smoothing preconditioner decay (once per iteration)
+        if self.smooth_gradient:
+            self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
+            for name, s in new_ob_grad.storages.items():
+                s.data[:] = self._get_smooth_gradient(s.data, self.smooth_gradient.sigma)
+
     def _get_ob_norm(self):
         norm = Cnorm2(self.ob_grad_new)
         return norm
@@ -138,12 +146,7 @@ class LBFGS_serial(LBFGS, ML_serial):
             else:
                 self.scale_p_o = self.p.scale_probe_object
 
-            # Smoothing preconditioner decay (once per iteration)
-            if self.smooth_gradient:
-                self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
-                for name, s in new_ob_grad.storages.items():
-                    s.data[:] = self.smooth_gradient(s.data)
-
+            self._smooth_gradient()
 
             ############################
             # LBFGS Two Loop Recursion
