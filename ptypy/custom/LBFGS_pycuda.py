@@ -103,36 +103,21 @@ class LBFGS_pycuda(LBFGS_serial, ML_pycuda):
         self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
         return data
 
-    def _replace_ob_grad(self):
+    def _smooth_gradient(self):
         new_ob_grad = self.ob_grad_new
-        # Smoothing preconditioner
+        # Smoothing preconditioner decay (once per iteration)
         if self.smooth_gradient:
             self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
             for name, s in new_ob_grad.storages.items():
                 s.gpu = self._get_smooth_gradient(s.gpu, self.smooth_gradient.sigma)
 
-        return self._replace_grad(self.ob_grad, new_ob_grad)
+    def _get_ob_norm(self):
+        norm = self._get_norm(self.ob_grad_new)
+        return norm
 
-    def _replace_pr_grad(self):
-        new_pr_grad = self.pr_grad_new
-        # probe support
-        if self.p.probe_update_start <= self.curiter:
-            # Apply probe support if needed
-            for name, s in new_pr_grad.storages.items():
-                self.support_constraint(s)
-        else:
-            new_pr_grad.fill(0.)
-
-        return self._replace_grad(self.pr_grad , new_pr_grad)
-
-    def _replace_grad(self, grad, new_grad):
-        norm = np.double(0.)
-        dot = np.double(0.)
-        for name, new in new_grad.storages.items():
-            old = grad.storages[name]
-            norm += self._dot_kernel(new.gpu,new.gpu).get()[0]
-            dot += self._dot_kernel(new.gpu,old.gpu).get()[0]
-        return norm, dot
+    def _get_pr_norm(self):
+        norm = self._get_norm(self.pr_grad_new)
+        return norm
 
     def _get_dot(self, c1, c2):
         dot = np.double(0.)
@@ -147,7 +132,7 @@ class LBFGS_pycuda(LBFGS_serial, ML_pycuda):
             norm += self._dot_kernel(s.gpu, s.gpu).get()[0]
         return norm
 
-    def _replace_ob_pr_ysh(self, mi):
+    def _replace_ob_pr_ys(self, mi):
         self.cdotr_ob_ys[mi-1] = self._get_dot(self.ob_y[mi-1],
                 self.ob_s[mi-1])
         self.cdotr_pr_ys[mi-1] = self._get_dot(self.pr_y[mi-1],
@@ -155,14 +140,15 @@ class LBFGS_pycuda(LBFGS_serial, ML_pycuda):
         self.cn2_ob_y[mi-1] = self._get_norm(self.ob_y[mi-1])
         self.cn2_pr_y[mi-1] = self._get_norm(self.pr_y[mi-1])
 
-        for i in reversed(range(mi)):
-            self.cdotr_ob_sh[i] = self._get_dot(self.ob_s[i], self.ob_h)
-            self.cdotr_pr_sh[i] = self._get_dot(self.pr_s[i], self.pr_h)
+    def _get_ob_pr_sh(self, k):
+        ob_sh = self._get_dot(self.ob_s[k], self.ob_h)
+        pr_sh = self._get_dot(self.pr_s[k], self.pr_h)
+        return ob_sh, pr_sh
 
-    def _replace_ob_pr_yh(self, mi):
-        for i in range(mi):
-            self.cdotr_ob_yh[i] = self._get_dot(self.ob_y[i], self.ob_h)
-            self.cdotr_pr_yh[i] = self._get_dot(self.pr_y[i], self.pr_h)
+    def _get_ob_pr_yh(self, k):
+        ob_yh = self._get_dot(self.ob_y[k], self.ob_h)
+        pr_yh = self._get_dot(self.pr_y[k], self.pr_h)
+        return ob_yh, pr_yh
 
     def engine_iterate(self, num=1):
         """
