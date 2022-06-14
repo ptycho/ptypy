@@ -41,10 +41,6 @@ class LBFGS_serial(LBFGS, ML_serial):
 
         self.cdotr_ob_ys = [0] * self.p.bfgs_memory_size
         self.cdotr_pr_ys = [0] * self.p.bfgs_memory_size
-        self.cdotr_ob_sh = [0] * self.p.bfgs_memory_size
-        self.cdotr_pr_sh = [0] * self.p.bfgs_memory_size
-        self.cdotr_ob_yh = [0] * self.p.bfgs_memory_size
-        self.cdotr_pr_yh = [0] * self.p.bfgs_memory_size
         self.cn2_ob_y = [0] * self.p.bfgs_memory_size
         self.cn2_pr_y = [0] * self.p.bfgs_memory_size
 
@@ -71,35 +67,15 @@ class LBFGS_serial(LBFGS, ML_serial):
     def _get_smooth_gradient(self, data, sigma):
         return self.smooth_gradient(data)
 
-    def _replace_ob_grad(self):
-        new_ob_grad = self.ob_grad_new
-        # Smoothing preconditioner
-        if self.smooth_gradient:
-            self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
-            for name, s in new_ob_grad.storages.items():
-                s.data[:] = self._get_smooth_gradient(s.data, self.smooth_gradient.sigma)
+    def _get_ob_norm(self):
+        norm = Cnorm2(self.ob_grad_new)
+        return norm
 
-        norm = Cnorm2(new_ob_grad)
-        dot = np.real(Cdot(new_ob_grad, self.ob_grad))
+    def _get_pr_norm(self):
+        norm = Cnorm2(self.pr_grad_new)
+        return norm
 
-        return norm, dot
-
-    def _replace_pr_grad(self):
-        new_pr_grad = self.pr_grad_new
-        # probe support
-        if self.p.probe_update_start <= self.curiter:
-            # Apply probe support if needed
-            for name, s in new_pr_grad.storages.items():
-                self.support_constraint(s)
-        else:
-            new_pr_grad.fill(0.)
-
-        norm = Cnorm2(new_pr_grad)
-        dot = np.real(Cdot(new_pr_grad, self.pr_grad))
-
-        return norm, dot
-
-    def _replace_ob_pr_ysh(self, mi):
+    def _replace_ob_pr_ys(self, mi):
         self.cdotr_ob_ys[mi-1] = np.real(Cdot(self.ob_y[mi-1],
             self.ob_s[mi-1]))
         self.cdotr_pr_ys[mi-1] = np.real(Cdot(self.pr_y[mi-1],
@@ -107,14 +83,15 @@ class LBFGS_serial(LBFGS, ML_serial):
         self.cn2_ob_y[mi-1] = Cnorm2(self.ob_y[mi-1])
         self.cn2_pr_y[mi-1] = Cnorm2(self.pr_y[mi-1])
 
-        for i in reversed(range(mi)):
-            self.cdotr_ob_sh[i] = np.real(Cdot(self.ob_s[i], self.ob_h))
-            self.cdotr_pr_sh[i] = np.real(Cdot(self.pr_s[i], self.pr_h))
+    def _get_ob_pr_sh(self, k):
+        ob_sh = np.real(Cdot(self.ob_s[k], self.ob_h))
+        pr_sh = np.real(Cdot(self.pr_s[k], self.pr_h))
+        return ob_sh, pr_sh
 
-    def _replace_ob_pr_yh(self, mi):
-        for i in range(mi):
-            self.cdotr_ob_yh[i] = np.real(Cdot(self.ob_y[i], self.ob_h))
-            self.cdotr_pr_yh[i] = np.real(Cdot(self.pr_y[i], self.pr_h))
+    def _get_ob_pr_yh(self, k):
+        ob_yh = np.real(Cdot(self.ob_y[k], self.ob_h))
+        pr_yh = np.real(Cdot(self.pr_y[k], self.pr_h))
+        return ob_yh, pr_yh
 
     def engine_iterate(self, num=1):
         """
@@ -129,13 +106,24 @@ class LBFGS_serial(LBFGS, ML_serial):
         for it in range(num):
             t1 = time.time()
             error_dct = self.ML_model.new_grad()
+            new_ob_grad, new_pr_grad = self.ob_grad_new, self.pr_grad_new
             tg += time.time() - t1
 
-            cn2_new_pr_grad, cdotr_pr_grad = self._replace_pr_grad()
-            cn2_new_ob_grad, cdotr_ob_grad = self._replace_ob_grad()
+            if self.p.probe_update_start <= self.curiter:
+                # Apply probe support if needed
+                for name, s in new_pr_grad.storages.items():
+                    self.support_constraint(s)
+                    #support = self.probe_support.get(name)
+                    #if support is not None:
+                    #    s.data *= support
+            else:
+                new_pr_grad.fill(0.)
 
-            # probe/object rescaling
+            # probe/object rescaling (not used for now)
             if self.p.scale_precond:
+                cn2_new_pr_grad = self._get_pr_norm()
+                cn2_new_ob_grad = self._get_ob_norm()
+
                 if cn2_new_pr_grad > 1e-5:
                     scale_p_o = (self.p.scale_probe_object * cn2_new_ob_grad
                                  / cn2_new_pr_grad)
@@ -145,10 +133,17 @@ class LBFGS_serial(LBFGS, ML_serial):
                     self.scale_p_o = scale_p_o
                 else:
                     self.scale_p_o = self.scale_p_o ** self.scale_p_o_memory
-                    self.scale_p_o *= scale_p_o ** (1 - self.scale_p_o_memory)
+                    self.scale_p_o *= scale_p_o ** (1-self.scale_p_o_memory)
                 logger.debug('Scale P/O: %6.3g' % scale_p_o)
             else:
                 self.scale_p_o = self.p.scale_probe_object
+
+            # Smoothing preconditioner decay (once per iteration)
+            if self.smooth_gradient:
+                self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
+                for name, s in new_ob_grad.storages.items():
+                    s.data[:] = self.smooth_gradient(s.data)
+
 
             ############################
             # LBFGS Two Loop Recursion
@@ -156,11 +151,11 @@ class LBFGS_serial(LBFGS, ML_serial):
             if self.curiter == 0: # Initial steepest-descent step
 
                 # Object steepest-descent step
-                self.ob_h -= self.ob_grad_new
+                self.ob_h -= new_ob_grad
 
                 # Probe steepest-descent step
-                self.pr_grad_new *= self.scale_p_o # probe preconditioning
-                self.pr_h -= self.pr_grad_new
+                new_pr_grad *= self.scale_p_o # probe preconditioning
+                self.pr_h -= new_pr_grad
 
             else: # Two-loop LBFGS recursion
 
@@ -169,29 +164,28 @@ class LBFGS_serial(LBFGS, ML_serial):
 
                 # Remember last object update and gradient difference
                 self.ob_s[mi-1] << self.ob_h
-                self.ob_y[mi-1] << self.ob_grad_new
+                self.ob_y[mi-1] << new_ob_grad
                 self.ob_y[mi-1] -= self.ob_grad
 
                 # Remember last probe update and gradient difference
                 self.pr_h /= np.sqrt(self.scale_p_o) # probe preconditioning
                 self.pr_s[mi-1] << self.pr_h
-                self.pr_grad_new *= np.sqrt(self.scale_p_o) # probe preconditioning
-                self.pr_y[mi-1] << self.pr_grad_new
+                new_pr_grad *= np.sqrt(self.scale_p_o) # probe preconditioning
+                self.pr_y[mi-1] << new_pr_grad
                 self.pr_y[mi-1] -= self.pr_grad
 
-                # BFGS update
-                self.ob_h << self.ob_grad_new
-                self.pr_h << self.pr_grad_new
-
                 # Compute and store rho
-                self._replace_ob_pr_ysh(mi)
+                self._replace_ob_pr_ys(mi)
                 self.rho[mi-1] = 1. / (self.cdotr_ob_ys[mi-1] +
                         self.cdotr_pr_ys[mi-1])
 
+                # BFGS update
+                self.ob_h << new_ob_grad
+                self.pr_h << new_pr_grad
                 # Compute right-hand side of BGFS product
                 for i in reversed(range(mi)):
-                    self.alpha[i] = self.rho[i] * (self.cdotr_ob_sh[i] +
-                            self.cdotr_pr_sh[i])
+                    ob_sh, pr_sh = self._get_ob_pr_sh(i)
+                    self.alpha[i] = self.rho[i]*(ob_sh + pr_sh)
 
                     #TODO: support operand * for 'float' and 'Container'
                     # (reusing self.ob_grad here is not efficient)
@@ -206,20 +200,17 @@ class LBFGS_serial(LBFGS, ML_serial):
                     self.pr_grad *= self.alpha[i]
                     self.pr_h -= self.pr_grad
 
-
                 # Compute centre of BFGS product (scaled identity)
                 c_num = self.cdotr_ob_ys[mi-1] + self.cdotr_pr_ys[mi-1]
                 c_denom = self.cn2_ob_y[mi-1] + self.cn2_pr_y[mi-1]
-                gamma = c_num/c_denom
-                self.ob_h *= gamma
-                self.pr_h *= gamma
+                self.ob_h *= (c_num/c_denom)
+                self.pr_h *= (c_num/c_denom)
+
 
                 # Compute left-hand side of BFGS product
-                self._replace_ob_pr_yh(mi)
                 for i in range(mi):
-                    beta = self.rho[i] * (self.cdotr_ob_yh[i] +
-                            self.cdotr_pr_yh[i])
-
+                    ob_yh, pr_yh = self._get_ob_pr_yh(i)
+                    beta = self.rho[i]*(ob_yh + pr_yh)
 
                     #TODO: support operand * for 'float' and 'Container'
                     # (reusing self.ob_grad here is not efficient)
@@ -240,18 +231,15 @@ class LBFGS_serial(LBFGS, ML_serial):
                 self.pr_h *= np.sqrt(self.scale_p_o) # probe preconditioning
                 self.pr_h *= -1
 
-
             # update current gradients with new gradients
-            self.ob_grad << self.ob_grad_new
-            self.pr_grad << self.pr_grad_new
-
-            self.cn2_ob_grad = cn2_new_ob_grad
-            self.cn2_pr_grad = cn2_new_pr_grad
+            self.ob_grad << new_ob_grad
+            self.pr_grad << new_pr_grad
 
             # linesearch (same as ML)
             t2 = time.time()
             B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
             tc += time.time() - t2
+
 
             if np.isinf(B).any() or np.isnan(B).any():
                 logger.warning(
@@ -283,7 +271,7 @@ class LBFGS_serial(LBFGS, ML_serial):
             self._post_iterate_update()
 
             # increase iteration counter
-            self.curiter += 1
+            self.curiter +=1
 
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
