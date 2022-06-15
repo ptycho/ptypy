@@ -146,8 +146,6 @@ class LBFGS_serial(LBFGS, ML_serial):
             else:
                 self.scale_p_o = self.p.scale_probe_object
 
-            self._smooth_gradient()
-
             ############################
             # LBFGS Two Loop Recursion
             ############################

@@ -200,13 +200,6 @@ class LBFGS(ML):
             else:
                 self.scale_p_o = self.p.scale_probe_object
 
-            # Smoothing preconditioner decay (once per iteration)
-            if self.smooth_gradient:
-                self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
-                for name, s in new_ob_grad.storages.items():
-                    s.data[:] = self.smooth_gradient(s.data)
-
-
             ############################
             # LBFGS Two Loop Recursion
             ############################
