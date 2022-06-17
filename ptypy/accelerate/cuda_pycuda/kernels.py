@@ -859,7 +859,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                 self.conv_kernel = GaussianSmoothingKernel()
             if self.float_intens_lowfreq is None:
                 self.float_intens_lowfreq = gpuarray.zeros(fic.shape[0], dtype=np.complex64)
-            if self.float_intens_lowfreq.shape != fic:
+            if self.float_intens_lowfreq.shape != fic.shape:
                 self.float_intens_lowfreq = gpuarray.zeros(fic.shape[0], dtype=np.complex64)
             self.float_intens_lowfreq[:] = fic.astype(np.complex64)
             self.conv_kernel.convolution(self.float_intens_lowfreq, [1.0])
