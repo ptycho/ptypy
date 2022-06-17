@@ -819,9 +819,9 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                        stream=self.queue)
                        
         if high_pass:
-            if self.conv_kernel is None:
-                self.conv_kernel = GaussianSmoothingKernel()
-                self.float_intens_lowfreq = gpuarray.zeros(fic.shape[0], dtype=np.complex64)
+            #if self.conv_kernel is None:
+            self.conv_kernel = GaussianSmoothingKernel()
+            self.float_intens_lowfreq = gpuarray.zeros(fic.shape[0], dtype=np.complex64)
             self.float_intens_lowfreq[:] = fic.astype(np.complex64)
             self.conv_kernel.convolution(self.float_intens_lowfreq, [1.0])
             fic /= self.float_intens_lowfreq.real
