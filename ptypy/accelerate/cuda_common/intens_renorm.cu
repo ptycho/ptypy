@@ -48,18 +48,28 @@ extern "C" __global__ void step2(const IN_TYPE* fic_tmp,
 
   // now all threads can access that value
   auto tmp = shfic[0];
-
-  // offset Imodel for current z
-  Imodel += iz * X * Y;
-  
-  for (int iy = ty; iy < Y; iy += blockDim.y) {
-    #pragma unroll(4)
-    for (int ix = tx; ix < X; ix += blockDim.x) {
-      Imodel[iy * X + ix] *= tmp;
-    }
-  }
     
   // race condition if write is not restricted to one thread
   if (tx==0 && ty == 0)
     fic[iz] = tmp;
+}
+
+extern "C" __global__ void step3(OUT_TYPE* fic,
+  OUT_TYPE* Imodel,
+  int X,
+  int Y)
+{
+int iz = blockIdx.z;
+int tx = threadIdx.x;
+int ty = threadIdx.y;
+
+// offset Imodel for current z
+Imodel += iz * X * Y;
+
+for (int iy = ty; iy < Y; iy += blockDim.y) {
+#pragma unroll(4)
+for (int ix = tx; ix < X; ix += blockDim.x) {
+Imodel[iy * X + ix] *= fic[iz];
+}
+}
 }

@@ -53,6 +53,12 @@ class ML(PositionCorrectionEngine):
     help = Adaptive diffraction pattern rescaling
     doc = If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).
 
+    [floating_intensities_high_pass]
+    default = False
+    type = bool
+    help = Apply high-pass filter to floating intensities
+    doc = If True, calculates the low-frequency component using a Gaussian filter with sigma=1 and removes that component
+
     [intensity_renormalization]
     default = 1.
     type = float
@@ -518,6 +524,9 @@ class GaussianModel(BaseModel):
             if self.p.floating_intensities:
                 self.float_intens_coeff[dname] = ((w * Imodel * I).sum()
                                                 / (w * Imodel**2).sum())
+                if self.p.floating_intensities_high_pass:
+                    low_freq_component = u.gf(self.float_intens_coeff[dname],1)
+                    self.float_intens_coeff[dname] /= low_freq_component
                 Imodel *= self.float_intens_coeff[dname]
 
             DI = np.double(Imodel) - I

@@ -459,7 +459,7 @@ class GaussianModel(BaseModelSerial):
             GDK.make_model(aux, addr)
 
             if self.p.floating_intensities:
-                GDK.floating_intensity(addr, w, I, fic)
+                GDK.floating_intensity(addr, w, I, fic, high_pass=self.p.floating_intensities_high_pass)
 
             GDK.main(aux, addr, w, I)
             GDK.error_reduce(addr, err_phot)

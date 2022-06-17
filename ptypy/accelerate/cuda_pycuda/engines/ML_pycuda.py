@@ -533,7 +533,7 @@ class GaussianModel(BaseModelSerial):
             queue.wait_for_event(ev)
 
             if self.p.floating_intensities:
-                GDK.floating_intensity(addr, w, I, fic)
+                GDK.floating_intensity(addr, w, I, fic, high_pass=self.p.floating_intensities_high_pass)
 
             GDK.main(aux, addr, w, I)
             data_w.record_done(queue, 'compute')

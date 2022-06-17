@@ -1,6 +1,6 @@
 import numpy as np
 from ptypy.utils.verbose import logger, log
-from .array_utils import max_abs2, abs2
+from .array_utils import max_abs2, abs2, complex_gaussian_filter
 
 class Adict(object):
 
@@ -338,7 +338,7 @@ class GradientDescentKernel(BaseKernel):
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
 
-    def floating_intensity(self, addr, w, I, fic):
+    def floating_intensity(self, addr, w, I, fic, high_pass=False):
 
         # reference shape  (= GPU global dims)
         sh = fic.shape
@@ -358,6 +358,9 @@ class GradientDescentKernel(BaseKernel):
         fic[:] = num.sum(-1).sum(-1)
         fic_tmp[:]= den.sum(-1).sum(-1)
         fic/=fic_tmp
+        if high_pass:
+            lowfreq = complex_gaussian_filter(fic, [1.0])
+            fic /= lowfreq
         Imodel *= fic.reshape(Imodel.shape[0], 1, 1)
 
     def main(self, b_aux, addr, w, I):

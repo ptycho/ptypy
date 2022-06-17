@@ -125,6 +125,32 @@ class GradientDescentKernelTest(unittest.TestCase):
         np.testing.assert_array_almost_equal(exp_fic, fic,
             err_msg="floating intensity coeff (fic) has not been updated as expected")
 
+    def test_floating_intensity_high_pass(self):
+        b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
+        fic = np.ones((I.shape[0],), dtype=I.dtype)
+        GDK=GradientDescentKernel(b_f, addr.shape[1])
+        GDK.allocate()
+        GDK.npy.Imodel[:I.shape[0]] = I * (1+np.arange(I.shape[0]))[::-1].reshape((I.shape[0],1,1))
+        GDK.floating_intensity(addr, w, I, fic, high_pass=True)
+        #print('Imodel',repr(GDK.npy.Imodel))
+        #print('fic',repr(1./fic))
+        exp_Imodel = np.array([[[0.       , 0.       , 0.       ],
+                                [2.3547409, 2.3547409, 2.3547409],
+                                [9.418963 , 9.418963 , 9.418963 ]],
+                                [[1.670289 , 1.670289 , 1.670289 ],
+                                [3.340578 , 3.340578 , 3.340578 ],
+                                [8.351445 , 8.351445 , 8.351445 ]],
+                                [[4.9385195, 4.9385195, 4.9385195],
+                                [6.173149 , 6.173149 , 6.173149 ],
+                                [9.877039 , 9.877039 , 9.877039 ]],
+                                [[0.       , 0.       , 0.       ],
+                                [0.       , 0.       , 0.       ],
+                                [0.       , 0.       , 0.       ]]], dtype=np.float32)
+        exp_fic=1./np.array([1.2740256 , 1.1973976 , 0.80995935], dtype=np.float32)
+        np.testing.assert_array_almost_equal(exp_Imodel, GDK.npy.Imodel,
+            err_msg="`Imodel` buffer has not been updated as expected")
+        np.testing.assert_array_almost_equal(exp_fic, fic,
+            err_msg="floating intensity coeff (fic) has not been updated as expected")
 
     def test_make_a012(self):
         b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()

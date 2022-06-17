@@ -5,6 +5,7 @@ from ptypy.utils.verbose import log, logger
 from . import load_kernel
 from .array_utils import CropPadKernel
 from .array_utils import MaxAbs2Kernel
+from .array_utils import GaussianSmoothingKernel
 from ..base import kernels as ab
 from ..base.kernels import Adict
 
@@ -671,6 +672,9 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.main_cuda = load_kernel('gd_main', subs)
         self.floating_intensity_cuda_step1, self.floating_intensity_cuda_step2 = \
             load_kernel(('step1', 'step2'), subs,'intens_renorm.cu')
+        self.floating_intensity_cuda_step3 = load_kernel('step3', subs, 'intens_renorm.cu')
+
+        self.conv_kernel = None
 
     def allocate(self):
         self.gpu.LLden = gpuarray.zeros(self.fshape, dtype=self.ftype)
@@ -769,7 +773,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                                grid=(int(maxz), 1, 1),
                                stream=self.queue)
 
-    def floating_intensity(self, addr, w, I, fic):
+    def floating_intensity(self, addr, w, I, fic, high_pass=False):
 
         # reference shape  (= GPU global dims)
         sh = I.shape
@@ -813,7 +817,21 @@ class GradientDescentKernel(ab.GradientDescentKernel):
                        block=(32, 32, 1),
                        grid=(1, 1, int(maxz)),
                        stream=self.queue)
+                       
+        if high_pass:
+            if self.conv_kernel is None:
+                self.conv_kernel = GaussianSmoothingKernel()
+                self.float_intens_lowfreq = gpuarray.zeros(fic.shape[0], dtype=np.complex64)
+            self.float_intens_lowfreq[:] = fic.astype(np.complex64)
+            self.conv_kernel.convolution(self.float_intens_lowfreq, [1.0])
+            fic /= self.float_intens_lowfreq.real
 
+        self.floating_intensity_cuda_step3(fic, Imodel,
+                    np.int32(Imodel.shape[-2]),
+                    np.int32(Imodel.shape[-1]),
+                    block=(32, 32, 1),
+                    grid=(1, 1, int(maxz)),
+                    stream=self.queue)
 
     def main(self, b_aux, addr, w, I):
         nmodes = self.nmodes

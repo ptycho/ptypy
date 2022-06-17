@@ -178,6 +178,23 @@ class ArrayUtilsTest(PyCudaTest):
         out = data_dev.get()
         np.testing.assert_allclose(out_exp, out, rtol=1e-5)
 
+    def test_complex_gaussian_filter_1d_little_blurring_real_UNITY(self):
+        # Arrange
+        data = np.zeros((11,), dtype=np.complex64)
+        data[5] = 1.0
+        mfs = [0.2]
+        data_dev = gpuarray.to_gpu(data)
+        tmp_dev = gpuarray.empty((11,), dtype=np.complex64)
+
+        # Act
+        GS = gau.GaussianSmoothingKernel()
+        GS.convolution(data_dev, mfs, tmp=tmp_dev)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter(data, mfs)
+        out = data_dev.get()
+        np.testing.assert_allclose(out_exp, out, rtol=1e-5)
+
 
     def test_complex_gaussian_filter_1d_more_blurring_UNITY(self):
         # Arrange

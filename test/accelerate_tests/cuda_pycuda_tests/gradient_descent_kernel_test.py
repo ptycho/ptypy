@@ -135,6 +135,34 @@ class GradientDescentKernelTest(PyCudaTest):
         np.testing.assert_array_almost_equal(exp_fic, fic.get(),
             err_msg="floating intensity coeff (fic) has not been updated as expected")
 
+    def test_floating_intensity_high_pass(self):
+        b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays()
+        GDK=GradientDescentKernel(b_f, addr.shape[1])
+        GDK.allocate()
+        GDK.gpu.Imodel[0] = I[0] * 3.
+        GDK.gpu.Imodel[1] = I[1] * 2.
+        GDK.gpu.Imodel[2] = I[2]
+        GDK.floating_intensity(addr, w, I, fic, high_pass=True)
+        #print('Imodel',repr(GDK.gpu.Imodel))
+        #print('fic',repr(1./fic))
+        exp_Imodel = np.array([[[0.       , 0.       , 0.       ],
+                                [2.3547409, 2.3547409, 2.3547409],
+                                [9.418963 , 9.418963 , 9.418963 ]],
+                                [[1.670289 , 1.670289 , 1.670289 ],
+                                [3.340578 , 3.340578 , 3.340578 ],
+                                [8.351445 , 8.351445 , 8.351445 ]],
+                                [[4.9385195, 4.9385195, 4.9385195],
+                                [6.173149 , 6.173149 , 6.173149 ],
+                                [9.877039 , 9.877039 , 9.877039 ]],
+                                [[0.       , 0.       , 0.       ],
+                                [0.       , 0.       , 0.       ],
+                                [0.       , 0.       , 0.       ]]], dtype=np.float32)
+        exp_fic=1./np.array([1.2740256 , 1.1973976 , 0.80995935], dtype=np.float32)
+        np.testing.assert_array_almost_equal(exp_Imodel, GDK.gpu.Imodel.get(),
+            err_msg="`Imodel` buffer has not been updated as expected")
+        np.testing.assert_array_almost_equal(exp_fic, fic.get(),
+            err_msg="floating intensity coeff (fic) has not been updated as expected")
+
     def test_make_a012(self):
         b_f, b_a, b_b, I, w, err_sum, addr, fic = self.prepare_arrays()
         GDK = GradientDescentKernel(b_f, addr.shape[1])
