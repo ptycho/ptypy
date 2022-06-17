@@ -710,6 +710,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.floating_intensity_cuda_step3 = load_kernel('step3', subs, 'intens_renorm.cu')
 
         self.conv_kernel = None
+        self.float_intens_lowfreq = None
 
     def allocate(self):
         self.gpu.LLden = gpuarray.zeros(self.fshape, dtype=self.ftype)
@@ -856,7 +857,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         if high_pass:
             if self.conv_kernel is None:
                 self.conv_kernel = GaussianSmoothingKernel()
-            if (self.float_intens_lowfreq is None):
+            if self.float_intens_lowfreq is None:
                 self.float_intens_lowfreq = gpuarray.zeros(fic.shape[0], dtype=np.complex64)
             if self.float_intens_lowfreq.shape != fic:
                 self.float_intens_lowfreq = gpuarray.zeros(fic.shape[0], dtype=np.complex64)
