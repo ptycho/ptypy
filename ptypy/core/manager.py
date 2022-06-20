@@ -23,6 +23,7 @@ from . import data
 
 from .. import utils as u
 from ..utils.verbose import logger, headerline, log
+from ..utils.verbose import ilog_message, ilog_streamer, ilog_newline
 from .classes import *
 from .classes import DEFAULT_ACCESSRULE
 from .classes import MODEL_PREFIX
@@ -43,7 +44,7 @@ class _LogTime(object):
         self._t = time.time()
 
     def __call__(self, msg=None):
-        logger.warning('Duration %.2f for ' % (time.time() - self._t) + str(msg))
+        logger.info('Duration %.2f for ' % (time.time() - self._t) + str(msg))
         self._t = time.time()
 
 
@@ -150,6 +151,14 @@ class ScanModel(object):
         self.data_available = True
         self.CType = CType
         self.FType = FType
+
+        # Keep track of the maximum frames in a block
+        # For the ScanModel this will be equivalent to the total nr. of frames in the scan
+        # For the BlockScanModel this is defined by the user (frames_per_block) and the MPI settings
+        self.max_frames_per_block = 0
+
+        # By default we create a new exit buffer for each view
+        self._single_exit_buffer_for_all_views = False
 
     @classmethod
     def makePtyScan(cls, pars):
@@ -324,6 +333,9 @@ class ScanModel(object):
             # FIXME: Find a more transparent way than this.
             self.diff.data[self.diff.layermap.index(idx)][:] = diff_data
             self.mask.data[self.mask.layermap.index(idx)][:] = dct.get('mask', np.ones_like(diff_data))
+
+        # Update maximum nr. of frames in a block
+        self.max_frames_per_block = self.diff.nlayers
 
         self.diff.nlayers = parallel.MPImax(self.diff.layermap) + 1
         self.mask.nlayers = parallel.MPImax(self.mask.layermap) + 1
@@ -537,6 +549,7 @@ class BlockScanModel(ScanModel):
                                       fill=0.0, layermap=indices_node)
         mask = self.Cmask.new_storage(shape=sh, psize=self.psize, padonly=True,
                                       fill=1.0, layermap=indices_node)
+
         # Prepare for View generation
         AR_diff = DEFAULT_ACCESSRULE.copy()
         AR_diff.shape = self.diff_shape # this is None due to init
@@ -588,6 +601,9 @@ class BlockScanModel(ScanModel):
         positions = chunk.positions
 
         ## warning message for empty postions?
+
+        # Update maximum nr. of frames in a block
+        self.max_frames_per_block = max(diff.nlayers, self.max_frames_per_block)
 
         # this is not absolutely necessary
         # diff.update_views()
@@ -930,7 +946,11 @@ class _Full(object):
         for i in range(len(self.new_diff_views)):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
 
-            index = dv.layer
+            # For stochastic engines (e.g. ePIE) we only need one exit buffer
+            if self._single_exit_buffer_for_all_views:
+                index = 0
+            else:
+                index = dv.layer
 
             # Object and probe position
             pos_pr = u.expect2(0.0)
@@ -1227,6 +1247,18 @@ class OPRModel(_OPRModel, Full):
 @defaults_tree.parse_doc('scan.BlockOPRModel')
 class BlockOPRModel(_OPRModel, BlockFull):
     pass
+
+@defaults_tree.parse_doc('scan.GradFull')
+class GradFull(Full):
+    def __init__(self, ptycho=None, pars=None, label=None):
+        super(GradFull, self).__init__(ptycho, pars, label)
+        self._single_exit_buffer_for_all_views = True
+
+@defaults_tree.parse_doc('scan.BlockGradFull')
+class BlockGradFull(BlockFull):
+    def __init__(self, ptycho=None, pars=None, label=None):
+        super(BlockGradFull, self).__init__(ptycho, pars, label)
+        self._single_exit_buffer_for_all_views = True
 
 # Append illumination and sample defaults
 defaults_tree['scan.Full'].add_child(illumination.illumination_desc)
@@ -1618,14 +1650,16 @@ class ModelManager(object):
 
         logger.info('Processing new data.')
 
-        # Attempt to get new data
-        _nframes = self.ptycho.frames_per_block
+        # making sure frames_per_block is defined per rank
+        _nframes = self.ptycho.frames_per_block * parallel.size
 
+        # Attempt to get new data
         new_data = []
         for label, scan in self.scans.items():
             if not scan.data_available:
                 continue
             else:
+                ilog_streamer('%s: loading data for scan %s' %(type(scan).__name__,label))
                 prb_ids, obj_ids, pod_ids = dict(), dict(), set()
                 nd = scan.new_data(_nframes)
                 while nd:
@@ -1633,14 +1667,19 @@ class ModelManager(object):
                     prb_ids.update(nd[1])
                     obj_ids.update(nd[2])
                     pod_ids = pod_ids.union(nd[3])
+                    ilog_streamer('%s: loading data for scan %s (%d diffraction frames, %d PODs, %d probe(s) and %d object(s))' 
+                                   %(type(scan).__name__,label, sum([d.shape[0] if l==label else 0 for l,d in new_data]), len(pod_ids), len(prb_ids), len(obj_ids)))
                     nd = scan.new_data(_nframes)
+                ilog_newline()
 
                 # Reformatting
+                ilog_message('%s: loading data for scan %s (reformatting probe/obj/exit)'  %(type(scan).__name__,label))
                 self.ptycho.probe.reformat(True)
                 self.ptycho.obj.reformat(True)
                 self.ptycho.exit.reformat(True)
 
                 # Initialize probe/object/exit
+                ilog_message('%s: loading data for scan %s (initializing probe/obj/exit)'  %(type(scan).__name__,label))
                 scan._initialize_probe(prb_ids)
                 scan._initialize_object(obj_ids)
                 scan._initialize_exit(list(pod_ids))

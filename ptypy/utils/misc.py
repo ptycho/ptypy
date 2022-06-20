@@ -139,7 +139,7 @@ def isstr(s):
     if sys.version_info[0] == 3:
         string_types = str,
     else:
-        string_types = basestring,
+        string_types = basestring, # noqa: F821
     
     return isinstance(s, string_types)
     
@@ -290,7 +290,7 @@ def expectN(a, N):
         raise ValueError('N must be 2 or 3')
 
 def complex_overload(func):
-    """\
+    r"""\
     Overloads function specified only for floats in the following manner
 
     .. math::
@@ -329,4 +329,3 @@ def clean_path(filename):
     if not os.path.exists(base):
         os.makedirs(base)
     return filename
-

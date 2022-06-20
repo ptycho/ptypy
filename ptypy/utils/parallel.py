@@ -27,7 +27,8 @@ master = (rank == 0)
 
 __all__ = ['MPIenabled', 'comm', 'MPI', 'master','barrier',
            'LoadManager', 'loadmanager','allreduce','send','receive','bcast',
-           'bcast_dict', 'gather_dict', 'gather_list', 'MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
+           'bcast_dict', 'gather_dict', 'gather_list', 
+           'MPIrand_normal', 'MPIrand_uniform','MPInoise2d']
 
 
 def useMPI(do=None):
@@ -456,11 +457,6 @@ def bcast(data, source=0):
 def bcast_dict(dct, keys='all', source=0):
     """
     Broadcasts or scatters a dict `dct` from ``rank==source``.
-    If value is a numpy ndarray, `comm.Bcast` is used instead `comm.bcast`,
-    such that transfer is accelerated.
-
-    Fills dict `dct` in place for receiving nodes, although this is a
-    bit inconsistent compared to :any:`gather_dict`
 
     Parameters
     ----------
@@ -497,35 +493,37 @@ def bcast_dict(dct, keys='all', source=0):
         out = dict(dct)
         return out
 
-    # communicate the dict length
+    # Broadcast all keys (the full dict)
+    if str(keys) == 'all':
+        out = comm.bcast(dct)
+        return out
+
+    # Broadcast only given keys of dict
     if rank == source:
         out = {}
         length = comm.bcast(len(dct), source)
         for k, v in dct.items():
             comm.bcast(k,source)
             bcast(v,source)
-            if str(keys) == 'all' or k in keys:
+            if k in keys:
                 out[k] = v
-
         return out
     else:
-        if dct is None:
-            dct = {}
+        out = {}
         length = comm.bcast(None, source)
         for k in range(length):
             k = comm.bcast(None,source)
             v = bcast(None,source)
-            if str(keys) == 'all' or k in keys:
-                dct[k] = v
-
-        return dct
+            if k in keys:
+                out[k] = v
+        return out
 
 def allgather_dict(dct):
     """
     Allgather dict in place.
     """
     gdict = gather_dict(dct)
-    bcast_dict(gdict)
+    gdict = bcast_dict(gdict)
     dct.update(gdict)
 
 def gather_dict(dct, target=0):
@@ -558,34 +556,38 @@ def gather_dict(dct, target=0):
     if not MPIenabled:
         out.update(dct)
         return out
-
-    for r in range(size):
-        if r == target:
-            if rank == target:
-                #print rank,dct
-                out.update(dct)
-            continue
-
-        if rank == target:
-            l = comm.recv(source=r,tag=9999)
-            for i in range(l):
-                #k = receive(r)
-                k = comm.recv(source=r,tag=9999)
-                v = receive(r)
-                #print rank,str(k),v
-                out[k] = v
-        elif r == rank:
-            # your turn to send
-            l = len(dct)
-            comm.send(l, dest=target,tag=9999)
-            for k,v in dct.items():
-                #print rank,str(k),v
-                #send(k, dest=target)
-                comm.send(k, dest=target,tag=9999)
-                send(v, dest=target)
-        barrier()
-
+    ret = comm.gather(dct, root=target)
+    if rank == target:
+        for d in ret:
+            out.update(d)
     return out
+
+    # for r in range(size):
+    #     if r == target:
+    #         if rank == target:
+    #             #print rank,dct
+    #             out.update(dct)
+    #         continue
+
+    #     if rank == target:
+    #         l = comm.recv(source=r,tag=9999)
+    #         for i in range(l):
+    #             #k = receive(r)
+    #             k = comm.recv(source=r,tag=9999)
+    #             v = receive(r)
+    #             #print rank,str(k),v
+    #             out[k] = v
+    #     elif r == rank:
+    #         # your turn to send
+    #         l = len(dct)
+    #         comm.send(l, dest=target,tag=9999)
+    #         for k,v in dct.items():
+    #             #print rank,str(k),v
+    #             #send(k, dest=target)
+    #             comm.send(k, dest=target,tag=9999)
+    #             send(v, dest=target)
+    #     barrier()
+    # return out
 
 def _send(data, dest=0, tag=0):
     """
@@ -750,7 +752,7 @@ if MPI is not None:
         else:
             hosts_ranks[v].append(k)
             
-    bcast_dict(hosts_ranks)
+    hosts_ranks = bcast_dict(hosts_ranks)
     rank_local = hosts_ranks[host].index(rank)
     del rank_host
 else:

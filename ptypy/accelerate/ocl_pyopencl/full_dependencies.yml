@@ -1,0 +1,20 @@
+name: ptypy_pyopencl
+channels:
+  - conda-forge
+dependencies:
+  - python=3.7
+  - numpy
+  - scipy
+  - matplotlib
+  - h5py
+  - pyzmq
+  - pep8
+  - mpi4py
+  - pillow
+  - pyfftw
+  - pip
+  - pip:
+    - pytest-cov
+    - coveralls
+    - fabio
+    - pyopencl==2020.1

@@ -128,12 +128,15 @@ except ImportError:
                     print(message)
                 time.sleep(timeout)
 
+# BD: With version 9.1.0 of PIL, _MODE_CONV has been removed, 
+#     see here: https://github.com/python-pillow/Pillow/pull/6057
+#     can't see a reason why this is still needed, therefore commenting it out
 # FIXME: Is this still needed?
 # Fix tif import problem
-Image._MODE_CONV['I;16'] = (Image._ENDIAN + 'u2', None)
+#Image._MODE_CONV['I;16'] = (Image._ENDIAN + 'u2', None)
 
 # Grayscale + alpha should also work
-Image._MODE_CONV['LA'] = (Image._ENDIAN + 'u1', 2)
+#Image._MODE_CONV['LA'] = (Image._ENDIAN + 'u1', 2)
 
 
 def complex2hsv(cin, vmin=0., vmax=None):
@@ -285,7 +288,7 @@ HSV_to_P1A = hsv2complex
 
 
 def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
-    """
+    r"""
     Take array `a` and transform to `PIL.Image` object that may be used
     by `pyplot.imshow` for example. Also save image buffer directly
     without the sometimes unnecessary Gui-frame and overhead.
@@ -357,9 +360,9 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
             vmin, vmax = 0.9 * vmin, 1.1 * vmax
         im = Image.fromarray((255*(a.clip(vmin,vmax)-vmin)/(vmax-vmin)).astype('uint8'))
         if cmap is not None:
-            r = im.point(lambda x: cmap(x/255.0)[0] * 255)
-            g = im.point(lambda x: cmap(x/255.0)[1] * 255)
-            b = im.point(lambda x: cmap(x/255.0)[2] * 255)
+            r = im.point(lambda x: int(cmap(x/255.0)[0] * 255))
+            g = im.point(lambda x: int(cmap(x/255.0)[1] * 255))
+            b = im.point(lambda x: int(cmap(x/255.0)[2] * 255))
             im = Image.merge("RGB", (r, g, b))
 
     if filename is not None:
@@ -460,7 +463,7 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
     useweight = True
     if weight is None:
         useweight = False
-    elif weight == 'abs':
+    elif isinstance(weight,str) and weight == 'abs':
         weight = np.abs(a)
 
     ph = np.exp(1j*np.angle(a))
@@ -817,7 +820,7 @@ class PtyAxis(object):
 
         if self.channel == 'c':
             self.cax.xaxis.set_major_locator(mpl.ticker.FixedLocator([0,np.pi, 2*np.pi]))
-            self.cax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(['0', '$\pi$', '2$\pi$']))
+            self.cax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(['0', r'$\pi$', r'2$\pi$']))
             self.cax.set_xlabel('phase [rad]', fontsize=self.fontsize+2)
             self.cax.xaxis.set_label_position("top")
 

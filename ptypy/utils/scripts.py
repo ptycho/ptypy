@@ -144,9 +144,9 @@ def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],
     elif len(dark_list) == 1:
         dark_list = dark_list * len(img_list)
     # Convert to floats except for mask_list
-    img_list = [img.astype(np.float) for img in img_list]
-    dark_list = [dark.astype(np.float) for dark in dark_list]
-    exp_list = [np.float(exp) for exp in exp_list]
+    img_list = [img.astype(float) for img in img_list]
+    dark_list = [dark.astype(float) for dark in dark_list]
+    exp_list = [float(exp) for exp in exp_list]
     mask_list = [mask.astype(np.int) for mask in mask_list]
 
     for img, dark, exp,mask in zip(img_list, dark_list,exp_list,mask_list):
@@ -190,7 +190,7 @@ def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],
 
 def png2mpg(listoffiles, framefile='frames.txt', fps=5, bitrate=2000,
             codec='wmv2', Encode=True, RemoveImages=False):
-    """
+    r"""
     Makes a movie (\*.mpg) from a collection of \*.png or \*.jpeg frames.
     *Requires* binary of **mencoder** installed on system
 
@@ -303,7 +303,7 @@ def png2mpg(listoffiles, framefile='frames.txt', fps=5, bitrate=2000,
                     # Trying to find similar images.
                     body, imagetype = os.path.splitext(tail)
                     # Replace possible numbers by a wildcard.
-                    newbody = re.sub('\d+', '*', body)
+                    newbody = re.sub(r'\d+', '*', body)
                     wcard = head + os.sep + newbody + imagetype
                     #print wcard
                     imagfiles = glob.glob(wcard)
@@ -531,9 +531,9 @@ def mass_center(A, axes=None, mask=None):
         axes = tuple(np.array(axes) + 1)
 
     if mask is None:
-        return np.sum(A * np.indices(A.shape), axis=axes, dtype=np.float) / np.sum(A, dtype=np.float)
+        return np.sum(A * np.indices(A.shape), axis=axes, dtype=float) / np.sum(A, dtype=float)
     else:
-        return np.sum(A * mask * np.indices(A.shape), axis=axes, dtype=np.float) / np.sum(A * mask, dtype=np.float)
+        return np.sum(A * mask * np.indices(A.shape), axis=axes, dtype=float) / np.sum(A * mask, dtype=float)
 
 
 def radial_distribution(A, radii=None):

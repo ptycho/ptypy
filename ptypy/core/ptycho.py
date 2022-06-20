@@ -9,11 +9,13 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
+import json
 from . import paths
 from collections import OrderedDict
 
 from .. import utils as u
-from ..utils.verbose import logger, _, report, headerline, log
+from ..utils.verbose import logger, _, report, headerline, log, LogTime
+from ..utils.verbose import ilog_message, ilog_streamer, ilog_newline
 from ..utils import parallel
 from .. import engines
 from .classes import Base, Container, Storage, PTYCHO_PREFIX
@@ -70,19 +72,17 @@ class Ptycho(Base):
     Defaults:
 
     [verbose_level]
-    default = 1
+    default = 'ERROR'
     help = Verbosity level
     doc = Verbosity level for information logging.
-       - ``0``: Only critical errors
-       - ``1``: All errors
-       - ``2``: Warning
-       - ``3``: Process Information
-       - ``4``: Object Information
-       - ``5``: Debug
-    type = int
+       - ``CRITICAL``: Only critical errors
+       - ``ERROR``:    All errors
+       - ``WARNING``:  Warning
+       - ``INFO``:     Process Information
+       - ``INSPECT``:  Object Information
+       - ``DEBUG``:    Debug
+    type = str, int
     userlevel = 0
-    lowlim = 0
-    uplim = 5
 
     [data_type]
     default = 'single'
@@ -141,6 +141,15 @@ class Ptycho(Base):
     type = str
     help = Reconstruction file name (or format string)
     doc = Reconstruction file name or format string (constructed against runtime dictionary)
+
+    [io.rformat]
+    default = "minimal"
+    type = str
+    help = Reconstruction file format
+    doc = Choose a reconstruction file format for after engine completion.
+       - ``'minimal'``: Bare minimum of information
+       - ``'dls'``:    Custom format for Diamond Light Source
+    choices = 'minimal','dls'
 
     [io.interaction]
     default = None
@@ -248,6 +257,14 @@ class Ptycho(Base):
     doc = Switch to request the production of a movie from the dumped plots at the end of the
       reconstruction.
 
+    [io.benchmark]
+    default = None
+    type = str
+    help = Produce timings for benchmarking the performance of data loaders and engines
+    doc = Switch to get timings and save results to a json file in p.io.home
+        Choose ``'all'`` for timing data loading, engine_init, engine_prepare, engine_iterate and engine_finalize
+    userlevel = 2
+
     [scans]
     default = None
     type = Param
@@ -332,6 +349,7 @@ class Ptycho(Base):
         # Communication
         self.interactor = None
         self.plotter = None
+        self.record_positions = False
 
         # Early boot strapping
         self._configure()
@@ -389,9 +407,9 @@ class Ptycho(Base):
         self.data_type = p.data_type
         assert p.data_type in ['single', 'double']
         self.FType = np.dtype(
-            'f' + str(np.dtype(np.typeDict[p.data_type]).itemsize)).type
+            'f' + str(np.dtype(np.sctypeDict[p.data_type]).itemsize)).type
         self.CType = np.dtype(
-            'c' + str(2 * np.dtype(np.typeDict[p.data_type]).itemsize)).type
+            'c' + str(2 * np.dtype(np.sctypeDict[p.data_type]).itemsize)).type
         logger.info(_('Data type', self.data_type))
         # Check if there is already a runtime container
         if not hasattr(self, 'runtime'):
@@ -413,6 +431,15 @@ class Ptycho(Base):
 
         # Find run name
         self.runtime.run = self.paths.run(p.run)
+
+        # Benchmark
+        if self.p.io.benchmark == 'all':
+            self.benchmark = u.Param()
+            self.benchmark.data_load = 0
+            self.benchmark.engine_init = 0
+            self.benchmark.engine_prepare = 0
+            self.benchmark.engine_iterate = 0
+            self.benchmark.engine_finalize = 0
 
     def init_communication(self):
         """
@@ -479,9 +506,9 @@ class Ptycho(Base):
         """
         self.probe = Container(self, ID='Cprobe', data_type='complex')
         self.obj = Container(self, ID='Cobj', data_type='complex')
-        self.exit = Container(self, ID='Cexit', data_type='complex')
-        self.diff = Container(self, ID='Cdiff', data_type='real')
-        self.mask = Container(self, ID='Cmask', data_type='bool')
+        self.exit = Container(self, ID='Cexit', data_type='complex', distribution="scattered")
+        self.diff = Container(self, ID='Cdiff', data_type='real', distribution="scattered")
+        self.mask = Container(self, ID='Cmask', data_type='bool', distribution="scattered")
         # Initialize the model manager. This also initializes the
         # containers.
         self.model = ModelManager(self, self.p.scans)
@@ -495,7 +522,9 @@ class Ptycho(Base):
         """
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs. Sets self.new_data
-        self.new_data = self.model.new_data()
+        with LogTime(self.p.io.benchmark == 'all') as t:
+            self.new_data = self.model.new_data()
+        if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
         # Print stats
         parallel.barrier()
@@ -614,13 +643,20 @@ class Ptycho(Base):
                 self.runtime.last_plot = 0
 
             # Prepare the engine
-            engine.initialize()
+            ilog_message('%s: initializing engine' %engine.p.name)
+            with LogTime(self.p.io.benchmark == 'all') as t:
+                engine.initialize()
+            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_init += t.duration
 
             # One .prepare() is always executed, as Ptycho may hold data
+            ilog_message('%s: preparing engine' %engine.p.name)
             self.new_data = [(d.label, d) for d in self.diff.S.values()]
-            engine.prepare()
+            with LogTime(self.p.io.benchmark == 'all') as t:
+                engine.prepare()
+            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
             # Start the iteration loop
+            ilog_streamer('%s: starting engine' %engine.p.name)
             while not engine.finished:
                 # Check for client requests
                 if parallel.master and self.interactor is not None:
@@ -629,12 +665,16 @@ class Ptycho(Base):
                 parallel.barrier()
 
                 # Check for new data
-                self.new_data = self.model.new_data()
+                with LogTime(self.p.io.benchmark == 'all') as t:
+                    self.new_data = self.model.new_data()
+                if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
                 # Last minute preparation before a contiguous block of
                 # iterations
                 if self.new_data:
-                    engine.prepare()
+                    with LogTime(self.p.io.benchmark == 'all') as t:
+                        engine.prepare()
+                    if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
                 auto_save = self.p.io.autosave
                 if auto_save.active and auto_save.interval > 0:
@@ -646,7 +686,9 @@ class Ptycho(Base):
                         logger.info(headerline())
 
                 # One iteration
-                engine.iterate()
+                with LogTime(self.p.io.benchmark == 'all') as t:
+                    engine.iterate()
+                if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_iterate += t.duration
 
                 # Display runtime information and do saving
                 if parallel.master:
@@ -658,19 +700,34 @@ class Ptycho(Base):
                                 'Time %(duration).3f' % info)
                     logger.info('Errors :: Fourier %.2e, Photons %.2e, '
                                 'Exit %.2e' % tuple(err))
+                    ilog_streamer('%(engine)s: Iteration # %(iteration)d/%(numiter)d :: ' %info + 
+                                   'Fourier %.2e, Photons %.2e, Exit %.2e' %tuple(err))
 
                 parallel.barrier()
 
+            ilog_newline()
+
             # Done. Let the engine finish up
-            engine.finalize()
+            with LogTime(self.p.io.benchmark == 'all') as t:
+                engine.finalize()
+            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_finalize += t.duration
 
             # Save
             if self.p.io.rfile:
-                self.save_run()
+                self.save_run(kind=self.p.io.rformat)
             else:
                 pass
             # Time the initialization
             self.runtime.stop = time.asctime()
+
+            # Save benchmarks to json file
+            if (self.p.io.benchmark == 'all') and parallel.master:
+                try:
+                    with open(self.paths.home + "/benchmark.json", "w") as json_file:
+                        json.dump(self.benchmark, json_file)
+                    logger.info("Benchmarks have been written to %s" %self.paths.home + "/benchmark.json")
+                except Exception as e:
+                    logger.warning("Failed to write benchmarks to file: %s" %e)
 
         elif epars is not None:
             # A fresh set of engine parameters arrived.
@@ -719,7 +776,7 @@ class Ptycho(Base):
         citation_info = '\n'.join([headerline('This reconstruction relied on the following work', 'l', '='),
         str(self.citations),
         headerline('', 'l', '=')])
-        logger.warning(citation_info)
+        log("CITATION", citation_info)
 
     @classmethod
     def _from_dict(cls, dct):
@@ -759,7 +816,7 @@ class Ptycho(Base):
 
         logger.info('Creating Ptycho instance from %s' % runfile)
         header = u.Param(io.h5read(runfile, 'header')['header'])
-        if header['kind'] == 'minimal':
+        if header['kind'] == 'minimal' or header['kind'] == 'dls':
             logger.info('Found minimal ptypy dump')
             content = io.h5read(runfile, 'content')['content']
 
@@ -904,7 +961,7 @@ class Ptycho(Base):
 
                 content = dump
 
-            elif kind == 'minimal':
+            elif kind == 'minimal' or kind == 'dls':
                 # if self.interactor is not None:
                 #    self.interactor.stop()
                 logger.info('Generating shallow copies of probe, object and '
@@ -912,17 +969,9 @@ class Ptycho(Base):
                 minimal = u.Param()
                 minimal.probe = {ID: S._to_dict()
                                  for ID, S in self.probe.storages.items()}
-                for ID, S in self.probe.storages.items():
-                    minimal.probe[ID]['grids'] = S.grids()
 
                 minimal.obj = {ID: S._to_dict()
                                for ID, S in self.obj.storages.items()}
-
-                minimal.positions = {}
-                for ID, S in self.obj.storages.items():
-                    minimal.obj[ID]['grids'] = S.grids()
-                    minimal.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
-
                 try:
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
@@ -931,6 +980,20 @@ class Ptycho(Base):
                 minimal.runtime = self.runtime.copy()
 
                 content = minimal
+            else:
+                raise RuntimeError("Save file format '" + str(kind) + "' is not supported")
+
+            if kind == 'dls':
+                for ID, S in self.probe.storages.items():
+                    content.probe[ID]['grids'] = S.grids()
+
+                for ID, S in self.obj.storages.items():
+                    content.obj[ID]['grids'] = S.grids()
+
+            if kind in ['minimal', 'dls'] and self.record_positions:
+                content.positions = {}
+                for ID, S in self.obj.storages.items():
+                    content.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
 
             h5opt = io.h5options['UNSUPPORTED']
             io.h5options['UNSUPPORTED'] = 'ignore'

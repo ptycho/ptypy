@@ -50,7 +50,7 @@ def dynamic_load(path, baselist, fail_silently = True):
     
             # Find classes
             res = re.findall(
-                '^class (.*)\((.*)\)', file(filename, 'r').read(), re.M)
+                r'^class (.*)\((.*)\)', open(filename, 'r').read(), re.M)
     
             for classname, basename in res:
                 if (basename in baselist) and classname not in baselist:
@@ -76,8 +76,230 @@ def dynamic_load(path, baselist, fail_silently = True):
             u.logger.warning(traceback.format_exc(tb))
 
 
+def log_likelihood(diff_view):
+    """
+    Calculates the log-likelihood for a diffraction view.
+
+    Parameters
+    ----------
+    diff_view : View
+        View to diffraction data
+
+    Returns
+    -------
+    ll_error :  float
+        Log-likelihood error
+    """
+    I = diff_view.data
+    LL = np.zeros_like(I)
+    for name, pod in diff_view.pods.items():
+        LL += pod.downsample(u.abs2(pod.fw(pod.probe * pod.object)))
+    return np.sum(diff_view.pod.mask * (LL - I)**2 / (I + 1.)) / np.prod(LL.shape)
+
+
+def projection_update_generalized(diff_view, a, b, c, pbound=None):
+    """
+    Generalized projection update of a single view using its associated pods.
+    Updates on all pods' exit waves. We assume here that the current state
+    is held in pod.exit, while the product of pod.probe & pod.object hold
+    the state after overlap constraint has been applied. With O() denoting
+    the overlap constraint and F() denoting the Data/Fourier constraint,
+    the general projection update can be expressed with four coefficients
+
+    .. math::
+        \\psi^{j+1} = [x 1 + a O + b F (c O + y 1)](\\psi^{j})
+
+    However, the coefficients aren't all independent as the sum of
+    x+a+b and d+y must be 1, thus we choose
+
+    .. math::
+        x = 1 - a - b
+
+    and 
+
+    .. math::
+       y = 1 - c
+
+    The choice of a,b,c should enable a wide range of projection based
+    algorithms.
+
+    For memory efficiency, this projection update includes the Fourier update
+    which is why the power bound mechanism is included but deactivated by
+    default.
+
+    Parameters
+    ----------
+    diff_view : View
+        View to diffraction data
+
+    a,b,c : float
+        Coefficients for Overlap, Fourier and Fourier * Overlap constraints,
+        respectively
+
+    pbound : float, optional
+        Power bound. Fourier update is bypassed if the quadratic deviation
+        between diffraction data and `diff_view` is below this value.
+        If ``None``, fourier update always happens.
+
+    Returns
+    -------
+    err_fmag, err_exit : float
+
+        - `err_fmag`, Fourier magnitude error; quadratic deviation from
+          root of experimental data
+        - `err_exit`, quadratic deviation between exit waves before and after
+          projection
+    """
+    # Prepare dict for storing propagated waves
+    f = {}
+
+    # Buffer for accumulated photons
+    af2 = np.zeros_like(diff_view.data)
+    # Get measured data
+    I = diff_view.data
+
+    # Get the mask
+    fmask = diff_view.pod.mask
+
+    # Propagate the exit waves
+    for name, pod in diff_view.pods.items():
+        if not pod.active:
+            continue
+        f[name] = pod.fw((1-c) * pod.exit + c * pod.probe * pod.object)
+        af2 += pod.downsample(u.abs2(f[name]))
+
+    fmag = np.sqrt(np.abs(I))
+    af = np.sqrt(af2)
+
+    # Fourier magnitudes deviations
+    fdev = af - fmag
+    err_fmag = np.sum(fmask * fdev**2) / fmask.sum()
+    err_exit = 0.
+
+    """
+    if pbound is None:
+        # No power bound
+        fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
+        for name, pod in diff_view.pods.items():
+            if not pod.active:
+                continue
+            df = pod.bw(pod.upsample(fm) * f[name]) + \
+                 a * pod.probe * pod.object - (a + b + c) * pod.exit
+            pod.exit += df
+            err_exit += np.mean(u.abs2(df))
+    elif err_fmag > pbound:
+        # Power bound is applied
+        renorm = np.sqrt(pbound / err_fmag)
+        fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
+        for name, pod in diff_view.pods.items():
+            if not pod.active:
+                continue
+            df = pod.bw(pod.upsample(fm) * f[name]) + \
+                 a * pod.probe * pod.object - (a + b + c) * pod.exit
+            pod.exit += df
+            err_exit += np.mean(u.abs2(df))
+    else:
+        # Within power bound so no constraint applied.
+        for name, pod in diff_view.pods.items():
+            if not pod.active:
+                continue
+            df = (a + c) * (pod.probe * pod.object - pod.exit)
+            pod.exit += df
+            err_exit += np.mean(u.abs2(df))
+    """
+    # Essentially, the following is all the same formula
+    # fm = (1 - fmask) + fmask * (fmag + fdev * renorm)
+    # with
+    # renorm = 1.0 for pbound >= err_fmag
+    # renorm = np.sqrt(pbound / err_fmag) for pbound < err_fmag
+    # renorm = 0.0 for pbound == None (off-switch)
+    # und we use that for GPU and the serial/batched engines.
+    # See the basic_fourier_update_LEGACY function for the original
+    # implementation. We'll save a few FFTs this way but that only
+    # makes a difference if all ranks get similar numbers of diffraction
+    # frames with err_fmag inside the pbound.
+    if pbound is None:
+         fm = (1 - fmask) + fmask * fmag / (af + 1e-10)
+    elif err_fmag > pbound:
+         renorm = np.sqrt(pbound / err_fmag)
+         fm = (1 - fmask) + fmask * (fmag + fdev * renorm) / (af + 1e-10)
+    else:
+         fm = None
+
+    for name, pod in diff_view.pods.items():
+        if not pod.active:
+            continue
+
+        if fm is not None:
+            df = b * pod.bw(pod.upsample(fm) * f[name]) + \
+                 a * pod.probe * pod.object - (a + b) * pod.exit
+        else:
+            df = (a + b*c) * (pod.probe * pod.object - pod.exit)
+
+        pod.exit += df
+        err_exit += np.mean(u.abs2(df))
+
+    return err_fmag, err_exit
+
+
+def projection_update_DM_AP(diff_view, alpha=1.0, pbound=None):
+    """
+    Linear interpolation between Difference Map algorithm (a,b,c = -1,1,2)
+    and Alternating Projections algorithm (a,b,c = 0,1,1) with coefficients
+    a = -alpha, b = 1, c = 1 + alpha. Alpha = 1.0 corresponds to DM and
+    alpha = 0.0 to AP.
+
+    Parameters
+    ----------
+    diff_view : View
+        View to diffraction data
+
+    alpha : float, optional
+        Blend between AP (alpha=0.0 and DM (alpha=1.0) . Valid interval ``[0, 1]``
+
+    pbound : float, optional
+        Power bound. Fourier update is bypassed if the quadratic deviation
+        between diffraction data and `diff_view` is below this value.
+        If ``None``, fourier update always happens.
+
+    Returns
+    -------
+    err_fmag, err_exit : float
+
+        - `err_fmag`, Fourier magnitude error; quadratic deviation from
+          root of experimental data
+        - `err_exit`, quadratic deviation between exit waves before and after
+          projection
+    """
+    a = -alpha
+    b = 1
+    c = 1.+alpha
+    return projection_update_generalized(diff_view, a, b, c, pbound=pbound)
+
+
 def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
-    """\
+    """
+    *** DEPRECATED ***
+    Backwards compatible function, for reference only. Contains LL error.
+    Please replace with log_likelihood and projection_update_DM_AP
+
+    See also
+    --------
+    basic_fourier_update_LEGACY
+    """
+    if LL_error:
+        err_phot = log_likelihood(diff_view)
+    else:
+        err_phot = 0.0
+
+    err_fmag, err_exit = projection_update_DM_AP(diff_view, alpha=alpha, pbound=pbound)
+
+    return np.array([err_fmag, err_phot, err_exit])
+
+
+def basic_fourier_update_LEGACY(diff_view, pbound=None, alpha=1., LL_error=True):
+    """
+    *** DEPRECATED ***
     Fourier update a single view using its associated pods.
     Updates on all pods' exit waves.
 
@@ -134,8 +356,8 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
     for name, pod in diff_view.pods.items():
         if not pod.active:
             continue
-        f[name] = pod.fw((1 + alpha) * pod.probe * pod.object
-                         - alpha * pod.exit)
+        f[name] = pod.fw(-alpha * pod.exit+
+                         (1 + alpha) * pod.probe * pod.object)
         af2 += pod.downsample(u.abs2(f[name]))
 
     fmag = np.sqrt(np.abs(I))
@@ -152,7 +374,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = pod.bw(pod.upsample(fm) * f[name]) - pod.probe * pod.object
+            df = pod.bw(pod.upsample(fm) * f[name]) - alpha * pod.probe * pod.object + (alpha - 1) * pod.exit
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     elif err_fmag > pbound:
@@ -162,7 +384,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = pod.bw(pod.upsample(fm) * f[name]) - pod.probe * pod.object
+            df = pod.bw(pod.upsample(fm) * f[name]) - alpha * pod.probe * pod.object + (alpha - 1) * pod.exit
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     else:
@@ -170,7 +392,7 @@ def basic_fourier_update(diff_view, pbound=None, alpha=1., LL_error=True):
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = alpha * (pod.probe * pod.object - pod.exit)
+            df = (pod.probe * pod.object - pod.exit)
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
 
@@ -181,24 +403,26 @@ def reduce_dimension(a, dim, local_indices=None):
     """
     Apply a low-rank approximation on a.
 
-    :param a:
-     3D numpy array.
+    Parameters
+    ----------
+    a : ndarray
+        3D numpy array
 
-    :param dim:
-     The number of dimensions to retain. The case dim=0 (which would
-     just reduce all layers to a mean) is not implemented.
+    dim : int
+        The number of dimensions to retain. The case dim=0 (which would
+        just reduce all layers to a mean) is not implemented.
 
-    :param local_indices:
-     Used for Containers distributed across nodes. Local indices of
-     the current node.
+    local_indices :
+        Used for Containers distributed across nodes. Local indices of
+        the current node.
 
-    :return: [reduced array, modes, coefficients]
-     Where:
-      - reduced array is the result of dimensionality reduction
-         (same shape as a)
-      - modes: 3D array of length dim containing eigenmodes
-         (aka singular vectors)
-      - coefficients: 2D matrix representing the decomposition of a.
+    Returns
+    -------
+    reduced array, modes, coefficients :
+        where:
+          - reduced array is the result of dimensionality reduction (same shape as a)
+          - modes: 3D array of length dim containing eigenmodes (aka singular vectors)
+          - coefficients: 2D matrix representing the decomposition of a.
     """
     if local_indices is None:  # No MPI - generate a list of indices
         Nl = len(a)
@@ -285,7 +509,7 @@ def reduce_dimension(a, dim, local_indices=None):
 
 
 def Cnorm2(c):
-    """\
+    """
     Computes a norm2 on whole container `c`.
 
     :param Container c: Input
@@ -302,7 +526,7 @@ def Cnorm2(c):
 
 
 def Cdot(c1, c2):
-    """\
+    """
     Compute the dot product on two containers `c1` and `c2`.
     No check is made to ensure they are of the same kind.
 
