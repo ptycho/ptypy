@@ -342,6 +342,9 @@ class ML(PositionCorrectionEngine):
         # Save floating intensities into runtime
         self.ptycho.runtime["float_intens"] = parallel.gather_dict(self.ML_model.float_intens_coeff)
 
+        # Delete model
+        del self.ML_model
+
 class BaseModel(object):
     """
     Base class for log-likelihood models.
