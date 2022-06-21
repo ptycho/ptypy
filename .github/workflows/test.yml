@@ -9,7 +9,7 @@ on:
   pull_request:
     branches:
       - master
-      - pycuda
+      - dev
   # Also trigger on page_build, as well as release created events
   page_build:
   release:
@@ -22,7 +22,7 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        python-version: [3.7,3.8,3.9]
+        python-version: ['3.7','3.8','3.9','3.10']
 
     steps:
     - uses: actions/checkout@v2
