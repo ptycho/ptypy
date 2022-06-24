@@ -42,4 +42,5 @@ p.engines.engine00.overlap_converge_factor = 0.5
 p.engines.engine00.overlap_max_iterations = 100
 p.engines.engine00.fourier_relax_factor = 0.05
 
-P = Ptycho(p,level=5)
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)

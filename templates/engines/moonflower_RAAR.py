@@ -52,4 +52,5 @@ p.engines.engine00.numiter = 100
 p.engines.engine00.beta = 0.9
 
 # prepare and run
-P = Ptycho(p,level=5)
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)

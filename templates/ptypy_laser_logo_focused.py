@@ -94,4 +94,6 @@ p.engines.engine00.numiter = 40
 p.engines.engine00.fourier_relax_factor = 0.05
 
 u.verbose.set_level("info")
-P = Ptycho(p,level=5)
+
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)

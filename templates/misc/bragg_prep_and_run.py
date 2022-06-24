@@ -52,4 +52,5 @@ p.engines.engine00.sample_support.shrinkwrap.start = 15
 p.engines.engine00.sample_support.shrinkwrap.plot = True
 
 # prepare and run
-P = Ptycho(p,level=5)
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)

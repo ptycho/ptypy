@@ -71,4 +71,5 @@ p.engines.engine01.scale_probe_object = 1.
 p.engines.engine01.numiter = 100
 
 # prepare and run
-P = Ptycho(p,level=5)
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)

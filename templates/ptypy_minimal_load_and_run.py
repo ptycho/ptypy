@@ -31,4 +31,5 @@ p.engines.engine01 = u.Param()
 p.engines.engine01.name = 'ML'
 p.engines.engine01.numiter = 20
 
-P = Ptycho(p,level=5)
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)

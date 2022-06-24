@@ -590,5 +590,5 @@ p.scan.Full.coherence.num_object_modes = 1
 
 
 ### Reconstruction ###
-
-Ptycho(p,level=5)
+if __name__ == "__main__":
+    Ptycho(p,level=5)

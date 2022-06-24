@@ -59,4 +59,5 @@ p.engines.engine01.numiter = 100
 p.engines.engine01.probe_update_start = 0
 
 # prepare and run
-P = Ptycho(p,level=5)
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)
