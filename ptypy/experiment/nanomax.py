@@ -775,7 +775,7 @@ class NanomaxContrast(NanomaxStepscanSep2019):
                 mask = np.ones_like(frame)
                 if self.info.detector == 'pilatus':
                     mask[np.where(frame < 0)] = 0
-                if self.info.detector == 'eiger':
+                if 'eiger' in self.info.detector:
                     mask[np.where(frame == 2**32-1)] = 0
                     mask[np.where(frame == 2**16-1)] = 0
                 if self.info.maskfile:
@@ -848,7 +848,7 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         mask = np.ones_like(data)
         if self.info.detector == 'pilatus':
             mask[np.where(data < 0)] = 0
-        if self.info.detector == 'eiger':
+        if 'eiger' in self.info.detector:
             mask[np.where(data == 2**32-1)] = 0
             mask[np.where(data == 2**16-1)] = 0
         logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
