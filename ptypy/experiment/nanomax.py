@@ -785,13 +785,13 @@ class NanomaxContrast(NanomaxStepscanSep2019):
                 # now find the center of mass can be estimated using the ptypy internal function and make it integers
                 self.info.center = u.scripts.mass_center(frame*mask)
                 self.info.center = [int(x) for x in self.info.center]
-                logger.info('Estimated the center of the (first) diffraction pattern to be', self.info.center)
+                logger.info('Estimated the center of the (first) diffraction pattern to be %s' % (self.info.center,))
 
             # the center of the full frames is (now) known, and thus the indices for the cropping can be defined
             cy, cx   = self.info.center
             d        = self.info.shape
-            logger.info('Found the center of the full frames at', self.info.center)
-            logger.info('Will crop all diffraction patterns on load to a size of ', self.info.shape)
+            logger.info('Found the center of the full frames at %s' % (self.info.center,))
+            logger.info('Will crop all diffraction patterns on load to a size of %s' % self.info.shape)
             self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(cy)-d//2, int(cx)-d//2
             self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower+d, self.info.cropOnLoad_x_lower+d
 
