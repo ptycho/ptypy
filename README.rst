@@ -1,3 +1,11 @@
+Phase Focus Limited of Sheffield, UK has an international portfolio of patents and pending applications which relate to ptychography. A current list is available `here <http://www.phasefocus.com/patents/>`_.
+
+Phase Focus grants royalty free licences of its patent rights for non-commercial academic research use, for reconstruction of simulated data and for reconstruction of data obtained at synchrotrons at X-ray wavelengths. These licenses can be applied for online by clicking on `this link <http://www.phasefocus.com/licence/>`_.
+
+Phase Focus asserts that the software we have made available for download may be capable of being used in circumstances which may fall within the claims of one or more of the Phase Focus patents. Phase Focus advises that you apply for a licence from it before downloading any software from this website.
+
+----
+
 PTYPY - Ptychography Reconstruction for Python
 ==============================================
 
