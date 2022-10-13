@@ -59,4 +59,5 @@ p.engines.engine00.tau = 0.1
 
 
 # prepare and run
-P = Ptycho(p,level=5)
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)

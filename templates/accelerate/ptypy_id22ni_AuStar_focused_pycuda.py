@@ -116,4 +116,5 @@ p.engines.engine00.overlap_max_iterations = 100
 p.engines.engine00.obj_smooth_std = 5
 
 u.verbose.set_level("info")
-P = Ptycho(p,level=5)
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)

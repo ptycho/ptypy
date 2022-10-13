@@ -59,4 +59,5 @@ p.engines.engine01.numiter = 20
 p.engines.engine01.numiter_contiguous = 1
 
 # prepare and run
-P = Ptycho(p,level=5)
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)
