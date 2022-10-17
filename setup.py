@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 
-# we should aim to remove the distutils dependency
 import setuptools
-from distutils.core import setup
-import sys
 
 CLASSIFIERS = """\
 Development Status :: 3 - Alpha
@@ -22,11 +19,6 @@ MICRO               = 0
 ISRELEASED          = False
 VERSION             = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 
-
-# import os
-# if os.path.exists('MANIFEST'): os.remove('MANIFEST')
-
-DEBUG = False
 
 def write_version_py(filename='ptypy/version.py'):
     cnt = """
@@ -57,7 +49,6 @@ if not release:
 
 if __name__ == '__main__':
     write_version_py()
-    write_version_py('doc/version.py')
     try:
         exec(open('ptypy/version.py').read())
         vers = version # noqa: F821
@@ -66,7 +57,7 @@ if __name__ == '__main__':
 
 exclude_packages = ["test.*", "test"]
 package_list = setuptools.find_packages(exclude=exclude_packages)
-setup(
+setuptools.setup(
     name='Python Ptychography toolbox',
     version=VERSION,
     author='Pierre Thibault, Bjoern Enders, Martin Dierolf and others',

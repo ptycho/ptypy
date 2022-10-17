@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "PtyPy"
+version = "0.5.1"
+authors = [
+  { name="Bjoern Enders", email="benders@lbl.gov"},
+  { name="Pierre Thibault", email="pthibault@units.it" },
+  { name="Benedikt Daurer", email="benedikt.daurer@diamond.ac.uk" },
+]
+description = "A Ptychography reconstruction package for Python"
+readme = "README.rst"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: Other/Proprietary License",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development",
+    "Operating System :: POSIX :: Linux"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ptycho/ptypy"
+"Bug Tracker" = "https://github.com/ptycho/ptypy/issues"
+"Documentation" = "https://ptycho.github.io/ptypy"
