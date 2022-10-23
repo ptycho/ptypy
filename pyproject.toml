@@ -4,13 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "PtyPy"
-version = "0.5.1"
 authors = [
   { name="Bjoern Enders", email="benders@lbl.gov"},
   { name="Pierre Thibault", email="pthibault@units.it" },
   { name="Benedikt Daurer", email="benedikt.daurer@diamond.ac.uk" },
 ]
-description = "A Ptychography reconstruction package for Python"
+description = "Ptychographic reconstruction toolbox"
 readme = "README.rst"
 requires-python = ">=3.7"
 classifiers = [
@@ -22,8 +21,42 @@ classifiers = [
     "Topic :: Software Development",
     "Operating System :: POSIX :: Linux"
 ]
+dynamic = ["version"]
+dependencies = [
+#  "python >= 3.7",
+  "numpy",
+  "scipy",
+  "h5py",
+]
+
+[project.optional-dependencies]
+full = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw"]
+
+
+#[project.scripts]
+#"ptypy.plot" = 'scripts/ptypy.plot'
+#"ptypy.inspect" = 'scripts/ptypy.inspect'
+#"ptypy.plotclient" = 'scripts/ptypy.plotclient'
+#"ptypy.new" = 'scripts/ptypy.new'
+#"ptypy.csv2cp" = 'scripts/ptypy.csv2cp'
+#"ptypy.run" ='scripts/ptypy.run'
 
 [project.urls]
 "Homepage" = "https://github.com/ptycho/ptypy"
 "Bug Tracker" = "https://github.com/ptycho/ptypy/issues"
 "Documentation" = "https://ptycho.github.io/ptypy"
+
+
+# this is all BETA according to setuptools
+[tool.setuptools.dynamic]
+version = {attr = "ptypy.version.version"}
+
+[tool.setuptools.package-dir]
+ptypy = "ptypy"
+
+#[tool.setuptools.packages.find]
+#where = ["ptypy"]
+
+[tool.setuptools.package-data]
+ptypy = ["resources/*",]
+"ptypy.accelerate.cuda_pycuda.cuda" = ["*.cu"]
