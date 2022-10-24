@@ -1,3 +1,17 @@
+# PtyPy 0.6 release notes
+
+Public release of ptypy! After having to use a private repository
+for many years, we finally have a license agreement that allows
+PtyPy to go public. 
+
+## Build changes
+
+In accordance with PEP 621, we are moving away 
+from `setup.py` for the main build of PtyPy and
+adopt the new community standard for building
+packages with `pyproject.toml`.
+
+
 # PtyPy 0.5 release notes
 
 We're excited to bring you a new release, with new engines, GPU accelerations and

@@ -16,7 +16,7 @@ website.
 
 ----
 
-PTYPY - Ptychography Reconstruction for Python
+PtyPy - Ptychography Reconstruction for Python
 ==============================================
 
 |ptypysite|
@@ -95,10 +95,10 @@ Dependencies
 Ptypy depends on standard python packages:
  * numpy
  * scipy
- * matplotlib
  * h5py
+ * matplotlib & pillow (optional - required for plotting)
  * mpi4py (optional - required for parallel computing)
- * zeromq (optional - required for the offline plotting client)
+ * pyzmq (optional - required for the plotting client)
  
  
 Quicklinks
@@ -126,12 +126,6 @@ Support
 -------
 
 If you are having issues, please let us know.
-
-
-License
--------
-
-The project is licensed under a GPLv2 license.
 
 
 .. |ptypy| replace:: PtyPy
