@@ -46,6 +46,15 @@ full = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw"]
 "Bug Tracker" = "https://github.com/ptycho/ptypy/issues"
 "Documentation" = "https://ptycho.github.io/ptypy"
 
+[tool.pytest.ini_options]
+testpaths = [
+  "test/core_tests",
+  "test/engine_tests",
+  "test/io_tests",
+  "test/ptyscan_tests",
+  "test/template_tests",
+  "test/util_tests",
+]
 
 # this is all BETA according to setuptools
 [tool.setuptools.dynamic]
