@@ -1,18 +1,15 @@
-Phase Focus Limited of Sheffield, UK has an international portfolio of patents
-and pending applications which relate to ptychography. A current list is
-available `here <http://www.phasefocus.com/patents/>`__.
+Phase Focus Limited, UK, holds a portfolio of international patents
+regarding ptychography, which you can find listed
+`here: <https://www.phasefocus.com/patents>`__
 
-Phase Focus grants royalty free licences of its patent rights for
-non-commercial academic research use, for reconstruction of simulated data
-and for reconstruction of data obtained at synchrotrons at X-ray wavelengths.
-These licenses can be applied for online by clicking
-on `this link <http://www.phasefocus.com/licence/>`__.
+Phase Focus asserts that implementations of ptychography included
+within this computer software program may fall within the scope of
+patents owned by Phase Focus Limited.
 
-Phase Focus asserts that the software we have made available for download
-may be capable of being used in circumstances which may fall within the
-claims of one or more of the Phase Focus patents. Phase Focus advises that
-you apply for a licence from it before downloading any software from this
-website.
+If you intend to pursue ANY commercial interest in technologies
+making use of the patents, please contact Phase Focus Limited to
+discuss a commercial-use licence
+`here: <https://www.phasefocus.com/licence>`__
 
 ----
 
@@ -29,9 +26,9 @@ Welcome Ptychonaut!
      
 |ptypy| [#pronounciation]_ [#ptypypaper]_ is a
 framework for scientific ptychography compiled by 
-P. Thibault and B. Enders and licensed under the GPLv2 license.
+P. Thibault and B. Enders and other authors (see AUTHORS).
 
-It is the result of 7 years of experience in the field of ptychography condensed
+It is the result of years of experience in the field of ptychography condensed
 into a versatile python package. The package covers the whole path of
 ptychographic analysis after the actual experiment is completed
 - from data management to reconstruction to visualization.
@@ -56,7 +53,7 @@ Features
 * **Maximum Likelihood** [#ml]_ engine with preconditioners and regularizers.
 * A few more engines (RAAR, sDR, ePIE, ...).
 
-* **Fully parallelized** (CPU only) using the Massage Passing Interface 
+* **Fully parallelized** using the Massage Passing Interface
   (`MPI <https://en.wikipedia.org/wiki/Message_Passing_Interface>`_). 
   Simply execute your script with::
   
@@ -68,13 +65,13 @@ Features
   `ZeroMQ <http://www.zeromq.org>`_ .
   The reconstruction may run on a remote hpc cluster while your desktop
   computer displays the reconstruction progress.
-  
 
 * **Mixed-state** reconstructions of probe and object [#states]_ for 
   overcoming partial coherence or related phenomena.
   
 * **On-the-fly** reconstructions (while data is being acquired) using the
-  the `PtyScan <http://http://ptycho.github.io/ptypy/rst/ptypy.core.html#ptypy.core.data.PtyScan>`_ class in the linking mode `linking mode <http://ptycho.github.io/ptypy/rst/data_management.html#case-flyscan>`_ 
+  the `PtyScan <http://http://ptycho.github.io/ptypy/rst/ptypy.core.html#ptypy.core.data.PtyScan>`_
+  class in the `linking mode <http://ptycho.github.io/ptypy/rst/data_management.html#case-flyscan>`_
 
 
 Installation
@@ -82,7 +79,7 @@ Installation
 
 Installation should be as simple as ::
 
-   $ sudo pip install .
+   $ pip install .
 
 or, as a user, ::
 

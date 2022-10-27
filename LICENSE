@@ -3,11 +3,11 @@
 
  Introduction 
  
- This license agreement sets forth the terms and conditions under which the 
-authors (see AUTHORS file at https://github.com/ptycho/ptypy/) (hereafter 
-"LICENSOR") will grant you (hereafter "LICENSEE") a royalty-free, non-exclusive 
+This license agreement sets forth the terms and conditions under which the
+authors (see AUTHORS file at https://github.com/ptycho/ptypy/) (hereafter
+"LICENSOR") will grant you (hereafter "LICENSEE") a royalty-free, non-exclusive
 license for academic, non-commercial purposes only (hereafter "LICENSE") to use 
-the  ptypy package computer software program and associated documentation 
+the PtyPy package computer software program and associated documentation
 furnished hereunder (hereafter "PROGRAM").
 
  Terms and Conditions of the LICENSE
@@ -46,11 +46,11 @@ similar to the PROGRAM.
 publication resulting from the use of the PROGRAM or any translation of the code 
 into another computing language:
  
- "Data processing was carried out using the ptypy reconstruction package 
+ "Data processing was carried out using the PtyPy reconstruction package
 (https://github.com/ptycho/ptypy)."
 
 Additionally, any publication using the package, or any translation of the code 
-into another computing language should cite the original ptypy publication: 
+into another computing language should cite the original PtyPy publication:
 
 B. Enders and P. Thibault, A computational framework for ptychographic 
 reconstructions, Proc. Royal Soc. A 472, 20160640 (2016). (doi: 
@@ -72,7 +72,7 @@ nor to make any copies except for its internal use, without prior written
 consent of LICENSOR. LICENSEE agrees to place the following copyright notice on 
 any such copies: 
 
-© All rights reserved. The PTYPY team, see AUTHORS.
+© All rights reserved. The PtyPy team, see AUTHORS.
 
 8. The LICENSE shall not be construed to confer any rights upon LICENSEE by 
 implication or otherwise except as specifically set forth herein.
