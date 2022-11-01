@@ -257,6 +257,14 @@ class Ptycho(Base):
     doc = Switch to request the production of a movie from the dumped plots at the end of the
       reconstruction.
 
+    [io.autoplot.process_requests_timer]
+    default = None
+    type = int
+    help = Set to continue processing autoplot requests
+    doc = Set to continue processing autoplot requests for a given time period in seconds after 
+      reconstruction is complete
+
+
     [io.benchmark]
     default = None
     type = str
@@ -522,9 +530,13 @@ class Ptycho(Base):
         """
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs. Sets self.new_data
-        with LogTime(self.p.io.benchmark == 'all') as t:
-            self.new_data = self.model.new_data()
-        if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
+        while True:
+            with LogTime(self.p.io.benchmark == 'all') as t:
+                self.new_data = self.model.new_data()
+                if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
+                if self.new_data:
+                    break
+                time.sleep(1)
 
         # Print stats
         parallel.barrier()
@@ -625,6 +637,7 @@ class Ptycho(Base):
             An engine instance that should be a subclass of
             :py:class:`BaseEngine` or have the same methods.
         """
+
         if engine is not None:
             # Work with that engine
             if self.runtime.get('start') is None:
@@ -646,6 +659,7 @@ class Ptycho(Base):
             ilog_message('%s: initializing engine' %engine.p.name)
             with LogTime(self.p.io.benchmark == 'all') as t:
                 engine.initialize()
+
             if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_init += t.duration
 
             # One .prepare() is always executed, as Ptycho may hold data
@@ -653,6 +667,7 @@ class Ptycho(Base):
             self.new_data = [(d.label, d) for d in self.diff.S.values()]
             with LogTime(self.p.io.benchmark == 'all') as t:
                 engine.prepare()
+
             if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
             # Start the iteration loop
@@ -661,6 +676,7 @@ class Ptycho(Base):
                 # Check for client requests
                 if parallel.master and self.interactor is not None:
                     self.interactor.process_requests()
+                    pass
 
                 parallel.barrier()
 
@@ -676,6 +692,30 @@ class Ptycho(Base):
                         engine.prepare()
                     if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
+                # parallel.barrier()
+
+                all_pods = len(self.pods.values())
+                
+
+                go_to_next_loop = False
+                for scan in self.model.scans.values():
+                    if scan.ptyscan.end_of_scan:
+                        continue
+                    elif all_pods < int(scan.ptyscan.num_frames * 1/10):
+                        # dont start reconstruction until 10% of frames found
+                        print(f"----Not iterating until {int(scan.ptyscan.num_frames * 1/10)} frames loaded----")
+                        go_to_next_loop = True
+                        time.sleep(1)
+                        break
+                    else:
+                        # add iteration if scan not complete
+                        engine.numiter += 1
+                        print(f"----Adding iterations until scan is complete, ({engine.curiter}/{engine.numiter})----")
+                        time.sleep(1)
+                        break
+                if go_to_next_loop:
+                    continue
+
                 auto_save = self.p.io.autosave
                 if auto_save.active and auto_save.interval > 0:
                     if engine.curiter % auto_save.interval == 0:
@@ -688,6 +728,7 @@ class Ptycho(Base):
                 # One iteration
                 with LogTime(self.p.io.benchmark == 'all') as t:
                     engine.iterate()
+
                 if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_iterate += t.duration
 
                 # Display runtime information and do saving
@@ -768,7 +809,14 @@ class Ptycho(Base):
         except BaseException:
             pass
         try:
-            self.interactor.stop()
+            if parallel.master and None not in [self.interactor, self.io.autoplot.process_requests_timer]:
+                log(3, f"Setting a timeout for {self.io.autoplot.process_requests_timer} seconds before closing interactor")
+                log(3, f"processing requests ({self.interactor.address}:{self.interactor.port})...")
+                start = time.time()
+                while (time.time() - start) < self.io.autoplot.process_requests_timer:
+                    self.interactor.process_requests()
+                    time.sleep(5)
+                self.interactor.stop()
         except BaseException:
             pass
 

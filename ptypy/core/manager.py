@@ -1639,7 +1639,7 @@ class ModelManager(object):
     def new_data(self):
         """
         Get all new diffraction patterns and create all views and pods
-        accordingly.s
+        accordingly.
         """
         parallel.barrier()
 
