@@ -323,7 +323,7 @@ class SwmrLoader(Hdf5Loader):
 
         self.live_key = self.p.intensities.live_key
 
-        if self.p.intensities.file == self.p.positions.file and 1==2:
+        if self.p.intensities.file == self.p.positions.file:
             self.positions_file = self.intensities_file
             self.kf = KeyFollower(self.intensities_file, [self.live_key, self.live_fast_key, self.live_slow_key], timeout = 5)
         else:
