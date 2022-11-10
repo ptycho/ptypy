@@ -1647,7 +1647,6 @@ class ModelManager(object):
         if not self.data_available:
             return None
 
-
         logger.info('Processing new data.')
 
         # making sure frames_per_block is defined per rank
@@ -1662,6 +1661,8 @@ class ModelManager(object):
                 ilog_streamer('%s: loading data for scan %s' %(type(scan).__name__,label))
                 prb_ids, obj_ids, pod_ids = dict(), dict(), set()
                 nd = scan.new_data(_nframes)
+                if nd is None:
+                    return None
                 while nd:
                     new_data.append((label, nd[0]))
                     prb_ids.update(nd[1])
