@@ -264,14 +264,6 @@ class Ptycho(Base):
     doc = Switch to request the production of a movie from the dumped plots at the end of the
       reconstruction.
 
-    [io.autoplot.process_requests_timer]
-    default = None
-    type = int
-    help = Set to continue processing autoplot requests
-    doc = Set to continue processing autoplot requests for a given time period in seconds after 
-      reconstruction is complete
-
-
     [io.benchmark]
     default = None
     type = str
@@ -680,7 +672,6 @@ class Ptycho(Base):
                 # Check for client requests
                 if parallel.master and self.interactor is not None:
                     self.interactor.process_requests()
-                    pass
 
                 parallel.barrier()
 
@@ -796,6 +787,10 @@ class Ptycho(Base):
         try:
             # Not so clean.
             self.plotter.join()
+        except BaseException:
+            pass
+        try:
+            self.interactor.stop()
         except BaseException:
             pass
 
