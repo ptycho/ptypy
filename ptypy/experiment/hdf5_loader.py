@@ -363,7 +363,7 @@ class Hdf5Loader(PtyScan):
         positions_slow_shape = self.slow_axis.shape
         log(3, "The shape of the \n\tdiffraction intensities is: {}\n\tslow axis data:{}\n\tfast axis data:{}".format(data_shape,
                                                                                                                       positions_slow_shape,
-                                                                                                                                                                                                                                    positions_fast_shape))
+                                                                                                                      positions_fast_shape))
         if self.p.positions.skip > 1:
             log(3, "Skipping every {:d} positions".format(self.p.positions.skip))
         
