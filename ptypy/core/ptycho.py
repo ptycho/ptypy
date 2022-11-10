@@ -684,9 +684,13 @@ class Ptycho(Base):
                         engine.prepare()
                     if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
+                # Check if we have reached the end of the scan
+                end_of_scan =  any(s.ptyscan.end_of_scan for s in list(self.model.scans.values()))
                 # Nr. of currently loaded diffraction views
                 all_diff_views = len(self.diff.V)
-                if (self.p.frames_before_iterate is not None) and (all_diff_views < self.p.frames_before_iterate):
+                # Keep loading data, unless we have reached minimum nr. of frames or end of scan
+                keep_loading_data = (self.p.frames_before_iterate is not None) and (all_diff_views < self.p.frames_before_iterate)
+                if keep_loading_data and not end_of_scan:
                     continue
 
                 auto_save = self.p.io.autosave
@@ -700,7 +704,6 @@ class Ptycho(Base):
 
                 # If not end of scan, expand total number of iterations
                 # This is to make sure that the specified nr. of iterations is guaranteed once all data is loaded
-                end_of_scan =  any(s.ptyscan.end_of_scan for s in list(self.model.scans.values()))
                 if not end_of_scan:
                     engine.numiter += engine.p.numiter_contiguous
 
