@@ -633,7 +633,6 @@ class Ptycho(Base):
             An engine instance that should be a subclass of
             :py:class:`BaseEngine` or have the same methods.
         """
-
         if engine is not None:
             # Work with that engine
             if self.runtime.get('start') is None:
@@ -655,13 +654,11 @@ class Ptycho(Base):
             ilog_message('%s: initializing engine' %engine.p.name)
             with LogTime(self.p.io.benchmark == 'all') as t:
                 engine.initialize()
-
             if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_init += t.duration
 
             # One .prepare() is always executed, as Ptycho may hold data
             ilog_message('%s: preparing engine' %engine.p.name)
             self.new_data = [(d.label, d) for d in self.diff.S.values()]
-
             with LogTime(self.p.io.benchmark == 'all') as t:
                 engine.prepare()
             if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration

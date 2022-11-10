@@ -296,7 +296,6 @@ class Hdf5Loader(PtyScan):
         self.p = self.DEFAULT.copy(99)
         self.p.update(pars, in_place_depth=99)
 
-
         super(Hdf5Loader, self).__init__(self.p, **kwargs)
 
         self._scantype = None
