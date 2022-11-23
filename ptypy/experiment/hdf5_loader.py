@@ -430,6 +430,10 @@ class Hdf5Loader(PtyScan):
             elif self.darkfield.shape == data_shape[-2:]:
                 log(3, "The darkfield is not laid out like the data.")
                 self.darkfield_laid_out_like_data = False
+            elif (self.darkfield.shape[-2:] == data_shape[-2:]) and (self.darkfield.shape[0] == 1):
+                log(3, "The darkfield is not laid out like the data.")
+                self.darkfield_laid_out_like_data = False
+                self.darkfield = self.darkfield[0]
             else:
                 raise RuntimeError("I have no idea what to do with this shape of darkfield data.")
         else:
@@ -497,7 +501,7 @@ class Hdf5Loader(PtyScan):
         
         if None not in [self.p.recorded_psize.file, self.p.recorded_psize.key]:
             self.p.psize = float(h5.File(self.p.recorded_psize.file, 'r')[self.p.recorded_psize.key][()] * self.p.recorded_psize.multiplier)
-            self.meta.psize = self.p.psize
+            self.info.psize = self.p.psize
             log(3, "loading psize={} from file".format(self.p.psize))
 
         if self.p.padding is None:
@@ -591,6 +595,15 @@ class Hdf5Loader(PtyScan):
 
         return intensities, positions, weights
 
+    def subtract_dark(self, raw, dark):
+        """
+        Subtract dark current from a raw frame
+        and truncate negative values
+        """
+        corr = raw - dark
+        corr[raw<dark] = 0
+        return corr
+
     def get_corrected_intensities(self, index):
         '''
         Corrects the intensities for darkfield, flatfield and normalisations if they exist.
@@ -608,9 +621,10 @@ class Hdf5Loader(PtyScan):
         # TODO: Remove these logic blocks into something a bit more sensible.
         if self.darkfield is not None:
             if self.darkfield_laid_out_like_data:
-                intensity -= self.darkfield[indexed_frame_slices].squeeze()
+                df = self.darkfield[indexed_frame_slices].squeeze()
             else:
-                intensity -= self.darkfield[self.frame_slices].squeeze()
+                df = self.darkfield[self.frame_slices].squeeze()
+            intensity = self.subtract_dark(intensity, df)
 
         if self.flatfield is not None:
             if self.flatfield_laid_out_like_data:
@@ -806,6 +820,16 @@ class Hdf5LoaderFast(Hdf5Loader):
         self.weights_array = None
 
     @staticmethod
+    def subtract_dark(raw, dark):
+        """
+        Subtract dark current from a raw frame
+        and truncate negative values
+        """
+        corr = raw - dark
+        corr[raw<dark] = 0
+        return corr
+
+    @staticmethod
     def _init_worker(intensities_raw_array, weights_raw_array, 
                      intensities_handle,
                      weights_handle,
@@ -863,9 +887,10 @@ class Hdf5LoaderFast(Hdf5Loader):
         # Correct darkfield
         if src_darkfield is not None:
             if darkfield_laid_out_like_data:
-                dest_intensities[dest_slices] -= src_darkfield[indexed_frame_slices].squeeze()
+                df = src_darkfield[indexed_frame_slices].squeeze()
             else:
-                dest_intensities[dest_slices] -= src_darkfield[frame_slices].squeeze()
+                df = src_darkfield[frame_slices].squeeze()
+            dest_intensities[dest_slices] = Hdf5LoaderFast.subtract_dark(dest_intensities[dest_slices], df)
 
         # Correct flatfield
         if src_flatfield is not None:
