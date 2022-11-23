@@ -25,7 +25,7 @@ from .array_utils import grids
 
 __all__ = ['pause', 'rmphaseramp', 'plot_storage', 'imsave', 'imload',
            'complex2hsv', 'complex2rgb', 'hsv2rgb', 'rgb2complex', 'rgb2hsv',
-           'hsv2complex', 'franzmap','PtyAxis']
+           'hsv2complex', 'franzmap','PtyAxis', 'plot_recon']
 
 # Improved interactive behavior for old versions of matplotlib
 try:
@@ -590,6 +590,48 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
 
     plt.draw()
     return fig
+
+
+def plot_recon(P, cropping=0.2):
+    """
+    A simple matplotlib figure displaying a reconstructed
+    object (magnitude and phase) and probe (zero component) 
+    together with the 1D plot of the log-likelihood error.
+
+    Parameters
+    ----------
+    P : Ptycho
+        Ptycho instance
+    cropping : int, optional
+        Fractional margin to be cropped from object. A value between 0 and 1.
+        Default is 0.2
+    """
+    scan = list(P.obj.S)[0]
+    obj  = P.obj.S[scan].data[0]
+    prb  = P.probe.S[scan].data[0]
+    cy = int(obj.shape[0]*cropping)
+    cx = int(obj.shape[1]*cropping)
+    likelihood_error = [P.runtime["iter_info"][i]['error'][1] for i in range(len(P.runtime["iter_info"]))]
+    iterations = [P.runtime["iter_info"][i]['iterations'] for i in range(len(P.runtime["iter_info"]))]
+    fig, axes = plt.subplots(ncols=4, nrows=1, figsize=(18,4), dpi=60)
+    axes[0].set_title("Object (magnitude)")
+    axes[0].axis('off')
+    axes[0].imshow(np.abs(obj)[cy:-cy,cx:-cx], cmap='gray', vmin=None, vmax=None, interpolation='none')
+    axes[1].set_title("Object  (phase)")
+    axes[1].axis('off')
+    axes[1].imshow(np.angle(obj)[cy:-cy,cx:-cx], vmin=-np.pi, vmax=np.pi, cmap='viridis', interpolation='none')
+    axes[2].set_title("Probe (complex)")
+    axes[2].axis('off')
+    axes[2] = PtyAxis(axes[2], channel='c')
+    axes[2].set_data(prb)
+    axes[3].set_title("Convergence plot")
+    axes[3].plot(iterations, likelihood_error)
+    axes[3].set_xlabel("Iteration")
+    axes[3].set_ylabel("Log-likelihood error")
+    axes[3].yaxis.set_label_position('right')
+    axes[3].tick_params(left=0, right=1, labelleft=0, labelright=1)
+    axes[3].semilogy()
+    plt.show()
 
 
 class PtyAxis(object):
