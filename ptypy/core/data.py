@@ -825,8 +825,8 @@ class PtyScan(object):
         self.meta.center = cen / float(self.rebin)
         self.meta.shape = u.expect2(sh) // self.rebin
 
-        if self.info.psize is not None:
-            self.meta.psize = u.expect2(self.info.psize) * self.rebin
+        if self.meta.psize is not None:
+            self.meta.psize = u.expect2(self.meta.psize) * self.rebin
 
         # Prepare chunk of data
         chunk = u.Param()
