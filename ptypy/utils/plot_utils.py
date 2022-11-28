@@ -25,7 +25,8 @@ from .array_utils import grids
 
 __all__ = ['pause', 'rmphaseramp', 'plot_storage', 'imsave', 'imload',
            'complex2hsv', 'complex2rgb', 'hsv2rgb', 'rgb2complex', 'rgb2hsv',
-           'hsv2complex', 'franzmap','PtyAxis', 'plot_recon']
+           'hsv2complex', 'franzmap','PtyAxis', 
+           'plot_recon', 'plot_recon_from_ptycho', 'plot_recon_from_ptyr']
 
 # Improved interactive behavior for old versions of matplotlib
 try:
@@ -592,7 +593,7 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
     return fig
 
 
-def plot_recon(P, cropping=0.2):
+def plot_recon(obj, probe, iter_info, cropping=0.2):
     """
     A simple matplotlib figure displaying a reconstructed
     object (magnitude and phase) and probe (zero component) 
@@ -600,19 +601,25 @@ def plot_recon(P, cropping=0.2):
 
     Parameters
     ----------
-    P : Ptycho
-        Ptycho instance
+    obj : ndarray
+        2D object array
+    probe : ndarray
+        2D probe array
+    iter_info : dict
+        Dictionary containing iteration events
     cropping : int, optional
         Fractional margin to be cropped from object. A value between 0 and 1.
         Default is 0.2
+
+    Return
+    ------
+    fig : matplotlib.figure.Figure
     """
-    scan = list(P.obj.S)[0]
-    obj  = P.obj.S[scan].data[0]
-    prb  = P.probe.S[scan].data[0]
+
     cy = int(obj.shape[0]*cropping)
     cx = int(obj.shape[1]*cropping)
-    likelihood_error = [P.runtime["iter_info"][i]['error'][1] for i in range(len(P.runtime["iter_info"]))]
-    iterations = [P.runtime["iter_info"][i]['iterations'] for i in range(len(P.runtime["iter_info"]))]
+    likelihood_error = [iter_info[i]['error'][1] for i in range(len(iter_info))]
+    iterations = [iter_info[i]['iterations'] for i in range(len(iter_info))]
     fig, axes = plt.subplots(ncols=4, nrows=1, figsize=(18,4), dpi=60)
     axes[0].set_title("Object (magnitude)")
     axes[0].axis('off')
@@ -623,7 +630,7 @@ def plot_recon(P, cropping=0.2):
     axes[2].set_title("Probe (complex)")
     axes[2].axis('off')
     axes[2] = PtyAxis(axes[2], channel='c')
-    axes[2].set_data(prb)
+    axes[2].set_data(probe)
     axes[3].set_title("Convergence plot")
     axes[3].plot(iterations, likelihood_error)
     axes[3].set_xlabel("Iteration")
@@ -631,8 +638,50 @@ def plot_recon(P, cropping=0.2):
     axes[3].yaxis.set_label_position('right')
     axes[3].tick_params(left=0, right=1, labelleft=0, labelright=1)
     axes[3].semilogy()
-    plt.show()
+    # plt.draw()
+    plt.close(fig)
+    return fig
 
+def plot_recon_from_ptycho(P, **kwargs):
+    """
+    A simple matplotlib figure displaying a reconstruction
+    from a Ptycho instance.
+
+    Parameters
+    ----------
+    P : Ptycho
+        Ptycho instance
+
+    Return
+    ------
+    fig : matplotlib.figure.Figure
+    """
+    scan = list(P.obj.S)[0]
+    obj  = P.obj.S[scan].data[0]
+    prb  = P.probe.S[scan].data[0]
+    iter = P.runtime["iter_info"]
+    return plot_recon(obj, prb, iter, **kwargs)
+
+def plot_recon_from_ptyr(filename, **kwargs):
+    """
+    A simple matplotlib figure displaying a reconstruction
+    from a .ptyr file.
+
+    Parameters
+    ----------
+    filename : str
+        path to .ptyr file
+
+    Return
+    ------
+    fig : matplotlib.figure.Figure
+    """
+    from ..io import h5read
+    from .scripts import load_from_ptyr
+    obj = load_from_ptyr(filename, what="obj", layer=0)
+    prb = load_from_ptyr(filename, what="probe", layer=0)
+    iter = h5read(filename, "content/runtime/iter_info")["content/runtime/iter_info"]
+    return plot_recon(obj, prb, iter, **kwargs)
 
 class PtyAxis(object):
     """
