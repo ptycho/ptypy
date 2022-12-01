@@ -11,9 +11,11 @@ This file is part of the PTYPY package.
 
 """
 import numpy as np
+from scipy.ndimage.interpolation import map_coordinates
 
 from .. import utils as u
 from ..core import geometry
+from ..core import Storage
 from ..utils.verbose import logger
 from .. import resources
 from ..utils.descriptor import EvalDescriptor
@@ -120,7 +122,7 @@ illumination_desc.from_string(r"""
 
     [model] 
     default = None
-    type = str, ndarray
+    type = str, ndarray, Storage
     help = Type of illumination model
     doc = One of:
     	 - ``None`` : model initialitziation defaults to flat array filled with the specified number of photons
@@ -280,7 +282,7 @@ def aperture(A, grids=None, pars=None, **kwargs):
     return np.resize(ap, sh)
 
 
-def init_storage(storage, pars, energy=None, **kwargs):
+def init_storage(storage, pars, energy=None):
     """
     Initializes :any:`Storage` `storage` with parameters from `pars`
 
@@ -366,18 +368,37 @@ def init_storage(storage, pars, energy=None, **kwargs):
     elif type(p.model) is np.ndarray:
         model = p.model
     elif p.model in resources.probes:
-        model = resources.probes[p.model](s.shape)
+        model = resources.probes[p.model](s.shape[1:])
+    elif type(p.model) is Storage:
+        # resample the incoming probe storage based on the current pixel
+        #size and shape
+        layer = p.recon.get('layer')
+        layer = 0 if layer is None else layer
+        if (np.allclose(p.model.psize, s.psize) and
+                np.allclose(p.model.shape, s.shape)):
+            model = p.model.data[layer]
+        else:
+            logger.info(
+                prefix +
+                'Attempt to resample layer %s from Storage %s'
+                % (str(layer), str(p.model.ID)))
+            y, x = np.array(s.grids())[:, layer]
+            ii = (y - p.model.origin[0]) / p.model.psize[0]
+            jj = (x - p.model.origin[1]) / p.model.psize[1]
+            model = np.empty(shape=ii.shape, dtype=np.complex128)
+            model[:] = map_coordinates(np.abs(p.model.data[layer]), np.array((ii, jj)), mode='constant', cval=0)
+            model[:] = model * np.exp(1j * map_coordinates(np.angle(p.model.data[layer]), (ii, jj), mode='constant', cval=0))
     elif str(p.model) == 'recon':
         # Loading from a reconstruction file
-        layer = p.recon.get('layer')
         ID = p.recon.get('ID')
         logger.info(
             prefix +
-            'Attempt to load layer `%s` of probe storage with ID `%s` from `%s`'
-            % (str(layer), str(ID), p.recon.rfile))
-        model = u.load_from_ptyr(p.recon.rfile, 'probe', ID, layer)
-        # This could be more sophisticated,
-        # i.e. matching the real space grids etc.
+            'Attempt to load probe storage with ID `%s` from `%s`'
+            % (str(ID), p.recon.rfile))
+        model = u.load_from_ptyr(p.recon.rfile, 'probe', how='storage', ID=ID)
+        p.model = model
+        init_storage(s, p, energy)
+        return
     elif str(p.model) == 'stxm':
         logger.info(
             prefix + 'Probe initialization using averaged diffraction data.')

@@ -659,7 +659,7 @@ def stxm_init(storage, probe=None):
     trans, dpc_row, dpc_col = stxm_analysis(storage,probe)
     storage.data = trans * np.exp(-1j*phase_from_dpc(dpc_row, dpc_col))
 
-def load_from_ptyr(filename, what='probe', ID=None, layer=None):
+def load_from_ptyr(filename, what='probe', how='array', ID=None, layer=None):
     """
     Convenience script to extract data from ``*.ptyr``-file.
 
@@ -671,19 +671,20 @@ def load_from_ptyr(filename, what='probe', ID=None, layer=None):
     what : str
         Type of container to retrieve. Only `'probe'` and `'obj'` makes
         sense. Default is `'probe'`
+    how : str
+        Type of object to return. Only ``array`` and ``storage`` are
+        accepted. Default is ``array``.
     ID : str
         ID of storage in chosen container. If ``None`` the first stored
         storage is chosen.
     layer : int, optional
         If an integer, the data buffer of chosen storage gets sliced
-        with `layer` for its first index.
+        with `layer` for its first index. Has no effect if how is
+        ``storage``.
 
     Returns
     -------
-    data : ndarray
-        If `layer` is provided, that layer ``storage,data[layer]``
-        will be sliced from the 3d data buffer, else the whole buffer
-        ``storage.data`` will be returned.
+    data : ndarray or Storage
     """
     from .. import io
     header = io.h5read(filename, 'header')['header']
@@ -698,10 +699,16 @@ def load_from_ptyr(filename, what='probe', ID=None, layer=None):
             address = 'content/' + str(what)
             conti = io.h5read(filename, address)[address]
             storage = list(conti.values())[0]
-        if layer is None:
-            return storage['data']
-        else:
-            return storage['data'][layer]
+        if how == 'array':
+            if layer is None:
+                return storage['data']
+            else:
+                return storage['data'][layer]
+        elif how == 'storage':
+            from ..core import Storage, Container
+            C = Container(data_dims=2, data_type='complex')
+            storage['owner'] = C
+            return Storage._from_dict(storage)
 
 def phase_from_dpc(dpc_row, dpc_col):
     """
