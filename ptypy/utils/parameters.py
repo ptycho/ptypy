@@ -317,3 +317,21 @@ def make_default(default_dict_or_file):
     convert description dict to a module dict using a possibly verbose Q & A game
     """
     pass
+
+def param_from_json(filename):
+    """
+    Convert param tree from JSON file into Param().
+    """
+    import json
+    p = Param()
+    p.update(json.load(open(filename)), Convert=True)
+    return p
+
+def param_from_yaml(filename):
+    """
+    Convert param tree from YAML file into Param().
+    """
+    import yaml
+    p = Param()
+    p.update(yaml.load(open(filename), Loader=yaml.FullLoader), Convert=True)
+    return p
