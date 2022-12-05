@@ -9,7 +9,7 @@ This file is part of the PTYPY package.
 """
 import os
 
-__all__ = ['Param', 'asParam']  # 'load',]
+__all__ = ['Param', 'asParam', 'param_from_json', 'param_from_yaml']  # 'load',]
 
 PARAM_PREFIX = 'pars'
 
