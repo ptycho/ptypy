@@ -324,7 +324,8 @@ def param_from_json(filename):
     """
     import json
     p = Param()
-    p.update(json.load(open(filename)), Convert=True)
+    with open(filename) as f:
+        p.update(json.load(f), Convert=True)
     return p
 
 def param_from_yaml(filename):
@@ -333,5 +334,6 @@ def param_from_yaml(filename):
     """
     import yaml
     p = Param()
-    p.update(yaml.load(open(filename), Loader=yaml.FullLoader), Convert=True)
+    with open(filename) as f:
+        p.update(yaml.load(f, Loader=yaml.FullLoader), Convert=True)
     return p
