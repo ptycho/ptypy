@@ -326,7 +326,13 @@ class Hdf5Loader(PtyScan):
     default = None
     help = Option to pad the detector frames on all sides
     doc = A tuple of list with padding given as ( top, bottom, left, right)
-   
+
+    [electron_data]
+    type = bool
+    default = False
+    help = Switch for loading data from electron ptychography experiments.
+    doc = If True, the energy provided in keV will be considered as electron energy 
+          and converted to electron wavelengths.    
     """
 
     def __init__(self, pars=None, **kwargs):
@@ -540,6 +546,9 @@ class Hdf5Loader(PtyScan):
             log(3, "center is %s, auto_center: %s" % (self.info.center, self.info.auto_center))
             log(3, "The loader will not do any cropping.")
 
+        # For electron data, convert energy
+        if self.p.electron_data:
+            self.meta.energy = u.m2keV(u.electron_wavelength(self.meta.energy))
 
         # it's much better to have this logic here than in load!
         if (self._ismapped and (self._scantype == 'arb')):
