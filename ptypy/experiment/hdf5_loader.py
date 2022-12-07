@@ -355,6 +355,12 @@ class Hdf5Loader(PtyScan):
         self.framefilter = None
         self._is_spectro_scan = False
 
+        self.fhandle_intensities = None
+        self.fhandle_darkfield = None
+        self.fhandle_flatfield = None
+        self.fhandle_normalisation = None
+        self.fhandle_normalisation = None
+
         # lets raise some exceptions here for the essentials
         if None in [self.p.intensities.file,
                     self.p.intensities.key,
@@ -371,28 +377,32 @@ class Hdf5Loader(PtyScan):
 
         # Check for spectro scans
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            _energy_dset = h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key]
-            if len(_energy_dset.shape):
-                if _energy_dset.shape[0] > 1:
-                    self._is_spectro_scan = True
+            with h5.File(self.p.recorded_energy.file, 'r') as f:
+                _energy_dset = f[self.p.recorded_energy.key]
+                if len(_energy_dset.shape):
+                    if _energy_dset.shape[0] > 1:
+                        self._is_spectro_scan = True
         if self._is_spectro_scan and self.p.outer_index is None:
             self.p.outer_index = 0
         if self._is_spectro_scan:
             log(3, "This is appears to be a spectro scan, selecting index = {}".format(self.p.outer_index))
 
-        self.intensities = h5.File(self.p.intensities.file, 'r')[self.p.intensities.key]
+        self.fhandle_intensities = h5.File(self.p.intensities.file, 'r')
+        self.intensities = self.fhandle_intensities[self.p.intensities.key]
         self.intensities_dtype = self.intensities.dtype
         data_shape = self.intensities.shape
         if self._is_spectro_scan and self.p.outer_index is not None:
             data_shape = tuple(np.array(data_shape)[1:])
 
-        fast_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.fast_key][...]
+        with h5.File(self.p.positions.file, 'r') as f:
+            fast_axis = f[self.p.positions.fast_key][...]
         if self._is_spectro_scan and self.p.outer_index is not None:
             fast_axis = fast_axis[self.p.outer_index]
         self.fast_axis = np.squeeze(fast_axis) if fast_axis.ndim > 2 else fast_axis
         positions_fast_shape = self.fast_axis.shape
 
-        slow_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.slow_key][...]
+        with h5.File(self.p.positions.file, 'r') as f:
+            slow_axis = [self.p.positions.slow_key][...]
         if self._is_spectro_scan and self.p.outer_index is not None:
             slow_axis = slow_axis[self.p.outer_index]
         self.slow_axis = np.squeeze(slow_axis) if slow_axis.ndim > 2 else slow_axis
@@ -407,7 +417,8 @@ class Hdf5Loader(PtyScan):
             log(3, "Skipping every {:d} positions".format(self.p.positions.skip))
         
         if None not in [self.p.framefilter.file, self.p.framefilter.key]:
-            self.framefilter = h5.File(self.p.framefilter.file, 'r')[self.p.framefilter.key][()].squeeze() > 0 # turn into boolean
+            with h5.File(self.p.framefilter.file, 'r') as f:
+                self.framefilter = f[self.p.framefilter.key][()].squeeze() > 0 # turn into boolean
             if self._is_spectro_scan and self.p.outer_index is not None:
                 self.framefilter = self.framefilter[self.p.outer_index]
             if (self.framefilter.shape == self.fast_axis.shape == self.slow_axis.shape):
@@ -422,7 +433,8 @@ class Hdf5Loader(PtyScan):
         self.compute_scan_mapping_and_trajectory(data_shape, positions_fast_shape, positions_slow_shape)
 
         if None not in [self.p.darkfield.file, self.p.darkfield.key]:
-            self.darkfield = h5.File(self.p.darkfield.file, 'r')[self.p.darkfield.key]
+            self.fhandle_darkfield =  h5.File(self.p.darkfield.file, 'r')
+            self.darkfield = self.fhandle_darkfield[self.p.darkfield.key]
             log(3, "The darkfield has shape: {}".format(self.darkfield.shape))
             if self.darkfield.shape == data_shape:
                 log(3, "The darkfield is laid out like the data.")
@@ -440,7 +452,8 @@ class Hdf5Loader(PtyScan):
             log(3, "No darkfield will be applied.")
 
         if None not in [self.p.flatfield.file, self.p.flatfield.key]:
-            self.flatfield = h5.File(self.p.flatfield.file, 'r')[self.p.flatfield.key]
+            self.fhandle_flatfield = h5.File(self.p.flatfield.file, 'r')
+            self.flatfield = self.fhandle_flatfield[self.p.flatfield.key]
             log(3, "The flatfield has shape: {}".format(self.flatfield.shape))
             if self.flatfield.shape == data_shape:
                 log(3, "The flatfield is laid out like the data.")
@@ -454,7 +467,8 @@ class Hdf5Loader(PtyScan):
             log(3, "No flatfield will be applied.")
 
         if None not in [self.p.mask.file, self.p.mask.key]:
-            self.mask = h5.File(self.p.mask.file, 'r')[self.p.mask.key]
+            self.fhandle_mask = h5.File(self.p.mask.file, 'r')
+            self.mask = self.fhandle_mask[self.p.mask.key]
             self.mask_dtype = self.mask.dtype
             log(3, "The mask has shape: {}".format(self.mask.shape))
             if self.mask.shape == data_shape:
@@ -471,7 +485,8 @@ class Hdf5Loader(PtyScan):
 
 
         if None not in [self.p.normalisation.file, self.p.normalisation.key]:
-            self.normalisation = h5.File(self.p.normalisation.file, 'r')[self.p.normalisation.key]
+            self.fhandle_normalisation = h5.File(self.p.normalisation.file, 'r')
+            self.normalisation = self.fhandle_normalisation[self.p.normalisation.key]
             self.normalisation_mean = self.normalisation[:].mean()
             self.normalisation_std  = self.normalisation[:].std()
             if (self.normalisation.shape == self.fast_axis.shape == self.slow_axis.shape):
@@ -486,21 +501,24 @@ class Hdf5Loader(PtyScan):
             log(3, "No normalisation will be applied.")
 
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            if self._is_spectro_scan and self.p.outer_index is not None:
-                self.p.energy = float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][self.p.outer_index])
-            else:
-                self.p.energy = float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()])
+            with h5.File(self.p.recorded_energy.file, 'r') as f:
+                if self._is_spectro_scan and self.p.outer_index is not None:
+                    self.p.energy = float(f[self.p.recorded_energy.key][self.p.outer_index])
+                else:
+                    self.p.energy = float(f[self.p.recorded_energy.key][()])
             self.p.energy = self.p.energy * self.p.recorded_energy.multiplier + self.p.recorded_energy.offset
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
 
         if None not in [self.p.recorded_distance.file, self.p.recorded_distance.key]:
-            self.p.distance = float(h5.File(self.p.recorded_distance.file, 'r')[self.p.recorded_distance.key][()] * self.p.recorded_distance.multiplier)
+            with h5.File(self.p.recorded_distance.file, 'r') as f:
+                self.p.distance = float(f[self.p.recorded_distance.key][()] * self.p.recorded_distance.multiplier)
             self.meta.distance = self.p.distance
             log(3, "loading distance={} from file".format(self.p.distance))
         
         if None not in [self.p.recorded_psize.file, self.p.recorded_psize.key]:
-            self.p.psize = float(h5.File(self.p.recorded_psize.file, 'r')[self.p.recorded_psize.key][()] * self.p.recorded_psize.multiplier)
+            with h5.File(self.p.recorded_psize.file, 'r'):
+                self.p.psize = float(f[self.p.recorded_psize.key][()] * self.p.recorded_psize.multiplier)
             self.info.psize = self.p.psize
             log(3, "loading psize={} from file".format(self.p.psize))
 
@@ -809,6 +827,20 @@ class Hdf5Loader(PtyScan):
         else:
             raise IOError("I don't know what to do with these positions/data shapes")
 
+    def _finalize(self):
+        """
+        Close any open HDF5 files.
+        """
+        super()._finalize()
+        for h in [self.fhandle_intensities,
+                self.fhandle_darkfield,
+                self.fhandle_flatfield,
+                self.fhandle_normalisation,
+                self.fhandle_mask]:
+            try:
+                h.close()
+            except:
+                pass
 
 @register()
 class Hdf5LoaderFast(Hdf5Loader):
