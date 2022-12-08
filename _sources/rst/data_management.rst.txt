@@ -650,7 +650,7 @@ generates from it a class variable called `DEFAULT`, which stores all defaults:
 ::
 
    >>> print(u.verbose.report(NumpyScan.DEFAULT, noheader=True))
-   * id3VMDSB2BHG           : ptypy.utils.parameters.Param(20)
+   * id3VML8DHOKG           : ptypy.utils.parameters.Param(20)
      * name                 : PtyScan
      * dfile                : None
      * chunk_format         : .chunk%02d
@@ -1000,7 +1000,7 @@ in parantheses.
 ::
 
    >>> print(u.verbose.report(NPS.auto(80), noheader=True))
-   * id3VMDSBIOU0           : dict(3)
+   * id3VML8BIFGG           : dict(3)
      * common               : ptypy.utils.parameters.Param(8)
        * version            : 0.1
        * num_frames         : 116
@@ -1012,18 +1012,18 @@ in parantheses.
        * distance           : 7.19
      * chunk                : ptypy.utils.parameters.Param(6)
        * indices            : list(80)
-         * id44VE53G        : 0
-         * id44VE54G        : 1
-         * id44VE55G        : 2
-         * id44VE56G        : 3
-         * id44VE57G        : 4
+         * id46QVP3G        : 0
+         * id46QVP4G        : 1
+         * id46QVP5G        : 2
+         * id46QVP6G        : 3
+         * id46QVP7G        : 4
          * ...              : ....
        * indices_node       : list(80)
-         * id44VE53G        : 0
-         * id44VE54G        : 1
-         * id44VE55G        : 2
-         * id44VE56G        : 3
-         * id44VE57G        : 4
+         * id46QVP3G        : 0
+         * id46QVP4G        : 1
+         * id46QVP5G        : 2
+         * id46QVP6G        : 3
+         * id46QVP7G        : 4
          * ...              : ....
        * num                : 0
        * data               : dict(80)
@@ -1190,27 +1190,27 @@ in parantheses.
          * 79               : [256x256 bool array]
        * positions          : [80x2 float64 array]
      * iterable             : list(80)
-       * id3VMDSBIQNG       : dict(4)
+       * id3VML8BPTI0       : dict(4)
          * index            : 0
          * data             : [256x256 int32 array]
          * position         : [array = [0. 0.]]
          * mask             : [256x256 bool array]
-       * id3VMDK84LKG       : dict(4)
+       * id3VML8D8FO0       : dict(4)
          * index            : 1
          * data             : [256x256 int32 array]
          * position         : [array = [0.         0.00041562]]
          * mask             : [256x256 bool array]
-       * id3VMDSBIA60       : dict(4)
+       * id3VML8BRNBG       : dict(4)
          * index            : 2
          * data             : [256x256 int32 array]
          * position         : [array = [0.00039528 0.00012844]]
          * mask             : [256x256 bool array]
-       * id3VMDSBIA10       : dict(4)
+       * id3VML8BRML0       : dict(4)
          * index            : 3
          * data             : [256x256 int32 array]
          * position         : [array = [ 0.0002443  -0.00033625]]
          * mask             : [256x256 bool array]
-       * id3VMDSBIQ60       : dict(4)
+       * id3VML8BPUQ0       : dict(4)
          * index            : 4
          * data             : [256x256 int32 array]
          * position         : [array = [-0.0002443  -0.00033625]]
@@ -1219,7 +1219,7 @@ in parantheses.
    
    
    >>> print(u.verbose.report(NPS.auto(80), noheader=True))
-   * id3VMDSBHP0G           : dict(3)
+   * id3VMKO25OA0           : dict(3)
      * common               : ptypy.utils.parameters.Param(8)
        * version            : 0.1
        * num_frames         : 116
@@ -1231,18 +1231,18 @@ in parantheses.
        * distance           : 7.19
      * chunk                : ptypy.utils.parameters.Param(6)
        * indices            : list(36)
-         * id44VE7JG        : 80
-         * id44VE7KG        : 81
-         * id44VE7LG        : 82
-         * id44VE7MG        : 83
-         * id44VE7NG        : 84
+         * id46QVRJG        : 80
+         * id46QVRKG        : 81
+         * id46QVRLG        : 82
+         * id46QVRMG        : 83
+         * id46QVRNG        : 84
          * ...              : ....
        * indices_node       : list(36)
-         * id44VE7JG        : 80
-         * id44VE7KG        : 81
-         * id44VE7LG        : 82
-         * id44VE7MG        : 83
-         * id44VE7NG        : 84
+         * id46QVRJG        : 80
+         * id46QVRKG        : 81
+         * id46QVRLG        : 82
+         * id46QVRMG        : 83
+         * id46QVRNG        : 84
          * ...              : ....
        * num                : 1
        * data               : dict(36)
@@ -1321,27 +1321,27 @@ in parantheses.
          * 115              : [256x256 bool array]
        * positions          : [36x2 float64 array]
      * iterable             : list(36)
-       * id3VMDSBHR6G       : dict(4)
+       * id3VML8C0D5G       : dict(4)
          * index            : 80
          * data             : [256x256 int32 array]
          * position         : [array = [0.0018532 0.0016686]]
          * mask             : [256x256 bool array]
-       * id3VMDK8128G       : dict(4)
+       * id3VML8DDGCG       : dict(4)
          * index            : 81
          * data             : [256x256 int32 array]
          * position         : [array = [0.0021597 0.0012469]]
          * mask             : [256x256 bool array]
-       * id3VMDSBHQQ0       : dict(4)
+       * id3VML8C0F90       : dict(4)
          * index            : 82
          * data             : [256x256 int32 array]
          * position         : [array = [0.0023717  0.00077061]]
          * mask             : [256x256 bool array]
-       * id3VMDSBIQ60       : dict(4)
+       * id3VML8D9180       : dict(4)
          * index            : 83
          * data             : [256x256 int32 array]
          * position         : [array = [0.0024801  0.00026067]]
          * mask             : [256x256 bool array]
-       * id3VMDSBHPKG       : dict(4)
+       * id3VML8C0D80       : dict(4)
          * index            : 84
          * data             : [256x256 int32 array]
          * position         : [array = [ 0.0024801  -0.00026067]]
@@ -1379,7 +1379,7 @@ We can analyse the saved ``npy.ptyd`` with
 
    >>> from ptypy.io import h5info
    >>> print(h5info(NPS.info.dfile))
-   File created : Wed May  4 09:26:59 2022
+   File created : Wed Dec  7 16:30:29 2022
     * chunks [dict 6]:
         * 0 [dict 4]:
             * data [20x256x256 int32 array]

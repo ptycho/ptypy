@@ -257,7 +257,7 @@ and the corresponding *numpy* syntax, ptypy offers acces through a
    >>> from ptypy.core.classes import DEFAULT_ACCESSRULE
    >>> ar = DEFAULT_ACCESSRULE.copy()
    >>> print(ar)
-   * id3VIQ862Q1G           : ptypy.utils.parameters.Param(6)
+   * id3VN2C5P1LG           : ptypy.utils.parameters.Param(6)
      * storageID            : None
      * shape                : None
      * coord                : None
@@ -1334,9 +1334,9 @@ We start off with a small number of iterations.
 ::
 
    >>> iterate(P, 9)
-   438170.3264380576
-   315517.16234436736
-   237954.90075500667
+   438068.617220052
+   315551.7952469447
+   237508.33369270526
    
 
 We note that the error (here only displayed for 3 iterations) is
@@ -1379,18 +1379,18 @@ Ok, let us do some more iterations. 36 will do.
 ::
 
    >>> iterate(P, 36)
-   158915.27153488086
-   91916.97730865219
-   61074.06039295608
-   47990.177754398406
-   37926.09342086832
-   28904.497467175803
-   22488.8598904735
-   19680.60134584292
-   18666.331330559602
-   17917.54426299427
-   18070.198152618952
-   17842.483632624444
+   159471.3627333081
+   91979.67770205697
+   60626.5538798497
+   47254.777031521044
+   37146.52291323999
+   28057.178745169895
+   22256.575584983428
+   19983.492177719774
+   18427.198025867903
+   17726.22051379099
+   18077.448874346344
+   17713.97643463526
    
 
 Error is still on a steady descent. Let us look at the final

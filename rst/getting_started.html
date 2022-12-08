@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Getting started with Ptypy &#8212; ptypy 0.5.0 documentation</title>
+    <title>Getting started with Ptypy &#8212; ptypy 0.6.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/header.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -53,7 +53,7 @@
         <li class="right" >
           <a href="../content.html" title="Quicklinks"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Getting started with Ptypy</a></li> 
       </ul>
     </div>  
@@ -428,60 +428,60 @@ you can temper with.</p>
 <p>We encourage you to use the script <code class="docutils literal notranslate"><span class="pre">[ptypy_root]/templates/ptypy_minimal_prep_and_run.py</span></code>
 and modify the <em>recipe</em> part of the data parameter branch.
 Observe what changes in the reconstruction when scan parameters change.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="lineno"> 1 </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="lineno"> 2 </span><span class="sd">This script is a test for ptychographic reconstruction in the absence</span>
-<span class="lineno"> 3 </span><span class="sd">of actual data. It uses the test Scan class</span>
-<span class="lineno"> 4 </span><span class="sd">`ptypy.core.data.MoonFlowerScan` to provide &quot;data&quot;.</span>
-<span class="lineno"> 5 </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="lineno"> 6 </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">Ptycho</span>
-<span class="lineno"> 7 </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
-<span class="lineno"> 8 </span>
-<span class="lineno"> 9 </span><span class="kn">import</span> <span class="nn">tempfile</span>
-<span class="lineno">10 </span><span class="n">tmpdir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">()</span>
-<span class="lineno">11 </span>
-<span class="lineno">12 </span><span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">13 </span>
-<span class="lineno">14 </span><span class="c1"># for verbose output</span>
-<span class="lineno">15 </span><span class="n">p</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="s2">&quot;info&quot;</span>
-<span class="lineno">16 </span>
-<span class="lineno">17 </span><span class="c1"># set home path</span>
-<span class="lineno">18 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">19 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">home</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">tmpdir</span><span class="p">,</span> <span class="s2">&quot;ptypy&quot;</span><span class="p">])</span>
-<span class="lineno">20 </span>
-<span class="lineno">21 </span><span class="c1"># saving intermediate results</span>
-<span class="lineno">22 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">autosave</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">(</span><span class="n">active</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="lineno">23 </span>
-<span class="lineno">24 </span><span class="c1"># opens plotting GUI if interaction set to active)</span>
-<span class="lineno">25 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">autoplot</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">(</span><span class="n">active</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="lineno">26 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">interaction</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">(</span><span class="n">active</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="lineno">27 </span>
-<span class="lineno">28 </span><span class="c1"># max 200 frames (128x128px) of diffraction data</span>
-<span class="lineno">29 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">30 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">31 </span><span class="c1"># now you have to specify which ScanModel to use with scans.XX.name,</span>
-<span class="lineno">32 </span><span class="c1"># just as you have to give &#39;name&#39; for engines and PtyScan subclasses.</span>
-<span class="lineno">33 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;BlockVanilla&#39;</span> <span class="c1"># or &#39;BlockFull&#39;</span>
-<span class="lineno">34 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">35 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;MoonFlowerScan&#39;</span>
-<span class="lineno">36 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="mi">128</span>
-<span class="lineno">37 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">num_frames</span> <span class="o">=</span> <span class="mi">200</span>
-<span class="lineno">38 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">save</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="lineno">39 </span>
-<span class="lineno">40 </span><span class="c1"># position distance in fraction of illumination frame</span>
-<span class="lineno">41 </span><span class="hll"><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">density</span> <span class="o">=</span> <span class="mf">0.2</span>
-</span><span class="lineno">42 </span><span class="c1"># total number of photon in empty beam</span>
-<span class="lineno">43 </span><span class="hll"><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">photons</span> <span class="o">=</span> <span class="mf">1e8</span>
-</span><span class="lineno">44 </span><span class="c1"># Gaussian FWHM of possible detector blurring</span>
-<span class="lineno">45 </span><span class="hll"><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">psf</span> <span class="o">=</span> <span class="mf">0.</span>
-</span><span class="lineno">46 </span>
-<span class="lineno">47 </span><span class="c1"># attach a reconstrucion engine</span>
-<span class="lineno">48 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">49 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">50 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;DM&#39;</span>
-<span class="lineno">51 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">80</span>
-<span class="lineno">52 </span>
-<span class="lineno">53 </span><span class="c1"># prepare and run</span>
-<span class="lineno">54 </span><span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="linenos"> 2</span><span class="sd">This script is a test for ptychographic reconstruction in the absence</span>
+<span class="linenos"> 3</span><span class="sd">of actual data. It uses the test Scan class</span>
+<span class="linenos"> 4</span><span class="sd">`ptypy.core.data.MoonFlowerScan` to provide &quot;data&quot;.</span>
+<span class="linenos"> 5</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="linenos"> 6</span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">Ptycho</span>
+<span class="linenos"> 7</span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="linenos">10</span><span class="n">tmpdir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">()</span>
+<span class="linenos">11</span>
+<span class="linenos">12</span><span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">13</span>
+<span class="linenos">14</span><span class="c1"># for verbose output</span>
+<span class="linenos">15</span><span class="n">p</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="s2">&quot;info&quot;</span>
+<span class="linenos">16</span>
+<span class="linenos">17</span><span class="c1"># set home path</span>
+<span class="linenos">18</span><span class="n">p</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">19</span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">home</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">tmpdir</span><span class="p">,</span> <span class="s2">&quot;ptypy&quot;</span><span class="p">])</span>
+<span class="linenos">20</span>
+<span class="linenos">21</span><span class="c1"># saving intermediate results</span>
+<span class="linenos">22</span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">autosave</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">(</span><span class="n">active</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="linenos">23</span>
+<span class="linenos">24</span><span class="c1"># opens plotting GUI if interaction set to active)</span>
+<span class="linenos">25</span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">autoplot</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">(</span><span class="n">active</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos">26</span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">interaction</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">(</span><span class="n">active</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos">27</span>
+<span class="linenos">28</span><span class="c1"># max 200 frames (128x128px) of diffraction data</span>
+<span class="linenos">29</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">30</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">31</span><span class="c1"># now you have to specify which ScanModel to use with scans.XX.name,</span>
+<span class="linenos">32</span><span class="c1"># just as you have to give &#39;name&#39; for engines and PtyScan subclasses.</span>
+<span class="linenos">33</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;BlockVanilla&#39;</span> <span class="c1"># or &#39;BlockFull&#39;</span>
+<span class="linenos">34</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">35</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;MoonFlowerScan&#39;</span>
+<span class="linenos">36</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="mi">128</span>
+<span class="linenos">37</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">num_frames</span> <span class="o">=</span> <span class="mi">200</span>
+<span class="linenos">38</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">save</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="linenos">39</span>
+<span class="linenos">40</span><span class="c1"># position distance in fraction of illumination frame</span>
+<span class="hll"><span class="linenos">41</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">density</span> <span class="o">=</span> <span class="mf">0.2</span>
+</span><span class="linenos">42</span><span class="c1"># total number of photon in empty beam</span>
+<span class="hll"><span class="linenos">43</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">photons</span> <span class="o">=</span> <span class="mf">1e8</span>
+</span><span class="linenos">44</span><span class="c1"># Gaussian FWHM of possible detector blurring</span>
+<span class="hll"><span class="linenos">45</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">psf</span> <span class="o">=</span> <span class="mf">0.</span>
+</span><span class="linenos">46</span>
+<span class="linenos">47</span><span class="c1"># attach a reconstrucion engine</span>
+<span class="linenos">48</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">49</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">50</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;DM&#39;</span>
+<span class="linenos">51</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">80</span>
+<span class="linenos">52</span>
+<span class="linenos">53</span><span class="c1"># prepare and run</span>
+<span class="linenos">54</span><span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -493,36 +493,36 @@ processing parameters are changed. If you have become curious, move
 forward to <a class="reference internal" href="data_management.html#ptypy-data"><span class="std std-ref">Data management</span></a> and take a look at <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a>’s data management.
 Check out the data parameter branch <code class="xref py py-data docutils literal notranslate"><span class="pre">scan.data</span></code> for detailed parameter
 descriptions.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="lineno"> 1 </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="lineno"> 2 </span><span class="sd">This script creates a sample *.ptyd data file using the built-in</span>
-<span class="lineno"> 3 </span><span class="sd">test Scan `ptypy.core.data.MoonFlowerScan`</span>
-<span class="lineno"> 4 </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="lineno"> 5 </span><span class="kn">import</span> <span class="nn">time</span>
-<span class="lineno"> 6 </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
-<span class="lineno"> 7 </span><span class="kn">from</span> <span class="nn">ptypy.core.data</span> <span class="kn">import</span> <span class="n">MoonFlowerScan</span>
-<span class="lineno"> 8 </span><span class="c1"># for verbose output</span>
-<span class="lineno"> 9 </span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">set_level</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">)</span>
-<span class="lineno">10 </span>
-<span class="lineno">11 </span><span class="c1"># create data parameter branch</span>
-<span class="lineno">12 </span><span class="hll"><span class="n">data</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-</span><span class="lineno">13 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">dfile</span> <span class="o">=</span> <span class="s1">&#39;sample.ptyd&#39;</span>
-</span><span class="lineno">14 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">num_frames</span> <span class="o">=</span> <span class="mi">200</span>
-</span><span class="lineno">15 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">save</span> <span class="o">=</span> <span class="s1">&#39;append&#39;</span>
-</span><span class="lineno">16 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span class="lineno">17 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">auto_center</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span class="lineno">18 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">rebin</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span class="lineno">19 </span><span class="hll"><span class="n">data</span><span class="o">.</span><span class="n">orientation</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span class="lineno">20 </span>
-<span class="lineno">21 </span><span class="c1"># create PtyScan instance</span>
-<span class="lineno">22 </span><span class="n">MF</span> <span class="o">=</span> <span class="n">MoonFlowerScan</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-<span class="lineno">23 </span>
-<span class="lineno">24 </span><span class="n">MF</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
-<span class="lineno">25 </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
-<span class="lineno">26 </span>    <span class="c1"># autoprocess data</span>
-<span class="lineno">27 </span>    <span class="n">msg</span> <span class="o">=</span> <span class="n">MF</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
-<span class="lineno">28 </span>    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
-<span class="lineno">29 </span>    <span class="c1"># logs the out put of .auto() to terminal prompt</span>
-<span class="lineno">30 </span>    <span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">msg</span><span class="p">),</span> <span class="n">extra</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;allprocesses&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="linenos"> 2</span><span class="sd">This script creates a sample *.ptyd data file using the built-in</span>
+<span class="linenos"> 3</span><span class="sd">test Scan `ptypy.core.data.MoonFlowerScan`</span>
+<span class="linenos"> 4</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="linenos"> 5</span><span class="kn">import</span> <span class="nn">time</span>
+<span class="linenos"> 6</span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
+<span class="linenos"> 7</span><span class="kn">from</span> <span class="nn">ptypy.core.data</span> <span class="kn">import</span> <span class="n">MoonFlowerScan</span>
+<span class="linenos"> 8</span><span class="c1"># for verbose output</span>
+<span class="linenos"> 9</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">set_level</span><span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">)</span>
+<span class="linenos">10</span>
+<span class="linenos">11</span><span class="c1"># create data parameter branch</span>
+<span class="hll"><span class="linenos">12</span><span class="n">data</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+</span><span class="hll"><span class="linenos">13</span><span class="n">data</span><span class="o">.</span><span class="n">dfile</span> <span class="o">=</span> <span class="s1">&#39;sample.ptyd&#39;</span>
+</span><span class="hll"><span class="linenos">14</span><span class="n">data</span><span class="o">.</span><span class="n">num_frames</span> <span class="o">=</span> <span class="mi">200</span>
+</span><span class="hll"><span class="linenos">15</span><span class="n">data</span><span class="o">.</span><span class="n">save</span> <span class="o">=</span> <span class="s1">&#39;append&#39;</span>
+</span><span class="hll"><span class="linenos">16</span><span class="n">data</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span class="hll"><span class="linenos">17</span><span class="n">data</span><span class="o">.</span><span class="n">auto_center</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span class="hll"><span class="linenos">18</span><span class="n">data</span><span class="o">.</span><span class="n">rebin</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span class="hll"><span class="linenos">19</span><span class="n">data</span><span class="o">.</span><span class="n">orientation</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span class="linenos">20</span>
+<span class="linenos">21</span><span class="c1"># create PtyScan instance</span>
+<span class="linenos">22</span><span class="n">MF</span> <span class="o">=</span> <span class="n">MoonFlowerScan</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="linenos">23</span>
+<span class="linenos">24</span><span class="n">MF</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
+<span class="linenos">25</span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+<span class="linenos">26</span>    <span class="c1"># autoprocess data</span>
+<span class="linenos">27</span>    <span class="n">msg</span> <span class="o">=</span> <span class="n">MF</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+<span class="linenos">28</span>    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="linenos">29</span>    <span class="c1"># logs the out put of .auto() to terminal prompt</span>
+<span class="linenos">30</span>    <span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">msg</span><span class="p">),</span> <span class="n">extra</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;allprocesses&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
 </pre></div>
 </div>
 </section>
@@ -534,40 +534,40 @@ place. Take a challenging sample data from before
 and alter the reconstruction parameters and algorithms to find out if you
 can make the recontruction converge. Check out the engine parameter
 branch <a class="reference internal" href="parameters.html#id3" title="engine"><code class="xref py py-data docutils literal notranslate"><span class="pre">engine</span></code></a> for detailed parameter descriptions.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="lineno"> 1 </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="lineno"> 2 </span><span class="sd">This script is a test for ptychographic reconstruction after an</span>
-<span class="lineno"> 3 </span><span class="sd">experiment has been carried out and the data is available in ptypy&#39;s</span>
-<span class="lineno"> 4 </span><span class="sd">data file format in the current directory as &quot;sample.ptyd&quot;. Use together</span>
-<span class="lineno"> 5 </span><span class="sd">with `ptypy_make_sample_ptyd.py`.</span>
-<span class="lineno"> 6 </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="lineno"> 7 </span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">Ptycho</span>
-<span class="lineno"> 8 </span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
-<span class="lineno"> 9 </span>
-<span class="lineno">10 </span><span class="kn">import</span> <span class="nn">tempfile</span>
-<span class="lineno">11 </span><span class="n">tmpdir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">()</span>
-<span class="lineno">12 </span>
-<span class="lineno">13 </span><span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">14 </span><span class="n">p</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="s2">&quot;info&quot;</span>
-<span class="lineno">15 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">16 </span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">home</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">tmpdir</span><span class="p">,</span> <span class="s2">&quot;ptypy&quot;</span><span class="p">])</span>
-<span class="lineno">17 </span>
-<span class="lineno">18 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">19 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">20 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">21 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;BlockVanilla&#39;</span>
-<span class="lineno">22 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;PtydScan&#39;</span>
-<span class="lineno">23 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="s1">&#39;file&#39;</span>
-<span class="lineno">24 </span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dfile</span> <span class="o">=</span> <span class="s1">&#39;sample.ptyd&#39;</span>
-<span class="lineno">25 </span>
-<span class="lineno">26 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">27 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">28 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;DM&#39;</span>
-<span class="lineno">29 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">80</span>
-<span class="lineno">30 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine01</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
-<span class="lineno">31 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine01</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;ML&#39;</span>
-<span class="lineno">32 </span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine01</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">20</span>
-<span class="lineno">33 </span>
-<span class="lineno">34 </span><span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="linenos"> 2</span><span class="sd">This script is a test for ptychographic reconstruction after an</span>
+<span class="linenos"> 3</span><span class="sd">experiment has been carried out and the data is available in ptypy&#39;s</span>
+<span class="linenos"> 4</span><span class="sd">data file format in the current directory as &quot;sample.ptyd&quot;. Use together</span>
+<span class="linenos"> 5</span><span class="sd">with `ptypy_make_sample_ptyd.py`.</span>
+<span class="linenos"> 6</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="linenos"> 7</span><span class="kn">from</span> <span class="nn">ptypy.core</span> <span class="kn">import</span> <span class="n">Ptycho</span>
+<span class="linenos"> 8</span><span class="kn">from</span> <span class="nn">ptypy</span> <span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">u</span>
+<span class="linenos"> 9</span>
+<span class="linenos">10</span><span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="linenos">11</span><span class="n">tmpdir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">()</span>
+<span class="linenos">12</span>
+<span class="linenos">13</span><span class="n">p</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">14</span><span class="n">p</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="s2">&quot;info&quot;</span>
+<span class="linenos">15</span><span class="n">p</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">16</span><span class="n">p</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">home</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">tmpdir</span><span class="p">,</span> <span class="s2">&quot;ptypy&quot;</span><span class="p">])</span>
+<span class="linenos">17</span>
+<span class="linenos">18</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">19</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">20</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">21</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;BlockVanilla&#39;</span>
+<span class="linenos">22</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;PtydScan&#39;</span>
+<span class="linenos">23</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="s1">&#39;file&#39;</span>
+<span class="linenos">24</span><span class="n">p</span><span class="o">.</span><span class="n">scans</span><span class="o">.</span><span class="n">MF</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dfile</span> <span class="o">=</span> <span class="s1">&#39;sample.ptyd&#39;</span>
+<span class="linenos">25</span>
+<span class="linenos">26</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">27</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">28</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;DM&#39;</span>
+<span class="linenos">29</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">80</span>
+<span class="linenos">30</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine01</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">Param</span><span class="p">()</span>
+<span class="linenos">31</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine01</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;ML&#39;</span>
+<span class="linenos">32</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine01</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="linenos">33</span>
+<span class="linenos">34</span><span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -663,7 +663,7 @@ branch <a class="reference internal" href="parameters.html#id3" title="engine"><
         <li class="right" >
           <a href="../content.html" title="Quicklinks"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Getting started with Ptypy</a></li> 
       </ul>
     </div>

@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Data management &#8212; ptypy 0.5.0 documentation</title>
+    <title>Data management &#8212; ptypy 0.6.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/header.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -53,7 +53,7 @@
         <li class="right" >
           <a href="concept.html" title="Concepts and Classes"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Data management</a></li> 
       </ul>
     </div>  
@@ -325,7 +325,7 @@ Omitting any of these parameters or setting the value of the dataset to
 <blockquote>
 <div><ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">version</span></code> is ptypy version this dataset was prepared with
-(current version is 0.5.0.dev72f54d3d, see <code class="xref py py-data docutils literal notranslate"><span class="pre">version</span></code>).</p></li>
+(current version is 0.6.0, see <code class="xref py py-data docutils literal notranslate"><span class="pre">version</span></code>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">label</span></code> is a custom user label. Choose a unique label to your liking.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">num_frames</span></code> indicates how many diffraction image frames are
 expected in the dataset (see <code class="xref py py-data docutils literal notranslate"><span class="pre">num_frames</span></code>)
@@ -645,7 +645,7 @@ class. For each parameter, most important are the <em>type</em>, <em>default</em
 <em>help</em> string. The decorator does more than collect this information: it also
 generates from it a class variable called <cite>DEFAULT</cite>, which stores all defaults:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">NumpyScan</span><span class="o">.</span><span class="n">DEFAULT</span><span class="p">,</span> <span class="n">noheader</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-<span class="go">* id3VMDSB2BHG           : ptypy.utils.parameters.Param(20)</span>
+<span class="go">* id3VML8DHOKG           : ptypy.utils.parameters.Param(20)</span>
 <span class="go">  * name                 : PtyScan</span>
 <span class="go">  * dfile                : None</span>
 <span class="go">  * chunk_format         : .chunk%02d</span>
@@ -957,7 +957,7 @@ with <a class="reference internal" href="ptypy.utils.html#ptypy.utils.verbose.re
 concatenated, but the length of iterables or dicts is always indicated
 in parantheses.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">NPS</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">80</span><span class="p">),</span> <span class="n">noheader</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-<span class="go">* id3VMDSBIOU0           : dict(3)</span>
+<span class="go">* id3VML8BIFGG           : dict(3)</span>
 <span class="go">  * common               : ptypy.utils.parameters.Param(8)</span>
 <span class="go">    * version            : 0.1</span>
 <span class="go">    * num_frames         : 116</span>
@@ -969,18 +969,18 @@ in parantheses.</p>
 <span class="go">    * distance           : 7.19</span>
 <span class="go">  * chunk                : ptypy.utils.parameters.Param(6)</span>
 <span class="go">    * indices            : list(80)</span>
-<span class="go">      * id44VE53G        : 0</span>
-<span class="go">      * id44VE54G        : 1</span>
-<span class="go">      * id44VE55G        : 2</span>
-<span class="go">      * id44VE56G        : 3</span>
-<span class="go">      * id44VE57G        : 4</span>
+<span class="go">      * id46QVP3G        : 0</span>
+<span class="go">      * id46QVP4G        : 1</span>
+<span class="go">      * id46QVP5G        : 2</span>
+<span class="go">      * id46QVP6G        : 3</span>
+<span class="go">      * id46QVP7G        : 4</span>
 <span class="go">      * ...              : ....</span>
 <span class="go">    * indices_node       : list(80)</span>
-<span class="go">      * id44VE53G        : 0</span>
-<span class="go">      * id44VE54G        : 1</span>
-<span class="go">      * id44VE55G        : 2</span>
-<span class="go">      * id44VE56G        : 3</span>
-<span class="go">      * id44VE57G        : 4</span>
+<span class="go">      * id46QVP3G        : 0</span>
+<span class="go">      * id46QVP4G        : 1</span>
+<span class="go">      * id46QVP5G        : 2</span>
+<span class="go">      * id46QVP6G        : 3</span>
+<span class="go">      * id46QVP7G        : 4</span>
 <span class="go">      * ...              : ....</span>
 <span class="go">    * num                : 0</span>
 <span class="go">    * data               : dict(80)</span>
@@ -1147,27 +1147,27 @@ in parantheses.</p>
 <span class="go">      * 79               : [256x256 bool array]</span>
 <span class="go">    * positions          : [80x2 float64 array]</span>
 <span class="go">  * iterable             : list(80)</span>
-<span class="go">    * id3VMDSBIQNG       : dict(4)</span>
+<span class="go">    * id3VML8BPTI0       : dict(4)</span>
 <span class="go">      * index            : 0</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0. 0.]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VMDK84LKG       : dict(4)</span>
+<span class="go">    * id3VML8D8FO0       : dict(4)</span>
 <span class="go">      * index            : 1</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.         0.00041562]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VMDSBIA60       : dict(4)</span>
+<span class="go">    * id3VML8BRNBG       : dict(4)</span>
 <span class="go">      * index            : 2</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.00039528 0.00012844]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VMDSBIA10       : dict(4)</span>
+<span class="go">    * id3VML8BRML0       : dict(4)</span>
 <span class="go">      * index            : 3</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [ 0.0002443  -0.00033625]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VMDSBIQ60       : dict(4)</span>
+<span class="go">    * id3VML8BPUQ0       : dict(4)</span>
 <span class="go">      * index            : 4</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [-0.0002443  -0.00033625]]</span>
@@ -1176,7 +1176,7 @@ in parantheses.</p>
 
 
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">NPS</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">80</span><span class="p">),</span> <span class="n">noheader</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-<span class="go">* id3VMDSBHP0G           : dict(3)</span>
+<span class="go">* id3VMKO25OA0           : dict(3)</span>
 <span class="go">  * common               : ptypy.utils.parameters.Param(8)</span>
 <span class="go">    * version            : 0.1</span>
 <span class="go">    * num_frames         : 116</span>
@@ -1188,18 +1188,18 @@ in parantheses.</p>
 <span class="go">    * distance           : 7.19</span>
 <span class="go">  * chunk                : ptypy.utils.parameters.Param(6)</span>
 <span class="go">    * indices            : list(36)</span>
-<span class="go">      * id44VE7JG        : 80</span>
-<span class="go">      * id44VE7KG        : 81</span>
-<span class="go">      * id44VE7LG        : 82</span>
-<span class="go">      * id44VE7MG        : 83</span>
-<span class="go">      * id44VE7NG        : 84</span>
+<span class="go">      * id46QVRJG        : 80</span>
+<span class="go">      * id46QVRKG        : 81</span>
+<span class="go">      * id46QVRLG        : 82</span>
+<span class="go">      * id46QVRMG        : 83</span>
+<span class="go">      * id46QVRNG        : 84</span>
 <span class="go">      * ...              : ....</span>
 <span class="go">    * indices_node       : list(36)</span>
-<span class="go">      * id44VE7JG        : 80</span>
-<span class="go">      * id44VE7KG        : 81</span>
-<span class="go">      * id44VE7LG        : 82</span>
-<span class="go">      * id44VE7MG        : 83</span>
-<span class="go">      * id44VE7NG        : 84</span>
+<span class="go">      * id46QVRJG        : 80</span>
+<span class="go">      * id46QVRKG        : 81</span>
+<span class="go">      * id46QVRLG        : 82</span>
+<span class="go">      * id46QVRMG        : 83</span>
+<span class="go">      * id46QVRNG        : 84</span>
 <span class="go">      * ...              : ....</span>
 <span class="go">    * num                : 1</span>
 <span class="go">    * data               : dict(36)</span>
@@ -1278,27 +1278,27 @@ in parantheses.</p>
 <span class="go">      * 115              : [256x256 bool array]</span>
 <span class="go">    * positions          : [36x2 float64 array]</span>
 <span class="go">  * iterable             : list(36)</span>
-<span class="go">    * id3VMDSBHR6G       : dict(4)</span>
+<span class="go">    * id3VML8C0D5G       : dict(4)</span>
 <span class="go">      * index            : 80</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.0018532 0.0016686]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VMDK8128G       : dict(4)</span>
+<span class="go">    * id3VML8DDGCG       : dict(4)</span>
 <span class="go">      * index            : 81</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.0021597 0.0012469]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VMDSBHQQ0       : dict(4)</span>
+<span class="go">    * id3VML8C0F90       : dict(4)</span>
 <span class="go">      * index            : 82</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.0023717  0.00077061]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VMDSBIQ60       : dict(4)</span>
+<span class="go">    * id3VML8D9180       : dict(4)</span>
 <span class="go">      * index            : 83</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.0024801  0.00026067]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VMDSBHPKG       : dict(4)</span>
+<span class="go">    * id3VML8C0D80       : dict(4)</span>
 <span class="go">      * index            : 84</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [ 0.0024801  -0.00026067]]</span>
@@ -1328,7 +1328,7 @@ input paramaters.</p>
 <code class="xref py py-func docutils literal notranslate"><span class="pre">h5info()</span></code></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.io</span> <span class="kn">import</span> <span class="n">h5info</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">h5info</span><span class="p">(</span><span class="n">NPS</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">dfile</span><span class="p">))</span>
-<span class="go">File created : Wed May  4 09:26:59 2022</span>
+<span class="go">File created : Wed Dec  7 16:30:29 2022</span>
 <span class="go"> * chunks [dict 6]:</span>
 <span class="go">     * 0 [dict 4]:</span>
 <span class="go">         * data [20x256x256 int32 array]</span>
@@ -1502,7 +1502,7 @@ should be passed via the dict <code class="xref py py-data docutils literal notr
         <li class="right" >
           <a href="concept.html" title="Concepts and Classes"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.5.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Data management</a></li> 
       </ul>
     </div>
