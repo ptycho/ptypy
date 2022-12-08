@@ -40,7 +40,7 @@ jobs:
     - name: Prepare ptypy
       run: |
         # Dry install to create ptypy/version.py
-        python setup.py install -n
+        pip install .
     - name: Lint with flake8
       run: |
         conda install flake8

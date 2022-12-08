@@ -10,7 +10,7 @@ To cite PTYPY in publications, use
  @article{ ... }
 
     :copyright: Copyright 2018 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
     :version: %(version)s
     :status: %(devrel)s
 """ % {'version': version, 'devrel': 'release' if release else 'development', 'short': short_version}

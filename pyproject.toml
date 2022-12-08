@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "PtyPy"
+authors = [
+  { name="Bjoern Enders", email="benders@lbl.gov"},
+  { name="Pierre Thibault", email="pthibault@units.it" },
+  { name="Benedikt Daurer", email="benedikt.daurer@diamond.ac.uk" },
+]
+description = "Ptychography Reconstruction for Python"
+readme = "README.rst"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: Other/Proprietary License",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development",
+    "Operating System :: POSIX :: Linux"
+]
+dynamic = ["version"]
+dependencies = [
+#  "python >= 3.7",
+  "numpy",
+  "scipy",
+  "h5py",
+]
+
+[project.optional-dependencies]
+full = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw"]
+
+
+#[project.scripts]
+#"ptypy.plot" = 'scripts/ptypy.plot'
+#"ptypy.inspect" = 'scripts/ptypy.inspect'
+#"ptypy.plotclient" = 'scripts/ptypy.plotclient'
+#"ptypy.new" = 'scripts/ptypy.new'
+#"ptypy.csv2cp" = 'scripts/ptypy.csv2cp'
+#"ptypy.run" ='scripts/ptypy.run'
+
+[project.urls]
+"Homepage" = "https://github.com/ptycho/ptypy"
+"Bug Tracker" = "https://github.com/ptycho/ptypy/issues"
+"Documentation" = "https://ptycho.github.io/ptypy"
+
+[tool.pytest.ini_options]
+testpaths = [
+  "test/core_tests",
+  "test/engine_tests",
+  "test/io_tests",
+  "test/ptyscan_tests",
+  "test/template_tests",
+  "test/util_tests",
+]
+
+# this is all BETA according to setuptools
+[tool.setuptools.dynamic]
+version = {attr = "ptypy.version.version"}
+
+[tool.setuptools.package-dir]
+ptypy = "ptypy"
+
+#[tool.setuptools.packages.find]
+#where = ["ptypy"]
+
+[tool.setuptools.package-data]
+ptypy = ["resources/*",]
+"ptypy.accelerate.cuda_pycuda.cuda" = ["*.cu"]
