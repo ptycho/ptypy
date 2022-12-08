@@ -5,9 +5,9 @@ Welcome Ptychonaut!
 framework for scientific ptychography compiled by 
 P.Thibault, B. Enders, and others (see AUTHORS).
 
-It comprises 8 years of experience in the field of ptychography condensed
-to a versatile python package. The package covers the whole path of
-ptychographic analysis after the actual experiment 
+It is the result of years of experience in the field of ptychography condensed
+into a versatile python package. The package covers the whole path of
+ptychographic analysis after the actual experiment is completed
 - from data management to reconstruction to visualization.
 
 The main idea of ptypy is: *"Flexibility and Scalabality through abstraction"*. 
