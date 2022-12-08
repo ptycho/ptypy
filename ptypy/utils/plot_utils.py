@@ -593,7 +593,9 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
     return fig
 
 
-def plot_recon(obj, probe, iter_info=None, cropping=0.2):
+def plot_recon(obj, probe, iter_info=None, cropping=0.2, 
+               amin=None, amax=None, pmin=-np.pi, pmax=np.pi,
+               probe_channel="c", probe_min=None, probe_max=None):
     """
     A simple matplotlib figure displaying a reconstructed
     object (magnitude and phase) and probe (zero component) 
@@ -610,6 +612,22 @@ def plot_recon(obj, probe, iter_info=None, cropping=0.2):
     cropping : int, optional
         Fractional margin to be cropped from object. A value between 0 and 1.
         Default is 0.2
+    amin : float, optional
+        minimum level (vmin) for object amplitude plot using matplotlib.pyplot.imshow
+    amax : float, optional 
+        maximum level (vmax) for object amplitude plot using matplotlib.pyplot.imshow
+    pmin : float, optional
+        minimum level (vmin) for object phase plot using matplotlib.pyplot.imshow
+        Default is -pi
+    pmax : float, optional 
+        maximum level (vmax) for object phase plot using matplotlib.pyplot.imshow
+        Default is +pi
+    probe_channel : str, optional
+        PtyAxis channel to be used for probe plot, default is "c" (complex)
+    probe_min : float, optional
+        minimum level (vmin) for probe plot using PtyAxis
+    probe_max : float, optional 
+        maximum level (vmax) for probe plot using PtyAxis
 
     Return
     ------
@@ -625,13 +643,13 @@ def plot_recon(obj, probe, iter_info=None, cropping=0.2):
     fig, axes = plt.subplots(ncols=4, nrows=1, figsize=(18,4), dpi=60)
     axes[0].set_title("Object (magnitude)")
     axes[0].axis('off')
-    axes[0].imshow(np.abs(obj)[cy:-cy,cx:-cx], cmap='gray', vmin=None, vmax=None, interpolation='none')
+    axes[0].imshow(np.abs(obj)[cy:-cy,cx:-cx], cmap='gray', vmin=amin, vmax=amax, interpolation='none')
     axes[1].set_title("Object  (phase)")
     axes[1].axis('off')
-    axes[1].imshow(np.angle(obj)[cy:-cy,cx:-cx], vmin=-np.pi, vmax=np.pi, cmap='viridis', interpolation='none')
+    axes[1].imshow(np.angle(obj)[cy:-cy,cx:-cx], vmin=pmin, vmax=pmax, cmap='viridis', interpolation='none')
     axes[2].set_title("Probe (complex)")
     axes[2].axis('off')
-    axes[2] = PtyAxis(axes[2], channel='c')
+    axes[2] = PtyAxis(axes[2], channel=probe_channel, vmin=probe_min, vmax=probe_max)
     axes[2].set_data(probe)
     axes[3].set_title("Convergence plot")
     axes[3].plot(iterations, likelihood_error)
