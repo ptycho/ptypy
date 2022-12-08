@@ -402,7 +402,7 @@ class Hdf5Loader(PtyScan):
         positions_fast_shape = self.fast_axis.shape
 
         with h5.File(self.p.positions.file, 'r') as f:
-            slow_axis = [self.p.positions.slow_key][...]
+            slow_axis = f[self.p.positions.slow_key][...]
         if self._is_spectro_scan and self.p.outer_index is not None:
             slow_axis = slow_axis[self.p.outer_index]
         self.slow_axis = np.squeeze(slow_axis) if slow_axis.ndim > 2 else slow_axis
@@ -517,7 +517,7 @@ class Hdf5Loader(PtyScan):
             log(3, "loading distance={} from file".format(self.p.distance))
         
         if None not in [self.p.recorded_psize.file, self.p.recorded_psize.key]:
-            with h5.File(self.p.recorded_psize.file, 'r'):
+            with h5.File(self.p.recorded_psize.file, 'r') as f:
                 self.p.psize = float(f[self.p.recorded_psize.key][()] * self.p.recorded_psize.multiplier)
             self.info.psize = self.p.psize
             log(3, "loading psize={} from file".format(self.p.psize))
