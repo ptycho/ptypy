@@ -1,15 +1,15 @@
 Main contributors:
- * Pierre Thibault (p.thibault@ucl.ac.uk)
- * Björn Enders (bjoern.enders@ph.tum.de)
+ * Pierre Thibault (pthibault@units.it)
+ * Bjoern Enders (benders@lbl.gov)
 
 Early versions of this package were developed by Pierre Thibault between 2007 and 2009
 at Paul Scherrer Institut (Switzerland).
 
 The package was developed further by P. Thibault at the Technische Universität München 
-from 2009 to 2013, with important contributions from Martin Dierolf, Björn Enders,
+from 2009 to 2013, with important contributions from Martin Dierolf, Bjoern Enders,
 and Marco Stockmar. 
 
-The complete redesign of the code has been done by Björn Enders and Pierre Thibault in
+The complete redesign of the code has been done by Bjoern Enders and Pierre Thibault in
 2013-2014.
 
 We would like to thank especially Martin Dierolf for his valuable feedback.
