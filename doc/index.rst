@@ -3,7 +3,7 @@ Welcome Ptychonaut!
      
 |ptypy| [#Enders2016]_ is a
 framework for scientific ptychography compiled by 
-P.Thibault and B. Enders and licensed under the GPLv2 license.
+P.Thibault, B. Enders, and others (see AUTHORS).
 
 It comprises 8 years of experience in the field of ptychography condensed
 to a versatile python package. The package covers the whole path of
