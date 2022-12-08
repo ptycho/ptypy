@@ -5,7 +5,7 @@ Wrapper to store nearly anything in an hdf5 file.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import h5py
 import numpy as np
