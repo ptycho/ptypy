@@ -376,6 +376,7 @@ class Hdf5Loader(PtyScan):
         self._spectro_scan_check()
         self._prepare_intensity_and_positions()
         self._prepare_framefilter()
+        self.compute_scan_mapping_and_trajectory(self.data_shape, self.positions_fast_shape, self.positions_slow_shape)
         self._prepare_darkfield()
         self._prepare_flatfield()
         self._prepare_mask()
@@ -463,7 +464,6 @@ class Hdf5Loader(PtyScan):
         if self.p.positions.skip > 1:
             log(3, "Skipping every {:d} positions".format(self.p.positions.skip))
 
-        self.compute_scan_mapping_and_trajectory(self.data_shape, self.positions_fast_shape, self.positions_slow_shape)
 
     def _prepare_framefilter(self):
         """
