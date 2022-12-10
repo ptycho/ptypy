@@ -154,6 +154,11 @@ class Hdf5Loader(PtyScan):
     type = str
     help = Key to the mask entry in the hdf5 file.
 
+    [mask.invert]
+    default = False
+    type = bool
+    help = Inverting the mask
+
     [flatfield]
     default =
     type = Param
@@ -369,7 +374,7 @@ class Hdf5Loader(PtyScan):
         self.fhandle_darkfield = None
         self.fhandle_flatfield = None
         self.fhandle_normalisation = None
-        self.fhandle_normalisation = None
+        self.fhandle_mask = None
 
         self._params_check()
         log(4, u.verbose.report(self.info))
@@ -722,6 +727,8 @@ class Hdf5Loader(PtyScan):
                 mask = self.mask[indexed_frame_slices].squeeze()
             else:
                 mask = self.mask[self.frame_slices].squeeze()
+            if self.p.mask.invert:
+                mask = 1 - mask
         else:
             mask = np.ones_like(intensity, dtype=int)
 
