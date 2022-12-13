@@ -775,7 +775,7 @@ class Hdf5Loader(PtyScan):
                 indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
                 if self.framefilter is not None:
-                    self.preview_indices = self.preview_indices[:,self.framefilter[::skip,::skip].flatten()]
+                    self.preview_indices = self.preview_indices[:,self.framefilter[indices[1][::skip,::skip], indices[0][::skip,::skip]].flatten()]
                 self.num_frames = len(self.preview_indices[0])
             else:
                 if (set_slow_axis_bounds is not None) and (set_fast_axis_bounds is not None):
@@ -787,9 +787,10 @@ class Hdf5Loader(PtyScan):
                     elif isinstance(fast_axis_bounds, (tuple, list)):
                         fast_axis_bounds = set_fast_axis_bounds
                 self._scantype = "arb"
-                self.preview_indices = np.array(list(range(*fast_axis_bounds)))[::skip]
+                indices = np.array(list(range(*fast_axis_bounds)))
+                self.preview_indices = indices[::skip]
                 if self.framefilter is not None:
-                    self.preview_indices = self.preview_indices[self.framefilter[::skip]]
+                    self.preview_indices = self.preview_indices[self.framefilter[indices][::skip]]
                 self.num_frames = len(self.preview_indices)
 
         elif ((len(positions_fast_shape)>1) and (len(positions_slow_shape)>1)) and data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
