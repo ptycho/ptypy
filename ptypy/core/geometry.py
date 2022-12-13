@@ -685,7 +685,7 @@ class BasicNearfieldPropagator(object):
     Basic two step (i.e. two ffts) Nearfield Propagator.
     """
 
-    def __init__(self, geo_pars=None, ffttype='fftw', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='numpy', **kwargs):
         """
         Parameters
         ----------
