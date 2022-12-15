@@ -109,6 +109,13 @@ class Ptycho(Base):
     lowlim = 1
     userlevel = 1
 
+    [frames_before_iterate]
+    default = None
+    type = int
+    help = Number of frames to be loaded before reconstruction starts.
+    doc = For streaming data, this parameter determines when to start 
+          engine iterate if waiting for further frames
+
     [dry_run]
     default = False
     help = Dry run switch
@@ -524,8 +531,9 @@ class Ptycho(Base):
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs. Sets self.new_data
         with LogTime(self.p.io.benchmark == 'all') as t:
-            self.new_data = self.model.new_data()
-        if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
+            while self.new_data is None:
+                self.new_data = self.model.new_data()
+            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
         # Print stats
         parallel.barrier()
@@ -677,6 +685,15 @@ class Ptycho(Base):
                         engine.prepare()
                     if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
+                # Check if we have reached the end of the scan
+                end_of_scan =  any(s.ptyscan.end_of_scan for s in list(self.model.scans.values()))
+                # Nr. of currently loaded diffraction views
+                all_diff_views = len(self.diff.V)
+                # Keep loading data, unless we have reached minimum nr. of frames or end of scan
+                keep_loading_data = (self.p.frames_before_iterate is not None) and (all_diff_views < self.p.frames_before_iterate)
+                if keep_loading_data and not end_of_scan:
+                    continue
+
                 auto_save = self.p.io.autosave
                 if auto_save.active and auto_save.interval > 0:
                     if engine.curiter % auto_save.interval == 0:
@@ -685,6 +702,11 @@ class Ptycho(Base):
                         self.save_run(auto, 'dump')
                         self.runtime.last_save = engine.curiter
                         logger.info(headerline())
+
+                # If not end of scan, expand total number of iterations
+                # This is to make sure that the specified nr. of iterations is guaranteed once all data is loaded
+                if not end_of_scan:
+                    engine.numiter += engine.p.numiter_contiguous
 
                 # One iteration
                 with LogTime(self.p.io.benchmark == 'all') as t:
