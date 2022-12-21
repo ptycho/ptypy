@@ -1120,4 +1120,7 @@ class Hdf5LoaderFast(Hdf5Loader):
             intensities = np.pad(intensities, tuple(self.pad.reshape(2,2)), mode='constant')
             weights = np.pad(weights, tuple(self.pad.reshape(2,2)), mode='constant')
 
+        if self.p.mask.invert:
+            weights = 1 - weights
+
         return weights, intensities
