@@ -594,8 +594,10 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
 
 
 def plot_recon(obj, probe, iter_info=None, cropping=0.2, 
-               amin=None, amax=None, pmin=-np.pi, pmax=np.pi,
-               probe_channel="c", probe_min=None, probe_max=None):
+               amin=None, amax=None, pmin=None, pmax=None,
+               outlier_percentile=0.1, 
+               probe_channel="c", probe_min=None, probe_max=None,
+               title="", dpi=60):
     """
     A simple matplotlib figure displaying a reconstructed
     object (magnitude and phase) and probe (zero component) 
@@ -618,16 +620,21 @@ def plot_recon(obj, probe, iter_info=None, cropping=0.2,
         maximum level (vmax) for object amplitude plot using matplotlib.pyplot.imshow
     pmin : float, optional
         minimum level (vmin) for object phase plot using matplotlib.pyplot.imshow
-        Default is -pi
     pmax : float, optional 
         maximum level (vmax) for object phase plot using matplotlib.pyplot.imshow
-        Default is +pi
+    outlier_percentile : float, optional
+        sets object min/max scale based on percentile of image values
+        this is default setting with min/max at 0.1/100-0.1 percent.
     probe_channel : str, optional
         PtyAxis channel to be used for probe plot, default is "c" (complex)
     probe_min : float, optional
         minimum level (vmin) for probe plot using PtyAxis
     probe_max : float, optional 
         maximum level (vmax) for probe plot using PtyAxis
+    title : str, optional
+        Figure title displayed at the top.
+    dpi : int, optional
+        resolution of matplotlib.figure.Figure, default is 60.
 
     Return
     ------
@@ -637,16 +644,31 @@ def plot_recon(obj, probe, iter_info=None, cropping=0.2,
     iterations = []
     if iter_info is not None:
         likelihood_error = [iter_info[i]['error'][1] for i in range(len(iter_info))]
-        iterations = [iter_info[i]['iterations'] for i in range(len(iter_info))]        
+        iterations = [iter_info[i]['iterations'] for i in range(len(iter_info))]
     cy = int(obj.shape[0]*cropping)
     cx = int(obj.shape[1]*cropping)
-    fig, axes = plt.subplots(ncols=4, nrows=1, figsize=(18,4), dpi=60)
+    if (cx > 0) and (cy > 0):
+        amplitude = np.abs(obj)[cy:-cy,cx:-cx]
+        phase = np.angle(obj)[cy:-cy,cx:-cx]
+    else:
+        amplitude = np.abs(obj)
+        phase = np.angle(obj)
+    if amin is None:
+        amin = np.percentile(amplitude, outlier_percentile)
+    if amax is None:
+        amax = np.percentile(amplitude, 100-outlier_percentile)
+    if pmin is None:
+        pmin = np.percentile(phase, outlier_percentile)
+    if pmax is None:
+        pmax = np.percentile(phase, 100-outlier_percentile)
+    fig, axes = plt.subplots(ncols=4, nrows=1, figsize=(18,4), dpi=dpi)
+    fig.suptitle(title, y=1.05)
     axes[0].set_title("Object (magnitude)")
     axes[0].axis('off')
-    axes[0].imshow(np.abs(obj)[cy:-cy,cx:-cx], cmap='gray', vmin=amin, vmax=amax, interpolation='none')
+    axes[0].imshow(amplitude, cmap='gray', vmin=amin, vmax=amax, interpolation='none')
     axes[1].set_title("Object  (phase)")
     axes[1].axis('off')
-    axes[1].imshow(np.angle(obj)[cy:-cy,cx:-cx], vmin=pmin, vmax=pmax, cmap='viridis', interpolation='none')
+    axes[1].imshow(phase, vmin=pmin, vmax=pmax, cmap='viridis', interpolation='none')
     axes[2].set_title("Probe (complex)")
     axes[2].axis('off')
     axes[2] = PtyAxis(axes[2], channel=probe_channel, vmin=probe_min, vmax=probe_max)
