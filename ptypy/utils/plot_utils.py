@@ -22,7 +22,6 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from .verbose import logger
 from .array_utils import grids
-#from .plot_client import MPLplotter
 
 __all__ = ['pause', 'rmphaseramp', 'plot_storage', 'imsave', 'imload',
            'complex2hsv', 'complex2rgb', 'hsv2rgb', 'rgb2complex', 'rgb2hsv',
