@@ -22,11 +22,11 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from .verbose import logger
 from .array_utils import grids
+#from .plot_client import MPLplotter
 
 __all__ = ['pause', 'rmphaseramp', 'plot_storage', 'imsave', 'imload',
            'complex2hsv', 'complex2rgb', 'hsv2rgb', 'rgb2complex', 'rgb2hsv',
-           'hsv2complex', 'franzmap','PtyAxis', 
-           'plot_recon', 'plot_recon_from_ptycho', 'plot_recon_from_ptyr']
+           'hsv2complex', 'franzmap','PtyAxis']
 
 # Improved interactive behavior for old versions of matplotlib
 try:
@@ -591,138 +591,6 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
 
     plt.draw()
     return fig
-
-
-def plot_recon(obj, probe, iter_info=None, cropping=0.2, 
-               amin=None, amax=None, pmin=None, pmax=None,
-               outlier_percentile=0.1, 
-               probe_channel="c", probe_min=None, probe_max=None,
-               title="", dpi=60):
-    """
-    A simple matplotlib figure displaying a reconstructed
-    object (magnitude and phase) and probe (zero component) 
-    together with the 1D plot of the log-likelihood error.
-
-    Parameters
-    ----------
-    obj : ndarray
-        2D object array
-    probe : ndarray
-        2D probe array
-    iter_info : dict, optional
-        Dictionary containing iteration events
-    cropping : int, optional
-        Fractional margin to be cropped from object. A value between 0 and 1.
-        Default is 0.2
-    amin : float, optional
-        minimum level (vmin) for object amplitude plot using matplotlib.pyplot.imshow
-    amax : float, optional 
-        maximum level (vmax) for object amplitude plot using matplotlib.pyplot.imshow
-    pmin : float, optional
-        minimum level (vmin) for object phase plot using matplotlib.pyplot.imshow
-    pmax : float, optional 
-        maximum level (vmax) for object phase plot using matplotlib.pyplot.imshow
-    outlier_percentile : float, optional
-        sets object min/max scale based on percentile of image values
-        this is default setting with min/max at 0.1/100-0.1 percent.
-    probe_channel : str, optional
-        PtyAxis channel to be used for probe plot, default is "c" (complex)
-    probe_min : float, optional
-        minimum level (vmin) for probe plot using PtyAxis
-    probe_max : float, optional 
-        maximum level (vmax) for probe plot using PtyAxis
-    title : str, optional
-        Figure title displayed at the top.
-    dpi : int, optional
-        resolution of matplotlib.figure.Figure, default is 60.
-
-    Return
-    ------
-    fig : matplotlib.figure.Figure
-    """
-    likelihood_error = []
-    iterations = []
-    if iter_info is not None:
-        likelihood_error = [iter_info[i]['error'][1] for i in range(len(iter_info))]
-        iterations = [iter_info[i]['iterations'] for i in range(len(iter_info))]
-    cy = int(obj.shape[0]*cropping)
-    cx = int(obj.shape[1]*cropping)
-    if (cx > 0) and (cy > 0):
-        amplitude = np.abs(obj)[cy:-cy,cx:-cx]
-        phase = np.angle(obj)[cy:-cy,cx:-cx]
-    else:
-        amplitude = np.abs(obj)
-        phase = np.angle(obj)
-    if amin is None:
-        amin = np.percentile(amplitude, outlier_percentile)
-    if amax is None:
-        amax = np.percentile(amplitude, 100-outlier_percentile)
-    if pmin is None:
-        pmin = np.percentile(phase, outlier_percentile)
-    if pmax is None:
-        pmax = np.percentile(phase, 100-outlier_percentile)
-    fig, axes = plt.subplots(ncols=4, nrows=1, figsize=(18,4), dpi=dpi)
-    fig.suptitle(title, y=1.05)
-    axes[0].set_title("Object (magnitude)")
-    axes[0].axis('off')
-    axes[0].imshow(amplitude, cmap='gray', vmin=amin, vmax=amax, interpolation='none')
-    axes[1].set_title("Object  (phase)")
-    axes[1].axis('off')
-    axes[1].imshow(phase, vmin=pmin, vmax=pmax, cmap='viridis', interpolation='none')
-    axes[2].set_title("Probe (complex)")
-    axes[2].axis('off')
-    axes[2] = PtyAxis(axes[2], channel=probe_channel, vmin=probe_min, vmax=probe_max)
-    axes[2].set_data(probe)
-    axes[3].set_title("Convergence plot")
-    axes[3].plot(iterations, likelihood_error)
-    axes[3].set_xlabel("Iteration")
-    axes[3].set_ylabel("Log-likelihood error")
-    axes[3].yaxis.set_label_position('right')
-    axes[3].tick_params(left=0, right=1, labelleft=0, labelright=1)
-    axes[3].semilogy()
-    plt.close(fig)
-    return fig
-
-def plot_recon_from_ptycho(P, **kwargs):
-    """
-    A simple matplotlib figure displaying a reconstruction
-    from a Ptycho instance.
-
-    Parameters
-    ----------
-    P : Ptycho
-        Ptycho instance
-
-    Return
-    ------
-    fig : matplotlib.figure.Figure
-    """
-    scan = list(P.obj.S)[0]
-    obj  = P.obj.S[scan].data[0]
-    prb  = P.probe.S[scan].data[0]
-    iter = P.runtime["iter_info"] if "iter_info" in P.runtime else None
-    return plot_recon(obj, prb, iter, **kwargs)
-
-def plot_recon_from_ptyr(filename, **kwargs):
-    """
-    A simple matplotlib figure displaying a reconstruction
-    from a .ptyr file.
-
-    Parameters
-    ----------
-    filename : str
-        path to .ptyr file
-
-    Return
-    ------
-    fig : matplotlib.figure.Figure
-    """
-    from ..io import h5read
-    from .scripts import load_from_ptyr
-    obj = load_from_ptyr(filename, what="obj", layer=0)
-    prb = load_from_ptyr(filename, what="probe", layer=0)
-    iter = h5read(filename, "content/runtime/iter_info")["content/runtime/iter_info"]
-    return plot_recon(obj, prb, iter, **kwargs)
 
 class PtyAxis(object):
     """
