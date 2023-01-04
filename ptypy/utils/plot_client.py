@@ -19,7 +19,7 @@ from .plot_utils import plt # pyplot import with all the specialized settings
 from .plot_utils import PtyAxis, imsave, pause, rmphaseramp
 
 __all__ = ['MPLClient', 'MPLplotter', 'PlotClient', 'spawn_MPLClient', 'TEMPLATES', 'DEFAULT',
-           'JupyterClient', 'jupyter_plot_from_ptycho', 'jupyter_plot_from_ptyr']
+           '_JupyterClient', 'figure_from_ptycho', 'figure_from_ptyr']
 
 
 Storage_DEFAULT = Param(
@@ -624,7 +624,7 @@ class MPLplotter(object):
             f.write(plot_file+'\n')
             f.close()
 
-    def plot_all(self, blocking = False):
+    def plot_all(self):
         for key, storage in self.pr.items():
             #print key
             pp = self.pr_plot[key]
@@ -693,7 +693,7 @@ class MPLClient(MPLplotter):
             from ptypy import utils as u
             u.png2mpg(self._framefile, RemoveImages=True)
 
-class JupyterClient(MPLplotter):
+class _JupyterClient(MPLplotter):
 
     DEFAULT = DEFAULT
 
@@ -703,7 +703,7 @@ class JupyterClient(MPLplotter):
         self.config.update(autoplot_pars)
         layout = self.config.get('layout',layout_pars)
 
-        super(JupyterClient,self).__init__(pars=layout, 
+        super(_JupyterClient,self).__init__(pars=layout, 
                                       objects=ptycho.obj.S,
                                       probes=ptycho.probe.S,
                                       runtime=ptycho.runtime,
@@ -716,13 +716,12 @@ class JupyterClient(MPLplotter):
             self.initialized=True
         self.plot_fig.suptitle(title)
         self.plot_all()
-        self.draw()
         plt.close(self.plot_fig)
         return self.plot_fig
 
-def jupyter_plot_from_ptycho(P, pars=None):
+def figure_from_ptycho(P, pars=None):
     """
-    A simple matplotlib figure displaying a reconstruction
+    Returns a matplotlib figure displaying a reconstruction
     from a Ptycho instance.
 
     Parameters
@@ -745,13 +744,11 @@ def jupyter_plot_from_ptycho(P, pars=None):
                          in_thread=False)
     plotter.update_plot_layout()
     plotter.plot_all()
-    plotter.draw()
-    plt.close(plotter.plot_fig)
     return plotter.plot_fig
 
-def jupyter_plot_from_ptyr(filename, pars=None):
+def figure_from_ptyr(filename, pars=None):
     """
-    A simple matplotlib figure displaying a reconstruction
+    Returns a matplotlib figure displaying a reconstruction
     from a .ptyr file.
 
     Parameters
@@ -785,8 +782,6 @@ def jupyter_plot_from_ptyr(filename, pars=None):
                          in_thread=False)
     plotter.update_plot_layout()
     plotter.plot_all()
-    plotter.draw()
-    plt.close(plotter.plot_fig)
     return plotter.plot_fig
 
 class Bragg3dClient(object):

@@ -19,6 +19,7 @@ from . import parallel
 from .. import __has_matplotlib__ as hmpl
 if hmpl:
     from .plot_utils import *
-    from .plot_client import JupyterClient, PlotClient, MPLClient, spawn_MPLClient, MPLplotter
+    from .plot_client import PlotClient, MPLClient, spawn_MPLClient, MPLplotter
+    from .plot_client import _JupyterClient
 del hmpl
 
