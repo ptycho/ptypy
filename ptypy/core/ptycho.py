@@ -724,13 +724,15 @@ class Ptycho(Base):
                                 'Exit %.2e' % tuple(err))
                     imsg = '%(engine)s: Iteration # %(iteration)d/%(numiter)d :: ' %info + \
                                    'Fourier %.2e, Photons %.2e, Exit %.2e' %tuple(err)
-                    if self.p.io.jupyter_autoplot.active:
-                        from IPython import display
-                        fig = u.plot_recon_from_ptycho(self, title=imsg, 
-                                                       cropping=self.p.io.jupyter_autoplot.cropping,
-                                                       outlier_percentile=self.p.io.jupyter_autoplot.outlier_percentile)
-                        display.clear_output(wait=True)
-                        display.display(fig)
+                    if not self.p.io.autoplot.threaded:
+                        if not (info["iteration"] % self.p.io.autoplot.interval):
+                            from IPython import display
+                            from ptypy.utils.plot_client import _JupyterClient
+                            JC = _JupyterClient(self, autoplot_pars=self.p.io.autoplot, layout_pars=self.p.io.autoplot.layout)
+                            JC.runtime.update(self.runtime)
+                            fig = JC.plot(title=imsg)
+                            display.clear_output(wait=True)
+                            display.display(fig)
                     else:
                         ilog_streamer(imsg)
                     
