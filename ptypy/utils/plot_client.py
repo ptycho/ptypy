@@ -19,7 +19,7 @@ from .plot_utils import plt # pyplot import with all the specialized settings
 from .plot_utils import PtyAxis, imsave, pause, rmphaseramp
 
 __all__ = ['MPLClient', 'MPLplotter', 'PlotClient', 'spawn_MPLClient', 'TEMPLATES', 'DEFAULT',
-           '_JupyterClient', 'figure_from_ptycho', 'figure_from_ptyr']
+           'figure_from_ptycho', 'figure_from_ptyr']
 
 
 Storage_DEFAULT = Param(
