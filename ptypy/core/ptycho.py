@@ -16,7 +16,6 @@ from collections import OrderedDict
 from .. import utils as u
 from ..utils.verbose import logger, _, report, headerline, log, LogTime
 from ..utils.verbose import ilog_message, ilog_streamer, ilog_newline
-from ..utils.plot_client import _JupyterClient
 from ..utils import parallel
 from .. import engines
 from .classes import Base, Container, Storage, PTYCHO_PREFIX
@@ -728,6 +727,7 @@ class Ptycho(Base):
                     if not self.p.io.autoplot.threaded:
                         if not (info["iteration"] % self.p.io.autoplot.interval):
                             from IPython import display
+                            from ptypy.utils.plot_client import _JupyterClient
                             JC = _JupyterClient(self, autoplot_pars=self.p.io.autoplot, layout_pars=self.p.io.autoplot.layout)
                             JC.runtime.update(self.runtime)
                             fig = JC.plot(title=imsg)
