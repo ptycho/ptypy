@@ -674,7 +674,7 @@ class MPLClient(MPLplotter):
                         self.config.update(self.pc.config)
 
                     self._set_autolayout(self.config.layout)
-                    self.update_plot_layout(self.config.layout)
+                    self.update_plot_layout()
                     initialized=True
 
                 self.plot_all()
