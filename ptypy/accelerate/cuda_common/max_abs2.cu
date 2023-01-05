@@ -5,10 +5,7 @@
  * - IN_TYPE: can be float/double or complex<float>/complex<double>
  */
 
-#include <cmath>
-#include <thrust/complex.h>
-using thrust::complex;
-using thrust::norm;
+#include "common.cuh"
 
 inline __device__ OUT_TYPE norm(const float& in) {
     return in*in;

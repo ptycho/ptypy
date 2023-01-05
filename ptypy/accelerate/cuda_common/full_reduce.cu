@@ -7,8 +7,6 @@
  */
 
 
-#include <cassert>
-
 extern "C" __global__ void full_reduce(const IN_TYPE* in, OUT_TYPE* out, int size)
 {
   assert(gridDim.x == 1);

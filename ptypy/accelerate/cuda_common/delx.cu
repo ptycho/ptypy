@@ -5,8 +5,7 @@
  * - OUT_TYPE: the data type for the outputs 
  */
 
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 
 /** Finite difference for forward/backward for any axis that is not the

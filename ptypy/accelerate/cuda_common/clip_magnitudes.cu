@@ -1,10 +1,7 @@
 /** clip_magnitudes.
  *
  */
- #include <cassert>
- #include <cmath>
- #include <thrust/complex.h>
- using thrust::complex;
+ #include "common.cuh"
  
  extern "C" __global__ void clip_magnitudes(IN_TYPE *arr,
                                             float clip_min,

@@ -10,8 +10,7 @@
  * - DTYPE - any pod type
  */
 
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 extern "C" __global__ void transpose(const DTYPE* idata,
                                      DTYPE* odata,

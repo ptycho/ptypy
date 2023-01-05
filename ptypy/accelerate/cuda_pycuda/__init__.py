@@ -2,9 +2,8 @@ import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
 import numpy as np
 import os
-# debug_options = []
-# debug_options = ['-O0', '-G', '-g']
-debug_options = ['-O3', '-DNDEBUG', '-lineinfo'] # release mode flags
+kernel_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'cuda_common'))
+debug_options = ['-O3', '-DNDEBUG', '-lineinfo', '-I' + kernel_dir] # release mode flags
 
 # C++14 support was added with CUDA 9, so we only enable the flag there
 if cuda.get_version()[0] >= 9:
@@ -46,11 +45,11 @@ def load_kernel(name, subs={}, file=None):
 
     if file is None:
         if isinstance(name, str):
-            fn = "%s/cuda/%s.cu" % (os.path.dirname(__file__), name)
+            fn = "%s/%s.cu" % (kernel_dir, name)
         else:
             raise ValueError("name parameter must be a string if not filename is given")
     else:
-        fn = "%s/cuda/%s" % (os.path.dirname(__file__), file)
+        fn = "%s/%s" % (kernel_dir, file)
 
     with open(fn, 'r') as f:
         kernel = f.read()

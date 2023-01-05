@@ -5,8 +5,7 @@
  * - OUT_TYPE: can be float/double
  */
 
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 extern "C" __global__ void abs2sum(const IN_TYPE* a,
                                    const int n,

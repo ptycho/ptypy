@@ -1,6 +1,4 @@
-#include <cmath>
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 template <class T>
 __device__ inline T dotmul(const T& a, const T& b)

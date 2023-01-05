@@ -5,9 +5,7 @@
  * - OUT_TYPE: data type for outputs 
  */
 
-#include <cmath>
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 extern "C" __global__ void fill3D(
     OUT_TYPE* A,

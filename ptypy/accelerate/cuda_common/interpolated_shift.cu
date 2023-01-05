@@ -1,10 +1,4 @@
-#include <cassert>
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 __device__ inline complex<float>& ascomplex(float2& f2)
 {

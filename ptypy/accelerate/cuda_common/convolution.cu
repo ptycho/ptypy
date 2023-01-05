@@ -6,8 +6,7 @@
  * A symmetric convolution kernel is assumed here
  */
 
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 /** Implements reflect-mode index wrapping
  *
