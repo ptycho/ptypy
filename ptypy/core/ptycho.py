@@ -265,28 +265,6 @@ class Ptycho(Base):
         Choose ``'all'`` for timing data loading, engine_init, engine_prepare, engine_iterate and engine_finalize
     userlevel = 2
 
-    [io.jupyter_autoplot]
-    default = Param
-    type = Param
-    help = Live plotting for Jupyter Notebooks
-    doc = very useful for interactive reconstruction with jupyter notebooks, only works together with logging level "interactive".
-
-    [io.jupyter_autoplot.active]
-    default = False
-    type = bool
-    help = Activation switch
-    doc = If ``True`` the current reconstruction will be plotted inside a Jupyter notebook at regular intervals.
-
-    [io.jupyter_autoplot.cropping]
-    default = 0.2
-    type = float
-    help = Fractional margin to be cropped from object. A value between 0 and 1.
-    
-    [io.jupyter_autoplot.outlier_percentile]
-    default = 0.1
-    type = float
-    help = Object min/max scale based on percentile of image values.
-
     [scans]
     default = None
     type = Param
