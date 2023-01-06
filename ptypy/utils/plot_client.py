@@ -38,6 +38,7 @@ Storage_DEFAULT = Param(
 
 DEFAULT = Param()
 DEFAULT.figsize = (16, 10)
+DEFAULT.dpi = 100
 DEFAULT.ob = Storage_DEFAULT.copy()
 DEFAULT.pr = Storage_DEFAULT.copy()
 DEFAULT.pr.auto_display = ['c']
@@ -98,10 +99,15 @@ jupyter.pr.cmaps=['gray','hsv']
 jupyter.pr.crop=[0.0, 0.0]
 jupyter.pr.auto_display = ['c']
 jupyter.rm_pr=False
-jupyter.ob.clims=[[0,1], [-np.pi, np.pi]]
+jupyter.ob.clims=[None, None]
 jupyter.ob.cmaps=['gray','viridis']
 jupyter.ob.crop=[0.2, 0.2]
+jupyter.ob.mask = 0.5
 jupyter.rm_pr=True
+jupyter.figsize=(16,8)
+jupyter.dpi = 60
+jupyter.simplified_aspect_ratios = True
+jupyter.gridspecpars = (0.2, 0.12, 0.07, 0.95, 0.05, 0.93)
 TEMPLATES['jupyter'] = jupyter
 
 del nfbnw
@@ -428,7 +434,7 @@ class MPLplotter(object):
             num_shape_list.append(num_shape)
             self.pr_plot[key]=plot
 
-        axes_list, plot_fig, gs = self.create_plot_from_tile_list(1, num_shape_list, self.p.figsize)
+        axes_list, plot_fig, gs = self.create_plot_from_tile_list(1, num_shape_list, self.p.figsize, self.p.dpi)
         sy, sx = gs.get_geometry()
         w, h, l, r, b, t = self.p.gridspecpars
         gs.update(wspace=w*sy, hspace=h*sx, left=l, right=r, bottom=b, top=t)
@@ -442,7 +448,7 @@ class MPLplotter(object):
         self.gs = gs
 
     @staticmethod
-    def create_plot_from_tile_list(fignum=1, num_shape_list=[(4, (2, 2))], figsize=(8, 8)):
+    def create_plot_from_tile_list(fignum=1, num_shape_list=[(4, (2, 2))], figsize=(8, 8),dpi=100):
         def fill_with_tiles(size, sh, num, figratio=16./9.):
             coords_tl = []
             while num > 0:
@@ -505,7 +511,7 @@ class MPLplotter(object):
 
         from matplotlib import gridspec
         gs = gridspec.GridSpec(size[0], size[1])
-        fig = plt.figure(fignum)
+        fig = plt.figure(fignum, dpi=dpi)
         fig.clf()
 
         mag = min(figsize[0]/float(size[1]), figsize[1]/float(size[0]))
