@@ -700,9 +700,20 @@ class Ptycho(Base):
                                 'Time %(duration).3f' % info)
                     logger.info('Errors :: Fourier %.2e, Photons %.2e, '
                                 'Exit %.2e' % tuple(err))
-                    ilog_streamer('%(engine)s: Iteration # %(iteration)d/%(numiter)d :: ' %info + 
-                                   'Fourier %.2e, Photons %.2e, Exit %.2e' %tuple(err))
-
+                    imsg = '%(engine)s: Iteration # %(iteration)d/%(numiter)d :: ' %info + \
+                                   'Fourier %.2e, Photons %.2e, Exit %.2e' %tuple(err)
+                    if not self.p.io.autoplot.threaded:
+                        if not (info["iteration"] % self.p.io.autoplot.interval):
+                            from IPython import display
+                            from ptypy.utils.plot_client import _JupyterClient
+                            JC = _JupyterClient(self, autoplot_pars=self.p.io.autoplot, layout_pars=self.p.io.autoplot.layout)
+                            JC.runtime.update(self.runtime)
+                            fig = JC.plot(title=imsg)
+                            display.clear_output(wait=True)
+                            display.display(fig)
+                    else:
+                        ilog_streamer(imsg)
+                    
                 parallel.barrier()
 
             ilog_newline()

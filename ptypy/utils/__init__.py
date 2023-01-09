@@ -11,7 +11,7 @@ from .misc import *
 from .math_utils import *
 from .array_utils import *
 from .scripts import *
-from .parameters import Param, asParam
+from .parameters import *
 from .verbose import *
 from .citations import *
 from . import descriptor

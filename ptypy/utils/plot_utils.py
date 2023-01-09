@@ -591,7 +591,6 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
     plt.draw()
     return fig
 
-
 class PtyAxis(object):
     """
     Plot environment for matplotlib to allow for a Image plot with color axis,
