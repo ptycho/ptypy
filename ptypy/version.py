@@ -1,6 +1,6 @@
 
-short_version = '0.6.0'
-version = '0.6.0'
+short_version = '0.7.0'
+version = '0.7.0'
 release = True
 
 if not release:
