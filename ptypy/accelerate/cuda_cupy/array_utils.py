@@ -231,6 +231,97 @@ class CropPadKernel:
         self.fill3D(A, B, offset)
 
 
+class DerivativesKernel:
+    def __init__(self, dtype, queue=None):
+        if dtype == np.float32:
+            stype = "float"
+        elif dtype == np.complex64:
+            stype = "complex<float>"
+        else:
+            raise NotImplementedError(
+                "delxf is only implemented for float32 and complex64")
+
+        self.queue = queue
+        self.dtype = dtype
+        self.last_axis_block = (256, 4, 1)
+        self.mid_axis_block = (256, 4, 1)
+
+        self.delxf_last, self.delxf_mid = load_kernel(
+            ("delx_last", "delx_mid"),
+            file="delx.cu",
+            subs={
+                'IS_FORWARD': 'true',
+                'BDIM_X': str(self.last_axis_block[0]),
+                'BDIM_Y': str(self.last_axis_block[1]),
+                'IN_TYPE': stype,
+                'OUT_TYPE': stype
+            })
+        self.delxb_last, self.delxb_mid = load_kernel(
+            ("delx_last", "delx_mid"),
+            file="delx.cu",
+            subs={
+                'IS_FORWARD': 'false',
+                'BDIM_X': str(self.last_axis_block[0]),
+                'BDIM_Y': str(self.last_axis_block[1]),
+                'IN_TYPE': stype,
+                'OUT_TYPE': stype
+            })
+
+    def delxf(self, input, out, axis=-1):
+        if input.dtype != self.dtype:
+            raise ValueError('Invalid input data type')
+
+        if axis < 0:
+            axis = input.ndim + axis
+        axis = np.int32(axis)
+
+        if self.queue is not None:
+            self.queue.use()
+
+        if axis == input.ndim - 1:
+            flat_dim = np.int32(np.product(input.shape[0:-1]))
+            self.delxf_last((
+                int((flat_dim +
+                     self.last_axis_block[1] - 1) // self.last_axis_block[1]),
+                1, 1),
+                self.last_axis_block, (input, out, flat_dim, np.int32(input.shape[axis])))
+        else:
+            lower_dim = np.int32(np.product(input.shape[(axis+1):]))
+            higher_dim = np.int32(np.product(input.shape[:axis]))
+            gx = int(
+                (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
+            gy = 1
+            gz = int(higher_dim)
+            self.delxf_mid((gx, gy, gz), self.mid_axis_block, (input,
+                           out, lower_dim, higher_dim, np.int32(input.shape[axis])))
+
+    def delxb(self, input, out, axis=-1):
+        if input.dtype != self.dtype:
+            raise ValueError('Invalid input data type')
+
+        if axis < 0:
+            axis = input.ndim + axis
+        axis = np.int32(axis)
+
+        if self.queue is not None:
+            self.queue.use()
+        if axis == input.ndim - 1:
+            flat_dim = np.int32(np.product(input.shape[0:-1]))
+            self.delxb_last((
+                int((flat_dim +
+                     self.last_axis_block[1] - 1) // self.last_axis_block[1]),
+                1, 1), self.last_axis_block, (input, out, flat_dim, np.int32(input.shape[axis])))
+        else:
+            lower_dim = np.int32(np.product(input.shape[(axis+1):]))
+            higher_dim = np.int32(np.product(input.shape[:axis]))
+            gx = int(
+                (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
+            gy = 1
+            gz = int(higher_dim)
+            self.delxb_mid((gx, gy, gz), self.mid_axis_block, (input,
+                           out, lower_dim, higher_dim, np.int32(input.shape[axis])))
+
+
 class GaussianSmoothingKernel:
     def __init__(self, queue=None, num_stdevs=4, kernel_type='float'):
         if kernel_type not in ['float', 'double']:

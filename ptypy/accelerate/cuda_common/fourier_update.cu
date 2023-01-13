@@ -6,10 +6,7 @@ is 2x slower than individual as we have many idle threads here.
 It is not used at the moment.
 */
 
-#include <cassert>
-#include <cmath>
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 extern "C" __global__ void fourier_update(int nmodes,
                                           complex<float> *f_d,

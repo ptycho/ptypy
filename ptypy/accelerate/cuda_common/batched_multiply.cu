@@ -8,8 +8,7 @@
  * - MATH_TYPE: the data type used for computation (filter)
  */
 
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 extern "C" __global__ void batched_multiply(const complex<IN_TYPE>* input,
                                             complex<OUT_TYPE>* output,

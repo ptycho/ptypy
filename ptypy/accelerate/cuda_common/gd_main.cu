@@ -6,8 +6,7 @@
  * - MATH_TYPE: the data type used for computation 
  */
 
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 extern "C" __global__ void gd_main(const IN_TYPE* Imodel,
                                    const IN_TYPE* I,

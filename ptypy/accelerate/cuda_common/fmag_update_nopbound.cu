@@ -6,10 +6,7 @@
  * - MATH_TYPE: the data type used for computation
  */
 
-#include <cmath>
-#include <thrust/complex.h>
-using std::sqrt;
-using thrust::complex;
+#include "common.cuh"
 
 extern "C" __global__ void fmag_update_nopbound(complex<OUT_TYPE>* f,
                                                 const IN_TYPE* fmask,

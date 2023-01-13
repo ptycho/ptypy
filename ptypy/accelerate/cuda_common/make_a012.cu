@@ -7,8 +7,7 @@
  * - ACC_TYPE: data type used for accumulation
  */
 
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 extern "C" __global__ void make_a012(const complex<IN_TYPE>* f,
                                      const complex<IN_TYPE>* a,

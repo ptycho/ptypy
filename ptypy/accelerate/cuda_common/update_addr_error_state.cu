@@ -5,9 +5,7 @@
  * - OUT_TYPE: the data type for the outputs (float or double)
  */
 
-#include <cassert>
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 extern "C" __global__ void update_addr_error_state(int* __restrict addr,
                                                    const int* __restrict mangled_addr,

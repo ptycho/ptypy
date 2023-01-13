@@ -2,10 +2,7 @@
  * the modes. It turned out to run about 2x slower than the one without
  * shared memory, so it's not used at this stage.
  */
-#include <cassert>
-#include <cmath>
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 extern "C" __global__ void fourier_error2(int nmodes,
                                           complex<float> *f,

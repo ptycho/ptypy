@@ -7,8 +7,7 @@
  * - ACC_TYPE: data type used in norm calculation (input here)
  */
 
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 template <class T, class U>
 __device__ inline void atomicAdd(complex<T>* x, const complex<U>& y)

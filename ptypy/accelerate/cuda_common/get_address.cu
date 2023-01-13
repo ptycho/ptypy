@@ -1,6 +1,4 @@
-#include <thrust/complex.h>
-#include <cassert>
-using thrust::complex;
+#include "common.cuh"
 
 inline __device__ int minimum(int a, int b) { return a < b ? a : b; }
 

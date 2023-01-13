@@ -15,9 +15,7 @@
  */
 
 
-#include <cassert>
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 #define pr_dlayer(k) addr[(k)]
 #define ex_dlayer(k) addr[6 * num_pods + (k)]

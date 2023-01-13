@@ -6,8 +6,7 @@
  * - MATH_TYPE: the data type used for computation 
  */
 
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 extern "C" __global__ void build_aux_position_correction(
     complex<OUT_TYPE>* auxiliary_wave,

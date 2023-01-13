@@ -1,9 +1,4 @@
-#include <cassert>
-#include <cmath>
-#include <thrust/complex.h>
-using std::sqrt;
-using thrust::abs;
-using thrust::complex;
+#include "common.cuh"
 
 // specify max number of threads/block and min number of blocks per SM,
 // to assist the compiler in register optimisations.

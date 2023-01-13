@@ -14,9 +14,7 @@
  * and the kernel will get considerably slower.
  */
 
-#include <cassert>
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 #define pr_dlayer(k) addr[(k)]
 #define pr_roi_row(k) addr[1 * num_pods + (k)]

@@ -6,8 +6,7 @@
  * - MATH_TYPE: the data type used for computation
  */
 
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 template <class T, class U>
 __device__ inline void atomicAdd(complex<T>* x, const complex<U>& y)

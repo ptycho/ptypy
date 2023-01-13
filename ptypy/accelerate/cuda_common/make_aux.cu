@@ -6,8 +6,7 @@
  * - MATH_TYPE: the data type used for computation
  */
 
-#include <thrust/complex.h>
-using thrust::complex;
+#include "common.cuh"
 
 // core calculation function - used by both kernels and inlined
 inline __device__ complex<MATH_TYPE> calculate(
