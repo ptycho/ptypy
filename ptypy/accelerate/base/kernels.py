@@ -49,9 +49,9 @@ class FourierUpdateKernel(BaseKernel):
         self.npy.fdev = np.zeros(self.fshape, dtype=np.float32)
         self.npy.ferr = np.zeros(self.fshape, dtype=np.float32)
 
-    def fourier_error(self, b_aux, addr, mag, mask, mask_sum):
+    def fourier_error(self, b_aux, addr, mag, mask, mask_sum, aux_is_intensity=False):
         # reference shape (write-to shape)
-        sh = self.fshape
+        sh = b_aux.shape
         # stopper
         maxz = mag.shape[0]
 
@@ -65,7 +65,10 @@ class FourierUpdateKernel(BaseKernel):
         # build model from complex fourier magnitudes, summing up 
         # all modes incoherently
         tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
-        af = np.sqrt((np.abs(tf) ** 2).sum(1))
+        if aux_is_intensity:
+            af = np.sqrt(tf.sum(1))
+        else:
+            af = np.sqrt((np.abs(tf) ** 2).sum(1))
 
         # calculate difference to real data (g_mag)
         fdev[:] = af - mag
@@ -74,9 +77,9 @@ class FourierUpdateKernel(BaseKernel):
         ferr[:] = mask * np.abs(fdev) ** 2 / mask_sum.reshape((maxz, 1, 1))
         return
 
-    def fourier_deviation(self, b_aux, addr, mag):
+    def fourier_deviation(self, b_aux, addr, mag, aux_is_intensity=False):
         # reference shape (write-to shape)
-        sh = self.fshape
+        sh = b_aux.shape
         # stopper
         maxz = mag.shape[0]
 
@@ -89,7 +92,10 @@ class FourierUpdateKernel(BaseKernel):
         # build model from complex fourier magnitudes, summing up 
         # all modes incoherently
         tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
-        af = np.sqrt((np.abs(tf) ** 2).sum(1))
+        if aux_is_intensity:
+            af = np.sqrt(tf.sum(1))
+        else:
+            af = np.sqrt((np.abs(tf) ** 2).sum(1))
 
         # calculate difference to real data (g_mag)
         fdev[:] = af - mag
@@ -97,8 +103,6 @@ class FourierUpdateKernel(BaseKernel):
         return
 
     def error_reduce(self, addr, err_sum):
-        # reference shape (write-to shape)
-        sh = self.fshape
 
         # stopper
         maxz = err_sum.shape[0]
@@ -113,9 +117,9 @@ class FourierUpdateKernel(BaseKernel):
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
 
-    def fmag_all_update(self, b_aux, addr, mag, mask, err_sum, pbound=0.0):
+    def fmag_all_update(self, b_aux, addr, mag, mask, err_sum, pbound=0.0, mult=True):
 
-        sh = self.fshape
+        sh = b_aux.shape
         nmodes = self.nmodes
 
         # stopper
@@ -153,12 +157,15 @@ class FourierUpdateKernel(BaseKernel):
 
         #fm[:] = mag / (af + 1e-6)
         # upcasting
-        aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
+        if mult:
+            aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
+        else:
+            aux[:] = (np.ones((ish[0] // nmodes, nmodes, ish[1], ish[2])) * fm[:, np.newaxis, :, :]).reshape(ish)
         return
 
-    def fmag_update_nopbound(self, b_aux, addr, mag, mask):
+    def fmag_update_nopbound(self, b_aux, addr, mag, mask, mult=True):
 
-        sh = self.fshape
+        sh = b_aux.shape
         nmodes = self.nmodes
 
         # stopper
@@ -180,12 +187,15 @@ class FourierUpdateKernel(BaseKernel):
         fm[:] = (1 - mask) + mask * mag / (af + self.denom)
 
         # upcasting
-        aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
+        if mult:
+            aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * fm[:, np.newaxis, :, :]).reshape(ish)
+        else:
+            aux[:] = (np.ones((ish[0] // nmodes, nmodes, ish[1], ish[2])) * fm[:, np.newaxis, :, :]).reshape(ish)
         return
 
-    def log_likelihood(self, b_aux, addr, mag, mask, err_phot):
+    def log_likelihood(self, b_aux, addr, mag, mask, err_phot, aux_is_intensity=False):
         # reference shape (write-to shape)
-        sh = self.fshape
+        sh = b_aux.shape
         # stopper
         maxz = mag.shape[0]
 
@@ -195,7 +205,10 @@ class FourierUpdateKernel(BaseKernel):
         # build model from complex fourier magnitudes, summing up 
         # all modes incoherently
         tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
-        LL = (np.abs(tf) ** 2).sum(1)
+        if aux_is_intensity:
+            LL = tf.sum(1)
+        else:
+            LL = (np.abs(tf) ** 2).sum(1)
 
         # Intensity data
         I = mag**2
@@ -204,7 +217,7 @@ class FourierUpdateKernel(BaseKernel):
         err_phot[:] = ((mask * (LL - I)**2 / (I + 1.)).sum(-1).sum(-1) /  np.prod(LL.shape[-2:]))
         return
 
-    def exit_error(self, aux, addr):
+    def exit_error(self, aux, addr, aux_is_intensity=False):
         sh = addr.shape
         maxz = sh[0]
 
@@ -212,7 +225,11 @@ class FourierUpdateKernel(BaseKernel):
         ferr = self.npy.ferr[:maxz]
         dex = aux[:maxz * self.nmodes]
         fsh = dex.shape[-2:]
-        ferr[:] = (np.abs(dex.reshape((maxz,self.nmodes,fsh[0], fsh[1])))**2).sum(axis=1) / np.prod(fsh)
+        tf = dex.reshape((maxz,self.nmodes,fsh[0], fsh[1]))
+        if aux_is_intensity:
+            ferr[:] = (tf).sum(axis=1) / np.prod(fsh)
+        else:
+            ferr[:] = (np.abs(tf)**2).sum(axis=1) / np.prod(fsh)
 
 
 class GradientDescentKernel(BaseKernel):
@@ -256,18 +273,21 @@ class GradientDescentKernel(BaseKernel):
 
         self.npy.fic_tmp = np.ones((self.fshape[0],), dtype=self.ftype)
 
-    def make_model(self, b_aux, addr):
+    def make_model(self, b_aux, addr, aux_is_intensity=False):
 
         # reference shape (= GPU global dims)
-        sh = self.fshape
+        sh = b_aux.shape
 
         # batch buffers
         Imodel = self.npy.Imodel
         aux = b_aux
 
         ## Actual math ## (subset of FUK.fourier_error)
-        tf = aux.reshape(sh[0], self.nmodes, sh[1], sh[2])
-        Imodel[:] = ((tf * tf.conj()).real).sum(1)
+        tf = aux.reshape(sh[0]//self.nmodes, self.nmodes, sh[1], sh[2])
+        if aux_is_intensity:
+            Imodel[:] = tf.sum(1)
+        else:
+            Imodel[:] = ((tf * tf.conj()).real).sum(1)
 
     def make_a012(self, b_f, b_a, b_b, addr, I, fic):
 
@@ -377,8 +397,8 @@ class GradientDescentKernel(BaseKernel):
         ## math ##
         DI = np.double(Imodel) - I
         tmp = w * DI
-        err[:] = tmp * DI
 
+        err[:] = tmp * DI
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * tmp[:, np.newaxis, :, :]).reshape(ish)
         return
 

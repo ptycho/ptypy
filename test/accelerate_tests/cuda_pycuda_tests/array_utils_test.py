@@ -355,6 +355,119 @@ class ArrayUtilsTest(PyCudaTest):
         # Assert
         np.testing.assert_allclose(A, A_dev.get(), rtol=1e-6, atol=1e-6)
 
+    def test_downsample_factor_2(self):
+        # downsample, complex, 3D
+        B = np.indices((4,4), dtype=np.complex64)
+        B = np.indices((4,4), dtype=np.complex64) + 1j * B[::-1, :, :]
+        A = np.zeros((2,2,2), dtype=B.dtype)
+        
+        A_dev = gpuarray.to_gpu(A)
+        B_dev = gpuarray.to_gpu(B)
+        
+        k = gau.ResampleKernel(queue=self.stream)
+        k.resample(A_dev, B_dev)
+        exp_A = np.array([[[ 2. +2.j,  2.+10.j],
+                           [10. +2.j, 10.+10.j]],
+                          [[ 2. +2.j, 10.+ 2.j],
+                           [ 2.+10.j, 10.+10.j]]], dtype=np.complex64)
+
+        np.testing.assert_almost_equal(A_dev.get().sum(), B_dev.get().sum())
+        np.testing.assert_array_almost_equal(A_dev.get(), exp_A)
+
+    def test_upsample_factor_2(self):
+        # upsample, complex, 3D
+        B = np.indices((2,2), dtype=np.complex64)
+        B = np.indices((2,2), dtype=np.complex64) + 1j * B[::-1, :, :]
+        A = np.zeros((2,4,4), dtype=B.dtype)
+        A_dev = gpuarray.to_gpu(A)
+        B_dev = gpuarray.to_gpu(B)
+
+        k = gau.ResampleKernel(queue=self.stream)
+        k.resample(A_dev, B_dev)
+        exp_A = np.array([[[0.  +0.j  , 0.  +0.j  , 0.  +0.25j, 0.  +0.25j],
+                           [0.  +0.j  , 0.  +0.j  , 0.  +0.25j, 0.  +0.25j],
+                           [0.25+0.j  , 0.25+0.j  , 0.25+0.25j, 0.25+0.25j],
+                           [0.25+0.j  , 0.25+0.j  , 0.25+0.25j, 0.25+0.25j]],
+                          [[0.  +0.j  , 0.  +0.j  , 0.25+0.j  , 0.25+0.j  ],
+                           [0.  +0.j  , 0.  +0.j  , 0.25+0.j  , 0.25+0.j  ],
+                           [0.  +0.25j, 0.  +0.25j, 0.25+0.25j, 0.25+0.25j],
+                           [0.  +0.25j, 0.  +0.25j, 0.25+0.25j, 0.25+0.25j]]], dtype=np.complex64)
+
+        np.testing.assert_almost_equal(A_dev.get().sum(), B_dev.get().sum())
+        np.testing.assert_array_almost_equal(A_dev.get(), exp_A)
+
+    def test_downsample_factor_4(self):
+        # downsample, complex, 3D
+        B = np.indices((8,8), dtype=np.complex64)
+        B = np.indices((8,8), dtype=np.complex64) + 1j * B[::-1, :, :]
+        A = np.zeros((2,2,2), dtype=B.dtype)
+        
+        A_dev = gpuarray.to_gpu(A)
+        B_dev = gpuarray.to_gpu(B)
+        
+        k = gau.ResampleKernel(queue=self.stream)
+        k.resample(A_dev, B_dev)
+        exp_A = np.array([[[24.+24.j, 24.+88.j],
+                           [88.+24.j, 88.+88.j]],
+                          [[24.+24.j, 88.+24.j],
+                           [24.+88.j, 88.+88.j]]], dtype=np.complex64)
+                           
+        np.testing.assert_almost_equal(A_dev.get().sum(), B_dev.get().sum())
+        np.testing.assert_array_almost_equal(A_dev.get(), exp_A)
+
+    def test_upsample_factor_4(self):
+        # upsample, complex, 3D
+        Bshape = (2,4,4)
+        B = np.reshape(np.arange(0, np.prod(Bshape)), Bshape).astype(np.complex64) * 16
+        B = B + 1j * B
+        A = np.zeros((Bshape[0], Bshape[1]*4, Bshape[2]*4), dtype=B.dtype)
+        A_dev = gpuarray.to_gpu(A)
+        B_dev = gpuarray.to_gpu(B)
+
+        k = gau.ResampleKernel(queue=self.stream)
+        k.resample(A_dev, B_dev)
+        exp_A = np.zeros_like(A)
+
+        # building the expected value element-wise, to ensure correctness
+        for z in range(A.shape[0]):
+            for y in range(A.shape[1]):
+                for x in range(A.shape[2]):
+                    exp_A[z, y, x] = B[z, y//4, x//4] / 16
+
+        np.testing.assert_almost_equal(A_dev.get().sum(), B_dev.get().sum())
+        np.testing.assert_array_almost_equal(A_dev.get(), exp_A)
+
+    def test_upsample_factor_4_UNITY(self):
+        np.random.seed(1983)
+        
+        Bshape = (10,64,64)
+        B = np.reshape(np.arange(0, np.prod(Bshape)), Bshape).astype(np.complex64) * 16
+        B = B + 1j * B
+        A = np.zeros((Bshape[0], Bshape[1]*4, Bshape[2]*4), dtype=B.dtype)
+        B_dev = gpuarray.to_gpu(B)
+        A_dev = gpuarray.to_gpu(A)
+
+        k = gau.ResampleKernel(queue=self.stream)
+        k.resample(A_dev, B_dev)
+        au.resample(A, B)
+
+        np.testing.assert_allclose(A_dev.get(), A, rtol=1e-6, atol=1e-6, verbose=False)
+
+
+    def test_downsample_factor_4_UNITY(self):
+        np.random.seed(1983)
+        
+        A = np.zeros((10, 64, 64), dtype=np.float32)
+        B = np.random.rand(10, 256, 256).astype(np.float32)
+        B_dev = gpuarray.to_gpu(B)
+        A_dev = gpuarray.to_gpu(A)
+
+        k = gau.ResampleKernel(queue=self.stream)
+        k.resample(A_dev, B_dev)
+        au.resample(A, B)
+
+        np.testing.assert_allclose(A_dev.get(), A, rtol=1e-6, atol=1e-6, verbose=False)
+
     def test_max_abs2_complex_UNITY(self):
         np.random.seed(1983)
         X = (np.random.randint(-1000, 1000, (3,100,200)).astype(np.float32) + \

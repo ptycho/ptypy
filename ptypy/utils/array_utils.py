@@ -15,7 +15,7 @@ from .math_utils import smooth_step
 __all__ = ['grids', 'switch_orientation', 'mirror',
            'crop_pad_symmetric_2d', 'crop_pad_axis', 'crop_pad',
            'pad_lr', 'zoom', 'shift_zoom', 'c_zoom',
-           'rebin', 'rebin_2d', 'rectangle', 'ellipsis']
+           'rebin', 'rebin_2d', 'repeat_2d', 'rectangle', 'ellipsis']
 
 
 def switch_orientation(A, orientation, center=None):
@@ -105,6 +105,33 @@ def rebin_2d(A, rebin=1):
     else:
         return A.reshape(-1, newdim[0], rebin, newdim[1], rebin).mean(-1).mean(-2)
 
+def repeat_2d(A, repeat=1):
+    """
+    Repeats array `A` symmetrically along the last 2 axes
+    with factor `repeat`.
+
+    Parameters
+    ----------
+    A : array-like
+        input array, must be at least two-dimensional.
+
+    repeat : int
+        repeat factor, ``repeat=2`` means that one pixel will be repeated 
+        into a square of 4 pixels.
+
+    Returns
+    -------
+    out : ndarray
+        repeated array. Note that data type casting follows numpy rules, so that boolean arrays are converted to int.
+
+    See also
+    --------
+    rebin_2d
+    """
+    sh = np.asarray(A.shape[-2:])
+    newdim = sh * repeat
+    assert (sh % repeat == 0).all(), "Last two axes %s of input array `A` cannot be repeated by %s" % (str(tuple(sh)), str(repeat))
+    return np.repeat(np.repeat(A.reshape((-1,sh[0],1,sh[1],1)),repeat, axis=-4),repeat,axis=-2).reshape(-1,newdim[0],newdim[1])
 
 def crop_pad_symmetric_2d(A, newshape, center=None):
     """

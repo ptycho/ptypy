@@ -239,6 +239,85 @@ class CropPadKernel:
         self.fill3D(A, B, offset)
 
 
+class ResampleKernel:
+    def __init__(self, queue=None):
+        self.queue = queue
+        # we lazy-load this depending on the data types we get
+        self.upsample_cuda = {}
+        self.downsample_cuda = {}
+
+    def resample(self, A, B):
+        assert A.ndim > 2, "Arrays must have at least 2 dimensions"
+        assert B.ndim > 2, "Arrays must have at least 2 dimensions"
+        assert A.shape[:-2] == B.shape[:-2], "Arrays must have same shape expect along the last 2 dimensions"
+        assert A.shape[-2] == A.shape[-1], "Last two dimensions must be of equal length"
+        assert B.shape[-2] == B.shape[-2], "Last two dimensions must be of equal length"
+        # same sampling, no need to call this function
+        assert A.shape != B.shape, "A and B have the same shape, no need to do any resampling"
+        assert A.dtype == B.dtype, "A and B must have the same data type"
+
+        def map_type(dt):
+            if dt == np.float32:
+                return 'float'
+            elif dt == np.float64: 
+                return 'double'
+            elif dt == np.complex64: 
+                return 'complex<float>'
+            elif dt == np.complex128: 
+                return 'complex<double>'
+            elif dt == np.int32:
+                return 'int'
+            elif dt == np.int64:
+                return 'long long'
+            else:
+                raise ValueError('No mapping for {}'.format(dt))
+        
+        bx = 16
+        by = 16
+        # upsampling
+        if A.shape[-1] > B.shape[-1]:
+            resample = A.shape[-1] // B.shape[-1]
+            assert resample <= bx, "Upsampling up to factor {} is supported".format(bx)
+            
+            version = '{}'.format(map_type(A.dtype))
+            if version not in self.upsample_cuda:
+                self.upsample_cuda[version] = load_kernel('upsample', {
+                    'TYPE': map_type(A.dtype)
+                })
+            self.upsample_cuda[version](A, B, 
+                np.int32(A.shape[1]),
+                np.int32(A.shape[2]),
+                np.int32(resample),
+                block=(bx, by, 1),
+                grid=(
+                    int((A.shape[2] + bx - 1) // bx), 
+                    int((A.shape[1] + by - 1) // by), 
+                    int(A.shape[0])),
+                shared=int(bx*by*A.dtype.itemsize/resample/resample),
+                stream=self.queue)
+    
+        # downsampling
+        elif A.shape[-1] < B.shape[-1]:
+            resample = B.shape[-1] // A.shape[-1]
+            assert resample <= bx, "Downsampling up to factor {} is supported".format(bx)
+            
+            version = '{}'.format(map_type(A.dtype))
+            if version not in self.downsample_cuda:
+                self.downsample_cuda[version] = load_kernel('downsample', {
+                    'TYPE': map_type(A.dtype)
+                })
+            self.downsample_cuda[version](A, B, 
+                np.int32(B.shape[1]),
+                np.int32(B.shape[2]),
+                np.int32(resample),
+                block=(bx, by, 1),
+                grid=(
+                    int((B.shape[2] + bx - 1) // bx), 
+                    int((B.shape[1] + by - 1) // by), 
+                    int(A.shape[0])),
+                shared=int(bx*by*A.dtype.itemsize),
+                stream=self.queue)
+
 class DerivativesKernel:
     def __init__(self, dtype, queue=None):
         if dtype == np.float32:

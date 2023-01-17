@@ -23,6 +23,7 @@ from ptypy.engines.utils import Cnorm2, Cdot
 from ptypy.engines import register
 from ptypy.accelerate.base.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ptypy.accelerate.base import address_manglers
+from ptypy.accelerate.base import array_utils as au
 
 
 __all__ = ['ML_serial']
@@ -89,6 +90,13 @@ class ML_serial(ML):
             kern.aux = aux
             kern.a = np.zeros(ash, dtype=np.complex64)
             kern.b = np.zeros(ash, dtype=np.complex64)
+
+            # create extra array for resampling (if needed)
+            kern.resample = scan.resample > 1
+            if kern.resample:
+                ish = (ash[0],) + tuple(geo.shape//scan.resample)
+                kern.aux_tmp1 = np.zeros(ash, dtype=np.float32)
+                kern.aux_tmp2 = np.zeros(ish, dtype=np.float32)
 
             # setup kernels, one for each SCAN.
             kern.GDK = GradientDescentKernel(aux, nmodes)
@@ -382,6 +390,13 @@ class GaussianModel(BaseModelSerial):
             prep = self.engine.diff_info[d.ID]
             prep.weights = (self.Irenorm * self.engine.ma.S[d.ID].data
                             / (1. / self.Irenorm + d.data)).astype(d.data.dtype)
+            prep.intensity = self.engine.di.S[d.ID].data
+            kern = self.engine.kernels[prep.label]
+            if kern.resample:
+                prep.weights2 = np.zeros((prep.weights.shape[0],) + kern.aux_tmp1.shape[-2:], dtype=prep.weights.dtype)
+                au.resample(prep.weights2, prep.weights)
+                prep.intensity2 = np.zeros((prep.intensity.shape[0],) + kern.aux_tmp1.shape[-2:], dtype=prep.weights.dtype)
+                au.resample(prep.intensity2, prep.intensity)
 
     def __del__(self):
         """
@@ -423,7 +438,8 @@ class GaussianModel(BaseModelSerial):
 
             # get addresses and auxilliary array
             addr = prep.addr
-            w = prep.weights
+            w = prep.weights2
+            I = prep.intensity2
             err_phot = prep.err_phot
             fic = prep.float_intens_coeff
 
@@ -432,6 +448,12 @@ class GaussianModel(BaseModelSerial):
             obg = ob_grad.S[oID].data
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
+
+            # resampling
+            if kern.resample:
+                aux_tmp1 = kern.aux_tmp1
+                aux_tmp2 = kern.aux_tmp2
+
             I = prep.I
 
             # make propagated exit (to buffer)
@@ -440,7 +462,13 @@ class GaussianModel(BaseModelSerial):
             # forward prop
             aux[:] = FW(aux)
 
-            GDK.make_model(aux, addr)
+            if kern.resample:
+                aux_tmp1 = np.abs(aux)**2
+                au.resample(aux_tmp2, aux_tmp1)
+                au.resample(aux_tmp1, aux_tmp2)
+                GDK.make_model(aux_tmp1, addr, aux_is_intensity=True)
+            else:
+                GDK.make_model(aux, addr)
 
             if self.p.floating_intensities:
                 GDK.floating_intensity(addr, w, I, fic)
@@ -505,6 +533,7 @@ class GaussianModel(BaseModelSerial):
             # get addresses and auxilliary array
             addr = prep.addr
             w = prep.weights
+            I = prep.intensity
             fic = prep.float_intens_coeff
 
             # local references
@@ -512,7 +541,11 @@ class GaussianModel(BaseModelSerial):
             ob_h = c_ob_h.S[oID].data
             pr = self.pr.S[pID].data
             pr_h = c_pr_h.S[pID].data
-            I = self.di.S[dID].data
+
+            # resampling
+            if kern.resample:
+                w = prep.weights2
+                I = prep.intensity2
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(f, addr, ob, pr, add=False)

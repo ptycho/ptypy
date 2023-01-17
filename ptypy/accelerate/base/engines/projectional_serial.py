@@ -178,8 +178,18 @@ class _ProjectionEngine_serial(_ProjectionEngine):
             aux = np.zeros(ash, dtype=np.complex64)
             kern.aux = aux
 
+            # create extra array for resampling (if needed)
+            kern.resample = scan.resample > 1
+            if kern.resample:
+                ish = (ash[0],) + tuple(geo.shape//scan.resample)
+                kern.aux_tmp1 = np.zeros(ash, dtype=np.float32)
+                kern.aux_tmp2 = np.zeros(ish, dtype=np.float32)
+                aux_f = kern.aux_tmp2 # making sure to pass the correct shapes to FUK 
+            else:
+                aux_f = aux
+                
             # setup kernels, one for each SCAN.
-            kern.FUK = FourierUpdateKernel(aux, nmodes)
+            kern.FUK = FourierUpdateKernel(aux_f, nmodes)
             kern.FUK.allocate()
 
             kern.POK = PoUpdateKernel()
@@ -266,6 +276,12 @@ class _ProjectionEngine_serial(_ProjectionEngine):
                 pbound = self.pbound_scan[prep.label]
                 aux = kern.aux
 
+                # resampling
+                resample = kern.resample
+                if resample:
+                    aux_tmp1 = kern.aux_tmp1
+                    aux_tmp2 = kern.aux_tmp2
+
                 # local references
                 ma = prep.ma
                 ob = self.ob.S[oID].data
@@ -277,7 +293,12 @@ class _ProjectionEngine_serial(_ProjectionEngine):
                     t1 = time.time()
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
                     aux[:] = FW(aux)
-                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                    if resample:
+                        aux_tmp1 = np.abs(aux)**2
+                        au.resample(aux_tmp2, aux_tmp1)
+                        FUK.log_likelihood(aux_tmp2, addr, mag, ma, err_phot, aux_is_intensity=True)
+                    else:
+                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
                     self.benchmark.F_LLerror += time.time() - t1
 
                 ## build auxilliary wave
@@ -292,9 +313,18 @@ class _ProjectionEngine_serial(_ProjectionEngine):
 
                 ## Deviation from measured data
                 t1 = time.time()
-                FUK.fourier_error(aux, addr, mag, ma, ma_sum)
-                FUK.error_reduce(addr, err_fourier)
-                FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
+                if resample:
+                    aux_tmp1 = np.abs(aux)**2
+                    au.resample(aux_tmp2, aux_tmp1)
+                    FUK.fourier_error(aux_tmp2, addr, mag, ma, ma_sum, aux_is_intensity=True)
+                    FUK.error_reduce(addr, err_fourier)
+                    FUK.fmag_all_update(aux_tmp2, addr, mag, ma, err_fourier, pbound, mult=False)
+                    au.resample(aux_tmp1, aux_tmp2)
+                    aux *= aux_tmp1
+                else:
+                    FUK.fourier_error(aux, addr, mag, ma, ma_sum)
+                    FUK.error_reduce(addr, err_fourier)
+                    FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
                 self.benchmark.C_Fourier_update += time.time() - t1
 
                 ## backward FFT
@@ -305,7 +335,12 @@ class _ProjectionEngine_serial(_ProjectionEngine):
                 ## build exit wave
                 t1 = time.time()
                 AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._b, c_po=self._a, c_e=-(self._a+self._b))
-                FUK.exit_error(aux,addr)
+                if resample:
+                    aux_tmp1 = np.abs(aux)**2
+                    au.resample(aux_tmp2, aux_tmp1)
+                    FUK.exit_error(aux_tmp2, addr, aux_is_intensity=True)
+                else:
+                    FUK.exit_error(aux,addr)
                 FUK.error_reduce(addr, err_exit)
                 self.benchmark.E_Build_exit += time.time() - t1
 

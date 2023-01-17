@@ -3,6 +3,7 @@ useful utilities from ptypy that should be ported to gpu. These don't ahve exter
 '''
 import numpy as np
 from scipy import ndimage as ndi
+from ptypy import utils as u
 
 
 def dot(A, B, acc_dtype=np.float64):
@@ -146,3 +147,26 @@ def crop_pad_2d_simple(A, B):
     b1, b2 = B.shape[-2:]
     offset = [0, a1 // 2 - b1 // 2, a2 // 2 - b2 // 2]
     fill3D(A, B, offset)
+
+def resample(A, B):
+    """
+    Resamples the last two dimensions of B onto shape of A and places it in A.
+    The ratio between shapes needs to be a power of 2 along the last two dimension.
+    upsampling (A larger than B): nearest neighbour interpolation
+    downsampling (B larger than A): integrate over neighbouring regions
+    """
+    assert A.ndim > 2, "Arrays must have at least 2 dimensions"
+    assert B.ndim > 2, "Arrays must have at least 2 dimensions"
+    assert A.shape[:-2] == B.shape[:-2], "Arrays must have same shape expect along the last 2 dimensions"
+    assert A.shape[-2] == A.shape[-1], "Last two dimensions must be of equal length"
+    assert B.shape[-2] == B.shape[-2], "Last two dimensions must be of equal length"
+    # same sampling, no need to call this function
+    assert A.shape != B.shape, "A and B have the same shape, no need to do any resampling"
+    # upsampling
+    if A.shape[-1] > B.shape[-1]:
+        resample = A.shape[-1] // B.shape[-1]
+        A[:] = u.repeat_2d(B, resample) / (resample**2)
+    # downsampling
+    elif A.shape[-1] < B.shape[-1]:
+        resample = B.shape[-1] // A.shape[-1]
+        A[:] = u.rebin_2d(B, resample) * (resample**2)
