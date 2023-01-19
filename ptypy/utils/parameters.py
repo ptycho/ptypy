@@ -5,11 +5,11 @@ Parameter definition.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import os
 
-__all__ = ['Param', 'asParam']  # 'load',]
+__all__ = ['Param', 'asParam', 'param_from_json', 'param_from_yaml']  # 'load',]
 
 PARAM_PREFIX = 'pars'
 
@@ -317,3 +317,23 @@ def make_default(default_dict_or_file):
     convert description dict to a module dict using a possibly verbose Q & A game
     """
     pass
+
+def param_from_json(filename):
+    """
+    Convert param tree from JSON file into Param().
+    """
+    import json
+    p = Param()
+    with open(filename) as f:
+        p.update(json.load(f), Convert=True)
+    return p
+
+def param_from_yaml(filename):
+    """
+    Convert param tree from YAML file into Param().
+    """
+    import yaml
+    p = Param()
+    with open(filename) as f:
+        p.update(yaml.load(f, Loader=yaml.FullLoader), Convert=True)
+    return p

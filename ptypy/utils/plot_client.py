@@ -4,7 +4,7 @@ Client tools for plotting.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 
 import time
@@ -18,7 +18,8 @@ from .array_utils import crop_pad, clean_path
 from .plot_utils import plt # pyplot import with all the specialized settings
 from .plot_utils import PtyAxis, imsave, pause, rmphaseramp
 
-__all__ = ['MPLClient', 'MPLplotter', 'PlotClient', 'spawn_MPLClient', 'TEMPLATES', 'DEFAULT']
+__all__ = ['MPLClient', 'MPLplotter', 'PlotClient', 'spawn_MPLClient', 'TEMPLATES', 'DEFAULT',
+           'figure_from_ptycho', 'figure_from_ptyr']
 
 
 Storage_DEFAULT = Param(
@@ -37,6 +38,7 @@ Storage_DEFAULT = Param(
 
 DEFAULT = Param()
 DEFAULT.figsize = (16, 10)
+DEFAULT.dpi = 100
 DEFAULT.ob = Storage_DEFAULT.copy()
 DEFAULT.pr = Storage_DEFAULT.copy()
 DEFAULT.pr.auto_display = ['c']
@@ -90,6 +92,23 @@ nfbnw.ob.cmaps=['gray', 'bone']
 nfbnw.ob.crop=[0.0, 0.0]  # fraction of array to crop for display
 nfbnw.ob.rm_pr=False #
 TEMPLATES['nf_black_and_white'] = nfbnw
+
+jupyter = DEFAULT.copy(depth=4)
+jupyter.pr.clims=[None, [-np.pi, np.pi]]
+jupyter.pr.cmaps=['gray','hsv']
+jupyter.pr.crop=[0.0, 0.0]
+jupyter.pr.auto_display = ['c']
+jupyter.rm_pr=False
+jupyter.ob.clims=[None, None]
+jupyter.ob.cmaps=['gray','viridis']
+jupyter.ob.crop=[0.2, 0.2]
+jupyter.ob.mask = 0.5
+jupyter.rm_pr=True
+jupyter.figsize=(16,8)
+jupyter.dpi = 60
+jupyter.simplified_aspect_ratios = True
+jupyter.gridspecpars = (0.2, 0.12, 0.07, 0.95, 0.05, 0.93)
+TEMPLATES['jupyter'] = jupyter
 
 del nfbnw
 del nearfield
@@ -349,7 +368,7 @@ class MPLplotter(object):
             if hasattr(pars,'items'):
                 self.p.update(pars,in_place_depth=4)
 
-    def update_plot_layout(self, plot_template=None):
+    def update_plot_layout(self):
         """
         Generate the plot layout.
         """
@@ -363,8 +382,6 @@ class MPLplotter(object):
             else:
                 sh = (3, 3)
             return sh
-        # local references:
-        pr = self.pr
         self.num_shape_list = []
         num_shape_list = self.num_shape_list
         for key in sorted(self.ob.keys()):
@@ -417,7 +434,7 @@ class MPLplotter(object):
             num_shape_list.append(num_shape)
             self.pr_plot[key]=plot
 
-        axes_list, plot_fig, gs = self.create_plot_from_tile_list(1, num_shape_list, self.p.figsize)
+        axes_list, plot_fig, gs = self.create_plot_from_tile_list(1, num_shape_list, self.p.figsize, self.p.dpi)
         sy, sx = gs.get_geometry()
         w, h, l, r, b, t = self.p.gridspecpars
         gs.update(wspace=w*sy, hspace=h*sx, left=l, right=r, bottom=b, top=t)
@@ -431,7 +448,7 @@ class MPLplotter(object):
         self.gs = gs
 
     @staticmethod
-    def create_plot_from_tile_list(fignum=1, num_shape_list=[(4, (2, 2))], figsize=(8, 8)):
+    def create_plot_from_tile_list(fignum=1, num_shape_list=[(4, (2, 2))], figsize=(8, 8),dpi=100):
         def fill_with_tiles(size, sh, num, figratio=16./9.):
             coords_tl = []
             while num > 0:
@@ -494,7 +511,7 @@ class MPLplotter(object):
 
         from matplotlib import gridspec
         gs = gridspec.GridSpec(size[0], size[1])
-        fig = plt.figure(fignum)
+        fig = plt.figure(fignum, dpi=dpi)
         fig.clf()
 
         mag = min(figsize[0]/float(size[1]), figsize[1]/float(size[0]))
@@ -613,7 +630,7 @@ class MPLplotter(object):
             f.write(plot_file+'\n')
             f.close()
 
-    def plot_all(self, blocking = False):
+    def plot_all(self):
         for key, storage in self.pr.items():
             #print key
             pp = self.pr_plot[key]
@@ -663,7 +680,7 @@ class MPLClient(MPLplotter):
                         self.config.update(self.pc.config)
 
                     self._set_autolayout(self.config.layout)
-                    self.update_plot_layout(self.config.layout)
+                    self.update_plot_layout()
                     initialized=True
 
                 self.plot_all()
@@ -682,6 +699,96 @@ class MPLClient(MPLplotter):
             from ptypy import utils as u
             u.png2mpg(self._framefile, RemoveImages=True)
 
+class _JupyterClient(MPLplotter):
+
+    DEFAULT = DEFAULT
+
+    def __init__(self, ptycho, autoplot_pars=None, layout_pars=None):
+        from ptypy.core.ptycho import Ptycho
+        self.config = Ptycho.DEFAULT.io.autoplot.copy(depth=3)
+        self.config.update(autoplot_pars)
+        layout = self.config.get('layout',layout_pars)
+
+        super(_JupyterClient,self).__init__(pars=layout, 
+                                      objects=ptycho.obj.S,
+                                      probes=ptycho.probe.S,
+                                      runtime=ptycho.runtime,
+                                      in_thread=False)
+        self.initialized = False
+
+    def plot(self, title=""):
+        if not self.initialized:
+            self.update_plot_layout()
+            self.initialized=True
+        self.plot_fig.suptitle(title)
+        self.plot_all()
+        plt.close(self.plot_fig)
+        return self.plot_fig
+
+def figure_from_ptycho(P, pars=None):
+    """
+    Returns a matplotlib figure displaying a reconstruction
+    from a Ptycho instance.
+
+    Parameters
+    ----------
+    P : Ptycho
+        Ptycho instance
+    pars : Plotting paramters, optional
+        plotting template as u.Param() istance
+
+    Return
+    ------
+    fig : matplotlib.figure.Figure
+    """
+    if pars is None:
+        pars = TEMPLATES["jupyter"]
+    plotter = MPLplotter(pars=pars, 
+                         objects=P.obj.S,
+                         probes=P.probe.S,
+                         runtime=P.runtime,
+                         in_thread=False)
+    plotter.update_plot_layout()
+    plotter.plot_all()
+    return plotter.plot_fig
+
+def figure_from_ptyr(filename, pars=None):
+    """
+    Returns a matplotlib figure displaying a reconstruction
+    from a .ptyr file.
+
+    Parameters
+    ----------
+    filename : str
+        path to .ptyr file
+    pars : Plotting paramters, optional
+        plotting template as u.Param() istance
+
+    Return
+    ------
+    fig : matplotlib.figure.Figure
+    """
+    from ..io import h5read
+    header = h5read(filename,'header')['header']
+    if str(header['kind']) == 'fullflat':
+        raise NotImplementedError('Loading specific data from flattened dump not yet supported')
+    else: 
+        content = list(h5read(filename,'content').values())[0]
+        runtime = content['runtime']
+        probes = Param()
+        probes.update(content['probe'], Convert = True)
+        objects = Param()
+        objects.update(content['obj'], Convert = True)
+    if pars is None:
+        pars = TEMPLATES["jupyter"]
+    plotter = MPLplotter(pars=pars, 
+                         objects=objects,
+                         probes=probes,
+                         runtime=runtime,
+                         in_thread=False)
+    plotter.update_plot_layout()
+    plotter.plot_all()
+    return plotter.plot_fig
 
 class Bragg3dClient(object):
     """

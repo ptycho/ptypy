@@ -59,4 +59,5 @@ p.engines.engine00.smooth_gradient_decay = 1/50.
 p.engines.engine00.floating_intensities = False
 
 # prepare and run
-P = Ptycho(p,level=5)
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)

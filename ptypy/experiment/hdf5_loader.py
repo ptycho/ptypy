@@ -5,7 +5,7 @@ Scan loading recipe for the Diamond beamlines.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 
 import h5py as h5
@@ -153,6 +153,11 @@ class Hdf5Loader(PtyScan):
     default = None
     type = str
     help = Key to the mask entry in the hdf5 file.
+
+    [mask.invert]
+    default = False
+    type = bool
+    help = Inverting the mask
 
     [flatfield]
     default =
@@ -326,7 +331,13 @@ class Hdf5Loader(PtyScan):
     default = None
     help = Option to pad the detector frames on all sides
     doc = A tuple of list with padding given as ( top, bottom, left, right)
-   
+
+    [electron_data]
+    type = bool
+    default = False
+    help = Switch for loading data from electron ptychography experiments.
+    doc = If True, the energy provided in keV will be considered as electron energy 
+          and converted to electron wavelengths.    
     """
 
     def __init__(self, pars=None, **kwargs):
@@ -341,8 +352,12 @@ class Hdf5Loader(PtyScan):
         self._scantype = None
         self._ismapped = None
         self.intensities = None
+        self.intensities_dtype = None
         self.slow_axis = None
         self.fast_axis = None
+        self.data_shape = None
+        self.positions_fast_shape = None
+        self.positions_slow_shape = None
         self.darkfield = None
         self.flatfield = None
         self.mask = None
@@ -355,7 +370,46 @@ class Hdf5Loader(PtyScan):
         self.framefilter = None
         self._is_spectro_scan = False
 
-        # lets raise some exceptions here for the essentials
+        self.fhandle_intensities = None
+        self.fhandle_darkfield = None
+        self.fhandle_flatfield = None
+        self.fhandle_normalisation = None
+        self.fhandle_mask = None
+
+        self._params_check()
+        log(4, u.verbose.report(self.info))
+        self._spectro_scan_check()
+        self._prepare_intensity_and_positions()
+        self._prepare_framefilter()
+        self.compute_scan_mapping_and_trajectory(self.data_shape, self.positions_fast_shape, self.positions_slow_shape)
+        self._prepare_darkfield()
+        self._prepare_flatfield()
+        self._prepare_mask()
+        self._prepare_normalisation()
+        self._prepare_meta_info()
+        self._prepare_center()
+
+        # For electron data, convert energy
+        if self.p.electron_data:
+            self.meta.energy = u.m2keV(u.electron_wavelength(self.meta.energy))
+
+        # it's much better to have this logic here than in load!
+        if (self._ismapped and (self._scantype == 'arb')):
+            log(3, "This scan looks to be a mapped arbitrary trajectory scan.")
+            self.load = self.load_mapped_and_arbitrary_scan
+
+        if (self._ismapped and (self._scantype == 'raster')):
+            log(3, "This scan looks to be a mapped raster scan.")
+            self.load = self.load_mapped_and_raster_scan
+
+        if (self._scantype == 'raster') and not self._ismapped:
+            log(3, "This scan looks to be an unmapped raster scan.")
+            self.load = self.load_unmapped_raster_scan
+
+    def _params_check(self):
+        """
+        raise error if essential parameters mising
+        """
         if None in [self.p.intensities.file,
                     self.p.intensities.key,
                     self.p.positions.file,
@@ -363,85 +417,112 @@ class Hdf5Loader(PtyScan):
                     self.p.positions.fast_key]:
             raise RuntimeError("Missing some information about either the positions or the intensity mapping!")
 
-        log(4, u.verbose.report(self.info))
         if True in [self.p.intensities.is_swmr,
                     self.p.positions.is_swmr,
                     self.p.normalisation.is_swmr]:
             raise NotImplementedError("Currently swmr functionality is not implemented! Coming soon...")
 
-        # Check for spectro scans
+    def _spectro_scan_check(self):
+        """
+        make adjustments if dealing with a spectro scan
+        """
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            _energy_dset = h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key]
-            if len(_energy_dset.shape):
-                if _energy_dset.shape[0] > 1:
-                    self._is_spectro_scan = True
+            with h5.File(self.p.recorded_energy.file, 'r') as f:
+                _energy_dset = f[self.p.recorded_energy.key]
+                if len(_energy_dset.shape):
+                    if _energy_dset.shape[0] > 1:
+                        self._is_spectro_scan = True
         if self._is_spectro_scan and self.p.outer_index is None:
             self.p.outer_index = 0
         if self._is_spectro_scan:
             log(3, "This is appears to be a spectro scan, selecting index = {}".format(self.p.outer_index))
 
-        self.intensities = h5.File(self.p.intensities.file, 'r')[self.p.intensities.key]
-        self.intensities_dtype = self.intensities.dtype
-        data_shape = self.intensities.shape
-        if self._is_spectro_scan and self.p.outer_index is not None:
-            data_shape = tuple(np.array(data_shape)[1:])
 
-        fast_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.fast_key][...]
+    def _prepare_intensity_and_positions(self):
+        """
+        Prep for loading intensity and position data
+        """
+        self.fhandle_intensities = h5.File(self.p.intensities.file, 'r')
+        self.intensities = self.fhandle_intensities[self.p.intensities.key]
+        self.intensities_dtype = self.intensities.dtype
+        self.data_shape = self.intensities.shape
+        if self._is_spectro_scan and self.p.outer_index is not None:
+            self.data_shape = tuple(np.array(self.data_shape)[1:])
+
+        with h5.File(self.p.positions.file, 'r') as f:
+            fast_axis = f[self.p.positions.fast_key][...]
         if self._is_spectro_scan and self.p.outer_index is not None:
             fast_axis = fast_axis[self.p.outer_index]
         self.fast_axis = np.squeeze(fast_axis) if fast_axis.ndim > 2 else fast_axis
-        positions_fast_shape = self.fast_axis.shape
+        self.positions_fast_shape = self.fast_axis.shape
 
-        slow_axis = h5.File(self.p.positions.file, 'r')[self.p.positions.slow_key][...]
+        with h5.File(self.p.positions.file, 'r') as f:
+            slow_axis = f[self.p.positions.slow_key][...]
         if self._is_spectro_scan and self.p.outer_index is not None:
             slow_axis = slow_axis[self.p.outer_index]
         self.slow_axis = np.squeeze(slow_axis) if slow_axis.ndim > 2 else slow_axis
-        positions_slow_shape = self.slow_axis.shape
+        self.positions_slow_shape = self.slow_axis.shape
 
-
-
-        log(3, "The shape of the \n\tdiffraction intensities is: {}\n\tslow axis data:{}\n\tfast axis data:{}".format(data_shape,
-                                                                                                                      positions_slow_shape,
-                                                                                                                      positions_fast_shape))
+        log(3, "The shape of the \n\tdiffraction intensities is: {}\n\tslow axis data:{}\n\tfast axis data:{}".format(self.data_shape,
+                                                                                                                      self.positions_slow_shape,
+                                                                                                                      self.positions_fast_shape))
         if self.p.positions.skip > 1:
             log(3, "Skipping every {:d} positions".format(self.p.positions.skip))
-        
+
+
+    def _prepare_framefilter(self):
+        """
+        Prep for framefilter
+        """
         if None not in [self.p.framefilter.file, self.p.framefilter.key]:
-            self.framefilter = h5.File(self.p.framefilter.file, 'r')[self.p.framefilter.key][()].squeeze() > 0 # turn into boolean
+            with h5.File(self.p.framefilter.file, 'r') as f:
+                self.framefilter = f[self.p.framefilter.key][()].squeeze() > 0 # turn into boolean
             if self._is_spectro_scan and self.p.outer_index is not None:
                 self.framefilter = self.framefilter[self.p.outer_index]
-            if (self.framefilter.shape == self.fast_axis.shape == self.slow_axis.shape):
+            if (self.framefilter.shape == self.positions_fast_shape == self.positions_slow_shape):
                 log(3, "The frame filter has the same dimensionality as the axis information.")
-            elif self.framefilter.shape[:2] == self.fast_axis.shape == self.slow_axis.shape:
+            elif self.framefilter.shape[:2] == self.positions_fast_shape == self.positions_slow_shape:
                 log(3, "The frame filter matches the axis information, but will average the other dimensions.")
             else:
                 raise RuntimeError("I have no idea what to do with this is shape of frame filter data.")
         else:
             log(3, "No frame filter will be applied.")
 
-        self.compute_scan_mapping_and_trajectory(data_shape, positions_fast_shape, positions_slow_shape)
-
+    def _prepare_darkfield(self):
+        """
+        Prep for darkfield
+        """
         if None not in [self.p.darkfield.file, self.p.darkfield.key]:
-            self.darkfield = h5.File(self.p.darkfield.file, 'r')[self.p.darkfield.key]
+            self.fhandle_darkfield =  h5.File(self.p.darkfield.file, 'r')
+            self.darkfield = self.fhandle_darkfield[self.p.darkfield.key]
             log(3, "The darkfield has shape: {}".format(self.darkfield.shape))
-            if self.darkfield.shape == data_shape:
+            if self.darkfield.shape == self.data_shape:
                 log(3, "The darkfield is laid out like the data.")
                 self.darkfield_laid_out_like_data = True
-            elif self.darkfield.shape == data_shape[-2:]:
+            elif self.darkfield.shape == self.data_shape[-2:]:
                 log(3, "The darkfield is not laid out like the data.")
                 self.darkfield_laid_out_like_data = False
+            elif (self.darkfield.shape[-2:] == self.data_shape[-2:]) and (self.darkfield.shape[0] == 1):
+                log(3, "The darkfield is not laid out like the data.")
+                self.darkfield_laid_out_like_data = False
+                self.darkfield = self.darkfield[0]
             else:
                 raise RuntimeError("I have no idea what to do with this shape of darkfield data.")
         else:
             log(3, "No darkfield will be applied.")
 
+    def _prepare_flatfield(self):
+        """
+        Prep for flatfield
+        """
         if None not in [self.p.flatfield.file, self.p.flatfield.key]:
-            self.flatfield = h5.File(self.p.flatfield.file, 'r')[self.p.flatfield.key]
+            self.fhandle_flatfield = h5.File(self.p.flatfield.file, 'r')
+            self.flatfield = self.fhandle_flatfield[self.p.flatfield.key]
             log(3, "The flatfield has shape: {}".format(self.flatfield.shape))
-            if self.flatfield.shape == data_shape:
+            if self.flatfield.shape == self.data_shape:
                 log(3, "The flatfield is laid out like the data.")
                 self.flatfield_laid_out_like_data = True
-            elif self.flatfield.shape == data_shape[-2:]:
+            elif self.flatfield.shape == self.data_shape[-2:]:
                 log(3, "The flatfield is not laid out like the data.")
                 self.flatfield_laid_out_like_data = False
             else:
@@ -449,14 +530,19 @@ class Hdf5Loader(PtyScan):
         else:
             log(3, "No flatfield will be applied.")
 
+    def _prepare_mask(self):
+        """
+        Prep for mask
+        """
         if None not in [self.p.mask.file, self.p.mask.key]:
-            self.mask = h5.File(self.p.mask.file, 'r')[self.p.mask.key]
+            self.fhandle_mask = h5.File(self.p.mask.file, 'r')
+            self.mask = self.fhandle_mask[self.p.mask.key]
             self.mask_dtype = self.mask.dtype
             log(3, "The mask has shape: {}".format(self.mask.shape))
-            if self.mask.shape == data_shape:
+            if self.mask.shape == self.data_shape:
                 log(3, "The mask is laid out like the data.")
                 self.mask_laid_out_like_data = True
-            elif self.mask.shape == data_shape[-2:]:
+            elif self.mask.shape == self.data_shape[-2:]:
                 log(3, "The mask is not laid out like the data.")
                 self.mask_laid_out_like_data = False
             else:
@@ -466,8 +552,13 @@ class Hdf5Loader(PtyScan):
             log(3, "No mask will be applied.")
 
 
+    def _prepare_normalisation(self):
+        """
+        Prep for normalisation
+        """
         if None not in [self.p.normalisation.file, self.p.normalisation.key]:
-            self.normalisation = h5.File(self.p.normalisation.file, 'r')[self.p.normalisation.key]
+            self.fhandle_normalisation = h5.File(self.p.normalisation.file, 'r')
+            self.normalisation = self.fhandle_normalisation[self.p.normalisation.key]
             self.normalisation_mean = self.normalisation[:].mean()
             self.normalisation_std  = self.normalisation[:].std()
             if (self.normalisation.shape == self.fast_axis.shape == self.slow_axis.shape):
@@ -481,23 +572,30 @@ class Hdf5Loader(PtyScan):
         else:
             log(3, "No normalisation will be applied.")
 
+    def _prepare_meta_info(self):
+        """
+        Prep for meta info (energy, distance, psize)
+        """
         if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
-            if self._is_spectro_scan and self.p.outer_index is not None:
-                self.p.energy = float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][self.p.outer_index])
-            else:
-                self.p.energy = float(h5.File(self.p.recorded_energy.file, 'r')[self.p.recorded_energy.key][()])
+            with h5.File(self.p.recorded_energy.file, 'r') as f:
+                if self._is_spectro_scan and self.p.outer_index is not None:
+                    self.p.energy = float(f[self.p.recorded_energy.key][self.p.outer_index])
+                else:
+                    self.p.energy = float(f[self.p.recorded_energy.key][()])
             self.p.energy = self.p.energy * self.p.recorded_energy.multiplier + self.p.recorded_energy.offset
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
 
         if None not in [self.p.recorded_distance.file, self.p.recorded_distance.key]:
-            self.p.distance = float(h5.File(self.p.recorded_distance.file, 'r')[self.p.recorded_distance.key][()] * self.p.recorded_distance.multiplier)
+            with h5.File(self.p.recorded_distance.file, 'r') as f:
+                self.p.distance = float(f[self.p.recorded_distance.key][()] * self.p.recorded_distance.multiplier)
             self.meta.distance = self.p.distance
             log(3, "loading distance={} from file".format(self.p.distance))
         
         if None not in [self.p.recorded_psize.file, self.p.recorded_psize.key]:
-            self.p.psize = float(h5.File(self.p.recorded_psize.file, 'r')[self.p.recorded_psize.key][()] * self.p.recorded_psize.multiplier)
-            self.meta.psize = self.p.psize
+            with h5.File(self.p.recorded_psize.file, 'r') as f:
+                self.p.psize = float(f[self.p.recorded_psize.key][()] * self.p.recorded_psize.multiplier)
+            self.info.psize = self.p.psize
             log(3, "loading psize={} from file".format(self.p.psize))
 
         if self.p.padding is None:
@@ -508,14 +606,18 @@ class Hdf5Loader(PtyScan):
             assert self.pad.size == 4, "self.p.padding needs to of size 4"
             log(3, "Padding the detector frames by {}".format(self.p.padding))
 
+    def _prepare_center(self):
+        """
+        define how data should be loaded (center, cropping)
+        """
         # now lets figure out the cropping and centering roughly so we don't load the full data in.
-        frame_shape = np.array(data_shape[-2:]) + self.pad.reshape(2,2).sum(1)
+        frame_shape = np.array(self.data_shape[-2:]) + self.pad.reshape(2,2).sum(1)
         center = frame_shape // 2 if self.p.center is None else u.expect2(self.p.center)
         center = np.array([_translate_to_pix(frame_shape[ix], center[ix]) for ix in range(len(frame_shape))])
 
         if self.p.shape is None:
             self.frame_slices = (slice(None, None, 1), slice(None, None, 1))
-            self.frame_shape = data_shape[-2:]
+            self.frame_shape = self.data_shape[-2:]
             self.p.shape = frame_shape
             log(3, "Loading full shape frame.")
         elif self.p.shape is not None and not self.p.auto_center:
@@ -530,26 +632,11 @@ class Hdf5Loader(PtyScan):
             log(3, "Loading in frame based on a center in:%i, %i" % tuple(center))
         else:
             self.frame_slices = (slice(None, None, 1), slice(None, None, 1))
-            self.frame_shape = data_shape[-2:]
+            self.frame_shape = self.data_shape[-2:]
             self.info.center = None
             self.info.auto_center = self.p.auto_center
             log(3, "center is %s, auto_center: %s" % (self.info.center, self.info.auto_center))
             log(3, "The loader will not do any cropping.")
-
-
-        # it's much better to have this logic here than in load!
-        if (self._ismapped and (self._scantype == 'arb')):
-            # easy peasy
-            log(3, "This scan looks to be a mapped arbitrary trajectory scan.")
-            self.load = self.load_mapped_and_arbitrary_scan
-
-        if (self._ismapped and (self._scantype == 'raster')):
-            log(3, "This scan looks to be a mapped raster scan.")
-            self.load = self.load_mapped_and_raster_scan
-
-        if (self._scantype == 'raster') and not self._ismapped:
-            log(3, "This scan looks to be an unmapped raster scan.")
-            self.load = self.load_unmapped_raster_scan
 
     def load_unmapped_raster_scan(self, indices):
         intensities = {}
@@ -588,8 +675,16 @@ class Hdf5Loader(PtyScan):
                                       self.fast_axis[jj] * self.p.positions.fast_multiplier])
 
         log(3, 'Data loaded successfully.')
-
         return intensities, positions, weights
+
+    def subtract_dark(self, raw, dark):
+        """
+        Subtract dark current from a raw frame
+        and truncate negative values
+        """
+        corr = raw - dark
+        corr[raw<dark] = 0
+        return corr
 
     def get_corrected_intensities(self, index):
         '''
@@ -608,9 +703,10 @@ class Hdf5Loader(PtyScan):
         # TODO: Remove these logic blocks into something a bit more sensible.
         if self.darkfield is not None:
             if self.darkfield_laid_out_like_data:
-                intensity -= self.darkfield[indexed_frame_slices].squeeze()
+                df = self.darkfield[indexed_frame_slices].squeeze()
             else:
-                intensity -= self.darkfield[self.frame_slices].squeeze()
+                df = self.darkfield[self.frame_slices].squeeze()
+            intensity = self.subtract_dark(intensity, df)
 
         if self.flatfield is not None:
             if self.flatfield_laid_out_like_data:
@@ -631,6 +727,8 @@ class Hdf5Loader(PtyScan):
                 mask = self.mask[indexed_frame_slices].squeeze()
             else:
                 mask = self.mask[self.frame_slices].squeeze()
+            if self.p.mask.invert:
+                mask = 1 - mask
         else:
             mask = np.ones_like(intensity, dtype=int)
 
@@ -639,8 +737,6 @@ class Hdf5Loader(PtyScan):
             mask = np.pad(mask, tuple(self.pad.reshape(2,2)), mode='constant')
 
         return mask, intensity
-
-
 
     def compute_scan_mapping_and_trajectory(self, data_shape, positions_fast_shape, positions_slow_shape):
         '''
@@ -679,7 +775,7 @@ class Hdf5Loader(PtyScan):
                 indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
                 if self.framefilter is not None:
-                    self.preview_indices = self.preview_indices[:,self.framefilter[::skip,::skip].flatten()]
+                    self.preview_indices = self.preview_indices[:,self.framefilter[indices[1][::skip,::skip], indices[0][::skip,::skip]].flatten()]
                 self.num_frames = len(self.preview_indices[0])
             else:
                 if (set_slow_axis_bounds is not None) and (set_fast_axis_bounds is not None):
@@ -691,9 +787,10 @@ class Hdf5Loader(PtyScan):
                     elif isinstance(fast_axis_bounds, (tuple, list)):
                         fast_axis_bounds = set_fast_axis_bounds
                 self._scantype = "arb"
-                self.preview_indices = np.array(list(range(*fast_axis_bounds)))[::skip]
+                indices = np.array(list(range(*fast_axis_bounds)))
+                self.preview_indices = indices[::skip]
                 if self.framefilter is not None:
-                    self.preview_indices = self.preview_indices[self.framefilter[::skip]]
+                    self.preview_indices = self.preview_indices[self.framefilter[indices][::skip]]
                 self.num_frames = len(self.preview_indices)
 
         elif ((len(positions_fast_shape)>1) and (len(positions_slow_shape)>1)) and data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
@@ -795,6 +892,20 @@ class Hdf5Loader(PtyScan):
         else:
             raise IOError("I don't know what to do with these positions/data shapes")
 
+    def _finalize(self):
+        """
+        Close any open HDF5 files.
+        """
+        super()._finalize()
+        for h in [self.fhandle_intensities,
+                self.fhandle_darkfield,
+                self.fhandle_flatfield,
+                self.fhandle_normalisation,
+                self.fhandle_mask]:
+            try:
+                h.close()
+            except:
+                pass
 
 @register()
 class Hdf5LoaderFast(Hdf5Loader):
@@ -804,6 +915,16 @@ class Hdf5LoaderFast(Hdf5Loader):
         print("Rank %d has access to %d processes" %(parallel.rank, self.cpu_count_per_rank))
         self.intensities_array = None
         self.weights_array = None
+
+    @staticmethod
+    def subtract_dark(raw, dark):
+        """
+        Subtract dark current from a raw frame
+        and truncate negative values
+        """
+        corr = raw - dark
+        corr[raw<dark] = 0
+        return corr
 
     @staticmethod
     def _init_worker(intensities_raw_array, weights_raw_array, 
@@ -863,9 +984,10 @@ class Hdf5LoaderFast(Hdf5Loader):
         # Correct darkfield
         if src_darkfield is not None:
             if darkfield_laid_out_like_data:
-                dest_intensities[dest_slices] -= src_darkfield[indexed_frame_slices].squeeze()
+                df = src_darkfield[indexed_frame_slices].squeeze()
             else:
-                dest_intensities[dest_slices] -= src_darkfield[frame_slices].squeeze()
+                df = src_darkfield[frame_slices].squeeze()
+            dest_intensities[dest_slices] = Hdf5LoaderFast.subtract_dark(dest_intensities[dest_slices], df)
 
         # Correct flatfield
         if src_flatfield is not None:
@@ -997,5 +1119,8 @@ class Hdf5LoaderFast(Hdf5Loader):
         if self.p.padding:
             intensities = np.pad(intensities, tuple(self.pad.reshape(2,2)), mode='constant')
             weights = np.pad(weights, tuple(self.pad.reshape(2,2)), mode='constant')
+
+        if self.p.mask.invert:
+            weights = 1 - weights
 
         return weights, intensities

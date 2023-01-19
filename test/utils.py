@@ -5,7 +5,7 @@ This file is part of the PTYPY package.
     module:: utils
 .. moduleauthor:: Aaron Parsons <scientificsoftware@diamond.ac.uk>
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
     :platform: Unix
     :synopsis: utilities for the test framework
 """

@@ -7,7 +7,7 @@ This module generates the probe.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 
 """
 import numpy as np
@@ -376,6 +376,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
             'Attempt to load layer `%s` of probe storage with ID `%s` from `%s`'
             % (str(layer), str(ID), p.recon.rfile))
         model = u.load_from_ptyr(p.recon.rfile, 'probe', ID, layer)
+        p.photons = None
         # This could be more sophisticated,
         # i.e. matching the real space grids etc.
     elif str(p.model) == 'stxm':

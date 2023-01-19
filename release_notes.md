@@ -1,3 +1,35 @@
+# PtyPy 0.7 release notes
+
+This release is focused on improving the usability of PtyPy in Jupyter notebooks in preparation for the 
+[PtyPy workshop](https://www.diamond.ac.uk/Home/Events/2023/Ptychography--PtyPy--Software-Workshop-2023.html) 
+held at the Diamond Light Source in January 2023. The workshop features extensive interactive 
+[tutorials](https://ptycho.github.io/tutorials) delivered using Jupyter notebooks. 
+
+## Build changes
+
+We added the following features
+
+* convenience functions to read parameters from JSON/YAML files 
+  (`ptypy.utils.param_from_json` and `ptypy.utils.param_from_yaml`)
+* plotting utilites `ptypy.utils.plot_client.figure_from_ptycho` and 
+  `ptypy.utils.plot_client.figure_from_ptyr` that can be useful in Jupyter notebooks
+* non-threaded interactive plotting for Jupyter notebooks using `p.io.autoplot.threaded=False`
+
+
+# PtyPy 0.6 release notes
+
+Public release of ptypy! After having to use a private repository
+for many years, we finally have a license agreement that allows
+PtyPy to go public. 
+
+## Build changes
+
+In accordance with PEP 621, we are moving away 
+from `setup.py` for the main build of PtyPy and
+adopt the new community standard for building
+packages with `pyproject.toml`.
+
+
 # PtyPy 0.5 release notes
 
 We're excited to bring you a new release, with new engines, GPU accelerations and

@@ -103,7 +103,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(A*B*frame_size_m*frame_size_n).reshape(A, B, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -135,10 +136,12 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(k*frame_size_m*frame_size_n).reshape(k, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         ff= np.ones_like(data)
-        h5.File(self.flat_file, 'w')[self.flat_key] = ff
+        with h5.File(self.flat_file, 'w') as f:
+            f[self.flat_key] = ff
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -185,7 +188,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
             data.append([np.ones(frame_size_m*frame_size_n)*i])
 
         data = np.array(data).reshape(A, B, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -205,9 +209,12 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=A*B, cleanup=False)
 
-        out_data = h5.File(output['output_file'],'r')['chunks/0/data'][...].squeeze()
-        out_data_fast = h5.File(output['output_file'],'r')['chunks/0/positions'][:, 1]
-        out_data_slow = h5.File(output['output_file'],'r')['chunks/0/positions'][:, 0]
+        with h5.File(output['output_file'],'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
+        with h5.File(output['output_file'],'r') as f:
+            out_data_fast = f['chunks/0/positions'][:, 1]
+        with h5.File(output['output_file'],'r') as f:
+            out_data_slow = f['chunks/0/positions'][:, 0]
 
         ground_truth = data[slow_axis_min:slow_axis_max, fast_axis_min:fast_axis_max].reshape((-1, frame_size_m, frame_size_n))
         ground_truth_fast = fast[slow_axis_min:slow_axis_max, fast_axis_min:fast_axis_max].squeeze()
@@ -244,7 +251,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(A*B*frame_size_m*frame_size_n).reshape(A, B, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -259,7 +267,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.positions.skip = skip
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=A*B, cleanup=False)
 
-        out_data = h5.File(output['output_file'],'r')['chunks/0/data'][...].squeeze()
+        with h5.File(output['output_file'],'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
         ground_truth = data[::skip,::skip].reshape((-1, frame_size_m, frame_size_n))
         np.testing.assert_equal(out_data.shape, ground_truth.shape, err_msg="The shapes don't match for the positions for case 1 with skipping")
         np.testing.assert_array_equal(out_data, ground_truth, err_msg='There is something up with the positions for case 1 with skipping')
@@ -285,12 +294,14 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(A*B*frame_size_m*frame_size_n).reshape(A, B, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         # create framefilter
         framefilter = data.sum(axis=(2,3)) > 0
         framefilter[50:60,40:50] = False 
-        h5.File(self.framefilter_file, 'w')[self.framefilter_key] = framefilter
+        with h5.File(self.framefilter_file, 'w') as f:
+            f[self.framefilter_key] = framefilter
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -308,7 +319,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.framefilter.key = self.framefilter_key
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=A*B, cleanup=False)
 
-        out_data = h5.File(output['output_file'],'r')['chunks/0/data'][...].squeeze()
+        with h5.File(output['output_file'],'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
         ground_truth = data[framefilter].reshape((-1, frame_size_m, frame_size_n))
         np.testing.assert_equal(out_data.shape, ground_truth.shape, err_msg="The shapes don't match for the positions for case 1 with framefilter")
         np.testing.assert_array_equal(out_data, ground_truth, err_msg='There is something up with the positions for case 1 with framefilter')
@@ -331,10 +343,12 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(k*frame_size_m*frame_size_n).reshape(k, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         darkfield = np.ones_like(data)
-        h5.File(self.dark_file, 'w')[self.dark_key] = darkfield
+        with h5.File(self.dark_file, 'w') as f:
+            f[self.dark_key] = darkfield
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -368,12 +382,14 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(k*frame_size_m*frame_size_n).reshape((k, frame_size_m, frame_size_n))
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         mask = np.ones(data.shape[-2:], dtype=float)
         mask[::2] = 0
         mask[:, ::2] = 0
-        h5.File(self.mask_file, 'w')[self.mask_key] = mask
+        with h5.File(self.mask_file, 'w') as f:
+            f[self.mask_key] = mask
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -411,7 +427,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(k*frame_size_m*frame_size_n).reshape(k, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -447,7 +464,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         for i in range(k):
             data.append(np.ones((frame_size_m, frame_size_n))*i)
         data = np.array(data)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
         data_params = u.Param()
         data_params.auto_center = False
         data_params.intensities = u.Param()
@@ -462,10 +480,12 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.positions.bounding_box.fast_axis_bounds = fast_axis_min, fast_axis_max
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
 
-
-        out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
-        out_data_fast = h5.File(output['output_file'], 'r')['chunks/0/positions'][:, 1]
-        out_data_slow = h5.File(output['output_file'], 'r')['chunks/0/positions'][:, 0]
+        with h5.File(output['output_file'], 'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
+        with h5.File(output['output_file'], 'r') as f:
+            out_data_fast = f['chunks/0/positions'][:, 1]
+        with h5.File(output['output_file'], 'r') as f:
+            out_data_slow = f['chunks/0/positions'][:, 0]
 
         ground_truth = data[fast_axis_min:fast_axis_max].reshape((-1, frame_size_m, frame_size_n))
         ground_truth_fast = positions_fast[fast_axis_min:fast_axis_max].squeeze()
@@ -501,7 +521,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(k*frame_size_m*frame_size_n).reshape(k, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -516,7 +537,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.positions.skip = skip
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
 
-        out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
+        with h5.File(output['output_file'], 'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
         ground_truth = data[::skip].reshape((-1, frame_size_m, frame_size_n))
 
         np.testing.assert_equal(ground_truth.shape, out_data.shape,
@@ -542,12 +564,14 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(k*frame_size_m*frame_size_n).reshape(k, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         # create framefilter
         framefilter = data.sum(axis=(1,2)) > 0
-        framefilter[5:7] = False 
-        h5.File(self.framefilter_file, 'w')[self.framefilter_key] = framefilter
+        framefilter[5:7] = False
+        with h5.File(self.framefilter_file, 'w') as f:
+            f[self.framefilter_key] = framefilter
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -566,7 +590,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=k, cleanup=False)
 
-        out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
+        with h5.File(output['output_file'], 'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
         ground_truth = data[framefilter].reshape((-1, frame_size_m, frame_size_n))
 
         np.testing.assert_equal(ground_truth.shape, out_data.shape,
@@ -593,10 +618,12 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(k*frame_size_m*frame_size_n).reshape(k, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         flatfield = np.ones_like(data[0])
-        h5.File(self.flat_file, 'w')[self.flat_key] = flatfield
+        with h5.File(self.flat_file, 'w') as f:
+            f[self.flat_key] = flatfield
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -632,10 +659,12 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(k*frame_size_m*frame_size_n).reshape(k, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         darkfield = np.ones_like(data[0])
-        h5.File(self.dark_file, 'w')[self.dark_key] = darkfield
+        with h5.File(self.dark_file, 'w') as f:
+            f[self.dark_key] = darkfield
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -669,7 +698,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C*D, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -705,7 +735,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C*D, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -743,10 +774,12 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         for i in range(C*D):
             data.append(np.ones((frame_size_m, frame_size_n))*i)
         data = np.array(data)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C*D, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -763,9 +796,12 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.positions.bounding_box.slow_axis_bounds = slow_axis_min, slow_axis_max
 
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
-        out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
-        out_data_fast = h5.File(output['output_file'], 'r')['chunks/0/positions'][:, 1]
-        out_data_slow = h5.File(output['output_file'], 'r')['chunks/0/positions'][:, 0]
+        with h5.File(output['output_file'], 'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
+        with h5.File(output['output_file'], 'r') as f:
+            out_data_fast = f['chunks/0/positions'][:, 1]
+        with h5.File(output['output_file'], 'r') as f:
+            out_data_slow = f['chunks/0/positions'][:, 0]
 
         ground_truth = data.reshape((C, D, frame_size_m, frame_size_n))[slow_axis_min:slow_axis_max, fast_axis_min:fast_axis_max]
         ground_truth = ground_truth.reshape((-1, frame_size_m, frame_size_n))
@@ -803,7 +839,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C*D, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -818,7 +855,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.positions.skip = skip
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
 
-        out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
+        with h5.File(output['output_file'], 'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
         ground_truth = data.reshape((C, D, frame_size_m, frame_size_n))[::skip,::skip]
         ground_truth = ground_truth.reshape((-1, frame_size_m, frame_size_n))
 
@@ -846,7 +884,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C, D, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -880,7 +919,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C, D, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -896,9 +936,12 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.positions.bounding_box.fast_axis_bounds = fast_axis_min, fast_axis_max
         data_params.positions.bounding_box.slow_axis_bounds = slow_axis_min, slow_axis_max
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
-        out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
-        out_data_fast = h5.File(output['output_file'], 'r')['chunks/0/positions'][:, 1]
-        out_data_slow = h5.File(output['output_file'], 'r')['chunks/0/positions'][:, 0]
+        with h5.File(output['output_file'], 'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
+        with h5.File(output['output_file'], 'r') as f:
+            out_data_fast = f['chunks/0/positions'][:, 1]
+        with h5.File(output['output_file'], 'r') as f:
+            out_data_slow = f['chunks/0/positions'][:, 0]
 
 
         ground_truth = data.reshape((C, D, frame_size_m, frame_size_n))[slow_axis_min:slow_axis_max, fast_axis_min:fast_axis_max]
@@ -939,7 +982,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C, D, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -954,7 +998,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.positions.skip = skip
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
 
-        out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
+        with h5.File(output['output_file'], 'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
         ground_truth = data.reshape((C, D, frame_size_m, frame_size_n))[::skip,::skip]
         ground_truth = ground_truth.reshape((-1, frame_size_m, frame_size_n))
 
@@ -983,7 +1028,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C*D, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -1018,7 +1064,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C*D, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -1034,9 +1081,12 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.positions.bounding_box.fast_axis_bounds = fast_axis_min, fast_axis_max
         data_params.positions.bounding_box.slow_axis_bounds = slow_axis_min, slow_axis_max
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
-        out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
-        out_data_fast = h5.File(output['output_file'], 'r')['chunks/0/positions'][:, 1]
-        out_data_slow = h5.File(output['output_file'], 'r')['chunks/0/positions'][:, 0]
+        with h5.File(output['output_file'], 'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
+        with h5.File(output['output_file'], 'r') as f:
+            out_data_fast = f['chunks/0/positions'][:, 1]
+        with h5.File(output['output_file'], 'r') as f:
+            out_data_slow = f['chunks/0/positions'][:, 0]
 
         ground_truth = data.reshape((C, D, frame_size_m, frame_size_n))[slow_axis_min:slow_axis_max, fast_axis_min:fast_axis_max]
         ground_truth = ground_truth.reshape((-1, frame_size_m, frame_size_n))
@@ -1077,7 +1127,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C*D, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -1092,7 +1143,8 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         data_params.positions.skip = skip
         output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=C*D, cleanup=False)
 
-        out_data = h5.File(output['output_file'], 'r')['chunks/0/data'][...].squeeze()
+        with h5.File(output['output_file'], 'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
         ground_truth = data.reshape((C, D, frame_size_m, frame_size_n))[::skip,::skip]
         ground_truth = ground_truth.reshape((-1, frame_size_m, frame_size_n))
 
@@ -1116,10 +1168,12 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(k*frame_size_m*frame_size_n).reshape(k, frame_size_m, frame_size_n)
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         normalisation = np.ones_like(positions_slow)
-        h5.File(self.normalisation_file, 'w')[self.normalisation_key] = normalisation
+        with h5.File(self.normalisation_file, 'w') as f:
+            f[self.normalisation_key] = normalisation
 
         data_params = u.Param()
         data_params.auto_center = False
@@ -1265,12 +1319,14 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
 
         # make up some data ...
         data = np.arange(k*frame_size_m*frame_size_n).reshape((k, frame_size_m, frame_size_n))
-        h5.File(self.intensity_file, 'w')[self.intensity_key] = data
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
 
         mask = np.ones(data.shape[-2:], dtype=float)
         mask[::2] = 0
         mask[:, ::2] = 0
-        h5.File(self.mask_file, 'w')[self.mask_key] = mask
+        with h5.File(self.mask_file, 'w') as f:
+            f[self.mask_key] = mask
 
         data_params = u.Param()
         data_params.auto_center = False

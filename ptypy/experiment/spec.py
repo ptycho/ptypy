@@ -6,7 +6,7 @@ Adapted from spec_read.m by Andreas Menzel (PSI)
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import dateutil
 import dateutil.parser

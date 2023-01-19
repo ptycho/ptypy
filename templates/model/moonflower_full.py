@@ -45,4 +45,5 @@ p.engines.engine00.name = 'DM'
 p.engines.engine00.numiter = 80
 
 # prepare and run
-P = Ptycho(p,level=5)
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)

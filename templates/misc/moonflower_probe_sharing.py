@@ -76,24 +76,25 @@ p.engines.DM.numiter = 60
 
 
 
-P = Ptycho(p,level=3)
+if __name__ == "__main__":
+    P = Ptycho(p,level=3)
 
-s1, s2 = list(P.probe.storages.values())
-# Transfer views
-for v in s2.views:
-    v.storage = s1
-    v.storageID = s1.ID
-P.probe.reformat()
+    s1, s2 = list(P.probe.storages.values())
+    # Transfer views
+    for v in s2.views:
+        v.storage = s1
+        v.storageID = s1.ID
+    P.probe.reformat()
 
-# Unforunately we need to delete the storage here due to DM being unable 
-# to ignore unused storages. This is due to the /=nrm division in the
-# probe update 
-P.probe.storages.pop(s2.ID)
+    # Unforunately we need to delete the storage here due to DM being unable 
+    # to ignore unused storages. This is due to the /=nrm division in the
+    # probe update 
+    P.probe.storages.pop(s2.ID)
 
-P.print_stats()
-P.init_engine()
-P.run()
-P.finalize()
+    P.print_stats()
+    P.init_engine()
+    P.run()
+    P.finalize()
 
 
 

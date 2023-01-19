@@ -4,7 +4,7 @@ Plotting utilities.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import numpy as np
 import time
@@ -590,7 +590,6 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
 
     plt.draw()
     return fig
-
 
 class PtyAxis(object):
     """

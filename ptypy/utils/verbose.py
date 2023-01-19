@@ -15,7 +15,7 @@ TODO:
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import time
 import sys
@@ -186,13 +186,13 @@ def set_level(level):
         raise TypeError("Verbosity level should be an integer or a string")
     logger.info('Verbosity set to %s' % str(level))
 
-def get_level(num_or_string='num'):
+def get_level():
     """
-    inverse to get level
+    inverse to set level
     """
-    if num_or_string=='num':
+    try:
         return vlevel_from_logging[logger.level]
-    else:
+    except:
         return slevel_from_logging[logger.level]
 
 # Formatting helper

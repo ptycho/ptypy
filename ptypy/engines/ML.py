@@ -9,7 +9,7 @@ TODO.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import numpy as np
 import time
@@ -341,6 +341,9 @@ class ML(PositionCorrectionEngine):
 
         # Save floating intensities into runtime
         self.ptycho.runtime["float_intens"] = parallel.gather_dict(self.ML_model.float_intens_coeff)
+
+        # Delete model
+        del self.ML_model
 
 class BaseModel(object):
     """

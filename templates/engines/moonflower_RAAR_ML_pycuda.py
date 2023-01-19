@@ -65,4 +65,5 @@ p.engines.engine01.floating_intensities = False
 p.engines.engine01.probe_support = 0.5
 
 # prepare and run
-P = Ptycho(p,level=5)
+if __name__ == "__main__":
+    P = Ptycho(p,level=5)

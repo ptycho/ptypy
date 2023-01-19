@@ -4,7 +4,7 @@ Geometry manager.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import numpy as np
 from scipy import fftpack
@@ -685,7 +685,7 @@ class BasicNearfieldPropagator(object):
     Basic two step (i.e. two ffts) Nearfield Propagator.
     """
 
-    def __init__(self, geo_pars=None, ffttype='fftw', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='numpy', **kwargs):
         """
         Parameters
         ----------
