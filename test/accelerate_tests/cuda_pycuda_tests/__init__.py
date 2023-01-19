@@ -43,7 +43,7 @@ class PyCudaTest(unittest.TestCase):
     def tearDown(self):
         np.set_printoptions()
         self.ctx.pop()
-        self.ctx.detach()
+        self.ctx = None
         if not 'perf' in self._testMethodName:
            cuda_pycuda.debug_options = self.opts_old
 
