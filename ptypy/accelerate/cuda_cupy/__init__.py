@@ -3,17 +3,16 @@ import cupy as cp
 import os
 
 kernel_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'cuda_common'))
-compile_options = ('-std=c++14', '-DPTYPY_CUPY_NVTRC=1',
-                   '-I' + kernel_dir)
-
+compile_options =['-std=c++14', '-DPTYPY_CUPY_NVTRC=1', '-I' + kernel_dir, '-DNDEBUG']
 queue = None
+device = None
 
 
-def setup_context(new_queue=False):
+def get_context(new_queue=False):
 
     from ptypy.utils import parallel
 
-    global queue
+    global queue, device
 
     if queue is None or new_queue:
         ndevs = cp.cuda.runtime.getDeviceCount()
@@ -22,14 +21,14 @@ def setup_context(new_queue=False):
                 rank={}, rank_local={}, device_count={}'.format(
                 parallel.rank, parallel.rank_local, ndevs
             ))
-        cp.cuda.Device(parallel.rank_local).use()
-
+        device = cp.cuda.Device(parallel.rank_local)
+        device.use()
         queue = cp.cuda.Stream()
 
     return queue
 
 
-def load_kernel(name, subs={}, file=None):
+def load_kernel(name, subs={}, file=None, options=None):
 
     if file is None:
         if isinstance(name, str):
@@ -48,7 +47,10 @@ def load_kernel(name, subs={}, file=None):
     escaped = fn.replace("\\", "\\\\")
     kernel = '#line 1 "{}"\n'.format(escaped) + kernel
 
-    module = cp.RawModule(code=kernel, options=compile_options)
+    opt = [*compile_options]
+    if options is not None:
+        opt += list(options)
+    module = cp.RawModule(code=kernel, options=tuple(opt))
     if isinstance(name, str):
         return module.get_function(name)
     else:  # tuple

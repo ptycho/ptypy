@@ -9,7 +9,7 @@ from ptypy.utils.verbose import logger
 
 
 # fourier support
-def choose_fft(arr_shape):
+def choose_fft(arr_shape, fft_type=None):
     dims_are_powers_of_two = True
     rows = arr_shape[0]
     columns = arr_shape[1]
@@ -19,11 +19,11 @@ def choose_fft(arr_shape):
         try:
             from ptypy.accelerate.cuda_cupy.cufft import FFT_cuda as FFT
         except:
-            logger.warning(
+            logger.info(
                 'Unable to import optimised cufft version - using cufft with separte callbacks instead')
             from ptypy.accelerate.cuda_cupy.cufft import FFT_cupy as FFT
     else:
-        logger.warning(
+        logger.info(
             'cufft: array dimensions are not powers of two (16 to 2048) - using cufft with separated callbacks')
         from ptypy.accelerate.cuda_cupy.cufft import FFT_cupy as FFT
     return FFT
@@ -31,7 +31,7 @@ def choose_fft(arr_shape):
 
 class PropagationKernel:
 
-    def __init__(self, aux, propagator, queue_thread=None):
+    def __init__(self, aux, propagator, queue_thread=None, fft_type='cuda'):
         self.aux = aux
         self._queue = queue_thread
         self.prop_type = propagator.p.propagation
@@ -40,11 +40,12 @@ class PropagationKernel:
         self._fft1 = None
         self._fft2 = None
         self._p = propagator
+        self.fft_type = fft_type
 
     def allocate(self):
 
         aux = self.aux
-        FFT = choose_fft(aux.shape[-2:])
+        FFT = choose_fft(aux.shape[-2:], self.fft_type)
 
         if self.prop_type == 'farfield':
 
