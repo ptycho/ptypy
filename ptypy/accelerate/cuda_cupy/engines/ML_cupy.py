@@ -20,7 +20,7 @@ from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
 from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
-from .. import get_context
+from .. import get_context, log_device_memory_stats
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, TransposeKernel
@@ -149,8 +149,13 @@ class ML_cupy(ML_serial):
         for scan, kern in self.kernels.items():
             mag_mem = max(kern.aux.nbytes // 2, mag_mem)
         ma_mem = mag_mem
-        mem = cp.cuda.runtime.memGetInfo()[0]
         blk = ma_mem + mag_mem
+
+        # We need to add the free memory from the pool to the free device memory,
+        # as both will be used for allocations
+        mempool = cp.get_default_memory_pool()
+        mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
+
         # leave 200MB room for safety
         fit = int(mem - 200 * 1024 * 1024) // blk
         if not fit:
@@ -159,7 +164,7 @@ class ML_cupy(ML_serial):
 
         # TODO grow blocks dynamically
         nma = min(fit, MAX_BLOCKS)
-        log(4, 'Free memory on device: %.2f GB' % (float(mem)/1e9))
+        log_device_memory_stats(4)
         log(4, 'CuPy max blocks fitting on GPU: ma_arrays={}'.format(nma))
         # reset memory or create new
         self.w_data = GpuDataManager(ma_mem, 0, nma, False)
@@ -430,6 +435,8 @@ class ML_cupy(ML_serial):
 
         # self.queue.synchronize()
         super().engine_finalize()
+
+        log_device_memory_stats(4)
 
 
 class GaussianModel(BaseModelSerial):

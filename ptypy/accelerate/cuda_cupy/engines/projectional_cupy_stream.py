@@ -19,6 +19,7 @@ import cupy as cp
 import cupyx
 
 from ptypy import utils as u
+from ptypy.accelerate.cuda_cupy import log_device_memory_stats
 from ptypy.utils.verbose import log, logger
 from ptypy.utils import parallel
 from ptypy.engines import register
@@ -51,7 +52,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
         self.qu_dtoh = cp.cuda.Stream()
 
     def _setup_kernels(self):
-
+        
         super()._setup_kernels()
         ex_mem = 0
         mag_mem = 0
@@ -59,9 +60,14 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
             ex_mem = max(kern.aux.nbytes, ex_mem)
             mag_mem = max(kern.FUK.gpu.fdev.nbytes, mag_mem)
         ma_mem = mag_mem
-        # TODO: Check how this interfers with the cp memory pool?
-        mem = cp.cuda.runtime.memGetInfo()[0]
+        
         blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
+        
+        # We need to add the free memory from the pool to the free device memory,
+        # as both will be used for allocations
+        mempool = cp.get_default_memory_pool()
+        mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
+        
         # leave 200MB room for safety
         fit = int(mem - 200 * 1024 * 1024) // blk
         if not fit:
@@ -71,7 +77,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
         # TODO grow blocks dynamically
         nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)
         nma = min(fit, MAX_BLOCKS)
-        log(4, 'Free memory on device: %.2f GB' % (float(mem)/1e9))
+        log_device_memory_stats(4)
         log(4, 'cupy max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(
             nex, nma))
         # reset memory or create new
@@ -417,10 +423,12 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
             self.queue.synchronize()
 
         for name, s in self.ob.S.items():
-            s.data[:] = s.gpu.get()
+            cp.asnumpy(s.gpu, stream=self.queue, out=s.data)
         for name, s in self.pr.S.items():
-            s.data[:] = s.gpu.get()
+            cp.asnumpy(s.gpu, stream=self.queue, out=s.data)
 
+        self.queue.synchronize()
+        
         # costly but needed to sync back with
         # for name, s in self.ex.S.items():
         #     s.data[:] = s.gpu.get()
@@ -444,9 +452,8 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
         for pID, pr in self.pr.storages.items():
             prn = self.pr_nrm.S[pID]
             cfact = self.pr_cfact[pID]
-            # pr.gpu *= np.float64(cfact)
             with queue:
-                pr.gpu *= np.complex64(cfact)
+                pr.gpu *= np.float32(cfact)
                 prn.gpu.fill(np.float32(cfact))
 
         for iblock, dID in enumerate(self.dID_list):
@@ -474,6 +481,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
         self.dID_list.reverse()
 
         self.queue.synchronize()
+        self.queue.use()
         for pID, pr in self.pr.storages.items():
 
             buf = self.pr_buf.S[pID]
@@ -504,6 +512,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
 
         super().engine_finalize()
 
+        log_device_memory_stats(4)
 
 @register(name="DM_cupy")
 class DM_cupy_stream(_ProjectionEngine_cupy_stream, DMMixin):

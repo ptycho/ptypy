@@ -1,6 +1,9 @@
 
+from typing import Optional
 import cupy as cp
 import os
+
+from ptypy.utils.verbose import headerline, log
 
 kernel_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'cuda_common'))
 compile_options =['-std=c++14', '-DPTYPY_CUPY_NVTRC=1', '-I' + kernel_dir, '-DNDEBUG']
@@ -55,3 +58,16 @@ def load_kernel(name, subs={}, file=None, options=None):
         return module.get_function(name)
     else:  # tuple
         return tuple(module.get_function(n) for n in name)
+
+def log_device_memory_stats(level=4, heading: str ='Device Memory Stats'):
+        mempool = cp.get_default_memory_pool()
+        pinned_pool = cp.get_default_pinned_memory_pool()
+        log(level, '\n' + headerline(heading))
+        log(level, f'Device id             : {cp.cuda.Device().id}')
+        log(level, f'Total device mem      : {cp.cuda.runtime.memGetInfo()[1]/1024/1024} MB')
+        log(level, f'Free device mem       : {cp.cuda.runtime.memGetInfo()[0]/1024/1024} MB')
+        log(level, f'MemoryPool size       : {mempool.total_bytes()/1024/1024} MB')
+        log(level, f'MemoryPool used       : {mempool.used_bytes()/1024/1024} MB')
+        log(level, f'MemoryPool limit      : {mempool.get_limit()/1024/1024} MB')
+        log(level, f'MemoryPool free blocks: {mempool.n_free_blocks()}')
+        log(level, f'PinnedPool free blocks: {pinned_pool.n_free_blocks()}')

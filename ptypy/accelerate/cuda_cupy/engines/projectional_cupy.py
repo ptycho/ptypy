@@ -13,7 +13,7 @@ import time
 import cupy as cp
 
 from ptypy import utils as u
-from ptypy.accelerate.cuda_cupy import get_context
+from ptypy.accelerate.cuda_cupy import get_context, log_device_memory_stats
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
@@ -159,7 +159,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         super().engine_prepare()
 
         for name, s in self.ob.S.items():
-            s.gpu = cp.asarray(s.data)
+            s.gpu = cp.asarray(s.data)  # TODO: investigate if this can be pinned, it's much faster
         for name, s in self.ob_buf.S.items():
             s.gpu, s.data = mppa(s.data)
         for name, s in self.ob_nrm.S.items():
@@ -281,9 +281,11 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             queue.synchronize()
 
         for name, s in self.ob.S.items():
-            s.data[:] = s.gpu.get()
+            cp.asnumpy(s.gpu, stream=self.queue, out=s.data)
         for name, s in self.pr.S.items():
-            s.data[:] = s.gpu.get()
+            cp.asnumpy(s.gpu, stream=self.queue, out=s.data)
+
+        queue.synchronize()
 
         # costly but needed to sync back with
         # for name, s in self.ex.S.items():
@@ -460,7 +462,8 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             obn = self.ob_nrm.S[oID]
             self.multigpu.allReduceSum(ob.gpu)
             self.multigpu.allReduceSum(obn.gpu)
-            ob.gpu /= obn.gpu
+            with queue:
+                ob.gpu /= obn.gpu
 
             self.clip_object(ob.gpu)
             queue.synchronize()
@@ -556,31 +559,37 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         """
         clear GPU data and destroy context.
         """
+        # revert page-locked memory + delete GPU memory
         for name, s in self.ob.S.items():
+            s.data = np.copy(s.data)
             del s.gpu
         for name, s in self.ob_buf.S.items():
+            s.data = np.copy(s.data)
             del s.gpu
         for name, s in self.ob_nrm.S.items():
+            s.data = np.copy(s.data)
             del s.gpu
         for name, s in self.pr.S.items():
+            s.data = np.copy(s.data)
             del s.gpu
         for name, s in self.pr_buf.S.items():
+            s.data = np.copy(s.data)
             del s.gpu
         for name, s in self.pr_nrm.S.items():
+            s.data = np.copy(s.data)
             del s.gpu
 
         # copy addr to cpu
         for dID, prep in self.diff_info.items():
             prep.addr = prep.addr_gpu.get()
+            del prep.addr_gpu
 
-        # copy data to cpu
-        # TODO: this kills the pagelock memory (otherwise we get segfaults in h5py)
-        for name, s in self.pr.S.items():
-            s.data = np.copy(s.data)
 
-        # TODO: this removed all memory before - how can we do that in cupy?
-        # self.context.pop()
-        # self.context.detach()
+        mempool = cp.get_default_memory_pool()
+        mempool.free_all_blocks()
+        pinned_pool = cp.get_default_pinned_memory_pool()
+        pinned_pool.free_all_blocks()
+
 
         # we don't need the  "benchmarking" in DM_serial
         super().engine_finalize(benchmark=False)
