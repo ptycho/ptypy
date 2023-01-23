@@ -785,13 +785,13 @@ class NanomaxContrast(NanomaxStepscanSep2019):
                 # now find the center of mass can be estimated using the ptypy internal function and make it integers
                 self.info.center = u.scripts.mass_center(frame*mask)
                 self.info.center = [int(x) for x in self.info.center]
-                logger.info('Estimated the center of the (first) diffraction pattern to be', self.info.center)
+                logger.info(f'Estimated the center of the (first) diffraction pattern to be {self.info.center}')
 
             # the center of the full frames is (now) known, and thus the indices for the cropping can be defined
             cy, cx   = self.info.center
             d        = self.info.shape
-            logger.info('Found the center of the full frames at', self.info.center)
-            logger.info('Will crop all diffraction patterns on load to a size of ', self.info.shape)
+            logger.info(f'Found the center of the full frames at {self.info.center}')
+            logger.info(f'Will crop all diffraction patterns on load to a size of {self.info.shape}')
             self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(cy)-d//2, int(cx)-d//2
             self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower+d, self.info.cropOnLoad_x_lower+d
 
@@ -811,9 +811,13 @@ class NanomaxContrast(NanomaxStepscanSep2019):
             self.info.center = (tmp_center_y, tmp_center_x)
         
         # set the photon energy
+        path_options = ['entry/snapshot/energy',
+                        'entry/snapshots/pre_scan/energy',
+                        'entry/snapshots/prost_scan/energy']
         if self.info.energy == None:	
             with h5py.File(fullfilename, 'r') as fp:
-                self.meta.energy = fp['entry/snapshot/energy'][:] * 1e-3
+                existing_paths = [x for x in path_options if x in fp.keys()]
+                self.meta.energy = fp[existing_paths[0]][:] * 1e-3
         else:
             self.meta.energy = self.info.energy
 
