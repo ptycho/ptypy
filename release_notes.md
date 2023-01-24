@@ -43,15 +43,6 @@ the [`PyCUDA`](https://documen.tician.de/pycuda/) and
 [`Reikna`](http://reikna.publicfields.net/en/latest/) library and a whole
 collection of custom kernels. 
 
-An alternative CUDA implementation based on [`cupy`](https://cupy.dev/) 
-has also been implemented, providing the same feature as the `PyCuda` based
-engine. 
-It can be imported using
-```python
-import ptypy
-ptypy.load_gpu_engines('cupy')
-```
-
 All GPU engines leverage a "streaming" model which means that the 
 primary locations of all objects are on the host (CPU) memory.
 Diffraction data arrays and all other arrys that scale linearly with 
