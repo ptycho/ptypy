@@ -1,3 +1,14 @@
+# PtyPy 0.8 release notes
+
+An alternative CUDA implementation based on [`cupy`](https://cupy.dev/) 
+has been implemented, providing the same feature as the `PyCuda` based
+engine. 
+It can be imported using
+```python
+import ptypy
+ptypy.load_gpu_engines('cupy')
+```
+
 # PtyPy 0.7 release notes
 
 This release is focused on improving the usability of PtyPy in Jupyter notebooks in preparation for the 

@@ -1,7 +1,7 @@
 
-short_version = '0.7.0'
-version = '0.7.0'
-release = True
+short_version = '0.8.0'
+version = '0.8.0'
+release = False
 
 if not release:
     version += '.dev'
