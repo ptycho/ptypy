@@ -26,7 +26,13 @@ class PyCudaTest(unittest.TestCase):
     def setUp(self):
         import sys
         np.set_printoptions(threshold=sys.maxsize, linewidth=np.inf)
-        self.ctx = make_default_context()
+
+        def _retain_primary_context(dev):
+            ctx = dev.retain_primary_context()
+            ctx.push()
+            return ctx
+        self.ctx = make_default_context(_retain_primary_context)
+
         self.stream = cuda.Stream()
         # enable assertions in CUDA kernels for testing
         if not 'perf' in self._testMethodName:
@@ -37,7 +43,7 @@ class PyCudaTest(unittest.TestCase):
     def tearDown(self):
         np.set_printoptions()
         self.ctx.pop()
-        self.ctx.detach()
+        self.ctx = None
         if not 'perf' in self._testMethodName:
            cuda_pycuda.debug_options = self.opts_old
 
