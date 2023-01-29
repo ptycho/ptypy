@@ -107,6 +107,13 @@ class Geo(Base):
     doc = Either "farfield" or "nearfield"
     userlevel = 1
 
+    [ffttype]
+    type = str
+    default = numpy
+    help = FFT library
+    doc = Either "numpy", "scipy" or "fftw"
+    userlevel = 1
+
     [shape]
     type = int, tuple
     default = 256
@@ -429,9 +436,9 @@ def get_propagator(geo_dct, **kwargs):
     Helper function to determine propagator to be attached to Geometry class.
     """
     if geo_dct['propagation'] == 'farfield':
-        return BasicFarfieldPropagator(geo_dct, **kwargs)
+        return BasicFarfieldPropagator(geo_dct, ffttype=geo_dct["ffttype"], **kwargs)
     else:
-        return BasicNearfieldPropagator(geo_dct, **kwargs)
+        return BasicNearfieldPropagator(geo_dct, ffttype=geo_dct["ffttype"], **kwargs)
 
 
 class FFTchooser(object):
@@ -439,7 +446,7 @@ class FFTchooser(object):
     Chooses the desired FFT algo, and assigns scaling.
     If pyFFTW is not available, falls back to scipy.
     """
-    def __init__(self, ffttype='std'):
+    def __init__(self, ffttype='scipy'):
         """
         Parameters
         ----------
@@ -466,8 +473,8 @@ class FFTchooser(object):
         self.ifft = lambda x: fftpack.ifft2(x).astype(x.dtype)
 
     def _numpy_fft(self):
-        self.fft = lambda x: np.fft.fft2(x).astype(x.dtype)
-        self.ifft = lambda x: np.fft.ifft2(x).astype(x.dtype)
+        self.fft = lambda x: np.ascontiguousarray(np.fft.fft2(x).astype(x.dtype))
+        self.ifft = lambda x: np.ascontiguousarray(np.fft.ifft2(x).astype(x.dtype))
 
     def assign_scaling(self, shape):
         if isinstance(self.ffttype, tuple) and len(self.ffttype) > 2:

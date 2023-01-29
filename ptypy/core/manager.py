@@ -73,6 +73,13 @@ class ScanModel(object):
     doc = Either "farfield" or "nearfield"
     userlevel = 1
 
+    [ffttype]
+    type = str
+    default = numpy
+    help = FFT library
+    doc = Choose from "numpy", "scipy" or "fftw"
+    userlevel = 1
+
     [data]
     default =
     type = @scandata.*
@@ -776,6 +783,7 @@ class _Vanilla(object):
         geo_pars.shape = probe_shape
         geo_pars.center = center
         geo_pars.propagation = self.p.propagation
+        geo_pars.ffttype = self.p.ffttype
         geo_pars.psize = psize
 
         # make a Geo instance and fix resolution
@@ -1065,6 +1073,7 @@ class _Full(object):
 
         # Add propagation info from this scan model
         geo_pars.propagation = self.p.propagation
+        geo_pars.ffttype = self.p.ffttype
 
         # The multispectral case will have multiple geometries
         for ii, fac in enumerate(self.p.coherence.energies):
@@ -1532,6 +1541,7 @@ class Bragg3dModel(Vanilla):
         get_keys = ['distance', 'center', 'energy']
         geo_pars = u.Param({key: common[key] for key in get_keys})
         geo_pars.propagation = self.p.propagation
+        geo_pars.ffttype = self.p.ffttype
         # take extra Bragg information into account
         psize = tuple(common['psize'])
         geo_pars.psize = (self.ptyscan.common.rocking_step,) + psize
