@@ -96,7 +96,7 @@ GPUs based on our own kernels and the
 Install the dependencies for this version like so.
 ::
 
-    $ conda env create -f accelerate/cuda_pycuda/dependencies.yml
+    $ conda env create -f ptypy/accelerate/cuda_pycuda/dependencies.yml
     $ conda activate ptypy_pycuda
     (ptypy_pycuda)$ pip install .
 
