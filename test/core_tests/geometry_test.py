@@ -51,7 +51,6 @@ class GeometryTest(unittest.TestCase):
         g.shape = 256
         g.propagation = "nearfield"
         G = geometry.Geo(owner=P, pars=g)
-#         print G.resolution
         return G
 
     def test_geometry_near_field_init(self):
@@ -72,9 +71,9 @@ class GeometryTest(unittest.TestCase):
         C = prop.ifft(B)
 
         # asserts
-        assert (A.strides == B.strides), "FFT(x) has changed the strides of x, using fftw"
-        assert (B.strides == C.strides), "IFFT(x) has changed the strides of x, using fftw"
-        np.testing.assert_allclose(A,C, err_msg="IFFT(FFT(x) did not return the same as x, using fftw")
+        assert (A.strides == B.strides), "FFT(x) has changed the strides of x, using {:s}".format(prop.FFTch.ffttype)
+        assert (B.strides == C.strides), "IFFT(x) has changed the strides of x, using {:s}".format(prop.FFTch.ffttype)
+        np.testing.assert_allclose(A,C, err_msg="IFFT(FFT(x) did not return the same as x, using {:s}".format(prop.FFTch.ffttype))
 
     def test_basic_nearfield_propagator_fftw(self):
         G = self.set_up_nearfield()

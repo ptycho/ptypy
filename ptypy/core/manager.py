@@ -75,7 +75,7 @@ class ScanModel(object):
 
     [ffttype]
     type = str
-    default = numpy
+    default = scipy
     help = FFT library
     doc = Choose from "numpy", "scipy" or "fftw"
     userlevel = 1

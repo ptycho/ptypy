@@ -104,14 +104,16 @@ class Geo(Base):
     type = str
     default = farfield
     help = Propagation type
-    doc = Either "farfield" or "nearfield"
+    doc = Choose between "farfield" or "nearfield"
+    choices = 'farfield', 'nearfield'
     userlevel = 1
 
     [ffttype]
     type = str
-    default = numpy
+    default = scipy
     help = FFT library
-    doc = Either "numpy", "scipy" or "fftw"
+    doc = Choose which library to use for FFTs
+    choices = 'numpy', 'scipy', 'fftw'
     userlevel = 1
 
     [shape]
@@ -513,7 +515,7 @@ class BasicFarfieldPropagator(object):
     coordinates are rolled periodically, just like in the conventional fft case.
     """
 
-    def __init__(self, geo_pars=None, ffttype='numpy', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='scipy', **kwargs):
         """
         Parameters
         ----------
@@ -692,7 +694,7 @@ class BasicNearfieldPropagator(object):
     Basic two step (i.e. two ffts) Nearfield Propagator.
     """
 
-    def __init__(self, geo_pars=None, ffttype='numpy', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='scipy', **kwargs):
         """
         Parameters
         ----------
