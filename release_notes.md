@@ -9,6 +9,15 @@ import ptypy
 ptypy.load_gpu_engines('cupy')
 ```
 
+
+# PtyPy 0.7.1 release notes
+
+Patch release.
+
+*  Bug fix in Numpy FFT propagator - enforcing C-contiguous arrays
+*  You can now choose the CPU FFT type with parameter `p.scans.<scan_00>.ffttype={'scipy','numpy','fftw'}`
+
+
 # PtyPy 0.7 release notes
 
 This release is focused on improving the usability of PtyPy in Jupyter notebooks in preparation for the 

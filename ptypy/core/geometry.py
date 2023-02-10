@@ -104,7 +104,16 @@ class Geo(Base):
     type = str
     default = farfield
     help = Propagation type
-    doc = Either "farfield" or "nearfield"
+    doc = Choose between "farfield" or "nearfield"
+    choices = 'farfield', 'nearfield'
+    userlevel = 1
+
+    [ffttype]
+    type = str
+    default = scipy
+    help = FFT library
+    doc = Choose which library to use for FFTs
+    choices = 'numpy', 'scipy', 'fftw'
     userlevel = 1
 
     [shape]
@@ -429,9 +438,9 @@ def get_propagator(geo_dct, **kwargs):
     Helper function to determine propagator to be attached to Geometry class.
     """
     if geo_dct['propagation'] == 'farfield':
-        return BasicFarfieldPropagator(geo_dct, **kwargs)
+        return BasicFarfieldPropagator(geo_dct, ffttype=geo_dct["ffttype"], **kwargs)
     else:
-        return BasicNearfieldPropagator(geo_dct, **kwargs)
+        return BasicNearfieldPropagator(geo_dct, ffttype=geo_dct["ffttype"], **kwargs)
 
 
 class FFTchooser(object):
@@ -439,7 +448,7 @@ class FFTchooser(object):
     Chooses the desired FFT algo, and assigns scaling.
     If pyFFTW is not available, falls back to scipy.
     """
-    def __init__(self, ffttype='std'):
+    def __init__(self, ffttype='scipy'):
         """
         Parameters
         ----------
@@ -466,8 +475,8 @@ class FFTchooser(object):
         self.ifft = lambda x: fftpack.ifft2(x).astype(x.dtype)
 
     def _numpy_fft(self):
-        self.fft = lambda x: np.fft.fft2(x).astype(x.dtype)
-        self.ifft = lambda x: np.fft.ifft2(x).astype(x.dtype)
+        self.fft = lambda x: np.ascontiguousarray(np.fft.fft2(x).astype(x.dtype))
+        self.ifft = lambda x: np.ascontiguousarray(np.fft.ifft2(x).astype(x.dtype))
 
     def assign_scaling(self, shape):
         if isinstance(self.ffttype, tuple) and len(self.ffttype) > 2:
@@ -506,7 +515,7 @@ class BasicFarfieldPropagator(object):
     coordinates are rolled periodically, just like in the conventional fft case.
     """
 
-    def __init__(self, geo_pars=None, ffttype='numpy', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='scipy', **kwargs):
         """
         Parameters
         ----------
@@ -685,7 +694,7 @@ class BasicNearfieldPropagator(object):
     Basic two step (i.e. two ffts) Nearfield Propagator.
     """
 
-    def __init__(self, geo_pars=None, ffttype='numpy', **kwargs):
+    def __init__(self, geo_pars=None, ffttype='scipy', **kwargs):
         """
         Parameters
         ----------
