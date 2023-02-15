@@ -703,7 +703,7 @@ class Ptycho(Base):
                                 'Exit %.2e' % tuple(err))
                     imsg = '%(engine)s: Iteration # %(iteration)d/%(numiter)d :: ' %info + \
                                    'Fourier %.2e, Photons %.2e, Exit %.2e' %tuple(err)
-                    if not self.p.io.autoplot.threaded:
+                    if (self.p.io.autoplot.active) and (not self.p.io.autoplot.threaded):
                         if not (info["iteration"] % self.p.io.autoplot.interval):
                             if self._jupyter_client is None:
                                 from IPython import display
