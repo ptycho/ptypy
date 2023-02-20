@@ -59,14 +59,13 @@ class SwmrLoader(Hdf5Loader):
           is complete.
 
     """
-    def __init__(self, pars=None, **kwargs):
-        super().__init__(pars=pars, **kwargs)
-
-    def setup(self, *args, **kwargs):
+    def __init__(self, pars=None, *args, **kwargs):
         self._is_swmr = True
-        self._use_keyfilter = False if self.p.framefilter else True
-        # if no framefilter passed, use key follower to filter frames by index
-        super().setup(*args, **kwargs)
+        super().__init__(*args, **kwargs)
+
+    def _params_check(self):
+        super()._params_check()
+
         # Check if we have been given the live keys
         if None in [self.p.intensities.live_key,
                     self.p.positions.live_slow_key,
@@ -77,26 +76,21 @@ class SwmrLoader(Hdf5Loader):
         # are loaded from the same file
         if self.p.intensities.file != self.p.positions.file:
             raise RuntimeError("Intensities and positions file should be same")
-
-        # Initialize KeyFollower
-
-        intensity_file = h5.File(self.p.intensities.file, 'r', swmr=self._is_swmr)
-        positions_file = h5.File(self.p.positions.file, 'r', swmr=self._is_swmr)
-        self.kf = KeyFollower((intensity_file[self.p.intensities.live_key],
-                               positions_file[self.p.positions.live_slow_key],
-                               positions_file[self.p.positions.live_fast_key]),
-                              timeout=5)
-
-        # Get initial value of maximum number of frames to be loaded before
-        # marking scan finished
+        
+    def _prepare_intensity_and_positions(self):
+        super()._prepare_intensity_and_positions()
+        self.fhandle_positions = h5.File(self.p.positions.file, 'r', swmr=self._is_swmr)
+        self.kf = KeyFollower((self.fhandle_intensities[self.p.intensities.live_key],
+                               self.fhandle_positions[self.p.positions.live_slow_key],
+                               self.fhandle_positions[self.p.positions.live_fast_key]),
+                               timeout=5)
 
     def get_data_chunk(self, *args, **kwargs):
         self.kf.refresh()
         self.intensities.refresh()
         self.slow_axis.refresh()
         self.fast_axis.refresh()
-        # refreshing here to update before Ptyscan.get_data_chunk calls check
-        # and load
+        # refreshing here to update before Ptyscan.get_data_chunk calls check and load
         return super().get_data_chunk(*args, **kwargs)
 
     def check(self, frames=None, start=None):
