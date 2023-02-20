@@ -156,7 +156,6 @@ class ScanModel(object):
         # Object flags and constants
         self.containers_initialized = False
         self.data_available = True
-        self.end_of_scan = self.ptyscan.end_of_scan
         self.CType = CType
         self.FType = FType
 
@@ -1649,7 +1648,7 @@ class ModelManager(object):
     
     @property
     def end_of_scan(self):
-        return all(s.end_of_scan for s in list(self.scans.values()))
+        return all(s.ptyscan.end_of_scan for s in list(self.scans.values()))
 
     def new_data(self):
         """
