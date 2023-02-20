@@ -42,6 +42,7 @@ class BaseEngine(object):
     type = int
     lowlim = 1
     help = Total number of iterations
+    doc = For on-the-fly (live) processing, the specified total number of iterations is guaranteed to run after all data is loaded.
 
     [numiter_contiguous]
     default = 1

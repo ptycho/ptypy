@@ -109,12 +109,11 @@ class Ptycho(Base):
     lowlim = 1
     userlevel = 1
 
-    [frames_before_iterate]
-    default = None
+    [min_frames_for_recon]
+    default = 0
     type = int
-    help = Number of frames to be loaded before reconstruction starts.
-    doc = For streaming data, this parameter determines when to start 
-          engine iterate if waiting for further frames
+    help = Minimum number of frames to be loaded before reconstruction can start.
+    doc = For on-the-fly (live) processing, engine iterate is only called once the given minimum number of frames has been loaded. 
 
     [dry_run]
     default = False
@@ -685,13 +684,8 @@ class Ptycho(Base):
                         engine.prepare()
                     if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
-                # Check if we have reached the end of the scan
-                end_of_scan =  any(s.ptyscan.end_of_scan for s in list(self.model.scans.values()))
-                # Nr. of currently loaded diffraction views
-                all_diff_views = len(self.diff.V)
                 # Keep loading data, unless we have reached minimum nr. of frames or end of scan
-                keep_loading_data = (self.p.frames_before_iterate is not None) and (all_diff_views < self.p.frames_before_iterate)
-                if keep_loading_data and not end_of_scan:
+                if (len(self.diff.V) < self.p.min_frames_for_recon) and not self.model.end_of_scan:
                     continue
 
                 auto_save = self.p.io.autosave
@@ -705,7 +699,7 @@ class Ptycho(Base):
 
                 # If not end of scan, expand total number of iterations
                 # This is to make sure that the specified nr. of iterations is guaranteed once all data is loaded
-                if not end_of_scan:
+                if not self.model.end_of_scan:
                     engine.numiter += engine.p.numiter_contiguous
 
                 # One iteration
