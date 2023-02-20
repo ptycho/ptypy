@@ -79,11 +79,14 @@ class SwmrLoader(Hdf5Loader):
         
     def _prepare_intensity_and_positions(self):
         super()._prepare_intensity_and_positions()
-        self.fhandle_positions = h5.File(self.p.positions.file, 'r', swmr=self._is_swmr)
         self.kf = KeyFollower((self.fhandle_intensities[self.p.intensities.live_key],
                                self.fhandle_positions[self.p.positions.live_slow_key],
                                self.fhandle_positions[self.p.positions.live_fast_key]),
                                timeout=5)
+        
+    def compute_scan_mapping_and_trajectory(self,*args):
+        super().compute_scan_mapping_and_trajectory(*args)
+        assert isinstance(self.slow_axis, h5.Dataset), "Scantype = {:s} and mapped={:} is not compatible with the SwmrLoader".format(self._scantype, self._ismapped)
 
     def get_data_chunk(self, *args, **kwargs):
         self.kf.refresh()
