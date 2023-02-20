@@ -300,7 +300,7 @@ class Hdf5Loader(PtyScan):
           and converted to electron wavelengths.    
     """
 
-    def __init__(self, pars=None, **kwargs):
+    def __init__(self, pars=None, swmr=False, **kwargs):
         """
         hdf5 data loader
         """
@@ -329,9 +329,11 @@ class Hdf5Loader(PtyScan):
         self.preview_indices = None
         self.framefilter = None
         self._is_spectro_scan = False
-        self._is_swmr = False
+        self._is_swmr = swmr
         
         self.fhandle_intensities = None
+        self.fhandle_positions_fast = None
+        self.fhandle_positions_slow = None
         self.fhandle_darkfield = None
         self.fhandle_flatfield = None
         self.fhandle_normalisation = None
@@ -371,6 +373,7 @@ class Hdf5Loader(PtyScan):
         """
         raise error if essential parameters mising
         """
+        print(self.p.intensities, self.p.positions)
         if None in [self.p.intensities.file,
                     self.p.intensities.key,
                     self.p.positions.file,

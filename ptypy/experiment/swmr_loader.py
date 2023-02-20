@@ -59,9 +59,8 @@ class SwmrLoader(Hdf5Loader):
           is complete.
 
     """
-    def __init__(self, pars=None, *args, **kwargs):
-        self._is_swmr = True
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, swmr=True, **kwargs)
 
     def _params_check(self):
         super()._params_check()
@@ -80,8 +79,8 @@ class SwmrLoader(Hdf5Loader):
     def _prepare_intensity_and_positions(self):
         super()._prepare_intensity_and_positions()
         self.kf = KeyFollower((self.fhandle_intensities[self.p.intensities.live_key],
-                               self.fhandle_positions[self.p.positions.live_slow_key],
-                               self.fhandle_positions[self.p.positions.live_fast_key]),
+                               self.fhandle_positions_slow[self.p.positions.live_slow_key],
+                               self.fhandle_positions_fast[self.p.positions.live_fast_key]),
                                timeout=5)
         
     def compute_scan_mapping_and_trajectory(self,*args):
@@ -127,5 +126,7 @@ class SwmrLoader(Hdf5Loader):
         else:
             frames_accessible = frames
             end_of_scan = 0
+        print("Check: start = {:}, frames = {:}, available = {:}".format(start, frames, available))
+        print("Check: new_frames = {:}, frames_accessible = {:}, end_of_scan = {:}".format(new_frames, frames_accessible, end_of_scan))
 
         return frames_accessible, end_of_scan
