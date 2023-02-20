@@ -378,11 +378,6 @@ class Hdf5Loader(PtyScan):
                     self.p.positions.fast_key]:
             raise RuntimeError("Missing some information about either the positions or the intensity mapping!")
 
-        if True in [self.p.intensities.is_swmr,
-                    self.p.positions.is_swmr,
-                    self.p.normalisation.is_swmr]:
-            raise NotImplementedError("Currently swmr functionality is not implemented! Coming soon...")
-
     def _spectro_scan_check(self):
         """
         make adjustments if dealing with a spectro scan
