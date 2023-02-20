@@ -408,14 +408,14 @@ class Hdf5Loader(PtyScan):
             self.data_shape = tuple(np.array(self.data_shape)[1:])
 
         with h5.File(self.p.positions.file, 'r', swmr=self._is_swmr) as f:
-            fast_axis = f[self.p.positions.fast_key][...]
+            fast_axis = f[self.p.positions.fast_key]
         if self._is_spectro_scan and self.p.outer_index is not None:
             fast_axis = fast_axis[self.p.outer_index]
         self.fast_axis = np.squeeze(fast_axis) if fast_axis.ndim > 2 else fast_axis
         self.positions_fast_shape = self.fast_axis.shape
 
         with h5.File(self.p.positions.file, 'r', swmr=self._is_swmr) as f:
-            slow_axis = f[self.p.positions.slow_key][...]
+            slow_axis = f[self.p.positions.slow_key]
         if self._is_spectro_scan and self.p.outer_index is not None:
             slow_axis = slow_axis[self.p.outer_index]
         self.slow_axis = np.squeeze(slow_axis) if slow_axis.ndim > 2 else slow_axis
@@ -600,13 +600,15 @@ class Hdf5Loader(PtyScan):
         intensities = {}
         positions = {}
         weights = {}
-        sh = self.slow_axis.shape
+        slow_axis = np.squeeze(self.slow_axis[...]) if self.slow_axis.ndim > 2 else self.slow_axis
+        fast_axis = np.squeeze(self.fast_axis[...]) if self.fast_axis.ndim > 2 else self.fast_axis
+        sh = slow_axis.shape
         for ii in indices:
             slow_idx, fast_idx = self.preview_indices[:, ii]
             intensity_index = slow_idx * sh[1] + fast_idx
             weights[ii], intensities[ii] = self.get_corrected_intensities(intensity_index)
-            positions[ii] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
-                                      self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
+            positions[ii] = np.array([slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
+                                      fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
         log(3, 'Data loaded successfully.')
         return intensities, positions, weights
 
@@ -614,11 +616,13 @@ class Hdf5Loader(PtyScan):
         intensities = {}
         positions = {}
         weights = {}
+        slow_axis = np.squeeze(self.slow_axis[...]) if self.slow_axis.ndim > 2 else self.slow_axis
+        fast_axis = np.squeeze(self.fast_axis[...]) if self.fast_axis.ndim > 2 else self.fast_axis
         for jj in indices:
             slow_idx, fast_idx = self.preview_indices[:, jj]
             weights[jj], intensities[jj] = self.get_corrected_intensities((slow_idx, fast_idx))  # or the other way round???
-            positions[jj] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
-                                      self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
+            positions[jj] = np.array([slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
+                                      fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
         log(3, 'Data loaded successfully.')
         return intensities, positions, weights
 
@@ -626,11 +630,13 @@ class Hdf5Loader(PtyScan):
         intensities = {}
         positions = {}
         weights = {}
+        slow_axis = np.squeeze(self.slow_axis[...]) if self.slow_axis.ndim > 1 else self.slow_axis
+        fast_axis = np.squeeze(self.fast_axis[...]) if self.fast_axis.ndim > 1 else self.fast_axis
         for ii in indices:
             jj = self.preview_indices[ii]
             weights[ii], intensities[ii] = self.get_corrected_intensities(jj)
-            positions[ii] = np.array([self.slow_axis[jj] * self.p.positions.slow_multiplier,
-                                      self.fast_axis[jj] * self.p.positions.fast_multiplier])
+            positions[ii] = np.array([slow_axis[jj] * self.p.positions.slow_multiplier,
+                                      fast_axis[jj] * self.p.positions.fast_multiplier])
         log(3, 'Data loaded successfully.')
         return intensities, positions, weights
 
@@ -844,6 +850,7 @@ class Hdf5Loader(PtyScan):
                 self.num_frames = len(self.preview_indices[0])
                 self._ismapped = False
                 self._scantype = 'raster'
+
             else:
                 raise IOError("I don't know what to do with these positions/data shapes")
         else:
