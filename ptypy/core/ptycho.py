@@ -113,7 +113,7 @@ class Ptycho(Base):
     default = 0
     type = int
     help = Minimum number of frames to be loaded before reconstruction can start.
-    doc = For on-the-fly (live) processing, engine iterate is only called once the given minimum number of frames has been loaded. 
+    doc = For on-the-fly (live) processing, the first reconstruction engine will wait until this many frames have been loaded.
 
     [dry_run]
     default = False
@@ -530,7 +530,7 @@ class Ptycho(Base):
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs. Sets self.new_data
         with LogTime(self.p.io.benchmark == 'all') as t:
-            while self.new_data is None:
+            while not self.new_data:
                 self.new_data = self.model.new_data()
             if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 

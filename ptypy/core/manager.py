@@ -1676,10 +1676,6 @@ class ModelManager(object):
                 ilog_streamer('%s: loading data for scan %s' %(type(scan).__name__,label))
                 prb_ids, obj_ids, pod_ids = dict(), dict(), set()
                 nd = scan.new_data(_nframes)
-                # this is necessary for live processing
-                # maybe better way to do this??
-                if nd is None:
-                    return None
                 while nd:
                     new_data.append((label, nd[0]))
                     prb_ids.update(nd[1])
