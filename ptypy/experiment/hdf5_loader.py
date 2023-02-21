@@ -373,7 +373,6 @@ class Hdf5Loader(PtyScan):
         """
         raise error if essential parameters mising
         """
-        print(self.p.intensities, self.p.positions)
         if None in [self.p.intensities.file,
                     self.p.intensities.key,
                     self.p.positions.file,
