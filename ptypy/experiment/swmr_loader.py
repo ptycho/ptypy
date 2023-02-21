@@ -107,18 +107,13 @@ class SwmrLoader(Hdf5Loader):
 
         available = min(self.kf.get_current_max() + 1, self.num_frames)
         new_frames = available - start
+        # not reached expected nr. of frames
         if new_frames <= frames:
-            # not reached expected nr. of frames,
             # but its last chunk of scan so load it anyway
             if available == self.num_frames:
                 frames_accessible = new_frames
                 end_of_scan = 1
-            # reached expected nr. of frames
-            # but first block must be of maximum size
-            elif start != 0 and new_frames >= self.min_frames:
-                frames_accessible = self.min_frames
-                end_of_scan = 0
-            # not reached required nr. of frames, do nothing
+            # otherwise, do nothing
             else:
                 end_of_scan = 0
                 frames_accessible = 0
@@ -126,7 +121,5 @@ class SwmrLoader(Hdf5Loader):
         else:
             frames_accessible = frames
             end_of_scan = 0
-        print("Check: start = {:}, frames = {:}, available = {:}".format(start, frames, available))
-        print("Check: new_frames = {:}, frames_accessible = {:}, end_of_scan = {:}".format(new_frames, frames_accessible, end_of_scan))
 
         return frames_accessible, end_of_scan
