@@ -109,6 +109,12 @@ class Ptycho(Base):
     lowlim = 1
     userlevel = 1
 
+    [min_frames_for_recon]
+    default = 0
+    type = int
+    help = Minimum number of frames to be loaded before reconstruction can start.
+    doc = For on-the-fly (live) processing, the first reconstruction engine will wait until this many frames have been loaded.
+
     [dry_run]
     default = False
     help = Dry run switch
@@ -524,8 +530,9 @@ class Ptycho(Base):
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs. Sets self.new_data
         with LogTime(self.p.io.benchmark == 'all') as t:
-            self.new_data = self.model.new_data()
-        if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
+            while not self.new_data:
+                self.new_data = self.model.new_data()
+            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
         # Print stats
         parallel.barrier()
@@ -677,6 +684,10 @@ class Ptycho(Base):
                         engine.prepare()
                     if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
+                # Keep loading data, unless we have reached minimum nr. of frames or end of scan
+                if (len(self.diff.V) < self.p.min_frames_for_recon) and not self.model.end_of_scan:
+                    continue
+
                 auto_save = self.p.io.autosave
                 if auto_save.active and auto_save.interval > 0:
                     if engine.curiter % auto_save.interval == 0:
@@ -685,6 +696,11 @@ class Ptycho(Base):
                         self.save_run(auto, 'dump')
                         self.runtime.last_save = engine.curiter
                         logger.info(headerline())
+
+                # If not end of scan, expand total number of iterations
+                # This is to make sure that the specified nr. of iterations is guaranteed once all data is loaded
+                if not self.model.end_of_scan:
+                    engine.numiter += engine.p.numiter_contiguous
 
                 # One iteration
                 with LogTime(self.p.io.benchmark == 'all') as t:

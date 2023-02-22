@@ -1645,6 +1645,10 @@ class ModelManager(object):
     @property
     def data_available(self):
         return any(s.data_available for s in list(self.scans.values()))
+    
+    @property
+    def end_of_scan(self):
+        return all(s.ptyscan.end_of_scan for s in list(self.scans.values()))
 
     def new_data(self):
         """
