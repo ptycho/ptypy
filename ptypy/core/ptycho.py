@@ -722,11 +722,10 @@ class Ptycho(Base):
                     if (self.p.io.autoplot.active) and (not self.p.io.autoplot.threaded):
                         if not (info["iteration"] % self.p.io.autoplot.interval):
                             if self._jupyter_client is None:
-                                from IPython import display
                                 from ptypy.utils.plot_client import _JupyterClient
                                 self._jupyter_client = _JupyterClient(self, autoplot_pars=self.p.io.autoplot, layout_pars=self.p.io.autoplot.layout)
                             self._jupyter_client.runtime.update(self.runtime)
-                            display.display(self._jupyter_client.plot(title=imsg), clear=True)
+                            self._jupyter_client.display(imsg)
                     else:
                         ilog_streamer(imsg)
                     

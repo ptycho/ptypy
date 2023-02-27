@@ -715,6 +715,8 @@ class _JupyterClient(MPLplotter):
                                       runtime=ptycho.runtime,
                                       in_thread=False)
         self.initialized = False
+        import IPython
+        self.ipython = IPython
 
     def plot(self, title=""):
         if not self.initialized:
@@ -724,6 +726,10 @@ class _JupyterClient(MPLplotter):
         self.plot_all()
         plt.close(self.plot_fig)
         return self.plot_fig
+
+    def display(self,title):
+        self.ipython.display.display(self.plot(title=title), clear=True)
+        
 
 def figure_from_ptycho(P, pars=None):
     """
