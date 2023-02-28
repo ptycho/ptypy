@@ -78,8 +78,9 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
         nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)
         nma = min(fit, MAX_BLOCKS)
         log_device_memory_stats(4)
-        log(4, 'cupy max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(
-            nex, nma))
+        log(4, 'Free memory available: {:.2f} GB'.format(float(mem)/(1024**3)))
+        log(4, 'Memory to be allocated per block: {:.2f} GB'.format(float(blk)/(1024**3)))
+        log(4, 'cupy max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
         # reset memory or create new
         self.ex_data = GpuDataManager(ex_mem, 0, nex, True)
         self.ma_data = GpuDataManager(ma_mem, 0, nma, False)
@@ -143,8 +144,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
             prep.mag = cupyx.empty_pinned(mag.shape, mag.dtype, order="C")
             prep.mag[:] = mag
 
-            log(4, 'Free memory on device: %.2f GB' %
-                (float(cp.cuda.runtime.memGetInfo()[0])/1e9))
+            log(4, 'Free memory on device: {:.2f} GB'.format(float(cp.cuda.runtime.memGetInfo()[0])/(1024**3)))
             self.ex_data.add_data_block()
             self.ma_data.add_data_block()
             self.mag_data.add_data_block()
