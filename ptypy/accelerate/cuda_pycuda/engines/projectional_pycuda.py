@@ -120,6 +120,10 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
             # create buffer arrays
             ash = (fpc * nmodes,) + tuple(geo.shape)
             aux = np.zeros(ash, dtype=np.complex64)
+            mem = cuda.mem_get_info()[0]
+            if not int(mem) // aux.nbytes:
+                log(1,"Cannot fit memory into device, if possible reduce frames per block or nr. of modes. Exiting...")
+                raise SystemExit("ptypy has been exited.")
             kern.aux = gpuarray.to_gpu(aux)
 
             # setup kernels, one for each SCAN.
