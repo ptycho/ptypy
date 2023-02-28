@@ -15,16 +15,18 @@ def choose_fft(arr_shape, fft_type=None):
     columns = arr_shape[1]
     if rows != columns or rows not in [16, 32, 64, 128, 256, 512, 1024, 2048]:
         dims_are_powers_of_two = False
-    if dims_are_powers_of_two:
+    if fft_type=='cuda' and not dims_are_powers_of_two:
+        logger.warning('cufft: array dimensions are not powers of two (16 to 2048) - using cufft with seperated callbacks')
+        from ptypy.accelerate.cuda_cupy.cufft import FFT_cupy as FFT
+    elif fft_type=='cuda' and dims_are_powers_of_two:
         try:
+            import filtered_cufft
             from ptypy.accelerate.cuda_cupy.cufft import FFT_cuda as FFT
         except:
-            logger.info(
+            logger.warning(
                 'Unable to import optimised cufft version - using cufft with separte callbacks instead')
             from ptypy.accelerate.cuda_cupy.cufft import FFT_cupy as FFT
     else:
-        logger.info(
-            'cufft: array dimensions are not powers of two (16 to 2048) - using cufft with separated callbacks')
         from ptypy.accelerate.cuda_cupy.cufft import FFT_cupy as FFT
     return FFT
 
