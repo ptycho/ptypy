@@ -715,6 +715,10 @@ class _JupyterClient(MPLplotter):
                                       runtime=ptycho.runtime,
                                       in_thread=False)
         self.initialized = False
+
+        # not ideal but currently best solution
+        # avoiding a module-level import of Ipython
+        # since its not part of the core dependencies
         import IPython
         self.ipython = IPython
 
