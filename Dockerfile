@@ -24,29 +24,29 @@ ENV CUDA_PATH=/usr/local/cuda \
     LD_LIBRARY_PATH=$CUDA_PATH/lib64:$LD_LIBRARY_PATH \
     BACKEND=$PTYPY_BACKEND
 
-# Copy PtyPy
-COPY ./ ./ptypy/
+# Copy dependencies
+COPY ./ptypy/accelerate/cuda_${BACKEND}/dependencies.yml ./dependencies.yml
 
 # Conda env for PTYPY CUDA/PYCUDA backend
-RUN conda env create -n ptypy_${BACKEND} -f ptypy/ptypy/accelerate/cuda_${BACKEND}/dependencies.yml \
+RUN conda env create -n ptypy_${BACKEND} -f dependencies.yml \
     && conda install -y -n ptypy_${BACKEND} -c conda-forge pytest
 
 # Use conda-pack to create a standalone env in /venv
-RUN conda-pack -n ptypy_${BACKEND} -o /tmp/env.tar && \
-    mkdir /venv && cd /venv && tar xf /tmp/env.tar && \
-    rm /tmp/env.tar
+# RUN conda-pack -n ptypy_${BACKEND} -o /tmp/env.tar && \
+#     mkdir /venv && cd /venv && tar xf /tmp/env.tar && \
+#     rm /tmp/env.tar
 
-# Put venv in same path it'll be in the final image
-RUN /venv/bin/conda-unpack
+# # Put venv in same path it'll be in the final image
+# RUN /venv/bin/conda-unpack
 
-# This is the runtime image
-FROM registry.access.redhat.com/ubi8 as runtime
+# # This is the runtime image
+# FROM registry.access.redhat.com/ubi8 as runtime
 
-# Copy /venv from the build stage
-COPY --from=build /venv /venv
+# # Copy /venv from the build stage
+# COPY --from=build /venv /venv
 
-# Copy ptypy tests
-COPY ./test ./test
+# # Copy ptypy tests
+# COPY ./test ./test
 
 #SHELL ["/bin/bash", "-c"]
 
