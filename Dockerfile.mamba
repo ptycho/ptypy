@@ -1,9 +1,0 @@
-FROM condaforge/mambaforge as devel
-
-# Set build arguments and environment variables
-ARG PTYPY_BACKEND=pycuda
-ENV BACKEND=$PTYPY_BACKEND
-
-# Copy dependencies
-COPY ./ptypy/accelerate/cuda_${BACKEND}/dependencies.yml ./dependencies.yml
-

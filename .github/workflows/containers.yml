@@ -1,0 +1,51 @@
+name: Tests with Containers
+
+on:
+  push:
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 10
+      fail-fast: true
+      matrix:
+        python-version: ['3.7','3.8','3.9','3.10']
+        platform: ['core', 'pycuda', 'cupy']
+    name: Building container for ${{ matrix.platform }} with Python ${{ matrix.python-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Build Image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          registry: registry
+          repository: ptycho/ptypy/${{ matrix.platform }}_py${{ matrix.python-version }}_dev
+          tags: ${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          target: echo $(if [[ (${{ matrix.platform }} == "pycuda" || [${{ matrix.platform }} == "cupy") ]]; then echo accelerate; else echo core; fi)
+          file: ./Dockerfile
+          build-args: |
+            PYTHON_VERSION=${{ matrix.python-version }}
+            PLATFORM=${{ matrix.platform }}
+
+  test:
+    needs: [build-image]
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 10
+      fail-fast: false
+      matrix:
+        python-version: ['3.7','3.8','3.9','3.10']
+        platform: ['core', 'pycuda', 'cupy']
+    name: Running tests for ${{ matrix.platform }} with Python ${{ matrix.python-version }}
+    container:
+      image: registry/ptycho/ptypy/${{ matrix.platform }}_py${{ matrix.python-version }}_dev:${{ github.sha }}
+    steps:
+      - name: Run test inside container
+        run: pytest
