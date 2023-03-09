@@ -7,7 +7,7 @@ on:
       - dev
 
 jobs:
-  build-image:
+  test:
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 10
@@ -15,49 +15,23 @@ jobs:
       matrix:
         python-version: ['3.7','3.8','3.9','3.10']
         platform: ['core'] # ['pycuda', 'cupy']
-    name: Container build for ${{ matrix.platform }}/python=${{ matrix.python-version }}
+    name: Testing ${{ matrix.platform }}/python=${{ matrix.python-version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - name: Build Image and export
+      - name: Build Image
         uses: docker/build-push-action@v4
         with:
           context: .
           tags: ptypy_${{ matrix.platform }}_py${{ matrix.python-version }}_dev:latest
-          outputs: type=docker,dest=/tmp/ptypy_${{ matrix.platform }}_py${{ matrix.python-version }}_dev.tar
+          load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
           target: runtime
           build-args: |
             PYTHON_VERSION=${{ matrix.python-version }}
             PLATFORM=${{ matrix.platform }}
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ptypy_${{ matrix.platform }}_py${{ matrix.python-version }}_dev
-          path: /tmp/ptypy_${{ matrix.platform }}_py${{ matrix.python-version }}_dev.tar
-
-  test:
-    needs: [build-image]
-    runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 10
-      fail-fast: false
-      matrix:
-        python-version: ['3.7','3.8','3.9','3.10']
-        platform: ['core'] # ['pycuda', 'cupy']
-    name: Running tests for ${{ matrix.platform }} with Python ${{ matrix.python-version }}
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Download artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ptypy_${{ matrix.platform }}_py${{ matrix.python-version }}_dev
-          path: /tmp
-      - name: Load image and run test inside container
-        run: |
-          docker load --input /tmp/ptypy_${{ matrix.platform }}_py${{ matrix.python-version }}_dev.tar
-          docker run ptypy_${{ matrix.platform }}_py${{ matrix.python-version }}_dev:latest pytest
+      - name: Run test inside container
+        run: docker run ptypy_${{ matrix.platform }}_py${{ matrix.python-version }}_dev:latest pytest
