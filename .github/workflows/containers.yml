@@ -16,19 +16,31 @@ jobs:
         python-version: ['3.7','3.8','3.9','3.10']
         platform: ['core', 'pycuda', 'cupy']
     name: Building container for ${{ matrix.platform }} with Python ${{ matrix.python-version }}
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Build Image
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action/@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: network=host
+      - name: Generate target
+        run: echo TARGET=$(if [[ (${{ matrix.platform }} == "pycuda" || [${{ matrix.platform }} == "cupy") ]]; then echo accelerate; else echo core; fi) >> $GITHUB_ENV
+      - name: Build Image and push to local registry
         uses: docker/build-push-action@v4
         with:
           context: .
-          registry: registry
-          repository: ptycho/ptypy/${{ matrix.platform }}_py${{ matrix.python-version }}_dev
-          tags: ${{ github.sha }}
+          push: true
+          tags: localhost:5000/ptypy/${{ matrix.platform }}_py${{ matrix.python-version }}_dev:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          target: echo $(if [[ (${{ matrix.platform }} == "pycuda" || [${{ matrix.platform }} == "cupy") ]]; then echo accelerate; else echo core; fi)
+          target: ${{ env.TARGET }}
           file: ./Dockerfile
           build-args: |
             PYTHON_VERSION=${{ matrix.python-version }}
@@ -45,7 +57,7 @@ jobs:
         platform: ['core', 'pycuda', 'cupy']
     name: Running tests for ${{ matrix.platform }} with Python ${{ matrix.python-version }}
     container:
-      image: registry/ptycho/ptypy/${{ matrix.platform }}_py${{ matrix.python-version }}_dev:${{ github.sha }}
+      image: localhost:5000/ptypy/${{ matrix.platform }}_py${{ matrix.python-version }}_dev:latest
     steps:
       - name: Run test inside container
         run: pytest
