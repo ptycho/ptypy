@@ -103,7 +103,7 @@ class PtyScan(object):
     type = bool
     default = None
     help = Determine if center in data is calculated automatically
-    doc =
+    doc =  
        - ``False``, no automatic centering
        - ``None``, only if :py:data:`center` is ``None``
        - ``True``, it will be enforced
@@ -129,7 +129,7 @@ class PtyScan(object):
     default = None
     help = Data frame orientation
     doc = Choose
-       <newline>
+       <newline> 
        - ``None`` or ``0``: correct orientation
        - ``1``: invert columns (numpy.flip_lr)
        - ``2``: invert rows  (numpy.flip_ud)
@@ -137,9 +137,8 @@ class PtyScan(object):
        - ``4``: transpose (numpy.transpose)
        - ``4+i``: tranpose + other operations from above
        <newline>
-       Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
+       Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, 
        do_flipud, do_fliplr)``
-    choices = [0, 1, 2, 3, 4, 5, 6, 7]
     userlevel = 1
 
     [min_frames]
@@ -835,10 +834,10 @@ class PtyScan(object):
         chunk.indices_node = indices.node
         chunk.num = self.chunknum
         chunk.data = data
-
+        
         # chunk now always has weights
         chunk.weights = weights
-
+        
         # If there are weights we add them to chunk,
         # otherwise we push it into meta
         #if has_weights:
@@ -927,7 +926,7 @@ class PtyScan(object):
 
         # The "raw" part. Might replace the iterable in future.
         out['chunk'] = chunk
-
+        
         # The "iterable" part
         iterables = []
         for pos, index in zip(chunk.positions, chunk.indices):
@@ -1497,7 +1496,7 @@ class MoonFlowerScan(PtyScan):
     default = 0.
     type = float
     help = Point spread function of the detector
-
+    
     [add_poisson_noise]
     default = True
     type = bool
@@ -1549,20 +1548,20 @@ class MoonFlowerScan(PtyScan):
         self.pixel = np.round(pixel).astype(int) + 10
         frame = self.pixel.max(0) + 10 + geo.shape
         self.geo = geo
-
+        
         try:
             self.obj = resources.flower_obj(frame)
         except:
             # matplotlib failsafe
             self.obj = u.gf_2d(u.parallel.MPInoise2d(frame),1.)
-
+            
         # Get probe
         try:
             moon = resources.moon_pr(self.geo.shape)
         except:
             # matplotlib failsafe
             moon = u.ellipsis(u.grids(self.geo.shape)).astype(complex)
-
+        
         moon /= np.sqrt(u.abs2(moon).sum() / p.photons)
         self.pr = moon
         self.load_common_in_parallel = True
@@ -1675,7 +1674,7 @@ class QuickScan(PtyScan):
         self.diff = np.zeros(geo.shape)
         self.diff[0,0] = 1e7
         self.diff = np.fft.fftshift(self.diff)
-
+        
         self.p = p
 
     def load_positions(self):
