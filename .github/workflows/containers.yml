@@ -55,3 +55,4 @@ jobs:
         with:
           max-line-length: "120"
           exclude: "./archive,./benchmark"
+          args: "--count --select=E9,F63,F7,F82 --show-source --statistics"
