@@ -10,6 +10,17 @@ COPY ./dependencies_core.yml ./dependencies.yml
 RUN sed -i "s/python=3.9/python=${PYTHON_VERSION}/" dependencies.yml
 RUN conda env update -n base -f dependencies.yml && conda install -y -n base pytest
 
+# Pull from miniconda image and install full dependencies
+FROM condaforge/mambaforge as full
+
+ARG PYTHON_VERSION=3.9
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y libxml2 ssh
+COPY ./dependencies_full.yml ./dependencies.yml
+RUN sed -i "s/python=3.9/python=${PYTHON_VERSION}/" dependencies.yml
+RUN mamba env update -n base -f dependencies.yml && mamba install -y -n base pytest
+
 # Pull mambaforge image and install accelerate/pycuda dependencies
 FROM condaforge/mambaforge as pycuda
 
@@ -36,4 +47,4 @@ RUN mamba env update -n base -f dependencies.yml && mamba install -y -n base pyt
 FROM ${PLATFORM} as runtime
 COPY ./ ./
 RUN pip install .
-RUN if [ "$PLATFORM" = "pycuda" ] || [ "$PLATFORM" = "cupy" ] ; then cd cufft && pip install . ; fi
+RUN if [ "$PLATFORM" = "pycuda" ] || [ "$PLATFORM" = "cupy" ] ; then pip install ./cufft ; fi
