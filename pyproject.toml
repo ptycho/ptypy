@@ -32,6 +32,8 @@ dependencies = [
 [project.optional-dependencies]
 full = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw"]
 
+[project.scripts]
+"ptypy.cli" = "ptypy.io.cli:ptypy_run"
 
 #[project.scripts]
 #"ptypy.plot" = 'scripts/ptypy.plot'
