@@ -240,18 +240,14 @@ class LBFGS(ML):
                     self.alpha[i] = self.rho[i]*( np.real(Cdot(self.ob_s[i], self.ob_h))
                                                   + np.real(Cdot(self.pr_s[i], self.pr_h)) )
 
-                    #TODO: support operand * for 'float' and 'Container'
-                    # (reusing self.ob_grad here is not efficient)
                     # self.ob_h -= self.alpha[i]*self.ob_y[i]
-                    self.ob_grad << self.ob_y[i]
-                    self.ob_grad *= self.alpha[i]
-                    self.ob_h -= self.ob_grad
-                    #TODO: support operand * for 'float' and 'Container'
-                    # (reusing self.pr_grad here is not efficient)
+                    self.ob_h /= self.alpha[i]
+                    self.ob_h -= self.ob_y[i]
+                    self.ob_h *= self.alpha[i]
                     # self.pr_h -= self.alpha[i]*self.pr_y[i]
-                    self.pr_grad << self.pr_y[i]
-                    self.pr_grad *= self.alpha[i]
-                    self.pr_h -= self.pr_grad
+                    self.pr_h /= self.alpha[i]
+                    self.pr_h -= self.pr_y[i]
+                    self.pr_h *= self.alpha[i]
 
                 # Compute centre of BFGS product (scaled identity)
                 c_num = ( np.real(Cdot(self.ob_s[mi-1], self.ob_y[mi-1]))
@@ -265,19 +261,15 @@ class LBFGS(ML):
                 for i in range(mi):
                     beta = self.rho[i]*( np.real(Cdot(self.ob_y[i], self.ob_h))
                                          + np.real(Cdot(self.pr_y[i], self.pr_h)) )
-                    #TODO: support operand * for 'float' and 'Container'
-                    # (reusing self.ob_grad here is not efficient)
-                    # self.ob_h += (self.alpha[i]-beta)*self.ob_s[i]
-                    self.ob_grad << self.ob_s[i]
-                    self.ob_grad *= (self.alpha[i]-beta)
-                    self.ob_h += self.ob_grad
 
-                    #TODO: support operand * for 'float' and 'Container'
-                    # (reusing self.pr_grad here is not efficient)
+                    # self.ob_h += (self.alpha[i]-beta)*self.ob_s[i]
+                    self.ob_h /= (self.alpha[i]-beta)
+                    self.ob_h += self.ob_s[i]
+                    self.ob_h *= (self.alpha[i]-beta)
                     # self.pr_h += (self.alpha[i]-beta)*self.pr_s[i]
-                    self.pr_grad << self.pr_s[i]
-                    self.pr_grad *= (self.alpha[i]-beta)
-                    self.pr_h += self.pr_grad
+                    self.pr_h /= (self.alpha[i]-beta)
+                    self.pr_h += self.pr_s[i]
+                    self.pr_h *= (self.alpha[i]-beta)
 
                 # Flip step direction for minimisation
                 self.ob_h *= -1
