@@ -444,6 +444,13 @@ class GaussianModel(BaseModelSerial):
                 queue=self.engine.queue,
                 allocator=self.engine.allocate
             )
+        elif self.p.reg_Huber:
+            self.regularizer = Regul_Huber_pycuda(
+                self.p.reg_Huber_amplitude,
+                self.p.reg_Huber_scale,
+                queue=self.engine.queue,
+                allocator=self.engine.allocate
+            )
         else:
             self.regularizer = None
 
@@ -784,6 +791,169 @@ class Regul_del2_pycuda(object):
                                + self.norm(hdel_yf)
                                + self.norm(hdel_xb)
                                + self.norm(hdel_yb))
+
+        self.coeff = np.array([c0, c1, c2])
+        return self.coeff
+
+
+class Regul_Huber_pycuda(object):
+    """\
+    Huber regularizer.
+
+    See https://en.wikipedia.org/wiki/Huber_loss#Pseudo-Huber_loss_function
+    This class applies to any numpy array.
+    """
+    def __init__(self, amplitude, scale, axes=[-2, -1], queue=None, allocator=None):
+        self.axes = axes
+        self.amplitude = amplitude
+        self.scale = scale
+        self.delxy = None
+        self.g = None
+        self.LL = None
+        self.queue = queue
+        self.AUK = ArrayUtilsKernel(queue=queue)
+        self.DELK_c = DerivativesKernel(np.complex64, queue=queue)
+        self.DELK_f = DerivativesKernel(np.float32, queue=queue)
+
+        if allocator is None:
+            self._dmp = DeviceMemoryPool()
+            self.allocator=self._dmp.allocate
+        else:
+            self.allocator = allocator
+            self._dmp= None
+
+        empty = lambda x: gpuarray.empty(x.shape, x.dtype, allocator=self.allocator)
+
+        def delxb(x, axis=-1):
+            out = empty(x)
+            if x.dtype == np.float32:
+                self.DELK_f.delxb(x, out, axis)
+            elif x.dtype == np.complex64:
+                self.DELK_c.delxb(x, out, axis)
+            else:
+                raise TypeError("Type %s invalid for derivatives" % x.dtype)
+            return out
+
+        self.delxb = delxb
+
+        def delxf(x, axis=-1):
+            out = empty(x)
+            if x.dtype == np.float32:
+                self.DELK_f.delxf(x, out, axis)
+            elif x.dtype == np.complex64:
+                self.DELK_c.delxf(x, out, axis)
+            else:
+                raise TypeError("Type %s invalid for derivatives" % x.dtype)
+            return out
+
+        self.delxf = delxf
+        self.norm =  lambda x : self.AUK.norm2(x).get().item()
+        self.dot = lambda x, y : self.AUK.dot(x,y).get().item()
+        self.sum = lambda x: x.get().real.sum()
+
+        from pycuda.elementwise import ElementwiseKernel
+        self._denom_reg_kernel = ElementwiseKernel(
+            "pycuda::complex<float> *denom, float scale, \
+             pycuda::complex<float> *del", 
+            "denom[i] = sqrt(scale + del[i].real() * del[i].real() + del[i].imag() * del[i].imag())",
+            "denom_reg", preamble="#include <cmath>")
+        self._grad_reg_kernel = ElementwiseKernel(
+            "pycuda::complex<float> *g, float fac, \
+             pycuda::complex<float> *px, pycuda::complex<float> *py, \
+             pycuda::complex<float> *mx, pycuda::complex<float> *my, \
+             pycuda::complex<float> *fpx, pycuda::complex<float> *fpy, \
+             pycuda::complex<float> *fmx, pycuda::complex<float> *fmy", 
+            "g[i] = (px[i] / fpx[i] + py[i] / fpy[i] - mx[i] / fmx[i] - my[i] / fmy[i]) * fac",
+            "grad_reg")
+        self._divide_reg_kernel = ElementwiseKernel(
+            "pycuda::complex<float> *res, pycuda::complex<float> *a, pycuda::complex<float> *b",
+            "res[i] = a[i] / b[i]","divide")
+        self._c2_reg_kernel = ElementwiseKernel(
+            "pycuda::complex<float> *res, pycuda::complex<float> *a, \
+             pycuda::complex<float> *b, pycuda::complex<float> *c",
+             "res[i] = (a[i] * conj(b[i]) / c[i]) * (a[i] * conj(b[i]) / c[i]) / c[i]", "coeff", 
+             preamble="#include <cmath>")
+        def denom(scale, dxy):
+            out = empty(dxy)
+            self._denom_reg_kernel(out, scale, dxy, stream=self.queue)
+            return out
+        def grad(amp, px, py, mx, my, fpx, fpy, fmx, fmy):
+            out = empty(px)
+            self._grad_reg_kernel(out, amp, px, py, mx, my, fpx, fpy, fmx, fmy, stream=self.queue)
+            return out
+        def div(a,b):
+            out = empty(a)
+            self._divide_reg_kernel(out, a, b)
+            return out
+        def subtract_c2(a,b,c):
+            out = empty(a)
+            self._c2_reg_kernel(out, a,b,c)
+            return out.get().real.sum()
+        self.denom = denom
+        self.reg_grad = grad
+        self.div = div
+        self.subtract_c2 = subtract_c2
+
+    def grad(self, x):
+        """
+        Compute and return the regularizer gradient given the array x.
+        """
+        ax0, ax1 = self.axes
+        del_xf = self.delxf(x, axis=ax0)
+        del_yf = self.delxf(x, axis=ax1)
+        del_xb = self.delxb(x, axis=ax0)
+        del_yb = self.delxb(x, axis=ax1)
+
+        fp_xb = self.denom(self.scale, del_xb)
+        fp_yb = self.denom(self.scale, del_yb)
+        fp_xf = self.denom(self.scale, del_xf)
+        fp_yf = self.denom(self.scale, del_yf)
+
+        self.delxy = [del_xf, del_yf, del_xb, del_yb]
+        self.fpxy = [fp_xf, fp_yf, fp_xb, fp_yb]
+
+        self.g = self.reg_grad(self.amplitude, del_xb, del_yb, del_xf, del_yf, fp_xb, fp_yb, fp_xf, fp_yf)
+        self.LL = self.amplitude * (self.sum(fp_xb) + self.sum(fp_yb) + self.sum(fp_xf) + self.sum(fp_yf))
+
+        return self.g
+
+    def poly_line_coeffs(self, h, x=None):
+        ax0, ax1 = self.axes
+        if x is None:
+            del_xf, del_yf, del_xb, del_yb = self.delxy
+            fp_xf, fp_yf, fp_xb, fp_yb = self.fpxy
+            c0 = self.LL
+        else:
+            del_xf = self.delxf(x, axis=ax0)
+            del_yf = self.delxf(x, axis=ax1)
+            del_xb = self.delxb(x, axis=ax0)
+            del_yb = self.delxb(x, axis=ax1)
+            fp_xb = self.denom(self.scale, del_xb)
+            fp_yb = self.denom(self.scale, del_yb)
+            fp_xf = self.denom(self.scale, del_xf)
+            fp_yf = self.denom(self.scale, del_yf)
+            c0 = self.amplitude * (self.sum(fp_xb) + self.sum(fp_yb) + self.sum(fp_xf) + self.sum(fp_yf))
+
+        hdel_xf = self.delxf(h, axis=ax0)
+        hdel_yf = self.delxf(h, axis=ax1)
+        hdel_xb = self.delxb(h, axis=ax0)
+        hdel_yb = self.delxb(h, axis=ax1)
+
+        c1 = self.amplitude * np.real(self.dot(self.div(del_xf, fp_xf), hdel_xf) 
+                                    + self.dot(self.div(del_yf, fp_yf), hdel_yf)
+                                    + self.dot(self.div(del_xb, fp_xb), hdel_xb)
+                                    + self.dot(self.div(del_yb, fp_yb), hdel_yb))
+
+
+        c2 = .5 * self.amplitude * np.real(self.dot(self.div(hdel_xf, fp_xf), hdel_xf)
+                                         + self.dot(self.div(hdel_yf, fp_yf), hdel_yf)
+                                         + self.dot(self.div(hdel_xb, fp_xb), hdel_xb)
+                                         + self.dot(self.div(hdel_yb, fp_yb), hdel_yb))
+
+        c2 -= self.amplitude * (self.subtract_c2(del_xf, hdel_xf, fp_xf)
+                             + self.subtract_c2(del_yf, hdel_yf, fp_yf)
+                             + self.subtract_c2(del_xb, hdel_xb, fp_xb)
+                             + self.subtract_c2(del_yb, hdel_yb, fp_yb))
 
         self.coeff = np.array([c0, c1, c2])
         return self.coeff
