@@ -341,7 +341,7 @@ def clean_path(filename):
 
 
 def electron_wavelength(electron_energy):
-    """
+    r"""
     Calculate electron wavelength based on energy in keV:
 
     .. math::

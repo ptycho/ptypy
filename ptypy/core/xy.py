@@ -152,7 +152,7 @@ def _complete(extent, steps, spacing):
     elif steps is None:
         e = u.expect2(extent)
         s = u.expect2(spacing)
-        l = (e / s).astype(np.int)
+        l = (e / s).astype(int)
     elif spacing is None:
         e = u.expect2(extent)
         l = u.expect2(steps)
