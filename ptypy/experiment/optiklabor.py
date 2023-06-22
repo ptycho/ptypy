@@ -134,7 +134,7 @@ class FliSpecScanMultexp(PtyScan):
         exposures =[]
         for j in range(self.nexp):
             darks,meta = u.image_read(self.info.dark_dir + '/ccd*_%02d.raw' % j)
-            dark_imgs.append(np.array(darks,dtype=np.float).mean(0))
+            dark_imgs.append(np.array(darks,dtype=float).mean(0))
             exposures.append(meta[0][self.exp_string])
 
         # save in common dict/Param

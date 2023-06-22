@@ -361,7 +361,7 @@ def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):
         logger.info(prefix +
                     "Simulation resource is a thickness profile")
         # Enforce floats
-        ob = obj.astype(np.float)
+        ob = obj.astype(float)
         ob -= ob.min()
         if d is not None:
             logger.info(prefix + "Rescaling to maximum thickness")
