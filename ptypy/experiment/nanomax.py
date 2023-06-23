@@ -755,7 +755,23 @@ class NanomaxContrast(NanomaxStepscanSep2019):
     help = x-axis upper limit
     doc =
 
+    [tmp_center]
+    default = None
+    type = int, list, tuple
+    help = x-axis upper limit
+    doc =
     """
+
+    def pad_to_size(self, frame, value):
+        ny, nx   = np.shape(frame)
+        cy, cx   = self.info.tmp_center
+        d        = self.info.shape//2
+        pad_xl   = d - cx
+        pad_xu   = d + cx - nx 
+        pad_yl   = d - cy
+        pad_yu   = d + cy - ny 
+        return np.pad(frame, [[pad_yl,pad_yu],[pad_xl,pad_xu]], mode='constant', constant_values=[value])
+
 
     def load(self, indices):
         raw, weights, positions = {}, {}, {}
@@ -808,7 +824,8 @@ class NanomaxContrast(NanomaxStepscanSep2019):
             # no need to have something similar for too large upper indices due to the way python slices arrays
 
             # now fix the new center
-            self.info.center = (tmp_center_y, tmp_center_x)
+            self.info.tmp_center = (tmp_center_y, tmp_center_x)
+            self.info.center = (d//2, d//2)
         
         # set the photon energy
         path_options = ['entry/snapshot/energy',
@@ -826,14 +843,16 @@ class NanomaxContrast(NanomaxStepscanSep2019):
             for ind in indices:
                 # load only a cropped bit of the full frame
                 if self.info.cropOnLoad:
-                    raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][ind,self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                    frame = fp['entry/measurement/%s/frames'%self.info.detector][ind,self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                    raw[ind] = self.pad_to_size(frame, -1)
                 # load the full raw frame                
                 else:	
                     raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][ind]
                 # if there is I0 information, use it to normalize the just loaded frame                
                 if self.info.I0:
-                    logger.info('normalizing frame %u by %f' % (ind, self.normdata[ind]))
-                    logger.info('hack! assuming mask = 2**32-1 when I0-normalizing')
+                    self.normdata = self.normdata.flatten()
+                    #logger.info('normalizing frame %u by %f' % (ind, self.normdata[ind]))
+                    #logger.info('hack! assuming mask = 2**32-1 when I0-normalizing')
                     msk = np.where(raw[ind] == 2**32-1)
                     raw[ind] = np.round(raw[ind] / self.normdata[ind]).astype(raw[ind].dtype)
                     raw[ind][msk] = 2**32-1
@@ -853,8 +872,9 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         if self.info.detector == 'pilatus':
             mask[np.where(data < 0)] = 0
         if 'eiger' in self.info.detector:
-            mask[np.where(data == 2**32-1)] = 0
-            mask[np.where(data == 2**16-1)] = 0
+            mask[np.where(data < 0)] = 0
+            mask[np.where(data >= 2**32-1)] = 0
+            #mask[np.where(data == 2**16-1)] = 0
         logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
                     (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
 
@@ -864,6 +884,8 @@ class NanomaxContrast(NanomaxStepscanSep2019):
                 if self.info.cropOnLoad:
                     mask2 = mask2[self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, 
                                   self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                    mask2 = self.pad_to_size(mask2, 0)
+
             logger.info("loaded additional mask, %u x %u, sum %u, so %u masked pixels" %
                         (mask2.shape + (np.sum(mask2), np.prod(mask2.shape)-np.sum(mask2))))
             mask = mask * mask2
