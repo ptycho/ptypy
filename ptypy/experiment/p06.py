@@ -21,7 +21,7 @@ class p06nano_raw(PtyScan):
     This class loads data written by sardana at the P06 nano probe.
 
     Todo: 
-    * make it calculate scanx/y from samr and scanu/v encoder values.
+    * add feature for normalization of the frames
 
     Defaults:
 
@@ -141,7 +141,7 @@ class p06nano_raw(PtyScan):
     default = None
     type = str
     help = Arbitrary mask file
-    doc = Hdf5 file containing an array called 'mask' at the root level.
+    doc = Tiff file containing the mask or Hdf5 file containing an array called 'mask' at the root level.
 
     [I0]
     default = None
@@ -150,6 +150,21 @@ class p06nano_raw(PtyScan):
     doc =
 
     """
+
+    def clean_mask(self, mask):
+        mask[mask>=0.5] = 1
+        mask[mask<0.5] = 0
+        return mask
+
+    def load_mask_h5(self):
+        with h5py.File(self.info.maskfile, 'r') as hf:
+            mask = np.array(hf.get('mask')) 
+        return self.clean_mask(mask)
+
+    def load_mask_tiff(self):
+        with Image.open(self.info.maskfile) as im:
+            mask = np.array(im) 
+        return self.clean_mask(mask)
 
     def load_positions(self):
 
@@ -178,16 +193,40 @@ class p06nano_raw(PtyScan):
         yCosFactor = np.cos(self.info.yMotorAngle / 180.0 * np.pi)
         logger.info("x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
 
-        normdata, x, y = [], [], []
+
+        # read samr
+        with h5py.File(fpath_scan, 'r') as hf:
+            samr = hf['scan/sample/transformations/phi'][0]
+
+        # read encoderes of the physical axes
+        normdata, scanu, scanv, scanw, samr = [], [], [], [], []
         for fpath in flist_plc:
             with h5py.File(fpath, 'r') as hf:
-                part_x = list(hf['entry/data/%s' % (self.info.xMotor)])
-                part_y = list(hf['entry/data/%s' % (self.info.yMotor)])
-            x = x + part_x
-            y = y + part_y
-        x = np.array(x) * xFlipper * xCosFactor
-        y = np.array(y) * yFlipper * yCosFactor
+                part_samr = list(hf['entry/data/encoder_1'])
+                part_scanu = list(hf['entry/data/encoder_3'])
+                part_scanv = list(hf['entry/data/encoder_2'])
+                part_scanw = list(hf['entry/data/encoder_4'])
+                
+            scanu = scanu + part_scanu
+            scanv = scanv + part_scanv
+            scanw = scanw + part_scanw
+            samr = samr + part_samr
+        pos = {}
+        pos['scanu'] = np.array(scanu)
+        pos['scanv'] = np.array(scanv)
+        pos['scanw'] = np.array(scanw)
+        pos['scanx'] = np.sin(np.array(samr)*np.pi/180.) * pos['scanv'] + np.cos(np.array(samr)*np.pi/180.) * pos['scanu']
+        pos['scany'] = np.cos(np.array(samr)*np.pi/180.) * pos['scanv'] - np.sin(np.array(samr)*np.pi/180.) * pos['scanu']
+        pos['scanz'] = np.array(scanw)
 
+        # assign / calculate x and y positions 
+        if not(self.info.xMotor in pos.keys()):
+            logger.info("[!] given xMotor is not an allowed motor name")
+        if not(self.info.yMotor in pos.keys()):
+            logger.info("[!] given yMotor is not an allowed motor name")
+
+        x = pos[self.info.xMotor] * xFlipper * xCosFactor
+        y = pos[self.info.yMotor] * yFlipper * yCosFactor
 
         chi_rad_x = 0
         chi_rad_y = 0
@@ -251,8 +290,10 @@ class p06nano_raw(PtyScan):
                     mask[np.where(frame == 2**32-1)] = 0
                     mask[np.where(frame == 2**16-1)] = 0
                 if self.info.maskfile:
-                    with h5py.File(self.info.maskfile, 'r') as hf:
-                        mask2 = np.array(hf.get('mask'))
+                    if self.info.maskfile.endswith('.h5'):
+                        mask2 = self.load_mask_h5()
+                    else:
+                        mask2 = self.load_mask_tiff()
                     mask *= mask2
                 # now find the center of mass can be estimated using the ptypy internal function and make it integers
                 self.info.center = u.scripts.mass_center(frame*mask)
@@ -317,14 +358,6 @@ class p06nano_raw(PtyScan):
 
         return raw, positions, weights
 
-    def load_mask_h5(fpath):
-        with h5py.File(self.info.maskfile, 'r') as hf:
-            return np.array(hf.get('mask')) 
-
-    def load_mask_tiff(fpath):
-        with Image.open(fpath) as im:
-            return np.array(im) 
-
     def load_weight(self):
         """
         Provides the mask used for every single diffraction pattern ofthe whole scan.
@@ -344,10 +377,10 @@ class p06nano_raw(PtyScan):
 
         ## make it read tiff or adapt the to an h5 file
         if self.info.maskfile:
-            if maskfile.endswith('.h5')
-                mask2 = load_mask_h5(self.info.maskfile)
+            if self.info.maskfile.endswith('.h5'):
+                mask2 = self.load_mask_h5()
             else:
-                mask2 = load_mask_tiff(self.info.maskfile)
+                mask2 = self.load_mask_tiff()
 
             if self.info.cropOnLoad:
                 mask2 = mask2[self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, 
