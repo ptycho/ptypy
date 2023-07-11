@@ -251,13 +251,14 @@ class p06nano_raw(PtyScan):
         return positions
 
     def pad_to_size(self, frame, value):
-        ny, nx   = np.shape(frame)
-        cy, cx   = self.info.tmp_center
-        d        = self.info.shape//2
-        pad_xl   = d - cx
-        pad_xu   = d + cx - nx 
-        pad_yl   = d - cy
-        pad_yu   = d + cy - ny 
+        ny, nx = np.shape(frame)
+        cy, cx = self.info.tmp_center
+        dy, dx = self.info.shape
+        ry, rx = dy//2 , dx//2
+        pad_xl   = rx - cx
+        pad_xu   = rx + cx - nx 
+        pad_yl   = ry - cy
+        pad_yu   = ry + cy - ny 
         return np.pad(frame, [[pad_yl,pad_yu],[pad_xl,pad_xu]], mode='constant', constant_values=[value])
 
 
@@ -301,15 +302,15 @@ class p06nano_raw(PtyScan):
                 logger.info(f'Estimated the center of the (first) diffraction pattern to be {self.info.center}')
 
             # the center of the full frames is (now) known, and thus the indices for the cropping can be defined
-            cy, cx   = self.info.center
-            d        = self.info.shape
+            cy, cx  = self.info.center
+            dy, dx  = self.info.shape
             logger.info(f'Found the center of the full frames at {self.info.center}')
             logger.info(f'Will crop all diffraction patterns on load to a size of {self.info.shape}')
-            self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(cy)-d//2, int(cx)-d//2
-            self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower+d, self.info.cropOnLoad_x_lower+d
+            self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(cy)-dy//2, int(cx)-dy//2
+            self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower+dy, self.info.cropOnLoad_x_lower+dx
 
             # the (temporary) center needs to be redefined for the cropped frames
-            tmp_center_y, tmp_center_x = d//2, d//2
+            tmp_center_y, tmp_center_x = dy//2, dx//2
 
             # if the lower crop indices are negative, set them zero
             if self.info.cropOnLoad_y_lower<0:
@@ -322,7 +323,7 @@ class p06nano_raw(PtyScan):
 
             # now fix the new center
             self.info.tmp_center = (tmp_center_y, tmp_center_x)
-            self.info.center = (d//2, d//2)
+            self.info.center = (dy//2, dx//2)
         
         # set the photon energy
         path_options = ['scan/data/energy']
@@ -339,10 +340,10 @@ class p06nano_raw(PtyScan):
             i_frame =ind%eiger_mod
 
             with h5py.File(flist_eiger[i_file], 'r') as fp:
-
                 # load only a cropped bit of the full frame
                 if self.info.cropOnLoad:
                     frame = fp['entry/data/data'][i_frame,self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                    #print('--', ind, np.shape(frame))
                     raw[ind] = self.pad_to_size(frame, -1)
                 # load the full raw frame                
                 else:	
