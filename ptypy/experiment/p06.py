@@ -215,8 +215,8 @@ class p06nano_raw(PtyScan):
         pos['scanu'] = np.array(scanu)
         pos['scanv'] = np.array(scanv)
         pos['scanw'] = np.array(scanw)
-        pos['scanx'] = np.sin(np.array(samr)*np.pi/180.) * pos['scanv'] + np.cos(np.array(samr)*np.pi/180.) * pos['scanu']
-        pos['scany'] = np.cos(np.array(samr)*np.pi/180.) * pos['scanv'] - np.sin(np.array(samr)*np.pi/180.) * pos['scanu']
+        pos['scanx'] = np.sin(np.array(samr)*np.pi/180.) * pos['scanv'] - np.cos(np.array(samr)*np.pi/180.) * pos['scanu']
+        pos['scany'] = np.cos(np.array(samr)*np.pi/180.) * pos['scanv'] + np.sin(np.array(samr)*np.pi/180.) * pos['scanu']
         pos['scanz'] = np.array(scanw)
 
         # assign / calculate x and y positions 
