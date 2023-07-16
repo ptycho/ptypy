@@ -366,12 +366,14 @@ class p06nano_raw(PtyScan):
 
         r, w, p = self.load(indices=(0,))
         data = r[0]
+
         mask = np.ones_like(data)
         if self.info.detector == 'pilatus':
             mask[np.where(data < 0)] = 0
         if 'eiger' in self.info.detector:
+            bit_depth = int(''.join(filter(str.isdigit, str(data.dtype))))
             mask[np.where(data < 0)] = 0
-            mask[np.where(data >= 2**32-1)] = 0
+            mask[np.where(data >= 2**bit_depth-1)] = 0
             #mask[np.where(data == 2**16-1)] = 0
         logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
                     (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
