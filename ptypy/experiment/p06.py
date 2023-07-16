@@ -372,8 +372,10 @@ class p06nano_raw(PtyScan):
             mask[np.where(data < 0)] = 0
         if 'eiger' in self.info.detector:
             bit_depth = int(''.join(filter(str.isdigit, str(data.dtype))))
+            logger.info(f"found bit depth of {bit_depth} in the eiger frames")
+            logger.info(f"    -> masking all pixels with values of {2**(bit_depth) -1} and above")
             mask[np.where(data < 0)] = 0
-            mask[np.where(data >= 2**bit_depth-1)] = 0
+            mask[np.where(data >= ((2**bit_depth)-1))] = 0
             #mask[np.where(data == 2**16-1)] = 0
         logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
                     (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
