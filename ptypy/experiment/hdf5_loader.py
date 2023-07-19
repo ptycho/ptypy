@@ -539,20 +539,20 @@ class Hdf5Loader(PtyScan):
                 if self._is_spectro_scan and self.p.outer_index is not None:
                     self.p.energy = float(f[self.p.recorded_energy.key][self.p.outer_index])
                 else:
-                    self.p.energy = float(f[self.p.recorded_energy.key][()])
+                    self.p.energy = float(f[self.p.recorded_energy.key][()].item())
             self.p.energy = self.p.energy * self.p.recorded_energy.multiplier + self.p.recorded_energy.offset
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
 
         if None not in [self.p.recorded_distance.file, self.p.recorded_distance.key]:
             with h5.File(self.p.recorded_distance.file, 'r', swmr=self._is_swmr) as f:
-                self.p.distance = float(f[self.p.recorded_distance.key][()] * self.p.recorded_distance.multiplier)
+                self.p.distance = float(f[self.p.recorded_distance.key][()].item() * self.p.recorded_distance.multiplier)
             self.meta.distance = self.p.distance
             log(3, "loading distance={} from file".format(self.p.distance))
         
         if None not in [self.p.recorded_psize.file, self.p.recorded_psize.key]:
             with h5.File(self.p.recorded_psize.file, 'r', swmr=self._is_swmr) as f:
-                self.p.psize = float(f[self.p.recorded_psize.key][()] * self.p.recorded_psize.multiplier)
+                self.p.psize = float(f[self.p.recorded_psize.key][()].item() * self.p.recorded_psize.multiplier)
             self.info.psize = self.p.psize
             log(3, "loading psize={} from file".format(self.p.psize))
 

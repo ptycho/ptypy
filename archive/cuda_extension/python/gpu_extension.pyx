@@ -153,7 +153,7 @@ def abs2(input):
     cdef np.float32_t [:,:,::1] cout_3c
     cdef np.float64_t [:,::1] cout_d2c
     cdef np.float64_t [:,:,::1] cout_d3c
-    cdef int n = np.product(cin.shape)
+    cdef int n = np.prod(cin.shape)
 
     cdef np.float32_t [:, ::1] cin_f2c
     cdef np.complex64_t [:, ::1] cin_c2c
