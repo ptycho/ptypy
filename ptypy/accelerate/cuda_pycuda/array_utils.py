@@ -270,7 +270,7 @@ class DerivativesKernel:
         axis = np.int32(axis)
 
         if axis == input.ndim - 1:
-            flat_dim = np.int32(np.product(input.shape[0:-1]))
+            flat_dim = np.int32(np.prod(input.shape[0:-1]))
             self.delxf_last(input, out, flat_dim, np.int32(input.shape[axis]),
                             block=self.last_axis_block,
                             grid=(
@@ -280,8 +280,8 @@ class DerivativesKernel:
                 stream=self.queue
             )
         else:
-            lower_dim = np.int32(np.product(input.shape[(axis+1):]))
-            higher_dim = np.int32(np.product(input.shape[:axis]))
+            lower_dim = np.int32(np.prod(input.shape[(axis+1):]))
+            higher_dim = np.int32(np.prod(input.shape[:axis]))
             gx = int(
                 (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
             gy = 1
@@ -301,7 +301,7 @@ class DerivativesKernel:
         axis = np.int32(axis)
 
         if axis == input.ndim - 1:
-            flat_dim = np.int32(np.product(input.shape[0:-1]))
+            flat_dim = np.int32(np.prod(input.shape[0:-1]))
             self.delxb_last(input, out, flat_dim, np.int32(input.shape[axis]),
                             block=self.last_axis_block,
                             grid=(
@@ -311,8 +311,8 @@ class DerivativesKernel:
                 stream=self.queue
             )
         else:
-            lower_dim = np.int32(np.product(input.shape[(axis+1):]))
-            higher_dim = np.int32(np.product(input.shape[:axis]))
+            lower_dim = np.int32(np.prod(input.shape[(axis+1):]))
+            higher_dim = np.int32(np.prod(input.shape[:axis]))
             gx = int(
                 (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
             gy = 1

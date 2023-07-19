@@ -23,7 +23,7 @@ class FFT_cuda(object):
         if rows != columns or rows not in [16, 32, 64, 128, 256, 512, 1024, 2048]:
             raise ValueError(
                 "CUDA FFT only supports powers of 2 for rows/columns, from 16 to 2048")
-        self.batches = int(np.product(
+        self.batches = int(np.prod(
             array.shape[0:dims-2]) if dims > 2 else 1)
         self.forward = forward
 

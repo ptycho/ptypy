@@ -279,15 +279,15 @@ class DerivativesKernel:
             self.queue.use()
 
         if axis == input.ndim - 1:
-            flat_dim = np.int32(np.product(input.shape[0:-1]))
+            flat_dim = np.int32(np.prod(input.shape[0:-1]))
             self.delxf_last((
                 int((flat_dim +
                      self.last_axis_block[1] - 1) // self.last_axis_block[1]),
                 1, 1),
                 self.last_axis_block, (input, out, flat_dim, np.int32(input.shape[axis])))
         else:
-            lower_dim = np.int32(np.product(input.shape[(axis+1):]))
-            higher_dim = np.int32(np.product(input.shape[:axis]))
+            lower_dim = np.int32(np.prod(input.shape[(axis+1):]))
+            higher_dim = np.int32(np.prod(input.shape[:axis]))
             gx = int(
                 (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
             gy = 1
@@ -306,14 +306,14 @@ class DerivativesKernel:
         if self.queue is not None:
             self.queue.use()
         if axis == input.ndim - 1:
-            flat_dim = np.int32(np.product(input.shape[0:-1]))
+            flat_dim = np.int32(np.prod(input.shape[0:-1]))
             self.delxb_last((
                 int((flat_dim +
                      self.last_axis_block[1] - 1) // self.last_axis_block[1]),
                 1, 1), self.last_axis_block, (input, out, flat_dim, np.int32(input.shape[axis])))
         else:
-            lower_dim = np.int32(np.product(input.shape[(axis+1):]))
-            higher_dim = np.int32(np.product(input.shape[:axis]))
+            lower_dim = np.int32(np.prod(input.shape[(axis+1):]))
+            higher_dim = np.int32(np.prod(input.shape[:axis]))
             gx = int(
                 (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
             gy = 1
