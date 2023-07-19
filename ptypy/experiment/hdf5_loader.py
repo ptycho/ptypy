@@ -55,14 +55,14 @@ class Hdf5Loader(PtyScan):
     [positions]
     default =
     type = Param
-    help = Parameters for the position information data. 
-    doc = Shapes for each axis that are currently covered and tested corresponding 
+    help = Parameters for the position information data.
+    doc = Shapes for each axis that are currently covered and tested corresponding
           to the intensity shapes are:
             * axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n),
             * axis_data.shape (k,) for data.shape (k, frame_size_m, frame_size_n),
             * axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
             * axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the
-              size of the other axis, and 
+              size of the other axis, and
             * axis_data.shape (C,) for data.shape (C*D, frame_size_m, frame_size_n) where D is the
               size of the other axis.
 
@@ -114,7 +114,7 @@ class Hdf5Loader(PtyScan):
     [mask]
     default =
     type = Param
-    help = Parameters for mask data. 
+    help = Parameters for mask data.
     doc = The shape of the loaded data is assumed to be (frame_size_m, frame_size_n) or the same
           shape of the full intensities data.
 
@@ -153,7 +153,7 @@ class Hdf5Loader(PtyScan):
     [darkfield]
     default =
     type = Param
-    help = Parameters for darkfield data. 
+    help = Parameters for darkfield data.
     doc = The shape is assumed to be (frame_size_m, frame_size_n) or the same
           shape of the full intensities data.
 
@@ -190,7 +190,7 @@ class Hdf5Loader(PtyScan):
     help = Sigma value applied for automatic detection of outliers in the normalisation dataset.
 
     [framefilter]
-    default = 
+    default =
     type = Param
     help = Parameters for the filtering of frames
     doc = The shape of loaded data is assumed to hvae the same dimensionality as data.shape[:-2]
@@ -198,7 +198,7 @@ class Hdf5Loader(PtyScan):
     [framefilter.file]
     default = None
     type = str
-    help = This is the path to the file containing the filter information. 
+    help = This is the path to the file containing the filter information.
 
     [framefilter.key]
     default = None
@@ -210,7 +210,7 @@ class Hdf5Loader(PtyScan):
     type = Param
     help = This parameter contains information if we are use the recorded energy rather than as a parameter.
             It should be a scalar value.
-    
+
     [recorded_energy.file]
     default = None
     type = str
@@ -236,7 +236,7 @@ class Hdf5Loader(PtyScan):
     type = Param
     help = This parameter contains information if we are use the recorded distance to the detector rather than as a parameter,
             It should be a scalar value.
-    
+
     [recorded_distance.file]
     default = None
     type = str
@@ -257,7 +257,7 @@ class Hdf5Loader(PtyScan):
     type = Param
     help = This parameter contains information if we are use the recorded psize to the detector rather than as a parameter,
             It should be a scalar value.
-    
+
     [recorded_psize.file]
     default = None
     type = str
@@ -296,8 +296,8 @@ class Hdf5Loader(PtyScan):
     type = bool
     default = False
     help = Switch for loading data from electron ptychography experiments.
-    doc = If True, the energy provided in keV will be considered as electron energy 
-          and converted to electron wavelengths.    
+    doc = If True, the energy provided in keV will be considered as electron energy
+          and converted to electron wavelengths.
     """
 
     def __init__(self, pars=None, swmr=False, **kwargs):
@@ -330,7 +330,7 @@ class Hdf5Loader(PtyScan):
         self.framefilter = None
         self._is_spectro_scan = False
         self._is_swmr = swmr
-        
+
         self.fhandle_intensities = None
         self.fhandle_positions_fast = None
         self.fhandle_positions_slow = None
@@ -549,7 +549,7 @@ class Hdf5Loader(PtyScan):
                 self.p.distance = float(f[self.p.recorded_distance.key][()].item() * self.p.recorded_distance.multiplier)
             self.meta.distance = self.p.distance
             log(3, "loading distance={} from file".format(self.p.distance))
-        
+
         if None not in [self.p.recorded_psize.file, self.p.recorded_psize.key]:
             with h5.File(self.p.recorded_psize.file, 'r', swmr=self._is_swmr) as f:
                 self.p.psize = float(f[self.p.recorded_psize.key][()].item() * self.p.recorded_psize.multiplier)
@@ -870,7 +870,7 @@ class Hdf5Loader(PtyScan):
 class Hdf5LoaderFast(Hdf5Loader):
     def __init__(self, pars=None, **kwargs):
         super().__init__(pars=pars, **kwargs)
-        self.cpu_count_per_rank = max(os.cpu_count() // parallel.size,1)
+        self.cpu_count_per_rank = max(len(os.sched_getaffinity(0)) // parallel.size,1)
         print("Rank %d has access to %d processes" %(parallel.rank, self.cpu_count_per_rank))
         self.intensities_array = None
         self.weights_array = None
@@ -886,13 +886,13 @@ class Hdf5LoaderFast(Hdf5Loader):
         return corr
 
     @staticmethod
-    def _init_worker(intensities_raw_array, weights_raw_array, 
+    def _init_worker(intensities_raw_array, weights_raw_array,
                      intensities_handle,
                      weights_handle,
                      darkfield_handle,
                      flatfield_handle,
                      intensities_dtype, weights_dtype,
-                     array_shape, 
+                     array_shape,
                      mask_laid_out_like_data,
                      darkfield_laid_out_like_data,
                      flatfield_laid_out_like_data):
@@ -909,7 +909,7 @@ class Hdf5LoaderFast(Hdf5Loader):
     @staticmethod
     def _read_intensities_and_weights(slices):
         '''
-        Copy intensities/weights into memory and correct for 
+        Copy intensities/weights into memory and correct for
         darkfield/flatfield if they exist
         '''
         indexed_frame_slices, dest_slices = slices
@@ -961,7 +961,7 @@ class Hdf5LoaderFast(Hdf5Loader):
             return
         self._intensities_raw_array = RawArray(np.ctypeslib.as_ctypes_type(dtype), npixels)
         self.intensities_array = np.frombuffer(self._intensities_raw_array, self.intensities_dtype, -1).reshape(sh)
-        
+
     def _setup_raw_weights_buffer(self, dtype, sh):
         npixels = int(np.prod(sh))
         if (self.weights_array is not None) and (self.weights_array.size == npixels):
@@ -979,13 +979,13 @@ class Hdf5LoaderFast(Hdf5Loader):
         self._setup_raw_weights_buffer(self.mask_dtype, sh)
         dest_slices = [np.s_[i:i+1] for i in range(len(src_slices))]
 
-        with Pool(self.cpu_count_per_rank, 
+        with Pool(self.cpu_count_per_rank,
                   initializer=Hdf5LoaderFast._init_worker,
                   initargs=(self._intensities_raw_array, self._weights_raw_array,
                             self.intensities, self.mask, self.darkfield, self.flatfield,
                             self.intensities_dtype, self.mask_dtype,
                             sh, self.mask_laid_out_like_data,
-                            self.darkfield_laid_out_like_data, 
+                            self.darkfield_laid_out_like_data,
                             self.flatfield_field_laid_out_like_data)) as p:
             p.map(self._read_intensities_and_weights, zip(src_slices, dest_slices))
 
@@ -1013,7 +1013,7 @@ class Hdf5LoaderFast(Hdf5Loader):
                                       self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
         log(3, 'Data loaded successfully.')
         return intensities, positions, weights
-    
+
     def load_mapped_and_raster_scan(self, indices):
 
         slices = []
@@ -1024,7 +1024,7 @@ class Hdf5LoaderFast(Hdf5Loader):
             if self._is_spectro_scan and self.p.outer_index is not None:
                 indexed_frame_slices = (self.p.outer_index,) + indexed_frame_slices
             slices.append(indexed_frame_slices)
-        
+
         self.load_multiprocessing(slices)
 
         intensities = {}
