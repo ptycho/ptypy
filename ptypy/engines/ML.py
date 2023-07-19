@@ -45,7 +45,7 @@ class ML(PositionCorrectionEngine):
     type = str
     help = Likelihood model
     choices = ['gaussian','poisson','euclid']
-    doc = One of ‘gaussian’, poisson’ or ‘euclid’. Only 'gaussian' is implemented.
+    doc = One of ‘gaussian’, poisson’ or ‘euclid’.
 
     [floating_intensities]
     default = False
@@ -99,7 +99,7 @@ class ML(PositionCorrectionEngine):
     type = int
     lowlim = 0
     help = Number of iterations before probe update starts
-    
+
     """
 
     SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
@@ -153,7 +153,7 @@ class ML(PositionCorrectionEngine):
     def engine_initialize(self):
         """
         Prepare for ML reconstruction.
-        """        
+        """
         super(ML, self).engine_initialize()
 
         # Object gradient and minimization direction
@@ -182,7 +182,7 @@ class ML(PositionCorrectionEngine):
         elif self.p.ML_type.lower() == "poisson":
             self.ML_model = PoissonModel(self)
         elif self.p.ML_type.lower() == "euclid":
-            raise NotImplementedError('Euclid norm model not yet implemented')
+            self.ML_model = EuclidModel(self)
         else:
             raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
 
@@ -235,7 +235,7 @@ class ML(PositionCorrectionEngine):
                 cn2_new_pr_grad = Cnorm2(new_pr_grad)
                 cn2_new_ob_grad = Cnorm2(new_ob_grad)
                 if cn2_new_pr_grad > 1e-5:
-                    scale_p_o = (self.p.scale_probe_object * cn2_new_ob_grad 
+                    scale_p_o = (self.p.scale_probe_object * cn2_new_ob_grad
                                  / cn2_new_pr_grad)
                 else:
                     scale_p_o = self.p.scale_probe_object
@@ -601,7 +601,7 @@ class PoissonModel(BaseModel):
 
     def __init__(self, MLengine):
         """
-        Core functions for ML computation using a Gaussian model.
+        Core functions for ML computation using a Poisson model.
         """
         BaseModel.__init__(self, MLengine)
         from scipy import special
@@ -731,6 +731,172 @@ class PoissonModel(BaseModel):
             B[0] += (self.LLbase[dname] + (m * (A0 - I * np.log(A0))).sum().astype(np.float64)) * Brenorm
             B[1] += np.dot(m.flat, (A1*DI).flat) * Brenorm
             B[2] += (np.dot(m.flat, (A2*DI).flat) + .5*np.dot(m.flat, (I*(A1/A0)**2.).flat)) * Brenorm
+
+        parallel.allreduce(B)
+
+        # Object regularizer
+        if self.regularizer:
+            for name, s in self.ob.storages.items():
+                B += Brenorm * self.regularizer.poly_line_coeffs(
+                    ob_h.storages[name].data, s.data)
+
+        self.B = B
+
+        return B
+
+
+class EuclidModel(BaseModel):
+    """
+    Euclidean (Amplitude) noise model.
+    TODO: feed actual statistical weights instead of using a fixed variance.
+    """
+
+    def __init__(self, MLengine):
+        """
+        Core functions for ML computation using a Euclidean model.
+        """
+        BaseModel.__init__(self, MLengine)
+
+        # Euclidean model requires weights
+        # TODO: update this part of the code once actual weights are passed in the PODs
+        self.weights = self.engine.di.copy(self.engine.di.ID + '_weights')
+        # FIXME: This part needs to be updated once statistical weights are properly
+        # supported in the data preparation.
+        for name, di_view in self.di.views.items():
+            if not di_view.active:
+                continue
+            self.weights[di_view] = di_view.pod.ma_view.data # just the mask for now
+            #self.weights[di_view] = (di_view.pod.ma_view.data
+            #                         / (1. + stat_weights/di_view.data))
+
+    def __del__(self):
+        """
+        Clean up routine
+        """
+        BaseModel.__del__(self)
+        del self.engine.ptycho.containers[self.weights.ID]
+        del self.weights
+
+    def new_grad(self):
+        """
+        Compute a new gradient direction according to a Euclidean noise model.
+
+        Note: The negative log-likelihood and local errors are also computed
+        here.
+        """
+        self.ob_grad.fill(0.)
+        self.pr_grad.fill(0.)
+
+        # We need an array for MPI
+        LL = np.array([0.])
+        error_dct = {}
+
+        # Outer loop: through diffraction patterns
+        for dname, diff_view in self.di.views.items():
+            if not diff_view.active:
+                continue
+
+            # Weights and amplitudes for this view
+            w = self.weights[diff_view]
+            A = np.sqrt(diff_view.data)
+
+            Amodel = np.zeros_like(A)
+            f = {}
+
+            # First pod loop: compute total amplitude
+            for name, pod in diff_view.pods.items():
+                if not pod.active:
+                    continue
+                f[name] = pod.fw(pod.probe * pod.object)
+                Amodel += np.sqrt(u.abs2(f[name]))
+
+            # Floating intensity option
+            if self.p.floating_intensities:
+                self.float_intens_coeff[dname] = A.sum() / Amodel.sum()
+                Amodel *= self.float_intens_coeff[dname]
+
+            Amodel += 1e-6 # cf Poisson model
+            DA = (1. - A / Amodel)
+
+            # Second pod loop: gradients computation
+            LLL = np.sum((w * (Amodel - A)**2).astype(np.float64))
+            for name, pod in diff_view.pods.items():
+                if not pod.active:
+                    continue
+                xi = pod.bw(w*DA * f[name])
+                self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
+                self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
+
+            diff_view.error = LLL
+            error_dct[dname] = np.array([0, LLL / np.prod(DA.shape), 0])
+            LL += LLL
+
+        # MPI reduction of gradients
+        self.ob_grad.allreduce()
+        self.pr_grad.allreduce()
+        parallel.allreduce(LL)
+
+        # Object regularizer
+        if self.regularizer:
+            for name, s in self.ob.storages.items():
+                self.ob_grad.storages[name].data += self.regularizer.grad(
+                    s.data)
+                LL += self.regularizer.LL
+        self.LL = LL / self.tot_measpts
+
+        return error_dct
+
+    def poly_line_coeffs(self, ob_h, pr_h):
+        """
+        Compute the coefficients of the polynomial for line minimization
+        in direction h
+        """
+
+        B = np.zeros((3,), dtype=np.longdouble)
+        Brenorm = 1. / self.LL[0]**2
+
+        # Outer loop: through diffraction patterns
+        for dname, diff_view in self.di.views.items():
+            if not diff_view.active:
+                continue
+
+            # Weights and amplitudes for this view
+            w = self.weights[diff_view]
+            A = np.sqrt(diff_view.data)
+
+            A0 = None
+            A1 = None
+            A2 = None
+
+            for name, pod in diff_view.pods.items():
+                if not pod.active:
+                    continue
+                f = pod.fw(pod.probe * pod.object)
+                a = pod.fw(pod.probe * ob_h[pod.ob_view]
+                           + pr_h[pod.pr_view] * pod.object)
+                b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
+
+                if A0 is None:
+                    A0 = u.abs2(f).astype(np.longdouble)
+                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
+                    A2 = (2 * np.real(f * b.conj()).astype(np.longdouble)
+                          + u.abs2(a).astype(np.longdouble))
+                else:
+                    A0 += u.abs2(f)
+                    A1 += 2 * np.real(f * a.conj())
+                    A2 += 2 * np.real(f * b.conj()) + u.abs2(a)
+
+            if self.p.floating_intensities:
+                A0 *= self.float_intens_coeff[dname]
+                A1 *= self.float_intens_coeff[dname]
+                A2 *= self.float_intens_coeff[dname]
+
+            A0 += 1e-12 # cf Poisson model sqrt(1e-12) = 1e-6
+            DA = 1. - A/np.sqrt(A0)
+
+            B[0] += np.dot(w.flat, ((np.sqrt(A0) - A)**2).flat) * Brenorm
+            B[1] += np.dot(w.flat, (A1*DA).flat) * Brenorm
+            B[2] += (np.dot(w.flat, (A2*DA).flat) + .25*np.dot(w.flat, (A1**2 * A/A0**(3/2)).flat)) * Brenorm
 
         parallel.allreduce(B)
 
