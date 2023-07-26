@@ -21,7 +21,7 @@ class FFT_cuda(object):
         columns = self.arr_shape[1]
         if rows != columns or rows not in [16, 32, 64, 128, 256, 512, 1024, 2048]:
             raise ValueError("CUDA FFT only supports powers of 2 for rows/columns, from 16 to 2048")
-        self.batches = int(np.product(array.shape[0:dims-2]) if dims > 2 else 1)
+        self.batches = int(np.prod(array.shape[0:dims-2]) if dims > 2 else 1)
         self.forward = forward
 
         self._load(array, pre_fft, post_fft, symmetric, forward)
@@ -121,11 +121,11 @@ class FFT_skcuda(FFT_cuda):
         )
         # with cuFFT, we need to scale ifft
         if not symmetric and not forward:
-            self.scale = 1 / np.product(self.arr_shape)
+            self.scale = 1 / np.prod(self.arr_shape)
         elif forward and not symmetric:
             self.scale = 1.0
         else:
-            self.scale = 1 / np.sqrt(np.product(self.arr_shape))
+            self.scale = 1 / np.sqrt(np.prod(self.arr_shape))
 
         if pre_fft is not None:
             self.pre_fft = gpuarray.to_gpu(pre_fft)

@@ -87,7 +87,7 @@ class FourierUpdateKernel(BaseKernel):
         ## Actual math ##
 
         # Reduceses the Fourier error along the last 2 dimensions.fd
-        #err_sum[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
+        #err_sum[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(float)
         err_sum[:] = ferr.sum(-1).sum(-1)
         return
 

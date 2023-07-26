@@ -11,7 +11,7 @@ sizes ={
 }
 
 def run_benchmark(shape):
-    megabytes = np.product(shape) * 8 / 1024 / 1024 * 2
+    megabytes = np.prod(shape) * 8 / 1024 / 1024 * 2
 
     data = np.zeros(shape, dtype=np.complex64)
     

@@ -253,7 +253,7 @@ class Fourier_update_kernel(BaseKernel):
         self.queue.finish()
 
     def npy_error_reduce(self, ferr, err_fmag):
-        err_fmag[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
+        err_fmag[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(float)
 
     def ocl_error_reduce(self, ferr, err_fmag):
         shape = (self.fshape[0], 64),

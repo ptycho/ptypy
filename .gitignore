@@ -28,3 +28,4 @@ ghostdriver*
 .DS_Store
 .ipynb_checkpoints
 .clang-format
+pip-wheel-metadata/

@@ -167,7 +167,7 @@ class DM_3dBragg(DM):
                 r = np.sqrt((x_ - xcenter)**2 + (y_ - ycenter)**2)
                 scaling = np.min(geo.resolution)
                 r /= scaling
-                r = r.astype(np.int)
+                r = r.astype(int)
                 tbin = np.bincount(r.ravel(), arr.ravel())
                 nr = np.bincount(r.ravel())
                 s = np.arange(len(tbin)) * scaling

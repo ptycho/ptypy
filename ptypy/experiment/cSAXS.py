@@ -100,7 +100,7 @@ class cSAXSScan(PtyScan):
     def load(self, indices):
         raw = {}
         for i in indices:
-            raw[i] = self.data_object.getframe(i).data.astype(np.float)
+            raw[i] = self.data_object.getframe(i).data.astype(float)
         return raw, {}, {}
 
 

@@ -33,7 +33,6 @@ class PrepAndRunMoonFlowerTest(unittest.TestCase):
         p.engines.engine00.name = 'DM'
         p.engines.engine00.numiter = 5
         P = Ptycho(p,level=5)
-        return P
 
     def test_dm_multiple_probes(self):
         p = u.Param()
@@ -67,7 +66,6 @@ class PrepAndRunMoonFlowerTest(unittest.TestCase):
         p.engines.engine00.numiter = 5
         p.engines.engine00.fourier_relax_factor = 0.05
         P = Ptycho(p,level=5)
-        return P
 
     def test_dm_resample(self):
         p = u.Param()
@@ -97,7 +95,6 @@ class PrepAndRunMoonFlowerTest(unittest.TestCase):
         p.engines.engine00.name = 'DM'
         p.engines.engine00.numiter = 5
         P = Ptycho(p,level=5)
-        return P
 
     def test_ml_single_probe(self):
         p = u.Param()
@@ -134,7 +131,6 @@ class PrepAndRunMoonFlowerTest(unittest.TestCase):
         p.engines.engine00.floating_intensities = False
         p.engines.engine00.numiter = 5
         P = Ptycho(p,level=5)
-        return P
 
     def test_ml_resample(self):
         p = u.Param()
@@ -172,7 +168,6 @@ class PrepAndRunMoonFlowerTest(unittest.TestCase):
         p.engines.engine00.floating_intensities = False
         p.engines.engine00.numiter = 5
         P = Ptycho(p,level=5)
-        return P
 
 if __name__ == '__main__':
     unittest.main()

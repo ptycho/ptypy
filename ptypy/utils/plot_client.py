@@ -716,6 +716,12 @@ class _JupyterClient(MPLplotter):
                                       in_thread=False)
         self.initialized = False
 
+        # not ideal but currently best solution
+        # avoiding a module-level import of Ipython
+        # since its not part of the core dependencies
+        import IPython
+        self.ipython = IPython
+
     def plot(self, title=""):
         if not self.initialized:
             self.update_plot_layout()
@@ -724,6 +730,10 @@ class _JupyterClient(MPLplotter):
         self.plot_all()
         plt.close(self.plot_fig)
         return self.plot_fig
+
+    def display(self,title):
+        self.ipython.display.display(self.plot(title=title), clear=True)
+        
 
 def figure_from_ptycho(P, pars=None):
     """

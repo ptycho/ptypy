@@ -164,6 +164,10 @@ class SimScan(PtyScan):
         P = self.manipulate_ptycho(P)
         #############################################################
 
+        # Make sure all diff storages are empty
+        for name, storage in P.diff.S.items():
+            storage.data.fill(0.)
+
         # Simulate diffraction signal
         logger.info('Propagating exit waves.')
         for name,pod in P.pods.items():

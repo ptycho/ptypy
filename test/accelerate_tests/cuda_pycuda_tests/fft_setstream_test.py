@@ -25,6 +25,7 @@ class FftSetStreamTest(PyCudaTest):
         t2 = time.time()
         dur1 = t2 - t1
         f_dev = gpuarray.to_gpu(f)
+        self.stream.synchronize()
 
         # measure with events to make sure that something actually 
         # happened in the right stream

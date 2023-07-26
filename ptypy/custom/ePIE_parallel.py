@@ -179,7 +179,7 @@ class EPIEParallel(BaseEngine):
             if pod.active:
                 self.ob_nodecover[pod.ob_view] = 1
         self.nodemask = np.array(list(self.ob_nodecover.S.values())[0].data[0],
-                                 dtype=np.bool)
+                                 dtype=bool)
 
         # communicate this over MPI
         parallel.allreduceC(self.ob_nodecover)

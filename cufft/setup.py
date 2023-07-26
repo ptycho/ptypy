@@ -39,6 +39,7 @@ setup(
     description='Extension of CuFFT to include pre- and post-filters using callbacks',
     packages=package_list,
     ext_modules=ext_modules,
+    install_requires=["pybind11"],
     cmdclass=cmdclass
 )
 

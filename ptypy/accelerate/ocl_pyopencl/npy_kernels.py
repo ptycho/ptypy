@@ -102,7 +102,7 @@ class Fourier_update_kernel(BaseKernel):
         ## Actual math ##
 
         # Reduceses the Fourier error along the last 2 dimensions.fd
-        error_sum[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(np.float)
+        error_sum[:] = ferr.astype(np.double).sum(-1).sum(-1).astype(float)
 
     def fmag_all_update(self, pbound, g_mag, g_mask, g_err_sum, offset=0):
 
