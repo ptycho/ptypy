@@ -762,16 +762,31 @@ class NanomaxContrast(NanomaxStepscanSep2019):
     doc =
     """
 
-    def pad_to_size(self, frame, value):
-        ny, nx   = np.shape(frame)
-        cy, cx   = self.info.tmp_center
-        d        = self.info.shape//2
-        pad_xl   = d - cx
-        pad_xu   = d + cx - nx 
-        pad_yl   = d - cy
-        pad_yu   = d + cy - ny 
-        return np.pad(frame, [[pad_yl,pad_yu],[pad_xl,pad_xu]], mode='constant', constant_values=[value])
+    def clean_mask(self, mask):
+        mask[mask>=0.5] = 1
+        mask[mask<0.5] = 0
+        return mask
 
+    def load_mask_h5(self):
+        with h5py.File(self.info.maskfile, 'r') as hf:
+            mask = np.array(hf.get('mask')) 
+        return self.clean_mask(mask)
+
+    def load_mask_tiff(self):
+        with Image.open(self.info.maskfile) as im:
+            mask = np.array(im) 
+        return self.clean_mask(mask)
+
+    def pad_to_size(self, frame, value):
+        ny, nx = np.shape(frame)
+        cy, cx = self.info.tmp_center
+        dy, dx = self.info.shape
+        ry, rx = dy//2 , dx//2
+        pad_xl   = rx - cx
+        pad_xu   = rx + cx - nx 
+        pad_yl   = ry - cy
+        pad_yu   = ry + cy - ny 
+        return np.pad(frame, [[pad_yl,pad_yu],[pad_xl,pad_xu]], mode='constant', constant_values=[value])
 
     def load(self, indices):
         raw, weights, positions = {}, {}, {}
@@ -804,15 +819,15 @@ class NanomaxContrast(NanomaxStepscanSep2019):
                 logger.info(f'Estimated the center of the (first) diffraction pattern to be {self.info.center}')
 
             # the center of the full frames is (now) known, and thus the indices for the cropping can be defined
-            cy, cx   = self.info.center
-            d        = self.info.shape
+            cy, cx  = self.info.center
+            dy, dx  = self.info.shape
             logger.info(f'Found the center of the full frames at {self.info.center}')
             logger.info(f'Will crop all diffraction patterns on load to a size of {self.info.shape}')
-            self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(cy)-d//2, int(cx)-d//2
-            self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower+d, self.info.cropOnLoad_x_lower+d
+            self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(cy)-dy//2, int(cx)-dy//2
+            self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower+dy, self.info.cropOnLoad_x_lower+dx
 
             # the (temporary) center needs to be redefined for the cropped frames
-            tmp_center_y, tmp_center_x = d//2, d//2
+            tmp_center_y, tmp_center_x = dy//2, dx//2
 
             # if the lower crop indices are negative, set them zero
             if self.info.cropOnLoad_y_lower<0:
@@ -825,7 +840,7 @@ class NanomaxContrast(NanomaxStepscanSep2019):
 
             # now fix the new center
             self.info.tmp_center = (tmp_center_y, tmp_center_x)
-            self.info.center = (d//2, d//2)
+            self.info.center = (dy//2, dx//2)
         
         # set the photon energy
         path_options = ['entry/snapshot/energy',
@@ -872,19 +887,24 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         if self.info.detector == 'pilatus':
             mask[np.where(data < 0)] = 0
         if 'eiger' in self.info.detector:
+            bit_depth = int(''.join(filter(str.isdigit, str(data.dtype))))
+            logger.info(f"found bit depth of {bit_depth} in the eiger frames")
+            logger.info(f"    -> masking all pixels with values of {2**(bit_depth) -1} and above")
             mask[np.where(data < 0)] = 0
-            mask[np.where(data >= 2**32-1)] = 0
-            #mask[np.where(data == 2**16-1)] = 0
+            mask[np.where(data >= ((2**bit_depth)-1))] = 0
         logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
                     (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
 
         if self.info.maskfile:
-            with h5py.File(self.info.maskfile, 'r') as hf:
-                mask2 = np.array(hf.get('mask'))
-                if self.info.cropOnLoad:
-                    mask2 = mask2[self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, 
-                                  self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
-                    mask2 = self.pad_to_size(mask2, 0)
+            if self.info.maskfile.endswith('.h5'):
+                mask2 = self.load_mask_h5()
+            else:
+                mask2 = self.load_mask_tiff()
+
+            if self.info.cropOnLoad:
+                mask2 = mask2[self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, 
+                                self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                mask2 = self.pad_to_size(mask2, 0)
 
             logger.info("loaded additional mask, %u x %u, sum %u, so %u masked pixels" %
                         (mask2.shape + (np.sum(mask2), np.prod(mask2.shape)-np.sum(mask2))))
@@ -893,5 +913,6 @@ class NanomaxContrast(NanomaxStepscanSep2019):
                     (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
 
         return mask
+
 
 

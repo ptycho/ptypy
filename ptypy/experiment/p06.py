@@ -380,13 +380,12 @@ class p06nano_raw(PtyScan):
         logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
                     (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
 
-        ## make it read tiff or adapt the to an h5 file
         if self.info.maskfile:
             if self.info.maskfile.endswith('.h5'):
                 mask2 = self.load_mask_h5()
             else:
                 mask2 = self.load_mask_tiff()
-
+                
             if self.info.cropOnLoad:
                 mask2 = mask2[self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, 
                                 self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
