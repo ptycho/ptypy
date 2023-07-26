@@ -122,7 +122,7 @@ class PtyScan(object):
     doc = Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
     userlevel = 1
     lowlim = 1
-    uplim = 8
+    uplim = 16
 
     [orientation]
     type = int, tuple, list
@@ -797,7 +797,7 @@ class PtyScan(object):
             rebin = self.rebin
             if rebin <= 1:
                 pass
-            elif (rebin in range(2, 6)
+            elif (rebin in range(2, 17)
                   and (((sh / float(rebin)) % 1) == 0.0).all()):
                 mask = w > 0
                 d = u.rebin_2d(d, rebin)
