@@ -194,6 +194,8 @@ class id13eh3_raw(PtyScan):
 
         scan_nmb_str = f'{self.info.scanNumber}.1'
         fpath_scan = f'{self.info.path}/{self.info.sample_dir}/{self.info.sample_sub_dir}/{self.info.sample_sub_dir}.h5' 
+        fpath_pos = f'{self.info.path}/{self.info.sample_dir}/{self.info.sample_sub_dir}/scan{self.info.scanNumber:0>5}/scan{self.info.scanNumber:0>5}_jitter_pos.npy' 
+
 
         self.frames_per_scan = {}
 
@@ -215,21 +217,26 @@ class id13eh3_raw(PtyScan):
         if self.info.motor_auto_detect:
             with h5py.File(fpath_scan, 'r') as hf:
                 scan_command = str(hf[f'{scan_nmb_str}/title'][()])
-            if 'akmap' in scan_command:   # is a flyscan
+            if 'akmap' in scan_command:   
+                # is a flyscan
                 self.info.xMotor = 'nnp2_user_position'
                 self.info.yMotor = 'nnp3_position'
-                logger.info(f'auto detected a fly scan; using motors ({self.info.xMotor}, {self.info.yMotor})')        
-            else:
+                logger.info(f'auto detected a fly scan; using motors ({self.info.xMotor}, {self.info.yMotor})') 
+            elif 'lookupscan' in scan_command: 
+                # a scan where we created the positions
+                pos_y, pos_x = np.load(fpath_pos)
+            else: 
+                #must be a step scan then
                 self.info.xMotor = 'nnp2'
                 self.info.yMotor = 'nnp3'     
                 logger.info(f'auto detected a step scan; using motors ({self.info.xMotor}, {self.info.yMotor})')        
 
-
         # read motor positions
         normdata, scanu, scanv, scanw, samr = [], [], [], [], []
-        with h5py.File(fpath_scan, 'r') as hf:
-            pos_x = list(hf[f'{scan_nmb_str}/measurement/{self.info.xMotor}'])
-            pos_y = list(hf[f'{scan_nmb_str}/measurement/{self.info.yMotor}'])
+        if not(self.info.motor_auto_detect) and not('lookupscan' in scan_command):
+            with h5py.File(fpath_scan, 'r') as hf:
+                pos_x = list(hf[f'{scan_nmb_str}/measurement/{self.info.xMotor}'])
+                pos_y = list(hf[f'{scan_nmb_str}/measurement/{self.info.yMotor}'])
 
         x = np.array(pos_x) * xFlipper * xCosFactor
         y = np.array(pos_y) * yFlipper * yCosFactor
