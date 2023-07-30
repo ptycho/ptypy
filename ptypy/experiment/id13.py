@@ -213,10 +213,12 @@ class id13eh3_raw(PtyScan):
         logger.info("x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
 
 
+        # read scan command
+        with h5py.File(fpath_scan, 'r') as hf:
+            scan_command = str(hf[f'{scan_nmb_str}/title'][()])
+
         # check for fly/mesh automatially?
         if self.info.motor_auto_detect:
-            with h5py.File(fpath_scan, 'r') as hf:
-                scan_command = str(hf[f'{scan_nmb_str}/title'][()])
             if 'akmap' in scan_command:   
                 # is a flyscan
                 self.info.xMotor = 'nnp2_user_position'
@@ -231,9 +233,9 @@ class id13eh3_raw(PtyScan):
                 self.info.yMotor = 'nnp3'     
                 logger.info(f'auto detected a step scan; using motors ({self.info.xMotor}, {self.info.yMotor})')        
 
-        # read motor positions
+        # read motor positions from scan/master if they do not come from a lookup scan
         normdata, scanu, scanv, scanw, samr = [], [], [], [], []
-        if not(self.info.motor_auto_detect) and not('lookupscan' in scan_command):
+        if not('lookupscan' in scan_command):
             with h5py.File(fpath_scan, 'r') as hf:
                 pos_x = list(hf[f'{scan_nmb_str}/measurement/{self.info.xMotor}'])
                 pos_y = list(hf[f'{scan_nmb_str}/measurement/{self.info.yMotor}'])
