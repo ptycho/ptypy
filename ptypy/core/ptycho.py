@@ -532,7 +532,7 @@ class Ptycho(Base):
         with LogTime(self.p.io.benchmark == 'all') as t:
             while not self.new_data:
                 self.new_data = self.model.new_data()
-            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
+        if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
         # Print stats
         parallel.barrier()
