@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """\
-Scan loading recipe for the ID16A beamline at ESRF - near-field ptycho setup.
+Scan loading recipe for the Diamond beamlines.
 
 This file is part of the PTYPY package.
 
@@ -8,584 +8,1121 @@ This file is part of the PTYPY package.
     :license: see LICENSE for details.
 """
 
+import h5py as h5
 import numpy as np
-import os, re, glob
 
-from .. import utils as u
-from .. import io
-from . import register
-from ..core.data import PtyScan
-from ..utils.verbose import log
-from ..core.paths import Paths
-from ..core import Ptycho
+from ptypy import utils as u
+from ptypy.core.data import PtyScan
+from ptypy.experiment import register
+from ptypy.utils import parallel
+from ptypy.utils.verbose import log
+from ptypy.utils.array_utils import _translate_to_pix
 
-IO_par = Ptycho.DEFAULT['io']
-
-logger = u.verbose.logger
-
-# Paths to relevant information in h5 file.
-H5_PATHS = u.Param()
-H5_PATHS.energy = '{entry}/measurement/initial/energy'
-H5_PATHS.current_start = '{entry}/instrument/source/current_start'
-H5_PATHS.current_end = '{entry}/instrument/source/current_end'
-H5_PATHS.exposure = 'entry1/instrument/%(detector_name)s/count_time'
-H5_PATHS.sample_name = '{entry}/sample/name'
-H5_PATHS.pixel_size = '{entry}/sample/pixel_size'
-H5_PATHS.focus_position = '{entry}/focus_positions'
-H5_PATHS.command = '{entry}/scan_type'
-H5_PATHS.label = '{entry}/title'
-H5_PATHS.experiment = '{entry}/experiment_identifier'
-
-# These two entries are added to the structure post-measurement.
-H5_PATHS.frames = '{entry}/ptycho/data'
-H5_PATHS.motors = '{entry}/ptycho/motors'
-
+import os
+from multiprocessing import Pool, RawArray
 
 @register()
-class ID16AScan(PtyScan):
+class Hdf5Loader(PtyScan):
     """
-    Subclass of PtyScan for ID16A beamline (specifically for near-field
-    ptychography).
-
-    Default data parameters. See :py:data:`.scan.data`
+    First attempt to make a generalised hdf5 loader for data. Please raise a ticket in github if changes are required
+    so we can coordinate. There will be a Nexus and CXI subclass to this in the future.
 
     Defaults:
 
     [name]
-    default = 'ID16AScan'
+    default = 'Hdf5Loader'
     type = str
     help =
 
-    [experimentID]
+    [intensities]
+    default =
+    type = Param
+    help = Parameters for the diffraction data.
+    doc = Data shapes can be either (A, B, frame_size_m, frame_size_n) or (C, frame_size_m, frame_size_n).
+          It is assumed in this latter case that the fast axis in the scan corresponds
+          the fast axis on disc (i.e. C-ordered layout).
+
+    [intensities.is_swmr]
+    default = False
+    type = bool
+    help = If True, then intensities are assumed to be a swmr dataset that is being written as processing
+           is taking place.
+
+    [intensities.live_key]
+    default = None
     type = str
+    help = Key to live keys inside the intensities.file (used only if is_swmr is True)
+    doc = Live_keys indicate where the data collection has progressed to. They are zero at the 
+          scan start, but non-zero when the position is complete.
+
+    [intensities.file]
     default = None
-    help = Name of the experiment
-    doc = If None, a default value will be provided by the recipe. **unused**
-    userlevel = 2
+    type = str
+    help = Path to the file containing the diffraction intensities.
 
-    [dfile]
-    type = file
+    [intensities.key]
     default = None
-    help = File path where prepared data will be saved in the ``ptyd`` format.
-    userlevel = 0
+    type = str
+    help = Key to the intensities entry in the hdf5 file.
 
-    [motors]
-    default = ['spy', 'spz']
-    type = list
-    help = Motor names to determine the sample translation
+    [positions]
+    default =
+    type = Param
+    help = Parameters for the position information data. 
+    doc = Shapes for each axis that are currently covered and tested corresponding 
+          to the intensity shapes are:
+            * axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n),
+            * axis_data.shape (k,) for data.shape (k, frame_size_m, frame_size_n),
+            * axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
+            * axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the
+              size of the other axis, and 
+            * axis_data.shape (C,) for data.shape (C*D, frame_size_m, frame_size_n) where D is the
+              size of the other axis.
 
-    [motors_multiplier]
-    default = 1e-6
+    [positions.is_swmr]
+    default = False
+    type = bool
+    help = If True, positions are assumed to be a swmr dataset that is being written as processing
+           is taking place.
+
+    [positions.live_key]
+    default = None
+    type = str
+    help = Live_keys indicate where the data collection has progressed to. They are zero at the 
+           scan start, but non-zero when the position is complete. If None whilst positions.is_swmr 
+           is True, use "intensities.live_key".
+
+    [positions.file]
+    default = None
+    type = str
+    help = Path to the file containing the position information. If None use "intensities.file".
+
+    [positions.slow_key]
+    default = None
+    type = str
+    help = Key to the slow-axis positions entry in the hdf5 file.
+
+    [positions.slow_multiplier]
+    default = 1.0
     type = float
-    help = Motor conversion factor to meters at ID16A beamline
+    help = Multiplicative factor that converts motor positions to metres.
 
-    [base_path]
+    [positions.fast_key]
     default = None
     type = str
-    help = Base path to read and write data
+    help = Key to the fast-axis positions entry in the hdf5 file.
 
-    [sample_name]
+    [positions.fast_multiplier]
+    default = 1.0
+    type = float
+    help = Multiplicative factor that converts motor positions to metres.
+
+    [positions.bounding_box]
+    default =
+    type = Param
+    help = Bounding box (in array indices) to reconstruct a restricted area
+
+    [positions.bounding_box.fast_axis_bounds]
+    default = None
+    type = None, int, tuple, list
+    help = If an int, this is the lower bound only, if a tuple is (min, max)
+
+    [positions.bounding_box.slow_axis_bounds]
+    default =
+    type = None, int, tuple, list
+    help = If an int, this is the lower bound only, if a tuple is (min, max)
+
+    [positions.skip]
+    default = 1
+    type = int
+    help = Skip a given number of positions (in each direction)
+
+    [mask]
+    default =
+    type = Param
+    help = Parameters for mask data. 
+    doc = The shape of the loaded data is assumed to be (frame_size_m, frame_size_n) or the same
+          shape of the full intensities data.
+
+    [mask.file]
     default = None
     type = str
-    help = Sample name - will be read from h5
+    help = Path to the file containing the diffraction mask.
 
-    [label]
-    type = str
+    [mask.key]
     default = None
-    help = The scan label
-    doc = Unique string identifying the scan
+    type = str
+    help = Key to the mask entry in the hdf5 file.
+
+    [mask.invert]
+    default = False
+    type = bool
+    help = Inverting the mask
+
+    [flatfield]
+    default =
+    type = Param
+    help = Parameters for flatfield data.
+    doc = The shape of the loaded data is assumed to be (frame_size_m, frame_size_n) or the same
+            shape of the full intensities data.
+
+    [flatfield.file]
+    default = None
+    type = str
+    help = Path to the file containing the diffraction flatfield.
+
+    [flatfield.key]
+    default = None
+    type = str
+    help = Key to the flatfield entry in the hdf5 file.
+
+    [darkfield]
+    default =
+    type = Param
+    help = Parameters for darkfield data. 
+    doc = The shape is assumed to be (frame_size_m, frame_size_n) or the same
+          shape of the full intensities data.
+
+    [darkfield.file]
+    default = None
+    type = str
+    help = Path to the file containing the diffraction darkfield.
+
+    [darkfield.key]
+    default = None
+    type = str
+    help = Key to the darkfield entry in the hdf5 file.
+
+    [normalisation]
+    default =
+    type = Param
+    help = Parameters for per-point normalisation (i.e. ion chamber reading).
+    doc = The shape of loaded data is assumed to have the same dimensionality as data.shape[:-2]
+
+    [normalisation.is_swmr]
+    default = False
+    type = bool
+    help = If this is set to be true, then normalisations are assumed to be swmr datasets that are being written as processing
+            is taking place.
+
+    [normalisation.live_key]
+    default = None
+    type = str
+    help = If normalisation.is_swmr is true then we need a live_key to know where the data collection has progressed to.
+            This is the key to these live keys inside the normalisation.file. If None, whilst normalisation.is_swmr is
+            True, then we just assume the same keys work for both normalisation and intensities. They are zero at the
+            scan start, but non-zero when the position is complete.
+
+    [normalisation.file]
+    default = None
+    type = str
+    help = This is the path to the file containing the normalisation information. If None then we try to find the information
+            in the "intensities.file" location.
+
+    [normalisation.key]
+    default = None
+    type = str
+    help = This is the key to the normalisation entry in the hdf5 file.
+
+    [normalisation.sigma]
+    default = 3
+    type = int
+    help = Sigma value applied for automatic detection of outliers in the normalisation dataset.
+
+    [framefilter]
+    default = 
+    type = Param
+    help = Parameters for the filtering of frames
+    doc = The shape of loaded data is assumed to hvae the same dimensionality as data.shape[:-2]
+
+    [framefilter.file]
+    default = None
+    type = str
+    help = This is the path to the file containing the filter information. 
+
+    [framefilter.key]
+    default = None
+    type = str
+    help = This is the key to the frame filter entry in the hdf5 file.
+
+    [recorded_energy]
+    default =
+    type = Param
+    help = This parameter contains information if we are use the recorded energy rather than as a parameter.
+            It should be a scalar value.
+    
+    [recorded_energy.file]
+    default = None
+    type = str
+    help = This is the path to the file containing the recorded_energy.
+
+    [recorded_energy.key]
+    default = None
+    type = str
+    help = This is the key to the recorded_energy entry in the hdf5 file.
+
+    [recorded_energy.multiplier]
+    default = 1.0
+    type = float
+    help = This is the multiplier for the recorded energy.
+
+    [recorded_energy.offset]
+    default = 0.0
+    type = float
+    help = This is an optional offset for the recorded energy in keV.
+
+    [recorded_distance]
+    default =
+    type = Param
+    help = This parameter contains information if we are use the recorded distance to the detector rather than as a parameter,
+            It should be a scalar value.
+    
+    [recorded_distance.file]
+    default = None
+    type = str
+    help = This is the path to the file containing the recorded_distance between sample and detector.
+
+    [recorded_distance.key]
+    default = None
+    type = str
+    help = This is the key to the recorded_distance entry in the hdf5 file.
+
+    [recorded_distance.multiplier]
+    default = 1.0
+    type = float
+    help = This is the multiplier for the recorded distance.
+
+    [recorded_psize]
+    default =
+    type = Param
+    help = This parameter contains information if we are use the recorded psize to the detector rather than as a parameter,
+            It should be a scalar value.
+    
+    [recorded_psize.file]
+    default = None
+    type = str
+    help = This is the path to the file containing the recorded detector psize.
+
+    [recorded_psize.key]
+    default = None
+    type = str
+    help = This is the key to the recorded_psize entry in the hdf5 file.
+
+    [recorded_psize.multiplier]
+    default = 1.0
+    type = float
+    help = This is the multiplier for the recorded detector psize.
+
+    [shape]
+    type = int, tuple
+    default = None
+    help = Shape of the region of interest cropped from the raw data.
+    doc = Cropping dimension of the diffraction frame
+      Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).
     userlevel = 1
 
-    [mask_file]
+    [outer_index]
+    type = int
     default = None
-    type = str
-    help = Mask file name
+    help = Index for outer dimension (e.g. tomography, spectro scans), default is None.
 
-    [flat_division]
-    default = False
-    type = bool
-    help = Switch for flat division
-
-    [dark_subtraction]
-    default = False
-    type = bool
-    help = Switch for dark subtraction
-
-    [distortion_h_file]
-    default = '/data/id16a/inhouse1/instrument/img1/optique_peter_distortion/detector_distortion2d_v.edf'
-    type = str
-    help = The h and v are inverted here - that's on purpose!
-
-    [distortion_v_file]
-    default = '/data/id16a/inhouse1/instrument/img1/optique_peter_distortion/detector_distortion2d_h.edf'
-    type = str
-    help = The h and v are inverted here - that's on purpose!
-
-    [whitefield_file]
-    default = '/data/id16a/inhouse1/instrument/whitefield/white.edf'
-    type = str
-    help =
-
-    [det_flat_field]
-    default = None
-    type = str
-    help = path to detector flat field 
-
-    [auto_center]
-    type = bool
-    default = False
-    help = Determine if center in data is calculated automatically
-    doc =
-       - ``False``, no automatic centering
-       - ``None``, only if :py:data:`center` is ``None``
-       - ``True``, it will be enforced
-    userlevel = 0
-
-    [orientation]
+    [padding]
     type = int, tuple, list
-    default = (False, True, False)
-    help = Data frame orientation
-    doc = Choose
-       <newline>
-       - ``None`` or ``0``: correct orientation
-       - ``1``: invert columns (numpy.flip_lr)
-       - ``2``: invert rows  (numpy.flip_ud)
-       - ``3``: invert columns, invert rows
-       - ``4``: transpose (numpy.transpose)
-       - ``4+i``: tranpose + other operations from above
-       <newline>
-       Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
-       do_flipud, do_fliplr)``
-    userlevel = 1
+    default = None
+    help = Option to pad the detector frames on all sides
+    doc = A tuple of list with padding given as ( top, bottom, left, right)
 
-    [recipe]
-    default = u.Param()
-    help = Specific additional parameters of ID16A
-
+    [electron_data]
+    type = bool
+    default = False
+    help = Switch for loading data from electron ptychography experiments.
+    doc = If True, the energy provided in keV will be considered as electron energy 
+          and converted to electron wavelengths.    
     """
 
     def __init__(self, pars=None, **kwargs):
         """
-        Create a PtyScan object that will load ID16A data.
+        hdf5 data loader
         """
+        self.p = self.DEFAULT.copy(99)
+        self.p.update(pars, in_place_depth=99)
 
-        p = self.DEFAULT.copy(99)
-        p.update(pars)
+        super(Hdf5Loader, self).__init__(self.p, **kwargs)
 
-        # Initialise parent class
-        super(ID16AScan, self).__init__(p, **kwargs)
-        print(type(p.recipe))
+        self._scantype = None
+        self._ismapped = None
+        self.intensities = None
+        self.intensities_dtype = None
+        self.slow_axis = None
+        self.fast_axis = None
+        self.data_shape = None
+        self.positions_fast_shape = None
+        self.positions_slow_shape = None
+        self.darkfield = None
+        self.flatfield = None
+        self.mask = None
+        self.normalisation = None
+        self.normalisation_laid_out_like_positions = None
+        self.darkfield_laid_out_like_data = None
+        self.flatfield_field_laid_out_like_data = None
+        self.mask_laid_out_like_data = None
+        self.preview_indices = None
+        self.framefilter = None
+        self._is_spectro_scan = False
 
-        # Try to extract base_path to access data files
-        if self.info.base_path is None:
-            d = os.getcwd()
-            base_path = None
-            while True:
-                if 'id16a' in os.listdir(d):
-                    base_path = os.path.join(d, 'id16a')
-                    break
-                d, rest = os.path.split(d)
-                if not rest:
-                    break
-            if base_path is None:
-                raise RuntimeError('Could not guess base_path.')
-            else:
-                self.info.base_path = base_path
+        self.fhandle_intensities = None
+        self.fhandle_darkfield = None
+        self.fhandle_flatfield = None
+        self.fhandle_normalisation = None
+        self.fhandle_mask = None
 
-        # get the scan name
-        self.scan_name = self.info.sample_name
-
-        # filename analysis
-        self.frame_wcard = os.path.join(self.info.base_path,self.info.sample_name+'*')
-        self.filelist = sorted(glob.glob(self.frame_wcard))
-        self.firstframe,self.ext = os.path.splitext(self.filelist[0])
-
-        # count the number of available frames
-        self.num_frames = len(self.filelist)
-
-        # h5 path
-        if self.ext == '.h5':
-            self.h5_path = 'entry_0000/measurement/{}'.format(self.info.recipe.detector)
-
-        # Create the ptyd file name if not specified
-        if self.info.dfile is None:
-            home = Paths(IO_par).home
-            self.info.dfile = '%s/prepdata/data_%d.ptyd' % (
-                home, self.info.label)
-            log(3, 'Save file is %s' % self.info.dfile)
-
+        self._params_check()
         log(4, u.verbose.report(self.info))
+        self._spectro_scan_check()
+        self._prepare_intensity_and_positions()
+        self._prepare_framefilter()
+        self.compute_scan_mapping_and_trajectory(self.data_shape, self.positions_fast_shape, self.positions_slow_shape)
+        self._prepare_darkfield()
+        self._prepare_flatfield()
+        self._prepare_mask()
+        self._prepare_normalisation()
+        self._prepare_meta_info()
+        self._prepare_center()
 
-    def load_weight(self):
+        # For electron data, convert energy
+        if self.p.electron_data:
+            self.meta.energy = u.m2keV(u.electron_wavelength(self.meta.energy))
+
+        # it's much better to have this logic here than in load!
+        if (self._ismapped and (self._scantype == 'arb')):
+            log(3, "This scan looks to be a mapped arbitrary trajectory scan.")
+            self.load = self.load_mapped_and_arbitrary_scan
+
+        if (self._ismapped and (self._scantype == 'raster')):
+            log(3, "This scan looks to be a mapped raster scan.")
+            self.load = self.load_mapped_and_raster_scan
+
+        if (self._scantype == 'raster') and not self._ismapped:
+            log(3, "This scan looks to be an unmapped raster scan.")
+            self.load = self.load_unmapped_raster_scan
+
+    def _params_check(self):
         """
-        Function description see parent class. For now, this function
-        will be used to load the mask.
-
-        Returns
-        -------
-         weight2d : ndarray
-            A two-dimensional array with a shape compatible to the raw
-            diffraction data frames if provided from file
+        raise error if essential parameters mising
         """
-        # FIXME: do something better here. (detector-dependent)
-        # Load mask as weight
-        if self.info.mask_file is not None:
-            print('Loading detector mask')
-            return io.h5read(self.info.mask_file, 'mask')['mask'].astype(np.float32)
+        if None in [self.p.intensities.file,
+                    self.p.intensities.key,
+                    self.p.positions.file,
+                    self.p.positions.slow_key,
+                    self.p.positions.fast_key]:
+            raise RuntimeError("Missing some information about either the positions or the intensity mapping!")
 
-    def load_positions(self):
+        if True in [self.p.intensities.is_swmr,
+                    self.p.positions.is_swmr,
+                    self.p.normalisation.is_swmr]:
+            raise NotImplementedError("Currently swmr functionality is not implemented! Coming soon...")
+
+    def _spectro_scan_check(self):
         """
-        Loads all positions for all diffraction patterns in this scan.
-
-        Returns
-        -------
-        Positions : ndarray
-            A (N,2)-array where *N* is the number of positions.
+        make adjustments if dealing with a spectro scan
         """
-        positions = []
-        mmult = u.expect2(self.info.motors_multiplier)
+        if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
+            with h5.File(self.p.recorded_energy.file, 'r') as f:
+                _energy_dset = f[self.p.recorded_energy.key]
+                if len(_energy_dset.shape):
+                    if _energy_dset.shape[0] > 1:
+                        self._is_spectro_scan = True
+        if self._is_spectro_scan and self.p.outer_index is None:
+            self.p.outer_index = 0
+        if self._is_spectro_scan:
+            log(3, "This appears to be a spectro scan, selecting index = {}".format(self.p.outer_index))
 
-        # Load positions
-        if self.ext == '.h5':
-            # From .h5 files
-            for ii in self.filelist:
-                projobj = io.h5read(ii,self.h5_path)[self.h5_path]
-                metadata = projobj['parameters']
-                motor_mne = str(metadata['motor_mne ']).split("'")[1].split() # motor names
-                motor_pos = [eval(kk) for kk in str(metadata['motor_pos ']).split("'")[1].split()] # motor pos
-                motor_idx = (motor_mne.index('spy'), motor_mne.index('spz')) # index motors
-                positions.append((motor_pos[motor_idx[0]], \
-                                  motor_pos[motor_idx[1]]))# translation motor positions
+
+    def _prepare_intensity_and_positions(self):
+        """
+        Prep for loading intensity and position data
+        """
+        self.fhandle_intensities = h5.File(self.p.intensities.file, 'r')
+        self.intensities = self.fhandle_intensities[self.p.intensities.key]
+        self.intensities_dtype = self.intensities.dtype
+        self.data_shape = self.intensities.shape
+        if self._is_spectro_scan and self.p.outer_index is not None:
+            self.data_shape = tuple(np.array(self.data_shape)[1:])
+
+        with h5.File(self.p.positions.file, 'r') as f:
+            pos_fast = f[self.p.positions.fast_key][()]
+            fast_axis = np.array([float(pp) for pp in pos_fast.decode('utf-8').split(' ')])
+        if self._is_spectro_scan and self.p.outer_index is not None:
+            fast_axis = fast_axis[self.p.outer_index]
+        self.fast_axis = np.squeeze(fast_axis) if fast_axis.ndim > 2 else fast_axis
+        self.positions_fast_shape = self.fast_axis.shape
+
+        with h5.File(self.p.positions.file, 'r') as f:
+            pos_slow = f[self.p.positions.slow_key][()]
+            slow_axis = np.array([float(pp) for pp in pos_slow.decode('utf-8').split(' ')])
+        if self._is_spectro_scan and self.p.outer_index is not None:
+            slow_axis = slow_axis[self.p.outer_index]
+        self.slow_axis = np.squeeze(slow_axis) if slow_axis.ndim > 2 else slow_axis
+        self.positions_slow_shape = self.slow_axis.shape
+
+        log(3, "The shape of the \n\tdiffraction intensities is: {}\n\tslow axis data:{}\n\tfast axis data:{}".format(self.data_shape,
+                                                                                                                      self.positions_slow_shape,
+                                                                                                                      self.positions_fast_shape))
+        if self.p.positions.skip > 1:
+            log(3, "Skipping every {:d} positions".format(self.p.positions.skip))
+
+
+    def _prepare_framefilter(self):
+        """
+        Prep for framefilter
+        """
+        if None not in [self.p.framefilter.file, self.p.framefilter.key]:
+            with h5.File(self.p.framefilter.file, 'r') as f:
+                self.framefilter = f[self.p.framefilter.key][()].squeeze() > 0 # turn into boolean
+            if self._is_spectro_scan and self.p.outer_index is not None:
+                self.framefilter = self.framefilter[self.p.outer_index]
+            if (self.framefilter.shape == self.positions_fast_shape == self.positions_slow_shape):
+                log(3, "The frame filter has the same dimensionality as the axis information.")
+            elif self.framefilter.shape[:2] == self.positions_fast_shape == self.positions_slow_shape:
+                log(3, "The frame filter matches the axis information, but will average the other dimensions.")
+            else:
+                raise RuntimeError("I have no idea what to do with this is shape of frame filter data.")
         else:
-            # From .edf files
-            for ii in self.filelist:
-                data, meta = io.edfread(ii)
-                positions.append((meta['motor'][self.info.motors[0]],
-                                  meta['motor'][self.info.motors[1]]))
+            log(3, "No frame filter will be applied.")
 
-        return np.array(positions) * mmult[0]
-
-    def load_common(self):
+    def _prepare_darkfield(self):
         """
-        Loads anything that is common to all frames and stores it in dict.
-
-        Returns
-        -------
-        common : dict
-            contains information common to all frames such as dark,
-            flat-field, detector flat-field, normalization couter,
-            and distortion files
+        Prep for darkfield
         """
-        common = u.Param()
-
-        # Load dark files
-        if self.info.dark_subtraction:
-            print('Loading the dark files...')
-            dark = []
-            if self.ext == '.h5':
-                # From HDF5 files
-                dark_files = sorted(glob.glob(os.path.join(self.info.base_path,'dark*.h5')))
-                for ff in dark_files:
-                    dobj = io.h5read(ff,self.h5_path)[self.h5_path]
-                    d = dobj['data'].astype(np.float32)
-                    dark.append(d)
+        if None not in [self.p.darkfield.file, self.p.darkfield.key]:
+            self.fhandle_darkfield =  h5.File(self.p.darkfield.file, 'r')
+            self.darkfield = self.fhandle_darkfield[self.p.darkfield.key]
+            log(3, "The darkfield has shape: {}".format(self.darkfield.shape))
+            if self.darkfield.shape == self.data_shape:
+                log(3, "The darkfield is laid out like the data.")
+                self.darkfield_laid_out_like_data = True
+            elif self.darkfield.shape == self.data_shape[-2:]:
+                log(3, "The darkfield is not laid out like the data.")
+                self.darkfield_laid_out_like_data = False
+            elif self.darkfield.shape[-2:] == self.data_shape[-2:]:
+                log(3, "The darkfield is not laid out like the data.")
+                self.darkfield_laid_out_like_data = False
+                self.darkfield = np.mean(self.darkfield, axis=0)
             else:
-                # From .edf files
-                dark_files = sorted(glob.glob(os.path.join(self.info.base_path,'dark*.edf')))
-                for ff in dark_files:
-                    data, meta = io.edfread(ff)
-                    dark.append(data.astype(np.float32))
-            print('Averaging the dark files...')
-            common.dark = np.array(dark).mean(axis=0)
+                raise RuntimeError("I have no idea what to do with this shape of darkfield data.")
+        else:
+            log(3, "No darkfield will be applied.")
 
-            log(3, 'Dark loaded successfully.')
-
-        # Load flat files
-        if self.info.flat_division:
-            print('Loading the flat files...')
-            flat = []
-            if self.ext == '.h5':
-                # From HDF5 file
-                flat_files = sorted(glob.glob(os.path.join(self.info.base_path,'ref*.h5')))
-                for ff in flat_files:
-                    flobj = io.h5read(ff,self.h5_path)[self.h5_path]
-                    fl = flobj['data'].astype(np.float32)
-                    flat.append(fl)
+    def _prepare_flatfield(self):
+        """
+        Prep for flatfield
+        """
+        if None not in [self.p.flatfield.file, self.p.flatfield.key]:
+            self.fhandle_flatfield = h5.File(self.p.flatfield.file, 'r')
+            self.flatfield = self.fhandle_flatfield[self.p.flatfield.key]
+            log(3, "The flatfield has shape: {}".format(self.flatfield.shape))
+            if self.flatfield.shape == self.data_shape:
+                log(3, "The flatfield is laid out like the data.")
+                self.flatfield_laid_out_like_data = True
+            elif self.flatfield.shape == self.data_shape[-2:]:
+                log(3, "The flatfield is not laid out like the data.")
+                self.flatfield_laid_out_like_data = False
             else:
-                # From .edf files
-                flat_files = sorted(glob.glob(os.path.join(self.info.base_path,'ref*.edf')))
-                for ff in flat_files:
-                    data, meta = io.edfread(ff)
-                    flat.append(data.astype(np.float32))
-            print('Averaging the flat files...')
-            common.flat = np.array(flat).mean(axis=0)
+                raise RuntimeError("I have no idea what to do with this shape of flatfield data.")
+        else:
+            log(3, "No flatfield will be applied.")
 
-            log(3, 'Flat loaded successfully.')
-
-        # Load detector flat field
-        if self.info.det_flat_field is not None:
-            # read flat-field file
-            print('Reading flat-field file of the detector')
-            flat_field,header = io.edfread(self.det_flat_field)
-            flat_field = flat_field.astype(np.float32)/flat_field.mean()
-            flat_field[np.where(flat_field==0)]=1 # put 1 where values are 0 for the division
-            common.flat_field = flat_field
-
-            log(3, 'Detector flat field loaded successfully.')
-
-        # read the BPM5 ct values
-        if self.info.recipe.use_bpm5_ct:
-            print('Reading the values of the bpm5 ct')
-            bpm5_ct_val = np.zeros(self.num_frames)
-            for ii in range(self.num_frames):
-                projobj = io.h5read(self.frame_format.format(ii),self.h5_path)[self.h5_path]
-                #projobj = io.h5read(self._index_to_frame(ii),self.h5_path)[self.h5_path]
-                # metadata
-                metadata = projobj['parameters']
-                counter_mne = str(metadata['counter_mne ']).split() # counter names
-                counter_pos = [eval(kk) for kk in str(metadata['counter_pos ']).split()] # counter pos
-                bpm5_ct_idx = counter_mne.index('bpm5_ct')  # index bpm5_ct
-                bpm5_ct_val[ii] = (counter_pos[bpm5_ct_idx])  # value bpm5_ct
-
-            # Check for spikes in bpm5_ct values and correct them if needed
-            below_zero_values = np.where(bpm5_ct_val<0)
-            spikes_pos = [ii for ii in below_zero_values[0]]
-            below_mean_values = np.where(bpm5_ct_val<bpm5_ct_val.mean())
-            if len(below_mean_values[0])==1:
-                spikes_pos.append(below_mean_values[0][0])
-            if len(spikes_pos)!=0:#below_zero_values[0].shape[0]!=0:
-                # check for spikes in bpm5
-                for ii in spikes_pos:#below_zero_values[0]:
-                    if ii!=0 or ii!=len(bpm5_ct_val):
-                        bpm5_ct_val[ii] = (bpm5_ct_val[ii-1] + bpm5_ct_val[ii+1])/2.
-                    elif ii == 0:
-                        bpm5_ct_val[ii] = bpm5_ct_val[ii+1]
-                    elif ii == len(bpm5_ct_val):
-                        bpm5_ct_val[ii] = bpm5_ct_val[ii-1]
-            # normalization
-            print('Normalizing the values of the bpm5 ct by the average')
-            common.bpm5_ct_val = bpm5_ct_val/bpm5_ct_val.mean() # normalize by the mean value
-
-            log(3, 'Values of bpm5_ct loaded successfully.')
-
-        # Load white field
-        #common.white = io.edfread(self.rinfo.whitefield_file)[0]
-
-        # Load distortion files
-        #dh = io.edfread(self.rinfo.distortion_h_file)[0]
-        #dv = io.edfread(self.rinfo.distortion_v_file)[0]
-
-        #common.distortion = (dh, dv)
-
-        #return common._to_dict()
-
-        return common
-
-    def check(self, frames, start=0):
+    def _prepare_mask(self):
         """
-        This method checks how many frames the preparation routine may
-        process, starting from frame `start` at a request of `frames`.
-        Returns the number of frames available from starting index `start`, and
-        whether the end of the scan was reached.
-
-        Parameters
-        ----------
-        frames : int or None
-            Number of frames requested
-        start : int or None
-            Scanpoint index to start checking from
-
-        Returns
-        -------
-        frame_accessible : int 
-            Number of frames readable from a starting point `start`
-        end_of_scan : bool or None
-            Check if the end of scan was reached, otherwise None if this
-            routine doesn't know
+        Prep for mask
         """
-        npos = self.num_frames
-        frames_accessible = min((frames, npos - start))
-        stop = self.frames_accessible + start
-        return frames_accessible, (stop >= npos)
+        if None not in [self.p.mask.file, self.p.mask.key]:
+            self.fhandle_mask = h5.File(self.p.mask.file, 'r')
+            self.mask = self.fhandle_mask[self.p.mask.key]
+            self.mask_dtype = self.mask.dtype
+            log(3, "The mask has shape: {}".format(self.mask.shape))
+            if self.mask.shape == self.data_shape:
+                log(3, "The mask is laid out like the data.")
+                self.mask_laid_out_like_data = True
+            elif self.mask.shape == self.data_shape[-2:]:
+                log(3, "The mask is not laid out like the data.")
+                self.mask_laid_out_like_data = False
+            else:
+                raise RuntimeError("I have no idea what to do with this shape of mask data.")
+        else:
+            self.mask_dtype = np.int64
+            log(3, "No mask will be applied.")
 
-    def load(self, indices):
+
+    def _prepare_normalisation(self):
         """
-        Loads data according to node specific scanpoint indices that have
-        been determined by :py:class:`LoadManager` or otherwise.
+        Prep for normalisation
+        """
+        if None not in [self.p.normalisation.file, self.p.normalisation.key]:
+            self.fhandle_normalisation = h5.File(self.p.normalisation.file, 'r')
+            self.normalisation = self.fhandle_normalisation[self.p.normalisation.key]
+            self.normalisation_mean = self.normalisation[:].mean()
+            self.normalisation_std  = self.normalisation[:].std()
+            if (self.normalisation.shape == self.fast_axis.shape == self.slow_axis.shape):
+                log(3, "The normalisation is the same dimensionality as the axis information.")
+                self.normalisation_laid_out_like_positions = True
+            elif self.normalisation.shape[:2] == self.fast_axis.shape == self.slow_axis.shape:
+                log(3, "The normalisation matches the axis information, but will average the other dimensions.")
+                self.normalisation_laid_out_like_positions = False
+            else:
+                raise RuntimeError("I have no idea what to do with this is shape of normalisation data.")
+        else:
+            log(3, "No normalisation will be applied.")
 
-        Returns
-        -------
-        raw, pos, weight : dict
-            Dictionaries whose keys are the given scan point `indices`
-            and whose values are the respective frame / position according
-            to the scan point index. `weight` and `positions` may be empty
+    def _prepare_meta_info(self):
+        """
+        Prep for meta info (energy, distance, psize)
+        """
+        if None not in [self.p.recorded_energy.file, self.p.recorded_energy.key]:
+            with h5.File(self.p.recorded_energy.file, 'r') as f:
+                if self._is_spectro_scan and self.p.outer_index is not None:
+                    self.p.energy = float(f[self.p.recorded_energy.key][self.p.outer_index])
+                else:
+                    self.p.energy = float(f[self.p.recorded_energy.key][()])
+            self.p.energy = self.p.energy * self.p.recorded_energy.multiplier + self.p.recorded_energy.offset
+            self.meta.energy  = self.p.energy
+            log(3, "loading energy={} from file".format(self.p.energy))
+
+        if None not in [self.p.recorded_distance.file, self.p.recorded_distance.key]:
+            with h5.File(self.p.recorded_distance.file, 'r') as f:
+                self.p.distance = float(f[self.p.recorded_distance.key][()]) * float(self.p.recorded_distance.multiplier)
+            self.meta.distance = self.p.distance
+            log(3, "loading distance={} from file".format(self.p.distance))
         
-        Note
-        ----
-        If one weight (mask) is to be used for the whole scan, it should
-        be loaded with load_weights(). The same goes for the positions, 
-        which sould be loade with load_positions().
+        if None not in [self.p.recorded_psize.file, self.p.recorded_psize.key]:
+            with h5.File(self.p.recorded_psize.file, 'r') as f:
+                self.p.psize = float(f[self.p.recorded_psize.key][()]) * float(self.p.recorded_psize.multiplier)
+            self.info.psize = self.p.psize
+            log(3, "loading psize={} from file".format(self.p.psize))
+
+        if self.p.padding is None:
+            self.pad = np.array([0,0,0,0])
+            log(3, "No padding will be applied.")
+        else:
+            self.pad = np.array(self.p.padding, dtype=int)
+            assert self.pad.size == 4, "self.p.padding needs to be of size 4"
+            log(3, "Padding the detector frames by {}".format(self.p.padding))
+
+    def _prepare_center(self):
         """
-        raw = {}
-        pos = {}
+        define how data should be loaded (center, cropping)
+        """
+        # now lets figure out the cropping and centering roughly so we don't load the full data in.
+        frame_shape = np.array(self.data_shape[-2:]) + self.pad.reshape(2,2).sum(1)
+        center = frame_shape // 2 if self.p.center is None else u.expect2(self.p.center)
+        center = np.array([_translate_to_pix(frame_shape[ix], center[ix]) for ix in range(len(frame_shape))])
+
+        if self.p.shape is None:
+            self.frame_slices = (slice(None, None, 1), slice(None, None, 1))
+            self.frame_shape = self.data_shape[-2:]
+            self.p.shape = frame_shape
+            log(3, "Loading full shape frame.")
+        elif self.p.shape is not None and not self.p.auto_center:
+            pshape = u.expect2(self.p.shape)
+            low_pix = center - pshape // 2
+            high_pix = low_pix + pshape
+            self.frame_slices = (slice(int(low_pix[0]), int(high_pix[0]), 1), slice(int(low_pix[1]), int(high_pix[1]), 1))
+            self.frame_shape = self.p.shape
+            self.p.center = pshape // 2 #the  new center going forward
+            self.info.center = self.p.center
+            self.p.shape = pshape
+            log(3, "Loading in frame based on a center in:%i, %i" % tuple(center))
+        else:
+            self.frame_slices = (slice(None, None, 1), slice(None, None, 1))
+            self.frame_shape = self.data_shape[-2:]
+            self.info.center = None
+            self.info.auto_center = self.p.auto_center
+            log(3, "center is %s, auto_center: %s" % (self.info.center, self.info.auto_center))
+            log(3, "The loader will not do any cropping.")
+
+    def load_unmapped_raster_scan(self, indices):
+        intensities = {}
+        positions = {}
         weights = {}
+        sh = self.slow_axis.shape
+        for ii in indices:
+            slow_idx, fast_idx = self.preview_indices[:, ii]
+            intensity_index = slow_idx * sh[1] + fast_idx
+            weights[ii], intensities[ii] = self.get_corrected_intensities(intensity_index)
+            positions[ii] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
+        log(3, 'Data loaded successfully.')
+        return intensities, positions, weights
 
-        # Load data
-        if self.ext == '.h5':
-            # From HDF5 file
-            for idx in indices:
-                #print('Loading {}'.format(self.filelist[idx]))
-                projobj = io.h5read(self.filelist[idx],self.h5_path)[self.h5_path]
-                raw[idx] = projobj['data'][0].astype(np.float32) # needs the index [0] to squeeze (faster thant np.squeeze)
+    def load_mapped_and_raster_scan(self, indices):
+        intensities = {}
+        positions = {}
+        weights = {}
+        for jj in indices:
+            slow_idx, fast_idx = self.preview_indices[:, jj]
+            weights[jj], intensities[jj] = self.get_corrected_intensities((slow_idx, fast_idx))  # or the other way round???
+            positions[jj] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
+        log(3, 'Data loaded successfully.')
+        return intensities, positions, weights
+
+    def load_mapped_and_arbitrary_scan(self, indices):
+        intensities = {}
+        positions = {}
+        weights = {}
+        for ii in indices:
+            jj = self.preview_indices[ii]
+            weights[ii], intensities[ii] = self.get_corrected_intensities(jj)
+            positions[ii] = np.array([self.slow_axis[jj] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[jj] * self.p.positions.fast_multiplier])
+
+        log(3, 'Data loaded successfully.')
+        return intensities, positions, weights
+
+    def subtract_dark(self, raw, dark):
+        """
+        Subtract dark current from a raw frame
+        and truncate negative values
+        """
+        corr = raw - dark
+        corr[raw<dark] = 0
+        return corr
+
+    def get_corrected_intensities(self, index):
+        '''
+        Corrects the intensities for darkfield, flatfield and normalisations if they exist.
+        There is a lot of logic here, I wonder if there is a better way to get rid of it.
+        Limited a bit by the MPI, and thinking about extension to large data size.
+        '''
+        if not hasattr(index, '__iter__'):
+            index = (index,)
+        indexed_frame_slices = tuple([slice(ix, ix+1, 1) for ix in index])
+        indexed_frame_slices += self.frame_slices
+        if self._is_spectro_scan and self.p.outer_index is not None:
+            indexed_frame_slices = (self.p.outer_index,) + indexed_frame_slices
+        intensity = self.intensities[indexed_frame_slices].squeeze()
+
+        # TODO: Remove these logic blocks into something a bit more sensible.
+        if self.darkfield is not None:
+            if self.darkfield_laid_out_like_data:
+                df = self.darkfield[indexed_frame_slices].squeeze()
+            else:
+                df = self.darkfield[self.frame_slices].squeeze()
+            intensity = self.subtract_dark(intensity, df)
+
+        if self.flatfield is not None:
+            if self.flatfield_laid_out_like_data:
+                intensity[:] = intensity / self.flatfield[indexed_frame_slices].squeeze()
+            else:
+                intensity[:] = intensity / self.flatfield[self.frame_slices].squeeze()
+
+        if self.normalisation is not None:
+            if self.normalisation_laid_out_like_positions:
+                scale =  self.normalisation[index]
+            else:
+                scale = np.squeeze(self.normalisation[indexed_frame_slices])
+            if np.abs(scale - self.normalisation_mean) < (self.p.normalisation.sigma * self.normalisation_std):
+                intensity[:] = intensity / scale * self.normalisation_mean
+
+        if self.mask is not None:
+            if self.mask_laid_out_like_data:
+                mask = self.mask[indexed_frame_slices].squeeze()
+            else:
+                mask = self.mask[self.frame_slices].squeeze()
+            if self.p.mask.invert:
+                mask = 1 - mask
         else:
-            # From .edf files
-            for idx in indices:
-                #print('Loading {}'.format(self.filelist[idx]))
-                data, meta = io.edfread(self.filelist[idx])
-                raw[idx] = data.astype(np.float32)
+            mask = np.ones_like(intensity, dtype=int)
 
-        return raw, pos, weights
+        if self.p.padding:
+            intensity = np.pad(intensity, tuple(self.pad.reshape(2,2)), mode='constant')
+            mask = np.pad(mask, tuple(self.pad.reshape(2,2)), mode='constant')
 
-    def correct(self, raw, weights, common):
+        return mask, intensity
+
+    def compute_scan_mapping_and_trajectory(self, data_shape, positions_fast_shape, positions_slow_shape):
+        '''
+        This horrendous block of logic is all to do with making a semi-intelligent guess at what the data looks like.
+        '''
+        skip = self.p.positions.skip
+        if data_shape[:-2] == positions_slow_shape == positions_fast_shape:
+            '''
+            cases covered:
+            axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n) or
+            axis_data.shape (k,) for data.shape (k, frame_size_m, frame_size_n)
+            '''
+            log(3, "Everything is wonderful, each diffraction point has a co-ordinate.")
+
+            self._ismapped = True
+            slow_axis_bounds = [0, self.slow_axis.shape[0]]
+            fast_axis_bounds = [0, self.fast_axis.shape[-1]]
+
+            set_slow_axis_bounds = self.p.positions.bounding_box.slow_axis_bounds
+            set_fast_axis_bounds = self.p.positions.bounding_box.fast_axis_bounds
+
+            if len(data_shape) == 4:
+                self._scantype = "raster"
+
+                if set_slow_axis_bounds is not None:
+                    if isinstance(set_slow_axis_bounds, int):
+                        slow_axis_bounds[0] = set_slow_axis_bounds
+                    elif isinstance(slow_axis_bounds, (tuple, list)):
+                        slow_axis_bounds = set_slow_axis_bounds
+                if set_fast_axis_bounds is not None:
+                    if isinstance(set_fast_axis_bounds, int):
+                        fast_axis_bounds[0] = set_fast_axis_bounds
+                    elif isinstance(fast_axis_bounds, (tuple, list)):
+                        fast_axis_bounds = set_fast_axis_bounds
+
+                indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
+                self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
+                if self.framefilter is not None:
+                    self.preview_indices = self.preview_indices[:,self.framefilter[indices[1][::skip,::skip], indices[0][::skip,::skip]].flatten()]
+                self.num_frames = len(self.preview_indices[0])
+            else:
+                if (set_slow_axis_bounds is not None) and (set_fast_axis_bounds is not None):
+                    log(3, "Setting slow axis bounds for an arbitrary mapped scan doesn't make sense. "
+                           "We will just use the fast axis bounds.")
+                if set_fast_axis_bounds is not None:
+                    if isinstance(set_fast_axis_bounds, int):
+                        fast_axis_bounds[0] = set_fast_axis_bounds
+                    elif isinstance(fast_axis_bounds, (tuple, list)):
+                        fast_axis_bounds = set_fast_axis_bounds
+                self._scantype = "arb"
+                indices = np.array(list(range(*fast_axis_bounds)))
+                self.preview_indices = indices[::skip]
+                if self.framefilter is not None:
+                    self.preview_indices = self.preview_indices[self.framefilter[indices][::skip]]
+                self.num_frames = len(self.preview_indices)
+
+        elif ((len(positions_fast_shape)>1) and (len(positions_slow_shape)>1)) and data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
+            '''
+            cases covered:
+            axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
+            '''
+            log(3, "Positions are raster, but data is a list of frames. Unpacking the data to match the positions...")
+            slow_axis_bounds = [0, self.slow_axis.shape[0]]
+            fast_axis_bounds = [0, self.fast_axis.shape[-1]]
+
+            set_slow_axis_bounds = self.p.positions.bounding_box.slow_axis_bounds
+            set_fast_axis_bounds = self.p.positions.bounding_box.fast_axis_bounds
+            if set_slow_axis_bounds is not None:
+                if isinstance(set_slow_axis_bounds, int):
+                    slow_axis_bounds[0] = set_slow_axis_bounds
+                elif isinstance(slow_axis_bounds, (tuple, list)):
+                    slow_axis_bounds = set_slow_axis_bounds
+            if set_fast_axis_bounds is not None:
+                if isinstance(set_fast_axis_bounds, int):
+                    fast_axis_bounds[0] = set_fast_axis_bounds
+                elif isinstance(fast_axis_bounds, (tuple, list)):
+                    fast_axis_bounds = set_fast_axis_bounds
+
+            indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
+            self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()])
+            if self.framefilter:
+                log(3, "Framefilter not supported for this case")
+            self.num_frames = len(self.preview_indices[0])
+            self._ismapped = False
+            self._scantype = 'raster'
+
+        elif (len(positions_slow_shape) == 1) and (len(positions_fast_shape) == 1):
+            if data_shape[:-2] == (positions_slow_shape[0], positions_fast_shape[0]):
+                '''
+                cases covered:
+                axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the size of the other axis,
+                '''
+                log(3, "Assuming the axes are 1D and need to be meshed to match the raster style data")
+                slow_axis_bounds = [0, self.slow_axis.shape[0]]
+                fast_axis_bounds = [0, self.fast_axis.shape[0]]
+
+                set_slow_axis_bounds = self.p.positions.bounding_box.slow_axis_bounds
+                set_fast_axis_bounds = self.p.positions.bounding_box.fast_axis_bounds
+                if set_slow_axis_bounds is not None:
+                    if isinstance(set_slow_axis_bounds, int):
+                        slow_axis_bounds[0] = set_slow_axis_bounds
+                    elif isinstance(slow_axis_bounds, (tuple, list)):
+                        slow_axis_bounds = set_slow_axis_bounds
+                if set_fast_axis_bounds is not None:
+                    if isinstance(set_fast_axis_bounds, int):
+                        fast_axis_bounds[0] = set_fast_axis_bounds
+                    elif isinstance(fast_axis_bounds, (tuple, list)):
+                        fast_axis_bounds = set_fast_axis_bounds
+
+                self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
+
+                indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
+                self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
+                if self.framefilter:
+                    log(3, "Framefilter not supported for this case")
+                self.num_frames = len(self.preview_indices[0])
+                self._ismapped = True
+                self._scantype = 'raster'
+
+            elif data_shape[0] == (positions_slow_shape[0] * positions_fast_shape[0]):
+                '''
+                cases covered:
+                axis_data.shape (C,) for data.shape (C*D, frame_size_m, frame_size_n) where D is the size of the other axis.
+                '''
+                slow_axis_bounds = [0,self.slow_axis.shape[0]]
+                fast_axis_bounds = [0, self.fast_axis.shape[0]]
+
+                set_slow_axis_bounds = self.p.positions.bounding_box.slow_axis_bounds
+                set_fast_axis_bounds = self.p.positions.bounding_box.fast_axis_bounds
+                if set_slow_axis_bounds is not None:
+                    if isinstance(set_slow_axis_bounds, int):
+                        slow_axis_bounds[0] = set_slow_axis_bounds
+                    elif isinstance(slow_axis_bounds, (tuple, list)):
+                        slow_axis_bounds = set_slow_axis_bounds
+                if set_fast_axis_bounds is not None:
+                    if isinstance(set_fast_axis_bounds, int):
+                        fast_axis_bounds[0] = set_fast_axis_bounds
+                    elif isinstance(fast_axis_bounds, (tuple, list)):
+                        fast_axis_bounds = set_fast_axis_bounds
+
+                self.fast_axis, self.slow_axis = np.meshgrid(self.fast_axis[...], self.slow_axis[...])
+
+                indices = np.meshgrid(list(range(*fast_axis_bounds)), list(range(*slow_axis_bounds)))
+                self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
+                if self.framefilter:
+                    log(3, "Framefilter not supported for this case")
+                self.num_frames = len(self.preview_indices[0])
+                self._ismapped = False
+                self._scantype = 'raster'
+
+            else:
+                raise IOError("I don't know what to do with these positions/data shapes")
+        else:
+            raise IOError("I don't know what to do with these positions/data shapes")
+
+    def _finalize(self):
         """
-        Place holder for dark and flatfield correction. Apply (eventual)
-        corrections to the raw frames. Convert from "raw" frames to 
-        usable data.
-        
-        Parameters
-        ----------
-        raw : dict
-            Dict containing index matched data frames (np.array).
-        weights : dict
-            Dict containing possible weights.
-        common : dict
-            Dict containing possible dark and flat frames.
-        
-        Returns
-        -------
-        data, weights : dict
-            Flat and dark-corrected data dictionaries. These dictionaries
-            must have the same keys as the input `raw` and contain
-            corrected frames (`data`) and statistical weights (`weights`)
-
-        Note
-        ----
-        If the negative values results from the calculation, they will
-        be forced to be equal to 0.
+        Close any open HDF5 files.
         """
+        super()._finalize()
+        for h in [self.fhandle_intensities,
+                self.fhandle_darkfield,
+                self.fhandle_flatfield,
+                self.fhandle_normalisation,
+                self.fhandle_mask]:
+            try:
+                h.close()
+            except:
+                pass
 
-        # Apply flat and dark, only dark, or no correction
-        if self.info.flat_division and self.info.dark_subtraction:
-            for j in raw:
-                raw[j] = (raw[j] - common.dark) / (common.flat - common.dark)
-                raw[j][raw[j] < 0] = 0 # put negative values to 0
-        elif self.info.dark_subtraction:
-            for j in raw:
-                raw[j] = raw[j] - common.dark
-                raw[j][raw[j] < 0] = 0 # put negative values to 0
+@register()
+class Hdf5LoaderFast(Hdf5Loader):
+    def __init__(self, pars=None, **kwargs):
+        super().__init__(pars=pars, **kwargs)
+        self.cpu_count_per_rank = max(os.cpu_count() // parallel.size,1)
+        print("Rank %d has access to %d processes" %(parallel.rank, self.cpu_count_per_rank))
+        self.intensities_array = None
+        self.weights_array = None
 
-        if self.info.det_flat_field is not None:
-            for j in raw:
-                print("Correcting detector flat-field: {}".format(self._index_to_frame(j)))
-                raw[j] = raw[j] / common.flat_field
-                raw[j][raw[j] < 0] = 0 # put negative values to 0
+    @staticmethod
+    def subtract_dark(raw, dark):
+        """
+        Subtract dark current from a raw frame
+        and truncate negative values
+        """
+        corr = raw - dark
+        corr[raw<dark] = 0
+        return corr
 
-        if self.info.recipe.pad_crop is not None:
-            newdim = (self.info.recipe.pad_crop,self.info.recipe.pad_crop)
-            for j in raw:
-                print('Reshaping projection {} to {}'.format(self._index_to_frame(j),newdim))
-                raw[j],_ = u.crop_pad_symmetric_2d(raw[j],newdim)
+    @staticmethod
+    def _init_worker(intensities_raw_array, weights_raw_array, 
+                     intensities_handle,
+                     weights_handle,
+                     darkfield_handle,
+                     flatfield_handle,
+                     intensities_dtype, weights_dtype,
+                     array_shape, 
+                     mask_laid_out_like_data,
+                     darkfield_laid_out_like_data,
+                     flatfield_laid_out_like_data):
+        Hdf5LoaderFast.worker_intensities_handle = intensities_handle
+        Hdf5LoaderFast.worker_intensities_array = np.frombuffer(intensities_raw_array, intensities_dtype, -1).reshape(array_shape)
+        Hdf5LoaderFast.worker_weights_handle = weights_handle
+        Hdf5LoaderFast.worker_weights_array = np.frombuffer(weights_raw_array, weights_dtype, -1).reshape(array_shape) if weights_raw_array else None
+        Hdf5LoaderFast.worker_mask_laid_out_like_data = mask_laid_out_like_data
+        Hdf5LoaderFast.worker_darkfield_handle = darkfield_handle
+        Hdf5LoaderFast.worker_darkfield_laid_out_like_data = darkfield_laid_out_like_data
+        Hdf5LoaderFast.worker_flatfield_handle = flatfield_handle
+        Hdf5LoaderFast.worker_flatfield_laid_out_like_data = flatfield_laid_out_like_data
 
-        if self.info.recipe.use_bpm5_ct:
-            for j in raw:
-                print("Correcting for the bpm5_ct values for {}".format(self.frame_format.format(j)))
-                raw[j] = raw[j] / common.bpm5_ct_val[j]
+    @staticmethod
+    def _read_intensities_and_weights(slices):
+        '''
+        Copy intensities/weights into memory and correct for 
+        darkfield/flatfield if they exist
+        '''
+        indexed_frame_slices, dest_slices = slices
+        frame_slices = tuple(np.array(indexed_frame_slices)[-2:])
+
+        # Handle / target array for intensities
+        src_intensities  = Hdf5LoaderFast.worker_intensities_handle
+        dest_intensities = Hdf5LoaderFast.worker_intensities_array
+
+        # Handle / target array for mask/weights
+        src_weights  = Hdf5LoaderFast.worker_weights_handle
+        dest_weights = Hdf5LoaderFast.worker_weights_array
+        mask_laid_out_like_data = Hdf5LoaderFast.worker_mask_laid_out_like_data
+
+        # Handle for darkfield
+        src_darkfield = Hdf5LoaderFast.worker_darkfield_handle
+        darkfield_laid_out_like_data = Hdf5LoaderFast.worker_darkfield_laid_out_like_data
+
+        # Handle for flatfield
+        src_flatfield = Hdf5LoaderFast.worker_flatfield_handle
+        flatfield_laid_out_like_data = Hdf5LoaderFast.worker_flatfield_laid_out_like_data
+
+        # Copy intensities and weights
+        src_intensities.read_direct(dest_intensities, indexed_frame_slices, dest_slices)
+        if src_weights is not None:
+            if mask_laid_out_like_data:
+                src_weights.read_direct(dest_weights, indexed_frame_slices, dest_slices)
+            else:
+                src_weights.read_direct(dest_weights, frame_slices, dest_slices)
+
+        # Correct darkfield
+        if src_darkfield is not None:
+            if darkfield_laid_out_like_data:
+                df = src_darkfield[indexed_frame_slices].squeeze()
+            else:
+                df = src_darkfield[frame_slices].squeeze()
+            dest_intensities[dest_slices] = Hdf5LoaderFast.subtract_dark(dest_intensities[dest_slices], df)
+
+        # Correct flatfield
+        if src_flatfield is not None:
+            if flatfield_laid_out_like_data:
+                dest_intensities[dest_slices] /= src_flatfield[indexed_frame_slices].squeeze()
+            else:
+                dest_intensities[dest_slices] /= src_flatfield[frame_slices].squeeze()
+
+    def _setup_raw_intensity_buffer(self, dtype, sh):
+        npixels = int(np.prod(sh))
+        if (self.intensities_array is not None) and (self.intensities_array.size == npixels):
+            return
+        self._intensities_raw_array = RawArray(np.ctypeslib.as_ctypes_type(dtype), npixels)
+        self.intensities_array = np.frombuffer(self._intensities_raw_array, self.intensities_dtype, -1).reshape(sh)
         
-        data = raw
+    def _setup_raw_weights_buffer(self, dtype, sh):
+        npixels = int(np.prod(sh))
+        if (self.weights_array is not None) and (self.weights_array.size == npixels):
+            return
+        if self.mask is not None:
+            self._weights_raw_array = RawArray(np.ctypeslib.as_ctypes_type(dtype), npixels)
+            self.weights_array = np.frombuffer(self._weights_raw_array, dtype, -1).reshape(sh)
+        else:
+            self._weights_raw_array = None
+            self.weights_array = np.ones(sh, dtype=int)
 
-        # Sanity check
-        #assert (raw.shape == (2048,2048)), (
-        #    'Wrong frame dimension! Is this a Frelon camera?')
+    def load_multiprocessing(self, src_slices):
+        sh = (len(src_slices),) + self.frame_shape
+        self._setup_raw_intensity_buffer(self.intensities_dtype, sh)
+        self._setup_raw_weights_buffer(self.mask_dtype, sh)
+        dest_slices = [np.s_[i:i+1] for i in range(len(src_slices))]
 
-        # Whitefield correction
-        #raw_wf = raw / common.white
+        with Pool(self.cpu_count_per_rank, 
+                  initializer=Hdf5LoaderFast._init_worker,
+                  initargs=(self._intensities_raw_array, self._weights_raw_array,
+                            self.intensities, self.mask, self.darkfield, self.flatfield,
+                            self.intensities_dtype, self.mask_dtype,
+                            sh, self.mask_laid_out_like_data,
+                            self.darkfield_laid_out_like_data, 
+                            self.flatfield_field_laid_out_like_data)) as p:
+            p.map(self._read_intensities_and_weights, zip(src_slices, dest_slices))
 
-        # Missing line correction
-        #raw_wf_ml = raw_wf.copy()
-        #raw_wf_ml[1024:,:] = raw_wf[1023:-1,1]
-        #raw_wf_ml[1023,:] += raw_wf[1024,:]
-        #raw_wf_ml[1023,:] *= .5
+    def load_unmapped_raster_scan(self, indices):
 
-        # Undistort
-        #raw_wl_ml_ud = undistort(raw_wf_ml, common.distortion)
+        slices = []
+        for ii in indices:
+            slow_idx, fast_idx = self.preview_indices[:, ii]
+            jj = slow_idx * self.slow_axis.shape[1] + fast_idx
+            indexed_frame_slices = (jj,)
+            indexed_frame_slices += self.frame_slices
+            if self._is_spectro_scan and self.p.outer_index is not None:
+                indexed_frame_slices = (self.p.outer_index,) + indexed_frame_slices
+            slices.append(indexed_frame_slices)
 
-        #data = raw_wl_ml_ud
+        self.load_multiprocessing(slices)
 
-        return data, weights
+        intensities = {}
+        positions = {}
+        weights = {}
+        for k,ii in enumerate(indices):
+            slow_idx, fast_idx = self.preview_indices[:,ii]
+            weights[ii], intensities[ii] = self.get_corrected_intensities(self.weights_array[k], self.intensities_array[k], ii, slices[k])
+            positions[ii] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
+        log(3, 'Data loaded successfully.')
+        return intensities, positions, weights
+    
+    def load_mapped_and_raster_scan(self, indices):
 
-def undistort(frame, delta):
-    """
-    Frame distortion correction (linear interpolation)
-    Any value outside the frame is replaced with a constant value (mean of
-    the complete frame)
+        slices = []
+        for ii in indices:
+            index = self.preview_indices[:, ii]
+            indexed_frame_slices = tuple(index)
+            indexed_frame_slices += self.frame_slices
+            if self._is_spectro_scan and self.p.outer_index is not None:
+                indexed_frame_slices = (self.p.outer_index,) + indexed_frame_slices
+            slices.append(indexed_frame_slices)
+        
+        self.load_multiprocessing(slices)
 
-    Parameters
-    ----------
-    frame : ndarray
-        The input frame data
-    delta : 2-tuple
-        Containing the horizontal and vertical displacements respectively.
+        intensities = {}
+        positions = {}
+        weights = {}
+        for k,ii in enumerate(indices):
+            slow_idx, fast_idx = self.preview_indices[:, ii]
+            weights[ii], intensities[ii] = self.get_corrected_intensities(self.weights_array[k], self.intensities_array[k], ii, slices[k])
+            positions[ii] = np.array([self.slow_axis[slow_idx, fast_idx] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[slow_idx, fast_idx] * self.p.positions.fast_multiplier])
+        log(3, 'Data loaded successfully.')
+        return intensities, positions, weights
 
-    Returns
-    -------
-    outf : ndarray
-        The corrected frame of same dimension and type as frame.
+    def load_mapped_and_arbitrary_scan(self, indices):
 
-    """
-    # FIXME: this function should attempt to use scipy.interpolate.interpn if available.
+        slices = []
+        for ii in indices:
+            jj = self.preview_indices[ii]
+            indexed_frame_slices = (jj,)
+            indexed_frame_slices += self.frame_slices
+            if self._is_spectro_scan and self.p.outer_index is not None:
+                indexed_frame_slices = (self.p.outer_index,) + indexed_frame_slices
+            slices.append(indexed_frame_slices)
 
-    deltah, deltav = delta
+        self.load_multiprocessing(slices)
 
-    sh = frame.shape
-    x, y = np.meshgrid(np.arange(sh[0]), np.arange(sh[1]))
+        intensities = {}
+        positions = {}
+        weights = {}
+        for k,ii in enumerate(indices):
+            jj = self.preview_indices[ii]
+            weights[ii], intensities[ii] = self.get_corrected_intensities(self.weights_array[k], self.intensities_array[k], ii, slices[k])
+            positions[ii] = np.array([self.slow_axis[jj] * self.p.positions.slow_multiplier,
+                                      self.fast_axis[jj] * self.p.positions.fast_multiplier])
+        log(3, 'Data loaded successfully.')
+        return intensities, positions, weights
 
-    sh = frame.shape
+    def get_corrected_intensities(self, weights, intensities, index, indexed_frame_slice):
+        '''
+        Corrects the intensities for normalisation and padding
+        '''
 
-    ny = (y-deltav).flatten()
-    nx = (x-deltah).flatten()
+        if self.normalisation is not None:
+            if self.normalisation_laid_out_like_positions:
+                scale =  self.normalisation[index]
+            else:
+                scale = np.squeeze(self.normalisation[indexed_frame_slice])
+            if np.abs(scale - self.normalisation_mean) < (self.p.normalisation.sigma * self.normalisation_std):
+                intensities *= 1 / (scale * self.normalisation_mean)
 
-    nyf = np.floor(ny).astype(int)
-    nyc = nyf+1
-    nxf = np.floor(nx).astype(int)
-    nxc = nxf+1
+        if self.p.padding:
+            intensities = np.pad(intensities, tuple(self.pad.reshape(2,2)), mode='constant')
+            weights = np.pad(weights, tuple(self.pad.reshape(2,2)), mode='constant')
 
-    pts_in = (nyc < sh[0]) & (nyc > 0) & (nxc < sh[1]) & (nxc > 0)
-    pts_out = ~pts_in
-    outf = np.zeros_like(frame)
-    outf[pts_out] = frame.mean()
-    nxf = nxf[pts_in]
-    nxc = nxc[pts_in]
-    nyf = nyf[pts_in]
-    nyc = nyc[pts_in]
-    nx = nx[pts_in]
-    ny = ny[pts_in]
+        if self.p.mask.invert:
+            weights = 1 - weights
 
-    #nxf = np.clip(nxf, 0, sh[1]-1)
-    #nxc = np.clip(nxc, 0, sh[1]-1)
-    #nyf = np.clip(nyf, 0, sh[0]-1)
-    #nyc = np.clip(nyc, 0, sh[0]-1)
-
-    fa = frame[ nyf, nxf ]
-    fb = frame[ nyc, nxf ]
-    fc = frame[ nyf, nxc ]
-    fd = frame[ nyc, nxc ]
-
-    wa = (nxc-nx) * (nyc-ny)
-    wb = (nxc-nx) * (ny-nyf)
-    wc = (nx-nxf) * (nyc-ny)
-    wd = (nx-nxf) * (ny-nyf)
-
-    outf[pts_in] = (wa*fa + wb*fb + wc*fc + wd*fd).astype(outf.dtype)
-    #outf = (wa*fa + wb*fb + wc*fc + wd*fd).astype(outf.dtype)
-
-    return outf.reshape(sh)
+        return weights, intensities
