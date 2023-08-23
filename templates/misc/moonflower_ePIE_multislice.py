@@ -57,7 +57,7 @@ p.engines.engine00.alpha = 1
 p.engines.engine00.beta = 1
 p.engines.engine00.probe_update_start = 0
 p.engines.engine00.number_of_slices = 2
-p.engines.engine00.slice_thickness = 1e-9
+p.engines.engine00.slice_thickness = 60e-9
 
 # prepare and run
 if __name__ == "__main__":

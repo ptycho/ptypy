@@ -42,9 +42,9 @@ class ePIE_multislice(stochastic.EPIE):
         self._probe = [None] * self.p.number_of_slices
         self._exits = [None] * self.p.number_of_slices
         for i in range(self.p.number_of_slices):
-            self._object[i] = self.ob.copy(self.ob.ID + "_o_" + str(i), fill=0.)
-            self._probe[i] = self.pr.copy(self.pr.ID + "_p_" + str(i), fill=0.)
-            self._exits[i] = self.pr.copy(self.pr.ID + "_e_" + str(i), fill=0.)
+            self._object[i] = self.ob.copy(self.ob.ID + "_o_" + str(i))
+            self._probe[i] = self.pr.copy(self.pr.ID + "_p_" + str(i))
+            self._exits[i] = self.pr.copy(self.pr.ID + "_e_" + str(i))
         
         scan = list(self.ptycho.model.scans.values())[0]
         geom = scan.geometries[0]
