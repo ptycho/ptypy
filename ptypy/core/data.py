@@ -1639,7 +1639,7 @@ class IAScan(PtyScan):
             #d = np.ones_like(next(iter(d.values())))
             w = dict(zip(indices, [c.data[t] for t in w]))
             # Catch the no-weight scenario
-            w = w if all(w.values()) else {}
+            #w = w if all(w.values()) else {}
             p = dict(zip(indices, [c.data[t] for t in p]))
             return d, p, w
         else:
