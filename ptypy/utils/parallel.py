@@ -16,10 +16,14 @@ rank = 0
 MPI = None
 comm = None
 if hmpi:
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
-    size = comm.Get_size()
-    rank = comm.Get_rank()
+    try:
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+        size = comm.Get_size()
+        rank = comm.Get_rank()
+    except:
+        size=1
+        rank=0
 del hmpi
 
 MPIenabled = not (size == 1)

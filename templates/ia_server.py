@@ -1,11 +1,23 @@
 from ptypy.io import interaction
 from ptypy.utils import verbose
+import sys
+
+if len(sys.argv) >1:
+    ip = sys.argv[1]
+else:
+    ip = 0.0.0.0
+
+if len(sys.argv) >2:
+    port = int(sys.argv[2])
+else:
+    port =  5860
+
 
 import time
 verbose.set_level(5)
 S = interaction.Server(
-    address="tcp://127.0.0.1",
-    port=5860,
+    address="tcp://"+ip,
+    port=port,
 )
 S.activate()
 keys=set()
