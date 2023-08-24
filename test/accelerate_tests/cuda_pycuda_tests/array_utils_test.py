@@ -538,3 +538,29 @@ class ArrayUtilsTest(PyCudaTest):
         np.testing.assert_allclose(out, isk, rtol=1e-6, atol=1e-6,
             err_msg="The shifting of array has not been calculated as expected")
 
+    def test_fft_filter_UNITY(self):
+        data = np.zeros((256, 512), dtype=np.complex64)
+        data[64:-64,128:-128] = 1 + 1.j
+
+        prefactor = np.zeros_like(data)
+        prefactor[:,256:] = 1.
+        postfactor = np.zeros_like(data)
+        postfactor[128:,:] = 1.
+
+        rk = np.zeros_like(data)
+        rk[:30, :30] = 1.
+        kernel = np.fft.fftn(rk)
+
+        data_dev = gpuarray.to_gpu(data)
+        kernel_dev = gpuarray.to_gpu(kernel)
+        prefactor_dev = gpuarray.to_gpu(prefactor)
+        postfactor_dev = gpuarray.to_gpu(postfactor)
+
+        FF = gau.FFTFilterKernel()
+        FF.allocate(kernel=kernel, prefactor=prefactor, postfactor=prefactor)
+        FF.apply_filter(data_dev)
+
+        output = au.fft_filter(data, kernel, prefactor, postfactor)
+
+        np.testing.assert_allclose(output, data_dev.get(), rtol=1e-5)
+
