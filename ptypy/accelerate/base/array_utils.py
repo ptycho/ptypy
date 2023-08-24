@@ -70,6 +70,29 @@ def complex_gaussian_filter(input, mfs):
         input.dtype)
 
 
+def fft_filter(input, kernel, prefactor=None, postfactor=None, forward=True):
+    """
+    Compute
+    output = ifft(fft( prefactor * input ) * kernel) * postfactor
+    """
+    # Make a copy (and cast if necessary)
+    x = np.array(input)
+
+
+    if prefactor is not None:
+        x *= prefactor
+
+    if forward:
+        x = np.fft.ifftn(np.fft.fftn(x) * kernel)
+    else:
+        x = np.fft.fftn(np.fft.ifftn(x) * kernel)
+
+    if postfactor is not None:
+        x *= postfactor
+
+    return x
+
+
 def mass_center(A):
     '''
     Input will always be real, and 2d or 3d, single precision here
@@ -81,7 +104,7 @@ def interpolated_shift(c, shift, do_linear=False):
     '''
     complex bicubic interpolated shift.
     complex output. This shift should be applied to 2D arrays. shift should have len=c.ndims 
-    
+
     '''
     if not do_linear:
         return ndi.shift(np.real(c), shift, order=3, prefilter=True) + 1j * ndi.shift(
