@@ -881,6 +881,35 @@ class Ptycho(Base):
             P.init_data()
         return P
 
+    def dump_current_state(self):
+        """
+        Returns current state of object/probe
+        together with pars and runtime as ``u.Param`` instance
+        """
+        dump = u.Param()
+        dump.probe = {ID: S._to_dict()
+                      for ID, S in self.probe.storages.items()}
+        for ID, S in self.probe.storages.items():
+            dump.probe[ID]['grids'] = S.grids()
+
+        dump.obj = {ID: S._to_dict()
+                    for ID, S in self.obj.storages.items()}
+
+        for ID, S in self.obj.storages.items():
+            dump.obj[ID]['grids'] = S.grids()
+
+        try:
+            defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
+        except RuntimeError:
+            logger.warning("The parameters we are saving won't pass a validator check!")
+        dump.pars = self.p.copy()  # _to_dict(Recursive=True)
+        dump.runtime = self.runtime.copy()
+        # Discard some bits of runtime to save space
+        if len(self.runtime.iter_info) > 0:
+            dump.runtime.iter_info = [self.runtime.iter_info[-1]]
+            
+        return dump
+    
     def save_run(self, alt_file=None, kind='minimal', force_overwrite=True):
         """
         Save run to file.
@@ -963,29 +992,7 @@ class Ptycho(Base):
                 #    self.interactor.stop()
                 logger.info('Generating copies of probe, object and parameters '
                             'and runtime')
-                dump = u.Param()
-                dump.probe = {ID: S._to_dict()
-                              for ID, S in self.probe.storages.items()}
-                for ID, S in self.probe.storages.items():
-                    dump.probe[ID]['grids'] = S.grids()
-
-                dump.obj = {ID: S._to_dict()
-                            for ID, S in self.obj.storages.items()}
-
-                for ID, S in self.obj.storages.items():
-                    dump.obj[ID]['grids'] = S.grids()
-
-                try:
-                    defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
-                except RuntimeError:
-                    logger.warning("The parameters we are saving won't pass a validator check!")
-                dump.pars = self.p.copy()  # _to_dict(Recursive=True)
-                dump.runtime = self.runtime.copy()
-                # Discard some bits of runtime to save space
-                if len(self.runtime.iter_info) > 0:
-                    dump.runtime.iter_info = [self.runtime.iter_info[-1]]
-
-                content = dump
+                content = self.dump_current_state()
 
             elif kind == 'minimal' or kind == 'dls':
                 # if self.interactor is not None:
