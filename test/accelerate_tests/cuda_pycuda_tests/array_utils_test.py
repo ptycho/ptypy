@@ -11,6 +11,7 @@ from ptypy.accelerate.base import array_utils as au
 if have_pycuda():
     from pycuda import gpuarray
     import ptypy.accelerate.cuda_pycuda.array_utils as gau
+    from ptypy.accelerate.cuda_pycuda.kernels import FFTFilterKernel
 
 class ArrayUtilsTest(PyCudaTest):
 
@@ -539,28 +540,28 @@ class ArrayUtilsTest(PyCudaTest):
             err_msg="The shifting of array has not been calculated as expected")
 
     def test_fft_filter_UNITY(self):
-        data = np.zeros((256, 512), dtype=np.complex64)
-        data[64:-64,128:-128] = 1 + 1.j
+        sh = (16, 35)
+        data = np.zeros(sh, dtype=np.complex64)
+        data.flat[:] = np.arange(np.prod(sh))
+        kernel = np.zeros_like(data)
+        kernel[0, 0] = 1.
+        kernel[0, 1] = 0.5
 
         prefactor = np.zeros_like(data)
-        prefactor[:,256:] = 1.
+        prefactor[:,2:] = 1.
         postfactor = np.zeros_like(data)
-        postfactor[128:,:] = 1.
-
-        rk = np.zeros_like(data)
-        rk[:30, :30] = 1.
-        kernel = np.fft.fftn(rk)
+        postfactor[2:,:] = 1.
 
         data_dev = gpuarray.to_gpu(data)
         kernel_dev = gpuarray.to_gpu(kernel)
-        prefactor_dev = gpuarray.to_gpu(prefactor)
-        postfactor_dev = gpuarray.to_gpu(postfactor)
+        pre_dev = gpuarray.to_gpu(prefactor)
+        post_dev = gpuarray.to_gpu(postfactor)
 
-        FF = gau.FFTFilterKernel()
-        FF.allocate(kernel=kernel, prefactor=prefactor, postfactor=prefactor)
+        FF = FFTFilterKernel(queue_thread=self.stream)
+        FF.allocate(kernel=kernel_dev, prefactor=pre_dev, postfactor=post_dev)
         FF.apply_filter(data_dev)
 
         output = au.fft_filter(data, kernel, prefactor, postfactor)
 
-        np.testing.assert_allclose(output, data_dev.get(), rtol=1e-5)
+        np.testing.assert_allclose(output, data_dev.get(), rtol=1e-5, atol=1e-6)
 

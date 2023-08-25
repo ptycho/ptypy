@@ -165,7 +165,6 @@ class FFTFilterKernel:
         # Current implementation recompiles every time there is a change in input shape.
         self.queue = queue_thread
         self._fft_type = fft
-        self.shape = None
         self._fft1 = None
         self._fft2 = None
     def allocate(self, kernel, prefactor=None, postfactor=None, forward=True):
@@ -180,9 +179,13 @@ class FFTFilterKernel:
                          post_fft=postfactor,
                         symmetric=True,
                         forward=not forward)
+
+    def set_kernel(self, kernel):
+        self._fft1.post_fft.set(kernel)
+
     def apply_filter(self, x):
-        self._fft1.ft(x,x)
-        self._fft2.ift(x,x)
+        self._fft1.ft(x, x)
+        self._fft2.ift(x, x)
 
 
 class FourierUpdateKernel(ab.FourierUpdateKernel):

@@ -83,9 +83,9 @@ def fft_filter(input, kernel, prefactor=None, postfactor=None, forward=True):
         x *= prefactor
 
     if forward:
-        x = np.fft.ifftn(np.fft.fftn(x) * kernel)
+        x = np.fft.ifftn(np.fft.fftn(x, norm="ortho") * kernel, norm="ortho")
     else:
-        x = np.fft.fftn(np.fft.ifftn(x) * kernel)
+        x = np.fft.fftn(np.fft.ifftn(x, norm="ortho") * kernel, norm="ortho")
 
     if postfactor is not None:
         x *= postfactor

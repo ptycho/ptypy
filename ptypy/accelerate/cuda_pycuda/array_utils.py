@@ -324,6 +324,53 @@ class DerivativesKernel:
                            )
 
 
+class FFTGaussianSmoothingKernel:
+    def __init__(self, queue=None, kernel_type='float'):
+        if kernel_type not in ['float', 'double']:
+            raise ValueError('Invalid data type for kernel')
+        self.kernel_type = kernel_type
+        self.dtype = np.complex64
+        self.stype = "complex<float>"
+        self.queue = queue
+        self.sigma = None
+
+        from .kernels import FFTFilterKernel
+
+        # Create general FFT filter object 
+        self.fft_filter = FFTFilterKernel(queue_thread=queue)
+        
+    def allocate(self, shape, sigma=1.):
+
+        # Create kernel
+        self.sigma = sigma
+        kernel = self._compute_kernel(shape, sigma)
+
+        # Allocate filter
+        kernel_dev = gpuarray.to_gpu(kernel)
+        self.fft_filter.allocate(kernel=kernel_dev)
+
+    def _compute_kernel(self, shape, sigma):
+        # Create kernel
+        self.sigma = sigma
+        u, v = np.fft.fftfreq(shape[-2]), np.fft.fftfreq(shape[-1])
+        uu, vv = np.meshgrid(u, v, sparse=True, indexing='ij')
+        kernel = np.exp(-2*(np.pi*sigma)**2 * (uu**2 + vv**2))
+        return kernel.astype(self.dtype)
+
+    def filter(self, data, sigma=None):
+        """
+        Apply filter in-place
+        
+        If sigma is not None: reallocate a new fft filter first.
+        """
+        if self.sigma is None:
+            self.allocate(shape=data.shape, sigma=sigma)
+        elif sigma is not None:
+            self.fft_filter.set_kernel(self._compute_kernel(data.shape, sigma))
+        
+        self.fft_filter.apply_filter(data)
+
+
 class GaussianSmoothingKernel:
     def __init__(self, queue=None, num_stdevs=4, kernel_type='float'):
         if kernel_type not in ['float', 'double']:

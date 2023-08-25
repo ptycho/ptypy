@@ -24,7 +24,7 @@ from ptypy.utils import parallel
 from .. import get_context, get_dev_pool
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
-from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, TransposeKernel
+from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, FFTGaussianSmoothingKernel, TransposeKernel
 
 from ..mem_utils import GpuDataManager
 from ptypy.accelerate.base import address_manglers
@@ -92,6 +92,8 @@ class ML_pycuda(ML_serial):
 
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
         self.GSK.tmp = None
+
+        self.FGSK = FFTGaussianSmoothingKernel(queue=self.queue)
 
         # Real/Fourier Support Kernel
         self.RSK = {}
@@ -260,13 +262,18 @@ class ML_pycuda(ML_serial):
         self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
         return data
 
+    def _get_smooth_gradient_fft(self, data, sigma):
+        self.FGSK.filter(data, sigma)
+        return data
+
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new
         # Smoothing preconditioner
         if self.smooth_gradient:
             self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
             for name, s in new_ob_grad.storages.items():
-                s.gpu = self._get_smooth_gradient(s.gpu, self.smooth_gradient.sigma)
+                #s.gpu = self._get_smooth_gradient(s.gpu, self.smooth_gradient.sigma)
+                s.gpu = self._get_smooth_gradient_fft(s.gpu, self.smooth_gradient.sigma)
 
         return self._replace_grad(self.ob_grad, new_ob_grad)
 
