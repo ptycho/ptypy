@@ -36,6 +36,7 @@ sample_desc.from_string(r"""
       processed according to `process` in order to *simulate* a sample from e.g. a thickness
       profile.
     type = str, array
+    choices = ['recon', 'stxm', 'None']
     userlevel = 0
 
     [fill]

@@ -55,6 +55,7 @@ class DM(PositionCorrectionEngine):
     default = 'linear'
     type = str
     help = Subpixel interpolation; 'fourier','linear' or None for no interpolation
+    choices = ['fourier','linear',None]
 
     [update_object_first]
     default = True

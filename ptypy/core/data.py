@@ -114,6 +114,7 @@ class PtyScan(object):
     default = data
     help = Determines what will be loaded in parallel
     doc = Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
+    choices = ['data', 'common', 'all']
 
     [rebin]
     type = int
