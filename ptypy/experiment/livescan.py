@@ -94,7 +94,6 @@ Methods defined in PtyScan(object) are:
 
 import numpy as np
 import zmq
-from zmq.utils import jsonapi as json
 import time
 import bitshuffle
 import struct
@@ -109,8 +108,6 @@ from ptypy.utils.verbose import headerline
 import inspect
 from bitshuffle import decompress_lz4
 import re
-from mpi4py import MPI ###
-import pdb
 
 logger = u.verbose.logger
 def logger_info(*arg):
@@ -120,18 +117,18 @@ def logger_info(*arg):
     return
 
 
-def decompress(data, shape, dtype):
-    """
-    Copied from nanomax_streaming.py, decompresses streamed images when
-    recv_multipart(flags=zmq.NOBLOCK) is used
-    """
-    block_size = struct.unpack('>I', data[8:12])[0] // dtype.itemsize
-    data = np.frombuffer(data[12:], np.int8)
-    output = bitshuffle.decompress_lz4(arr=data,
-                                       shape=shape,
-                                       dtype=dtype,
-                                       block_size=block_size)
-    return output
+# def decompress(data, shape, dtype):
+#     """
+#     Copied from nanomax_streaming.py, decompresses streamed images when
+#     recv_multipart(flags=zmq.NOBLOCK) is used
+#     """
+#     block_size = struct.unpack('>I', data[8:12])[0] // dtype.itemsize
+#     data = np.frombuffer(data[12:], np.int8)
+#     output = bitshuffle.decompress_lz4(arr=data,
+#                                        shape=shape,
+#                                        dtype=dtype,
+#                                        block_size=block_size)
+#     return output
 
 
 def backtrace(fname=None, plotlog=None, request_Ptycho=None, extra={}):
@@ -287,11 +284,6 @@ class LiveScan(PtyScan):
 
         super(LiveScan, self).__init__(p, **kwargs) # To get the parent of LiveScan, e.g. PtyScan
 
-        # main socket: reporting images, positions and motor stuff from RelayServer
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REQ)
-        self.socket.connect("%s:%u" % (self.info.relay_host, self.info.relay_port))
-
         self.end_of_scan = False
         self.energy_replied = False
         self.interaction_started = False
@@ -307,17 +299,7 @@ class LiveScan(PtyScan):
         #backtrace()
 
         self.p = p
-        # !#
-        if self.info.crop_at_RS is not None:
-            self.preprocess_RS['shape'] = self.info.crop_at_RS
-            self.preprocess_RS['center'] = self.p.center
-        if self.info.rebin_at_RS is not None and self.info.rebin_at_RS != 1:
-            self.preprocess_RS['rebin'] = self.info.rebin_at_RS
-        ## Implement background subtraction
-        ## ...
-        self.socket.send_json(['preprocess', self.preprocess_RS])
-        self.socket.recv_json()
-        # !#
+
 
         try:
             self.BT_fname = re.sub(r'(.*/).*/.*', rf'\1backtrace_{time.strftime("%F_%H:%M:%S", time.localtime())}.txt', self.p.dfile)
@@ -329,6 +311,49 @@ class LiveScan(PtyScan):
         logger.info(headerline('', 'c', '#'))
         logger.info(headerline('Leaving LiveScan().init()', 'c', '#'))
         logger.info(headerline('', 'c', '#') + '\n')
+
+    def initialize(self):
+        # main socket: reporting images, positions and motor stuff from RelayServer
+
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.REQ)
+        self.socket.connect("%s:%u" % (self.info.relay_host, self.info.relay_port))
+
+        # !#
+        if self.info.crop_at_RS is not None:
+            self.preprocess_RS['shape'] = self.info.crop_at_RS
+            self.preprocess_RS['center'] = self.p.center
+        if self.info.rebin_at_RS is not None and self.info.rebin_at_RS != 1:
+            self.preprocess_RS['rebin'] = self.info.rebin_at_RS
+        ## Implement background subtraction
+        ## ...
+        self.socket.send_json(['preprocess', self.preprocess_RS])
+        self.socket.recv_json()
+        # !#
+        super(LiveScan, self).initialize()
+
+        self.meta.energy = self.common['energy']  # common gets data into all the ranks
+
+
+
+    def load_common(self):
+        """
+        Load meta data such as energy
+        :return:
+        """
+
+        logger.info('waiting for reply from RelayServer..')
+        while not self.energy_replied:
+            self.socket.send_json(['check_energy'])
+            msg = self.socket.recv_json()
+            if msg['energy'] != False:
+                # self.meta.energy = np.float64([msg['energy']]) * 1e-3  ## Read energy from beamline snapshot
+                # logger.info('### Energy set to %f keV' % self.meta.energy)
+                common_dct = {'energy': np.float64([msg['energy']]) * 1e-3}
+                self.energy_replied = True
+                break
+            time.sleep(1)
+        return common_dct
 
 
     def check(self, frames=None, start=None):
@@ -362,123 +387,129 @@ class LiveScan(PtyScan):
         logger.info('check() has now been called %d times in total, and %d times externally.' % (self.checknr, self.checknr_external))  ##
         ###backtrace(self.BT_fname, extra={'checknr': self.checknr, 'checknr_external': self.checknr_external, 'latest_frame_index_received': self.latest_frame_index_received, 'frames': frames, 'start': start})
 
-        comm = MPI.COMM_WORLD
-        rank = comm.Get_rank()
+        rank = parallel.rank
         logger.info("### I'm check-rank nr  = %s" % rank)
         if not self.interaction_started:
             self.BackTrace2(plotlog=self.BT_logfname)
 
-        if self.end_of_scan == True and (self.latest_frame_index_received - start + 1) == 0:
-            self.socket.send_json(['stop'])
-            reply = self.socket.recv_json()
-            logger.info('Closing the relay_socket at %s' % time.strftime("%H:%M:%S", time.localtime()))
-            self.socket.close()
-            return 0, self.end_of_scan
-        #!# else do this bwc:
-        bwc = self.p.block_wait_count #### maybe
-        if bwc >= 1 and self.checknr_external % (bwc + 1) == 0:  ## ToDo: Make a better solution than using self.checknr
-            ##### backtrace(self.BT_fname, extra={'checknr': self.checknr, 'checknr_external': self.checknr_external, 'return': ['bwc => 0', self.end_of_scan], 'p.num_frames': self.p.num_frames, 'frames': frames, 'start': start})
-            logger.info('### block_wait_count, return')
-            return 0, False#####self.end_of_scan
-
-
-        logger.info('waiting for reply from RelayServer..')
-        while not self.energy_replied:
-            self.socket.send_json(['check_energy'])
-            msg = self.socket.recv_json()
-            if msg['energy'] != False:
-                self.meta.energy = np.float64([msg['energy']]) * 1e-3  ## Read energy from beamline snapshot
-                logger.info('### Energy set to %f keV' % self.meta.energy)
-                self.energy_replied = True
-                break
-            time.sleep(1)
-        while True:
-            self.socket.send_json(['check'])
-            msg = self.socket.recv_json()
-            logger.info('#### check message = %s' % msg)
-            self.latest_frame_index_received = msg[0] - 1 # could also set this to =msg[0] and delete the "+1" in the return..
-            self.frames_accessible = msg[0]  # Total nr of frames accessible
-            self.end_of_scan = msg[1]
-
-            backtrace(self.BT_fname,
-                      extra={'checknr': self.checknr, 'checknr_external': self.checknr_external,
-                             'return': [(self.latest_frame_index_received - start + 1), self.end_of_scan],
-                             'latest_frame_index_received': self.latest_frame_index_received, 'p.num_frames': self.p.num_frames,
-                             'frames': frames, 'start': start, 'frames_accessible': self.frames_accessible})
-
-            ## frames_per_iter = None, 1, 2, 3, 4, .. ## start_frame = 1, 2, 3, .., 55
-            # Start iterations after all frames are gathered (start_frame= nr of frames):
-            #     bwc=0, frames_per_iter=None, start_frame=55, min_frames=1
-            # Check return whatever is available and iterate on that:
-            #     bwc=1, frames_per_iter=None, start_frame=1, min_frames=1
-            # Check return whatever is available, after at least start_frame has been recieved
-            #     bwc=1, frames_per_iter=None, start_frame=14, min_frames=1
-            # Check always return 2 frames:
-            #     bwc=1, frames_per_iter=2, start_frame=2, min_frames=1?
-            # Start iterations after least start_frame has been recieved, then Check always return 1 frame:
-            #     bwc=1, frames_per_iter=1, start_frame=14, min_frames=1
-            #replace start_frame with new ptycho param, use input param "frame"
-
-            if self.info.frames_per_iter == None and self.frames_accessible < self.info.start_frame and not self.end_of_scan:
-                logger.info('---------------------------- nr 0, have %u frames in total, %u new ones, waiting...' % (self.frames_accessible, self.frames_accessible - start))
-                time.sleep(1)
-            elif self.info.frames_per_iter != None and self.frames_accessible - start < self.info.frames_per_iter and not self.end_of_scan:
-                logger.info('---------------------------- nr 1, have %u frames in total, %u new ones, waiting...' % (self.frames_accessible, self.frames_accessible - start))
-                time.sleep(1)
-            elif self.info.frames_per_iter != None and self.frames_accessible - start >= self.info.frames_per_iter:
-                logger.info('---------------------------- nr 2')
-                if self.frames_accessible < self.info.start_frame:
-                    logger.info('---------------------------- nr 3, have %u frames in total, %u new ones, waiting...' % (self.frames_accessible, self.frames_accessible - start))
-                    time.sleep(1)
-                elif self.checknr_external == 1 and self.frames_accessible >= self.info.start_frame:
-                    logger.info('---------------------------- nr 4, actually have %u frames, but will set it to %u' % (self.frames_accessible, start + self.info.start_frame))
-                    self.frames_accessible = start + self.info.start_frame
-                    break
-                else:
-                    logger.info('---------------------------- nr 5, actually have %u frames, but will set it to %u' % (self.frames_accessible, start + self.info.frames_per_iter))
-                    self.frames_accessible = start + self.info.frames_per_iter
-                    break
-            else:
-                logger.info('---------------------------- nr 6')
-                break
-
-            """# Start iterations after all frames are gathered (start_frame= nr of frames)
-            if self.frames_accessible < self.info.start_frame:
-                logger.info('have %u frames, waiting...' % self.frames_accessible)
-                time.sleep(1)
-            elif self.info.start_frame >= 2 and self.checknr_external == 1:
-                break
-            # Always return the same nr of frames
-            elif self.info.frames_per_iter != None:  #and self.frames_accessible - start >= self.info.frames_per_iter:
-                if self.frames_accessible - start >= self.info.frames_per_iter:
-                    logger.info('updating frames_accessible from %d to %d according to frames_per_iter' % (self.frames_accessible, self.info.frames_per_iter))
-                    self.frames_accessible = start + self.info.frames_per_iter
-                    break
-                else:
-                    logger.info('not enough frames, have %u frames, waiting...' % self.frames_accessible)
-                    time.sleep(1)
-                # self.checknr_external -= 1
-                # self.check(frames=frames, start=start)
-            # ### DEBUG: GPU memory error. Fixed nr of loaded frames each time.
-            # elif self.latest_frame_index_received - start + 1 >= 1:
-            #     self.latest_frame_index_received = start
-            #     break
-            else:
-                break"""
-
-        #
-        # if self.checknr_external >= 5 and (self.latest_frame_index_received - start + 1) <= 2:
+        ## ToDo: Reimplement closing sockets!
+        # if self.end_of_scan == True and (self.latest_frame_index_received - start + 1) <= 0:
+        #     self.socket.send_json(['stop'])
+        #     reply = self.socket.recv_json()
+        #     logger.info('Closing the relay_socket at %s' % time.strftime("%H:%M:%S", time.localtime()))
+        #     self.socket.close()
         #     return 0, self.end_of_scan
+        # #!# else do this bwc:
+        # bwc = self.p.block_wait_count #### maybe
+        # if bwc >= 1 and self.checknr_external % (bwc + 1) == 0:  ## ToDo: Make a better solution than using self.checknr
+        #     ##### backtrace(self.BT_fname, extra={'checknr': self.checknr, 'checknr_external': self.checknr_external, 'return': ['bwc => 0', self.end_of_scan], 'p.num_frames': self.p.num_frames, 'frames': frames, 'start': start})
+        #     logger.info('### block_wait_count, return')
+        #     return 0, False#####self.end_of_scan
 
-        logger.info('#### check return [self.frames_accessible - start), self.end_of_scan]  =  [(%d - %d), %s] = [%d, %s]' % (self.frames_accessible, start, self.end_of_scan, (self.frames_accessible-start), self.end_of_scan))
+        self.socket.send_json(['check'])
+        msg = self.socket.recv_json()
+        logger.info('#### check message = %s' % msg)
+
+        backtrace(self.BT_fname,
+                  extra={'checknr': self.checknr, 'checknr_external': self.checknr_external,
+                         'return': [min(frames, msg[0]), msg[1]],
+                         'latest_frame_index_received': self.latest_frame_index_received, 'p.num_frames': self.p.num_frames,
+                         'frames': frames, 'start': start, 'frames_accessible': msg[0]})
+
         t1 = time.perf_counter()
-        self.checktottime += t1-t0
         logger.info('#### Time spent in check = %f, accumulated time = %f' % ((t1-t0), self.checktottime))
         logger.info(headerline('', 'c', '#'))
         logger.info(headerline('Leaving LiveScan().check() at time %s' % time.strftime("%H:%M:%S", time.localtime()), 'c', '#'))
         logger.info(headerline('', 'c', '#') + '\n')
-        #!#return (self.frames_accessible - start), self.end_of_scan
-        return (self.frames_accessible), self.end_of_scan
+        return min(frames, msg[0]), msg[1]
+
+        # while True:
+        #     self.socket.send_json(['check'])
+        #     msg = self.socket.recv_json()
+        #     logger.info('#### check message = %s' % msg)
+        #     self.latest_frame_index_received = msg[0] - 1 # could also set this to =msg[0] and delete the "+1" in the return..
+        #     self.frames_accessible = msg[0]  # Total nr of frames accessible
+        #     self.end_of_scan = msg[1]
+        #
+        #     backtrace(self.BT_fname,
+        #               extra={'checknr': self.checknr, 'checknr_external': self.checknr_external,
+        #                      'return': [(self.latest_frame_index_received - start + 1), self.end_of_scan],
+        #                      'latest_frame_index_received': self.latest_frame_index_received, 'p.num_frames': self.p.num_frames,
+        #                      'frames': frames, 'start': start, 'frames_accessible': self.frames_accessible})
+        #
+        #     ## frames_per_iter = None, 1, 2, 3, 4, .. ## start_frame = 1, 2, 3, .., 55
+        #     # Start iterations after all frames are gathered (start_frame= nr of frames):
+        #     #     bwc=0, frames_per_iter=None, start_frame=55, min_frames=1
+        #     # Check return whatever is available and iterate on that:
+        #     #     bwc=1, frames_per_iter=None, start_frame=1, min_frames=1
+        #     # Check return whatever is available, after at least start_frame has been recieved
+        #     #     bwc=1, frames_per_iter=None, start_frame=14, min_frames=1
+        #     # Check always return 2 frames:
+        #     #     bwc=1, frames_per_iter=2, start_frame=2, min_frames=1?
+        #     # Start iterations after least start_frame has been recieved, then Check always return 1 frame:
+        #     #     bwc=1, frames_per_iter=1, start_frame=14, min_frames=1
+        #     #replace start_frame with new ptycho param, use input param "frame"
+        #
+        #     if self.info.frames_per_iter == None and self.frames_accessible < self.info.start_frame and not self.end_of_scan:
+        #         logger.info('---------------------------- nr 0, have %u frames in total, %u new ones, waiting...' % (self.frames_accessible, self.frames_accessible - start))
+        #         time.sleep(1)
+        #     elif self.info.frames_per_iter != None and self.frames_accessible - start < self.info.frames_per_iter and not self.end_of_scan:
+        #         logger.info('---------------------------- nr 1, have %u frames in total, %u new ones, waiting...' % (self.frames_accessible, self.frames_accessible - start))
+        #         time.sleep(1)
+        #     elif self.info.frames_per_iter != None and self.frames_accessible - start >= self.info.frames_per_iter:
+        #         logger.info('---------------------------- nr 2')
+        #         if self.frames_accessible < self.info.start_frame:
+        #             logger.info('---------------------------- nr 3, have %u frames in total, %u new ones, waiting...' % (self.frames_accessible, self.frames_accessible - start))
+        #             time.sleep(1)
+        #         elif self.checknr_external == 1 and self.frames_accessible >= self.info.start_frame:
+        #             logger.info('---------------------------- nr 4, actually have %u frames, but will set it to %u' % (self.frames_accessible, start + self.info.start_frame))
+        #             self.frames_accessible = start + self.info.start_frame
+        #             break
+        #         else:
+        #             logger.info('---------------------------- nr 5, actually have %u frames, but will set it to %u' % (self.frames_accessible, start + self.info.frames_per_iter))
+        #             self.frames_accessible = start + self.info.frames_per_iter
+        #             break
+        #     else:
+        #         logger.info('---------------------------- nr 6')
+        #         break
+        #
+        #     """# Start iterations after all frames are gathered (start_frame= nr of frames)
+        #     if self.frames_accessible < self.info.start_frame:
+        #         logger.info('have %u frames, waiting...' % self.frames_accessible)
+        #         time.sleep(1)
+        #     elif self.info.start_frame >= 2 and self.checknr_external == 1:
+        #         break
+        #     # Always return the same nr of frames
+        #     elif self.info.frames_per_iter != None:  #and self.frames_accessible - start >= self.info.frames_per_iter:
+        #         if self.frames_accessible - start >= self.info.frames_per_iter:
+        #             logger.info('updating frames_accessible from %d to %d according to frames_per_iter' % (self.frames_accessible, self.info.frames_per_iter))
+        #             self.frames_accessible = start + self.info.frames_per_iter
+        #             break
+        #         else:
+        #             logger.info('not enough frames, have %u frames, waiting...' % self.frames_accessible)
+        #             time.sleep(1)
+        #         # self.checknr_external -= 1
+        #         # self.check(frames=frames, start=start)
+        #     # ### DEBUG: GPU memory error. Fixed nr of loaded frames each time.
+        #     # elif self.latest_frame_index_received - start + 1 >= 1:
+        #     #     self.latest_frame_index_received = start
+        #     #     break
+        #     else:
+        #         break"""
+        #
+        # #
+        # # if self.checknr_external >= 5 and (self.latest_frame_index_received - start + 1) <= 2:
+        # #     return 0, self.end_of_scan
+        #
+        # logger.info('#### check return [self.frames_accessible - start), self.end_of_scan]  =  [(%d - %d), %s] = [%d, %s]' % (self.frames_accessible, start, self.end_of_scan, (self.frames_accessible-start), self.end_of_scan))
+        # t1 = time.perf_counter()
+        # self.checktottime += t1-t0
+        # logger.info('#### Time spent in check = %f, accumulated time = %f' % ((t1-t0), self.checktottime))
+        # logger.info(headerline('', 'c', '#'))
+        # logger.info(headerline('Leaving LiveScan().check() at time %s' % time.strftime("%H:%M:%S", time.localtime()), 'c', '#'))
+        # logger.info(headerline('', 'c', '#') + '\n')
+        # #!#return (self.frames_accessible - start), self.end_of_scan
+        # return (self.frames_accessible), self.end_of_scan
 
 
     def load(self, indices):
