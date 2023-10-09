@@ -108,6 +108,7 @@ from ptypy.utils.verbose import headerline
 import inspect
 from bitshuffle import decompress_lz4
 import re
+import h5py
 
 logger = u.verbose.logger
 def logger_info(*arg):
@@ -166,12 +167,19 @@ def backtrace(fname=None, plotlog=None, request_Ptycho=None, extra={}):
     if fname != None:
         with open(fname, 'a') as f:
             if extra != {}:
-                f.write(f'{extra}, \n')
-            f.write(f'Total Pods: {all_pods} ({active_pods} active), \n')
-            try:
-                f.write(f'Iteration:  {ptycho_engine.curiter}, \n\n')
-            except:
-                pass
+                if 'min_frames' in extra:
+                    extra_P = {'frames_per_block':     ptycho_self.frames_per_block,
+                               'min_frames_for_recon': ptycho_self.p.min_frames_for_recon,
+                               'numiter':              ptycho_self.p.engines.engine00.numiter,
+                               'numiter_contiguous':   ptycho_self.p.engines.engine00.numiter_contiguous}
+                    f.write(f'{extra}, {extra_P} \n\n')
+                else:
+                    f.write(f'\n{extra} \n')
+                    f.write(f'Total Pods: {all_pods} ({active_pods} active), \n')
+                    try:
+                        f.write(f'Iteration:  {ptycho_engine.curiter}, \n\n\n')
+                    except:
+                        pass
     if plotlog != None:
         addr = ptycho_self.interactor.address
         port = ptycho_self.interactor.port
@@ -270,6 +278,28 @@ class LiveScan(PtyScan):
     type = int
     help = Rebinning factor for the raw data frames used by the RelayServer.
       ``'None'`` or ``1`` both mean *no binning*
+
+    [average_x_at_RS]
+    default = None
+    type = str
+    help = Which x motor to use for averaging positions.
+     Only used when there is 2 x- and y positions per frame.
+
+    [average_y_at_RS]
+    default = None
+    type = str
+    help = Which y motor to use for averaging positions.
+     Only used when there is 2 x- and y positions per frame.
+
+    [maskfile]
+    default = None
+    type = str
+    help = Path to maskfile.h5
+
+    [backgroundfile]
+    default = None
+    type = str
+    help = Path to backgroundfile
     """
 
 
@@ -325,14 +355,30 @@ class LiveScan(PtyScan):
             self.preprocess_RS['center'] = self.p.center
         if self.info.rebin_at_RS is not None and self.info.rebin_at_RS != 1:
             self.preprocess_RS['rebin'] = self.info.rebin_at_RS
-        ## Implement background subtraction
-        ## ...
+        if self.info.average_x_at_RS is not None:
+            self.preprocess_RS['average_x_at_RS'] = self.info.average_x_at_RS
+        if self.info.average_x_at_RS is not None:
+            self.preprocess_RS['average_x_at_RS'] = self.info.average_x_at_RS
+        # if self.info.maskfile is not None:
+        #     self.preprocess_RS['maskfile'] = self.info.maskfile
+
         self.socket.send_json(['preprocess', self.preprocess_RS])
         self.socket.recv_json()
         # !#
         super(LiveScan, self).initialize()
 
         self.meta.energy = self.common['energy']  # common gets data into all the ranks
+
+        if self.info.backgroundfile is not None:
+            with h5py.File(self.info.backgroundfile, 'r') as fp:
+                self.data_background = fp['/entry/instrument/zyla/data'] ### DEBUG: HARDCODED
+                self.data_background = np.mean(self.data_background, axis=0)## check data type, change to float 32
+
+        if self.info.maskfile:
+            with h5py.File(self.info.maskfile, 'r') as hf:
+                self.mask_data = np.array(hf.get('mask'))
+            logger_info('############## Loading mask! mask.shape = %s, np.sum(mask) = %s' % (str(self.mask_data.shape), str(np.sum(self.mask_data))))  ### DEBUG
+
 
 
 
@@ -342,14 +388,14 @@ class LiveScan(PtyScan):
         :return:
         """
 
-        logger.info('waiting for reply from RelayServer..')
+        logger.info('Waiting for energy-reply from RelayServer..')
         while not self.energy_replied:
             self.socket.send_json(['check_energy'])
             msg = self.socket.recv_json()
             if msg['energy'] != False:
                 # self.meta.energy = np.float64([msg['energy']]) * 1e-3  ## Read energy from beamline snapshot
-                # logger.info('### Energy set to %f keV' % self.meta.energy)
                 common_dct = {'energy': np.float64([msg['energy']]) * 1e-3}
+                logger.info('### Energy set to %f keV' % common_dct['energy'])
                 self.energy_replied = True
                 break
             time.sleep(1)
@@ -410,13 +456,36 @@ class LiveScan(PtyScan):
         msg = self.socket.recv_json()
         logger.info('#### check message = %s' % msg)
 
+        if self.checknr == 1:
+            backtrace(self.BT_fname,
+                      extra={'frames': frames,
+                             'p.frames_per_iter': self.p.frames_per_iter,
+                             'min_frames':        self.min_frames})
         backtrace(self.BT_fname,
-                  extra={'checknr': self.checknr, 'checknr_external': self.checknr_external,
+                  extra={'checknr': self.checknr,
                          'return': [min(frames, msg[0]), msg[1]],
-                         'latest_frame_index_received': self.latest_frame_index_received, 'p.num_frames': self.p.num_frames,
-                         'frames': frames, 'start': start, 'frames_accessible': msg[0]})
+                         'frames_accessible': msg[0],
+                         'start': start})
+        ##### DEBUG:
+        if min(frames, msg[0]) == 0:
+            time.sleep(0.6)
+
+        # backtrace(self.BT_fname,
+        #           extra={'checknr': self.checknr,
+        #                  'return': [min(frames, msg[0]), msg[1]],
+        #                  'frames_accessible': msg[0],
+        #                  'start': start, 'frames': frames,
+        #                  'p.frames_per_iter': self.p.frames_per_iter,
+        #                  'min_frames': self.min_frames})
+
+        # backtrace(self.BT_fname,
+        #           extra={'checknr': self.checknr, 'checknr_external': self.checknr_external,
+        #                  'return': [min(frames, msg[0]), msg[1]],
+        #                  'latest_frame_index_received': self.latest_frame_index_received, 'p.num_frames': self.p.num_frames,
+        #                  'frames': frames, 'start': start, 'frames_accessible': msg[0]})
 
         t1 = time.perf_counter()
+        self.checktottime += t1 - t0
         logger.info('#### Time spent in check = %f, accumulated time = %f' % ((t1-t0), self.checktottime))
         logger.info(headerline('', 'c', '#'))
         logger.info(headerline('Leaving LiveScan().check() at time %s' % time.strftime("%H:%M:%S", time.localtime()), 'c', '#'))
@@ -559,7 +628,11 @@ class LiveScan(PtyScan):
         # repackage data and return
         for k, i in enumerate(indices):
             try:
+                if self.info.backgroundfile is not None:
+                    imgs[k] = imgs[k] - self.data_background
+                    print(f'Subtracted background data!!')  ### DEBUG
                 raw[i] = imgs[k]
+                raw[i][raw[i] <= 0] = 0  ##  Take care of overexposed pixels.
 
                 logger_info('### i = %s, raw[i].shape = %s' % (str(i), str(raw[i].shape))) ### DEBUG
 
@@ -577,7 +650,7 @@ class LiveScan(PtyScan):
                     y *= -1
 
                 logger_info('### x, y = %s, %s' % (str(x), str(y))) ### DEBUG
-                pos[i] = -np.array((y, x)) * 1e-6
+                pos[i] = np.array((y, x)) * 1e-9 #### CHECK IF THIS SHOULD BE MINUS!
                 pos[i] = pos[i].reshape(len(pos[i]))
                 logger_info('### pos[i] = %s, pos[i].shape = %s' % (str(pos[i]), str(pos[i].shape))) ### DEBUG
                 if self.info.rebin_at_RS:
@@ -585,13 +658,15 @@ class LiveScan(PtyScan):
                 else:
                     weight[i] = np.ones_like(raw[i])
                     weight[i][np.where(raw[i] == 2 ** 32 - 1)] = 0
+                    weight[i][np.where(raw[i] < 0)] = 0
+                    if self.info.maskfile:
+                        weight[i] = weight[i] * self.mask_data
                 logger_info('### weight[i].shape = %s' % str(weight[i].shape)) ### DEBUG
             except Exception as err:
                 logger.info('### load exception')  ### DEBUG
                 print('Error: ', err)
                 break
 
-        # ToDo: Fix mask and weights
 
 
         logger_info('### pos = %s' % str(pos))  ### DEBUG
@@ -603,6 +678,32 @@ class LiveScan(PtyScan):
         logger.info(headerline('', 'c', '#') + '\n')
 
         return raw, pos, weight
+
+    def load_weight(self):
+        """
+        Provides the mask for the whole scan, the shape of the first
+        frame.
+
+        Will not be called on if I provide a weight in return load! => I can probably remove this
+        """
+        if self.info.maskfile:
+            with h5py.File(self.info.maskfile, 'r') as hf:
+                mask = np.array(hf.get('mask'))
+            logger_info('############## Inside load_weight(), mask.shape = %s, np.sum(mask) = %s' % (str(mask.shape), str(np.sum(mask))))  ### DEBUG
+            return mask
+
+    def _finalize(self):
+        """
+        Close the socket to the RelayServer and tell it that it's OK to close the socket from its end as well.
+        """
+        super()._finalize()
+
+        self.socket.send_json(['stop'])
+        reply = self.socket.recv_json()
+        logger.info('Closing the relay_socket at %s' % time.strftime("%H:%M:%S", time.localtime()))
+        self.socket.close()
+        self.context.term()
+        time.sleep(1)
 
 
     def BackTrace2(self, fname=None, plotlog=None, extra={}):
