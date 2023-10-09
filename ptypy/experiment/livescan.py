@@ -625,6 +625,7 @@ class LiveScan(PtyScan):
             imgs = imgs[0]
             print(f'w.shape = {w.shape}, imgs.shape = {imgs.shape}')### DEBUG
 
+        imgs = imgs.astype(np.float32)
         # repackage data and return
         for k, i in enumerate(indices):
             try:
