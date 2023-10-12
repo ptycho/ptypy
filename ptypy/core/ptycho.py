@@ -82,6 +82,7 @@ class Ptycho(Base):
        - ``INSPECT``:  Object Information
        - ``DEBUG``:    Debug
     type = str, int
+    choices = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'INSPECT', 'DEBUG']
     userlevel = 0
 
     [data_type]
@@ -90,6 +91,7 @@ class Ptycho(Base):
     doc = Reconstruction floating number precision (``'single'`` or
           ``'double'``)
     type = str
+    choices = ['single', 'double']
     userlevel = 1
 
     [run]
@@ -248,6 +250,7 @@ class Ptycho(Base):
     help = Options for default plotter or template name
     doc = Flexible layout for default plotter is not implemented yet. Please choose one of the
       templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``
+    choices = ['default', 'black_and_white', 'nearfield', 'minimal', 'weak']
     userlevel = 2
 
     [io.autoplot.dump]
@@ -269,6 +272,7 @@ class Ptycho(Base):
     help = Produce timings for benchmarking the performance of data loaders and engines
     doc = Switch to get timings and save results to a json file in p.io.home
         Choose ``'all'`` for timing data loading, engine_init, engine_prepare, engine_iterate and engine_finalize
+    choices = ['all', 'loading', 'engine_init', 'engine_prepare', 'engine_iterate', 'engine_finalize']
     userlevel = 2
 
     [scans]

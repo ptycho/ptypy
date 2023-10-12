@@ -376,6 +376,7 @@ class PositionCorrectionEngine(BaseEngine):
     default = "fourier"
     type = str
     help = Error metric, can choose between "fourier" and "photon"
+    choices = ["fourier", "photon"]
     
     [position_refinement.record]
     default = False

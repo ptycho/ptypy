@@ -114,6 +114,7 @@ class PtyScan(object):
     default = data
     help = Determines what will be loaded in parallel
     doc = Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
+    choices = ['data', 'common', 'all']
 
     [rebin]
     type = int
@@ -139,6 +140,7 @@ class PtyScan(object):
        <newline>
        Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, 
        do_flipud, do_fliplr)``
+    choices = [0, 1, 2, 3, 4, 5, 6, 7]
     userlevel = 1
 
     [min_frames]
