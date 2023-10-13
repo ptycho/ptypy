@@ -989,6 +989,11 @@ class Ptycho(Base):
                 if len(self.runtime.iter_info) > 0:
                     dump.runtime.iter_info = [self.runtime.iter_info[-1]]
 
+                if self.record_positions:
+                    dump.positions = {}
+                    for ID, S in self.obj.storages.items():
+                        dump.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
+
                 content = dump
 
             elif kind == 'minimal' or kind == 'dls':
