@@ -881,18 +881,36 @@ class Ptycho(Base):
             P.init_data()
         return P
 
-    def dump_current_state(self):
+    def restore_state(self, dump, reformat_exit=True):
+        """
+        Restore object/probe based on previous dump provide as u.Param instance
+        """
+        for ID,S in self.probe.storages.items():
+            S.data[:] = dump["probe"][ID]["data"]
+        for ID,S in self.obj.storages.items():
+            S.data[:] = dump["obj"][ID]["data"]
+        self.runtime = dump.runtime.copy(depth=99)
+        
+        # Reformat/Recalculate exit waves
+        if reformat_exit:
+            self.exit.reformat()
+            for scan in self.model.scans.values():
+                scan._initialize_exit(list(self.pods.values()))
+
+                
+    def dump_current_state(self, deep=True, full_error_log=True):
         """
         Returns current state of object/probe
         together with pars and runtime as ``u.Param`` instance
+        By default, dictionaries from probe and object storages are deep copies. 
         """
         dump = u.Param()
-        dump.probe = {ID: S._to_dict()
+        dump.probe = {ID: S._to_dict(deep)
                       for ID, S in self.probe.storages.items()}
         for ID, S in self.probe.storages.items():
             dump.probe[ID]['grids'] = S.grids()
 
-        dump.obj = {ID: S._to_dict()
+        dump.obj = {ID: S._to_dict(deep)
                     for ID, S in self.obj.storages.items()}
 
         for ID, S in self.obj.storages.items():
@@ -902,10 +920,10 @@ class Ptycho(Base):
             defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
         except RuntimeError:
             logger.warning("The parameters we are saving won't pass a validator check!")
-        dump.pars = self.p.copy()  # _to_dict(Recursive=True)
+        dump.pars = self.p.copy()
         dump.runtime = self.runtime.copy()
         # Discard some bits of runtime to save space
-        if len(self.runtime.iter_info) > 0:
+        if hasattr(self.runtime, "iter_info") and len(self.runtime.iter_info) > 0 and not full_error_log:
             dump.runtime.iter_info = [self.runtime.iter_info[-1]]
             
         return dump
@@ -992,7 +1010,7 @@ class Ptycho(Base):
                 #    self.interactor.stop()
                 logger.info('Generating copies of probe, object and parameters '
                             'and runtime')
-                content = self.dump_current_state()
+                content = self.dump_current_state(deep=False, full_error_log=False)
 
             elif kind == 'minimal' or kind == 'dls':
                 # if self.interactor is not None:

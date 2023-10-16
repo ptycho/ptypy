@@ -34,6 +34,7 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import weakref
+import copy
 from collections import OrderedDict
 
 try:
@@ -222,7 +223,7 @@ class Base(object):
         """
         pass
 
-    def _to_dict(self):
+    def _to_dict(self, deep=False):
         """
         Extract all necessary information from object and store them in
         a dictionary. Overwrite in child for custom behavior.
@@ -232,8 +233,12 @@ class Base(object):
         for k in self.__slots__:
             res[k] = getattr(self, k)
         if hasattr(self, '__dict__'):
-            res.update(self.__dict__.copy())
-        return res
+            if deep:
+                d = copy.deepcopy(self.__dict__)
+            else:
+                d = self.__dict__.copy()
+            res.update(d)
+        return res    
 
     def calc_mem_usage(self):
         space = 64   # that is for the class itself
