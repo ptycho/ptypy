@@ -162,4 +162,9 @@ class ePIE_multislice(stochastic.EPIE):
             self.probe_update(view, {pod.ID:self._exits[i][pod.pr_view]})
             self._probe[i][pod.pr_view] = pod.probe
 
+        # set the object as the product of all slices for better live plotting
+        self.ob.fill(self._object[0])
+        for i in range(1, self.p.number_of_slices):
+            self.ob *= self._object[i]
+
         return error
