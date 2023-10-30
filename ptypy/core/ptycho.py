@@ -881,7 +881,7 @@ class Ptycho(Base):
             logger.info('Loading data')
             P.init_data()
         return P
-    
+
     def save_run(self, alt_file=None, kind='minimal', force_overwrite=True):
         """
         Save run to file.
@@ -980,7 +980,7 @@ class Ptycho(Base):
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
                     logger.warning("The parameters we are saving won't pass a validator check!")
-                dump.pars = self.p.copy()
+                dump.pars = self.p.copy() # _to_dict(Recursive=True)
                 dump.runtime = self.runtime.copy()
                 # Discard some bits of runtime to save space
                 if len(self.runtime.iter_info) > 0:
@@ -1103,6 +1103,8 @@ class Ptycho(Base):
     def copy_state(self, name="baseline", overwrite=False):
         """
         Store a copy of the current state of object/probe
+
+        Warning: This feature is under development and syntax might change!
         """
         if name in self.state_dict:
             logger.warning("A state with name {:s} exists already".format(name))
@@ -1120,6 +1122,8 @@ class Ptycho(Base):
     def restore_state(self, name="baseline", reformat_exit=True):
         """
         Restore object/probe based on a previously saved copy
+
+        Warning: This feature is under development and syntax might change!
         """
         if name in self.state_dict:
             for ID,S in self.probe.storages.items():
