@@ -57,7 +57,7 @@ SOLVED PROBLEMS:
                 size (1,) with type float64, whereas my energy is loaded directly as a float, i.e. float32!!
 ✖✖✖✖✖✖✖✖✖ Check if there is a way to see how many pods/frames that are included in each .ptyr file.
             ✖ SOLUTION: Using inspect.getouterframes(..) to retrieve variables from classes/methods/functions that
-                calls on LiveScan. This is implemented in my fynction "backtrace()"
+                calls on LiveScan. This is implemented in my fynction "self.BackTrace()"
 """
 
 """
@@ -117,86 +117,6 @@ def logger_info(*arg):
     """
     return
 
-
-# def decompress(data, shape, dtype):
-#     """
-#     Copied from nanomax_streaming.py, decompresses streamed images when
-#     recv_multipart(flags=zmq.NOBLOCK) is used
-#     """
-#     block_size = struct.unpack('>I', data[8:12])[0] // dtype.itemsize
-#     data = np.frombuffer(data[12:], np.int8)
-#     output = bitshuffle.decompress_lz4(arr=data,
-#                                        shape=shape,
-#                                        dtype=dtype,
-#                                        block_size=block_size)
-#     return output
-
-
-def backtrace(fname=None, plotlog=None, request_Ptycho=None, extra={}):
-    """
-    Retrieves variables from functions/classes which are calling LiveScan,
-    such that current nr of pods and the nr of currently performed iterations
-    can be printed.
-    """
-    logger.info(headerline('', 'c', '°'))
-    curframe = inspect.currentframe()
-    calframe = inspect.getouterframes(curframe, 2)
-    #### print('calframe.__len__() = %d' % calframe.__len__())
-    #### try:
-    ####     for fr in range(0, calframe.__len__()):
-    ####         print(f'calframe[{fr}] = ', calframe[fr])
-    ####         print(f'calframe[{fr}][0].f_locals.keys() = \n', calframe[fr][0].f_locals.keys(), '\n')
-    #### except:
-    ####     pass
-    #print(*[(frame.lineno, frame.filename, frame.function) for frame in calframe], sep="\n")
-    try:
-        ##OnMyMac## ptychoframe = [frame.filename for frame in calframe].index('/opt/anaconda3/envs/Contrast_PtyPyLive_v1/lib/python3.7/site-packages/ptypy/core/ptycho.py') ## or '/opt/anaconda3/envs/ptypy_contrast_NM-utils/lib/python3.7/site-packages/ptypy/core/ptycho.py'   or  '/opt/anaconda3/envs/Contrast_PtyPyLive_v1/lib/python3.7/site-packages/ptypy/core/ptycho.py'   or  '/Users/lexelius/Documents/PtyPy/ptypy-master/ptypy/core/ptycho.py'
-        ptychoframe = [frame.filename for frame in calframe].index(ptypy.core.ptycho.__file__)
-        ptycho_self = calframe[ptychoframe][0].f_locals['self']
-        #### ptycho_self.print_stats()
-        active_pods = sum(1 for pod in ptycho_self.pods.values() if pod.active)
-        all_pods = len(ptycho_self.pods.values())
-        print(f'---- Total Pods {all_pods} ({active_pods} active) ----')
-        # if calframe[ptychoframe].function == 'run': ###
-        #     pdb.set_trace()
-    except:
-        pass
-    if calframe[ptychoframe].function == 'run':# and calframe[7].lineno == 632:
-        ptycho_engine = calframe[ptychoframe][0].f_locals['engine']
-        print('ptycho_engine.curiter = ', ptycho_engine.curiter)
-    if fname != None:
-        with open(fname, 'a') as f:
-            if extra != {}:
-                if 'min_frames' in extra:
-                    extra_P = {'frames_per_block':     ptycho_self.frames_per_block,
-                               'min_frames_for_recon': ptycho_self.p.min_frames_for_recon,
-                               'numiter':              ptycho_self.p.engines.engine00.numiter,
-                               'numiter_contiguous':   ptycho_self.p.engines.engine00.numiter_contiguous}
-                    f.write(f'{extra}, {extra_P} \n\n')
-                else:
-                    f.write(f'\n{extra} \n')
-                    f.write(f'Total Pods: {all_pods} ({active_pods} active), \n')
-                    try:
-                        f.write(f'Iteration:  {ptycho_engine.curiter}, \n\n\n')
-                    except:
-                        pass
-    if plotlog != None:
-        addr = ptycho_self.interactor.address
-        port = ptycho_self.interactor.port
-        print(f'Connected to :::::: {addr}:{port}')
-    if request_Ptycho != None:
-        print('++++++++++++++++ ptycho_self ++++++++++++++++')
-        for key, val in ptycho_self.__dict__.items():
-            print(key, ':', val)
-        print()
-        print(ptycho_self.interactor)
-        print('+++++++++++++++++++++++++++++++++++++++++++++')
-
-    logger.info(headerline('', 'c', '°') + '\n')
-
-
-# ordinal = lambda n: "%d%s" % (n,"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4])
-# print([ordinal(n) for n in range(1,32)])
 
 ##@defaults_tree.parse_doc('scandata.LiveScan')
 @register()
@@ -326,7 +246,6 @@ class LiveScan(PtyScan):
         self.preprocess_RS = {}
         self.t = time.gmtime()
         self.t = f'{self.t[0]}-{self.t[1]:02d}-{self.t[2]:02d}__{self.t[3]:02d}-{self.t[4]:02d}'
-        #backtrace()
 
         self.p = p
 
@@ -335,7 +254,7 @@ class LiveScan(PtyScan):
             self.BT_fname = re.sub(r'(.*/).*/.*', rf'\1backtrace_{time.strftime("%F_%H:%M:%S", time.localtime())}.txt', self.p.dfile)
         except:
             self.BT_fname = None
-            print("Warning: Couldn't write a backtrace-file.")
+            print("Warning: Couldn't write a self.BackTrace-file.")
         self.BT_logfname = '/data/staff/nanomax/commissioning_2022-2/reblex/interaction_log.txt'##'/mxn/home/reblex/interaction_log.txt' # Will have to be updated on official release.
 
         logger.info(headerline('', 'c', '#'))
@@ -431,41 +350,27 @@ class LiveScan(PtyScan):
         logger.info(headerline('', 'c', '#'))
         logger.info(headerline('Entering LiveScan().check()', 'c', '#'))
         logger.info(headerline('', 'c', '#'))
+        self.BackTrace()
         t0 = time.perf_counter()
         self.checknr += 1
         self.checknr_external += 1
         logger.info('check() has now been called %d times in total, and %d times externally.' % (self.checknr, self.checknr_external))  ##
-        ###backtrace(self.BT_fname, extra={'checknr': self.checknr, 'checknr_external': self.checknr_external, 'latest_frame_index_received': self.latest_frame_index_received, 'frames': frames, 'start': start})
+        ###self.BackTrace(self.BT_fname, extra={'checknr': self.checknr, 'checknr_external': self.checknr_external, 'latest_frame_index_received': self.latest_frame_index_received, 'frames': frames, 'start': start})
 
         rank = parallel.rank
         logger.info("### I'm check-rank nr  = %s" % rank)
         if not self.interaction_started:
-            self.BackTrace2(plotlog=self.BT_logfname)
+            self.BackTrace(plotlog=self.BT_logfname)
 
-        ## ToDo: Reimplement closing sockets!
-        # if self.end_of_scan == True and (self.latest_frame_index_received - start + 1) <= 0:
-        #     self.socket.send_json(['stop'])
-        #     reply = self.socket.recv_json()
-        #     logger.info('Closing the relay_socket at %s' % time.strftime("%H:%M:%S", time.localtime()))
-        #     self.socket.close()
-        #     return 0, self.end_of_scan
-        # #!# else do this bwc:
-        # bwc = self.p.block_wait_count #### maybe
-        # if bwc >= 1 and self.checknr_external % (bwc + 1) == 0:  ## ToDo: Make a better solution than using self.checknr
-        #     ##### backtrace(self.BT_fname, extra={'checknr': self.checknr, 'checknr_external': self.checknr_external, 'return': ['bwc => 0', self.end_of_scan], 'p.num_frames': self.p.num_frames, 'frames': frames, 'start': start})
-        #     logger.info('### block_wait_count, return')
-        #     return 0, False#####self.end_of_scan
-
-        self.socket.send_json(['check'])
         msg = self.socket.recv_json()
         logger.info('#### check message = %s' % msg)
 
         if self.checknr == 1:
-            backtrace(self.BT_fname,
+            self.BackTrace(self.BT_fname,
                       extra={'frames': frames,
                              'p.frames_per_iter': self.p.frames_per_iter,
                              'min_frames':        self.min_frames})
-        backtrace(self.BT_fname,
+        self.BackTrace(self.BT_fname,
                   extra={'checknr': self.checknr,
                          'return': [min(frames, msg[0]), msg[1]],
                          'frames_accessible': msg[0],
@@ -473,20 +378,6 @@ class LiveScan(PtyScan):
         ##### DEBUG:
         if min(frames, msg[0]) == 0:
             time.sleep(0.6)
-
-        # backtrace(self.BT_fname,
-        #           extra={'checknr': self.checknr,
-        #                  'return': [min(frames, msg[0]), msg[1]],
-        #                  'frames_accessible': msg[0],
-        #                  'start': start, 'frames': frames,
-        #                  'p.frames_per_iter': self.p.frames_per_iter,
-        #                  'min_frames': self.min_frames})
-
-        # backtrace(self.BT_fname,
-        #           extra={'checknr': self.checknr, 'checknr_external': self.checknr_external,
-        #                  'return': [min(frames, msg[0]), msg[1]],
-        #                  'latest_frame_index_received': self.latest_frame_index_received, 'p.num_frames': self.p.num_frames,
-        #                  'frames': frames, 'start': start, 'frames_accessible': msg[0]})
 
         t1 = time.perf_counter()
         self.checktottime += t1 - t0
@@ -504,7 +395,7 @@ class LiveScan(PtyScan):
         #     self.frames_accessible = msg[0]  # Total nr of frames accessible
         #     self.end_of_scan = msg[1]
         #
-        #     backtrace(self.BT_fname,
+        #     self.BackTrace(self.BT_fname,
         #               extra={'checknr': self.checknr, 'checknr_external': self.checknr_external,
         #                      'return': [(self.latest_frame_index_received - start + 1), self.end_of_scan],
         #                      'latest_frame_index_received': self.latest_frame_index_received, 'p.num_frames': self.p.num_frames,
@@ -598,7 +489,7 @@ class LiveScan(PtyScan):
         t0 = time.perf_counter()
         self.loadnr += 1
         logger.info('load() has now been called %d times.' % self.loadnr)
-        backtrace()
+        self.BackTrace()
         logger_info('### parallel.master = %s, parallel.size = %s' % (str(parallel.master), str(parallel.size)))  ### DEBUG
 
         logger.info('### indices = %s' % indices)  ### DEBUG
@@ -704,48 +595,74 @@ class LiveScan(PtyScan):
         self.context.term()
         time.sleep(1)
 
-
-    def BackTrace2(self, fname=None, plotlog=None, extra={}):
+    def BackTrace(self, fname=None, writeBTsummary=True, plotlog=None, request_Ptycho=None, extra={}, verbose=False):
         """
-        Retrieves variables from functions/classes which are calling LiveScan,
-        such that current nr of pods and the nr of currently performed iterations
-        can be printed.
+        :param self:
+        :param fname:   filename where self.BackTrace info will be written to
+        :param plotlog: filename where ptypy interaction info will be written, used for jupyter liveplotting
+        :param extra:   Extra parameters that should be written to the file 'fname'
+        :param verbose: False,
+                        1: Print traceback summary,
+                        2: Print full traceback and names of local variables in each frame,
+                        3: Print both verbose = 1 and 2
+        :return:
         """
         logger.info(headerline('', 'c', '°'))
         curframe = inspect.currentframe()
         calframe = inspect.getouterframes(curframe, 2)
-        #### print('calframe.__len__() = %d' % calframe.__len__())
-        #### try:
-        ####     for fr in range(0, calframe.__len__()):
-        ####         print(f'calframe[{fr}] = ', calframe[fr])
-        ####         print(f'calframe[{fr}][0].f_locals.keys() = \n', calframe[fr][0].f_locals.keys(), '\n')
-        #### except:
-        ####     pass
-        #print(*[(frame.lineno, frame.filename, frame.function) for frame in calframe], sep="\n")
+        if verbose in [1, 3]:
+            print(*[(frame.lineno, frame.filename, frame.function) for frame in calframe], "", sep="\n")
+        if verbose in [2, 3]:
+            print('calframe.__len__() = %d' % calframe.__len__())
+            try:
+                for fr in range(0, calframe.__len__()):
+                    print(f'calframe[{fr}] =')
+                    for calkey, calval in calframe[fr]._asdict().items():
+                        print('\t', str(calkey + ':').ljust(14, ' '), calval)
+                    print(f'calframe[{fr}][0].f_locals.keys() = \n\t', calframe[fr][0].f_locals.keys(), '\n')
+            except:
+                pass
         try:
-            ##OnMyMac## ptychoframe = [frame.filename for frame in calframe].index('/opt/anaconda3/envs/Contrast_PtyPyLive_v1/lib/python3.7/site-packages/ptypy/core/ptycho.py') ## or '/opt/anaconda3/envs/ptypy_contrast_NM-utils/lib/python3.7/site-packages/ptypy/core/ptycho.py'   or  '/opt/anaconda3/envs/Contrast_PtyPyLive_v1/lib/python3.7/site-packages/ptypy/core/ptycho.py'   or  '/Users/lexelius/Documents/PtyPy/ptypy-master/ptypy/core/ptycho.py'
             ptychoframe = [frame.filename for frame in calframe].index(ptypy.core.ptycho.__file__)
             ptycho_self = calframe[ptychoframe][0].f_locals['self']
             #### ptycho_self.print_stats()
             active_pods = sum(1 for pod in ptycho_self.pods.values() if pod.active)
             all_pods = len(ptycho_self.pods.values())
             print(f'---- Total Pods {all_pods} ({active_pods} active) ----')
-            # if calframe[ptychoframe].function == 'run': ###
-            #     pdb.set_trace()
         except:
             pass
-        if calframe[ptychoframe].function == 'run':# and calframe[7].lineno == 632:
+        if calframe[ptychoframe].function == 'run':
             ptycho_engine = calframe[ptychoframe][0].f_locals['engine']
             print('ptycho_engine.curiter = ', ptycho_engine.curiter)
         if fname != None:
-            with open(fname, 'a') as f1:
+            with open(fname, 'a') as f:
                 if extra != {}:
-                    f1.write(f'{extra}, \n')
-                f1.write(f'Total Pods: {all_pods} ({active_pods} active), \n')
-                try:
-                    f1.write(f'Iteration:  {ptycho_engine.curiter}, \n\n')
-                except:
-                    pass
+                    if 'min_frames' in extra:
+                        extra_P = {'frames_per_block':     ptycho_self.frames_per_block,
+                                   'min_frames_for_recon': ptycho_self.p.min_frames_for_recon,
+                                   'numiter':              ptycho_self.p.engines.engine00.numiter,
+                                   'numiter_contiguous':   ptycho_self.p.engines.engine00.numiter_contiguous}
+                        f.write(f'{extra}, {extra_P} \n\n')
+                    else:
+                        f.write(f'\n{extra} \n')
+                        f.write(f'Total Pods: {all_pods} ({active_pods} active), \n')
+                        try:
+                            f.write(f'Iteration:  {ptycho_engine.curiter}, \n\n\n')
+                        except:
+                            pass
+        if writeBTsummary and fname != None and 'start' in extra.keys():
+            fnamesummary = fname.replace('backtrace', 'backtrace-summary')
+            try:
+                with open(fnamesummary, 'r+') as f2:
+                    text = f2.read()
+            except:
+                pass
+            try:
+                with open(fnamesummary, 'a+') as f2:
+                    if f'iteration: {ptycho_engine.curiter}' not in text:
+                        f2.write(f'start: {str(extra["start"]).ljust(4, " ")}, iteration: {str(ptycho_engine.curiter).ljust(5, " ")}, \n')
+            except Exception as ex:
+                pass
         if plotlog != None:
             if ptycho_self.interactor != None:
                 self.interaction_started = True
@@ -755,9 +672,15 @@ class LiveScan(PtyScan):
                 print(f'Connected to :::::: {addr}:{port}')
                 print('+++++++++++++++++++++++++++++++++++++++++++++')
                 print(f'writing to {plotlog}')
-                with open(plotlog, 'w') as f2:
-                    f2.write(f'address={addr}\nport={port}\ntime={time.strftime("%H:%M:%S", time.localtime())}') ##\n
-
+                with open(plotlog, 'w') as f3:
+                    f3.write(f'address={addr}\nport={port}\ntime={time.strftime("%H:%M:%S", time.localtime())}')
+        if request_Ptycho != None:
+            print('++++++++++++++++ ptycho_self ++++++++++++++++')
+            for key, val in ptycho_self.__dict__.items():
+                print(key, ':', val)
+            print()
+            print(ptycho_self.interactor)
+            print('+++++++++++++++++++++++++++++++++++++++++++++')
 
         logger.info(headerline('', 'c', '°') + '\n')
 
