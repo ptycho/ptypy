@@ -233,7 +233,7 @@ class Base(object):
             res[k] = getattr(self, k)
         if hasattr(self, '__dict__'):
             res.update(self.__dict__.copy())
-        return res    
+        return res
 
     def calc_mem_usage(self):
         space = 64   # that is for the class itself

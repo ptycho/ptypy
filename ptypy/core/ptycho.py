@@ -980,7 +980,7 @@ class Ptycho(Base):
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
                     logger.warning("The parameters we are saving won't pass a validator check!")
-                dump.pars = self.p.copy() # _to_dict(Recursive=True)
+                dump.pars = self.p.copy() #  _to_dict(Recursive=True)
                 dump.runtime = self.runtime.copy()
                 # Discard some bits of runtime to save space
                 if len(self.runtime.iter_info) > 0:
