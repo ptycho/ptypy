@@ -157,7 +157,8 @@ class Ptycho(Base):
     doc = Choose a reconstruction file format for after engine completion.
        - ``'minimal'``: Bare minimum of information
        - ``'dls'``:    Custom format for Diamond Light Source
-    choices = 'minimal','dls'
+       - ``'used_params'``: Same as minimal but including all used parameters 
+    choices = 'minimal','dls','used_params'
 
     [io.interaction]
     default = None
@@ -989,9 +990,14 @@ class Ptycho(Base):
                 if len(self.runtime.iter_info) > 0:
                     dump.runtime.iter_info = [self.runtime.iter_info[-1]]
 
+                if self.record_positions:
+                    dump.positions = {}
+                    for ID, S in self.obj.storages.items():
+                        dump.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
+
                 content = dump
 
-            elif kind == 'minimal' or kind == 'dls':
+            elif kind in ('minimal', 'dls', 'used_params'):
                 # if self.interactor is not None:
                 #    self.interactor.stop()
                 logger.info('Generating shallow copies of probe, object and '
@@ -1006,7 +1012,7 @@ class Ptycho(Base):
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
                     logger.warning("The parameters we are saving won't pass a validator check!")
-                minimal.pars = self.p.copy()  # _to_dict(Recursive=True)
+                minimal.pars = self.p.copy(depth=99)  # _to_dict(Recursive=True)
                 minimal.runtime = self.runtime.copy()
 
                 content = minimal
@@ -1019,6 +1025,13 @@ class Ptycho(Base):
 
                 for ID, S in self.obj.storages.items():
                     content.obj[ID]['grids'] = S.grids()
+
+            if kind == 'used_params':
+                for name, engine in self.engines.items():
+                    content.pars.engines[name] = engine.p
+                for name, scan in self.model.scans.items():
+                    content.pars.scans[name] = scan.p
+                    content.pars.scans[name].data = scan.ptyscan.p
 
             if kind in ['minimal', 'dls'] and self.record_positions:
                 content.positions = {}
