@@ -351,6 +351,7 @@ class Ptycho(Base):
         self.mask = None
         self.model = None
         self.new_data = None
+        self.state_dict = dict()
 
         # Communication
         self.interactor = None
@@ -880,53 +881,6 @@ class Ptycho(Base):
             logger.info('Loading data')
             P.init_data()
         return P
-
-    def restore_state(self, dump, reformat_exit=True):
-        """
-        Restore object/probe based on previous dump provide as u.Param instance
-        """
-        for ID,S in self.probe.storages.items():
-            S.data[:] = dump["probe"][ID]["data"]
-        for ID,S in self.obj.storages.items():
-            S.data[:] = dump["obj"][ID]["data"]
-        self.runtime = dump.runtime.copy(depth=99)
-        
-        # Reformat/Recalculate exit waves
-        if reformat_exit:
-            self.exit.reformat()
-            for scan in self.model.scans.values():
-                scan._initialize_exit(list(self.pods.values()))
-
-                
-    def dump_current_state(self, deep=True, full_error_log=True):
-        """
-        Returns current state of object/probe
-        together with pars and runtime as ``u.Param`` instance
-        By default, dictionaries from probe and object storages are deep copies. 
-        """
-        dump = u.Param()
-        dump.probe = {ID: S._to_dict(deep)
-                      for ID, S in self.probe.storages.items()}
-        for ID, S in self.probe.storages.items():
-            dump.probe[ID]['grids'] = S.grids()
-
-        dump.obj = {ID: S._to_dict(deep)
-                    for ID, S in self.obj.storages.items()}
-
-        for ID, S in self.obj.storages.items():
-            dump.obj[ID]['grids'] = S.grids()
-
-        try:
-            defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
-        except RuntimeError:
-            logger.warning("The parameters we are saving won't pass a validator check!")
-        dump.pars = self.p.copy()
-        dump.runtime = self.runtime.copy()
-        # Discard some bits of runtime to save space
-        if hasattr(self.runtime, "iter_info") and len(self.runtime.iter_info) > 0 and not full_error_log:
-            dump.runtime.iter_info = [self.runtime.iter_info[-1]]
-            
-        return dump
     
     def save_run(self, alt_file=None, kind='minimal', force_overwrite=True):
         """
@@ -1010,7 +964,29 @@ class Ptycho(Base):
                 #    self.interactor.stop()
                 logger.info('Generating copies of probe, object and parameters '
                             'and runtime')
-                content = self.dump_current_state(deep=False, full_error_log=False)
+                dump = u.Param()
+                dump.probe = {ID: S._to_dict()
+                              for ID, S in self.probe.storages.items()}
+                for ID, S in self.probe.storages.items():
+                    dump.probe[ID]['grids'] = S.grids()
+
+                dump.obj = {ID: S._to_dict()
+                            for ID, S in self.obj.storages.items()}
+
+                for ID, S in self.obj.storages.items():
+                    dump.obj[ID]['grids'] = S.grids()
+
+                try:
+                    defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
+                except RuntimeError:
+                    logger.warning("The parameters we are saving won't pass a validator check!")
+                dump.pars = self.p.copy()
+                dump.runtime = self.runtime.copy()
+                # Discard some bits of runtime to save space
+                if len(self.runtime.iter_info) > 0:
+                    dump.runtime.iter_info = [self.runtime.iter_info[-1]]
+
+                content = dump
 
             elif kind == 'minimal' or kind == 'dls':
                 # if self.interactor is not None:
@@ -1123,7 +1099,41 @@ class Ptycho(Base):
                            cmap='gray')
             fignum += 1
 
-    
+
+    def copy_state(self, name="baseline", overwrite=False):
+        """
+        Store a copy of the current state of object/probe
+        """
+        if name in self.state_dict:
+            logger.warning("A state with name {:s} exists already".format(name))
+            if overwrite:
+                logger.warning("Overwrite {:s} state".format(name))                
+                del self.state_dict[name]
+            else:
+                return
+        self.state_dict[name] = {}
+        self.state_dict[name]["ob"] = self.obj.copy()
+        self.state_dict[name]["pr"] = self.probe.copy()
+        self.state_dict[name]["runtime"] = self.runtime.copy(depth=99)
+        logger.info("Saved a copy of object and probe as the {:s} state".format(name))
+            
+    def restore_state(self, name="baseline", reformat_exit=True):
+        """
+        Restore object/probe based on a previously saved copy
+        """
+        if name in self.state_dict:
+            for ID,S in self.probe.storages.items():
+                S.data[:] = self.state_dict[name]["pr"].storages[ID].data
+            for ID,S in self.obj.storages.items():
+                S.data[:] = self.state_dict[name]["ob"].storages[ID].data
+        self.runtime = self.state_dict[name]["runtime"]
+        
+        # Reformat/Recalculate exit waves
+        if reformat_exit:
+            self.exit.reformat()
+            for scan in self.model.scans.values():
+                scan._initialize_exit(list(self.pods.values()))
+
     def _redistribute_data(self, div = 'rect', obj_storage=None):
         """
         This function redistributes data among nodes, so that each
