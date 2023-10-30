@@ -373,10 +373,14 @@ class LiveScan(PtyScan):
             with h5py.File(self.info.backgroundfile, 'r') as fp:
                 self.data_background = fp['/entry/instrument/zyla/data'] ### DEBUG: HARDCODED
                 self.data_background = np.mean(self.data_background, axis=0)## check data type, change to float 32
+            if self.info.crop_at_RS is not None:
+                self.data_background = u.crop_pad_symmetric_2d(self.data_background, (self.info.crop_at_RS, self.info.crop_at_RS), center=self.p.center)[0]
 
         if self.info.maskfile:
             with h5py.File(self.info.maskfile, 'r') as hf:
                 self.mask_data = np.array(hf.get('mask'))
+            if self.info.crop_at_RS is not None:
+                self.mask_data = u.crop_pad_symmetric_2d(self.mask_data, (self.info.crop_at_RS, self.info.crop_at_RS), center=self.p.center)[0]
             logger_info('############## Loading mask! mask.shape = %s, np.sum(mask) = %s' % (str(self.mask_data.shape), str(np.sum(self.mask_data))))  ### DEBUG
 
 
@@ -600,10 +604,8 @@ class LiveScan(PtyScan):
         logger.info('### indices = %s' % indices)  ### DEBUG
         self.socket.send_json(['load', {'frame': indices}])
         msgs = self.socket.recv_pyobj()
-        logger_info('### msgs[0][shape] = %s' % str(msgs[0]['shape'])) ### DEBUG
         buff = self.socket.recv(copy=True)
         imgs = decompress_lz4(np.frombuffer(buff, dtype=np.dtype('uint8')), msgs[0]['shape'], msgs[0]['dtype'])
-        logger_info('### type(imgs) = %s' % type(imgs)) ### DEBUG
         if self.loadnr == 1 and 'new_center' in msgs[0].keys():
             self.info.center = msgs[0]['new_center']
         if self.loadnr == 1 and 'RS_rebinned' in msgs[0].keys():
@@ -631,7 +633,6 @@ class LiveScan(PtyScan):
             try:
                 if self.info.backgroundfile is not None:
                     imgs[k] = imgs[k] - self.data_background
-                    print(f'Subtracted background data!!')  ### DEBUG
                 raw[i] = imgs[k]
                 raw[i][raw[i] <= 0] = 0  ##  Take care of overexposed pixels.
 
@@ -650,10 +651,8 @@ class LiveScan(PtyScan):
                 if self.info.yMotorFlipped:
                     y *= -1
 
-                logger_info('### x, y = %s, %s' % (str(x), str(y))) ### DEBUG
                 pos[i] = np.array((y, x)) * 1e-9 #### CHECK IF THIS SHOULD BE MINUS!
                 pos[i] = pos[i].reshape(len(pos[i]))
-                logger_info('### pos[i] = %s, pos[i].shape = %s' % (str(pos[i]), str(pos[i].shape))) ### DEBUG
                 if self.info.rebin_at_RS:
                     weight[i] = w[k]
                 else:
@@ -670,7 +669,6 @@ class LiveScan(PtyScan):
 
 
 
-        logger_info('### pos = %s' % str(pos))  ### DEBUG
         t1 = time.perf_counter()
         self.loadtottime += t1 - t0
         logger.info('#### Time spent in load = %f, accumulated time = %f' % ((t1 - t0), self.loadtottime))
