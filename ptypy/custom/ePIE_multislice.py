@@ -20,6 +20,12 @@ class ePIE_multislice(stochastic.EPIE):
 
     Defaults:
 
+    [name]
+    default = ePIE_multislice
+    type = str
+    help =
+    doc =
+
     [number_of_slices]
     default = 2
     type = int
@@ -53,6 +59,11 @@ class ePIE_multislice(stochastic.EPIE):
             self._object[i] = self.ob.copy(self.ob.ID + "_o_" + str(i))
             self._probe[i] = self.pr.copy(self.pr.ID + "_p_" + str(i))
             self._exits[i] = self.pr.copy(self.pr.ID + "_e_" + str(i))
+
+        # ToDo:
+        #    - allow for non equal slice spacing
+        #    - allow for start_slice_update at a freely chosen iteration
+        #      for each slice separately
 
         scan = list(self.ptycho.model.scans.values())[0]
         geom = scan.geometries[0]
@@ -118,49 +129,49 @@ class ePIE_multislice(stochastic.EPIE):
         Does multislice ePIE
         based on https://doi.org/10.1364/JOSAA.29.001606
         """
-        # Assume single pod
-        # TODO: consider probe modes
-        pod = view.pod
 
-        # Forward multislice, calculate exit waves
-        for i in range(self.p.number_of_slices-1):
-            # exit wave for this slice
-            self._exits[i][pod.pr_view] = self._probe[i][pod.pr_view] * self._object[i][pod.ob_view]
-            # incident wave for next slice
-            self._probe[i+1][pod.pr_view] = self.fw(self._exits[i][pod.pr_view])
+        for name, pod in view.pods.items():
+            # Forward multislice, calculate exit waves
+            for i in range(self.p.number_of_slices-1):
+                # exit wave for this slice
+                self._exits[i][pod.pr_view] = self._probe[i][pod.pr_view] * self._object[i][pod.ob_view]
+                # incident wave for next slice
+                self._probe[i+1][pod.pr_view] = self.fw(self._exits[i][pod.pr_view])
 
-        # Exit wave for last slice
-        self._exits[-1][pod.pr_view] = self._probe[-1][pod.pr_view] * self._object[-1][pod.ob_view]
+            # Exit wave for last slice
+            self._exits[-1][pod.pr_view] = self._probe[-1][pod.pr_view] * self._object[-1][pod.ob_view]
 
-        # Save final state into pod (need for ptypy fourier update)
-        pod.probe = self._probe[-1][pod.pr_view]
-        pod.object = self._object[-1][pod.ob_view]
+            # Save final state into pod (need for ptypy fourier update)
+            pod.probe = self._probe[-1][pod.pr_view]
+            pod.object = self._object[-1][pod.ob_view]
 
         # Fourier update
         error = self.fourier_update(view)
 
         # Object/probe update for the last slice
-        self.object_update(view, {pod.ID:self._exits[-1][pod.pr_view]})
-        self._object[-1][pod.ob_view] = pod.object
-        self.probe_update(view, {pod.ID:self._exits[-1][pod.pr_view]})
-        self._probe[-1][pod.pr_view] = pod.probe
+        self.object_update(view, {pod.ID:self._exits[-1][pod.pr_view] for name, pod in view.pods.items()})
+        self.probe_update(view, {pod.ID:self._exits[-1][pod.pr_view] for name, pod in view.pods.items()})
+        for name, pod in view.pods.items():
+            self._object[-1][pod.ob_view] = pod.object
+            self._probe[-1][pod.pr_view] = pod.probe
 
         # Object/probe update for other slices (backwards)
         for i in range(self.p.number_of_slices-2, -1, -1):
 
-            # Backwards propagation of the probe
-            pod.exit = self.bw(self._probe[i+1][pod.pr_view])
+            for name, pod in view.pods.items():
+                # Backwards propagation of the probe
+                pod.exit = self.bw(self._probe[i+1][pod.pr_view])
 
-            # Save state into pods
-            pod.probe = self._probe[i][pod.pr_view]
-
-            pod.object = self._object[i][pod.ob_view]
+                # Save state into pods
+                pod.probe = self._probe[i][pod.pr_view]
+                pod.object = self._object[i][pod.ob_view]
 
             # Actual object/probe update
-            self.object_update(view, {pod.ID:self._exits[i][pod.pr_view]})
-            self._object[i][pod.ob_view] = pod.object
-            self.probe_update(view, {pod.ID:self._exits[i][pod.pr_view]})
-            self._probe[i][pod.pr_view] = pod.probe
+            self.object_update(view, {pod.ID:self._exits[i][pod.pr_view] for name, pod in view.pods.items()})                
+            self.probe_update(view, {pod.ID:self._exits[i][pod.pr_view] for name, pod in view.pods.items()})
+            for name, pod in view.pods.items():
+                self._object[i][pod.ob_view] = pod.object
+                self._probe[i][pod.pr_view] = pod.probe
 
         # set the object as the product of all slices for better live plotting
         self.ob.fill(self._object[0])
