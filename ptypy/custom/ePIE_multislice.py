@@ -126,21 +126,21 @@ class ePIE_multislice(stochastic.EPIE):
 
     def multislice_update(self, view):
         """
-        Does multislice ePIE
-        based on https://doi.org/10.1364/JOSAA.29.001606
+        Performs one 'iteration' of 3PIE (multislice ePIE) for a single view.
+        Based on https://doi.org/10.1364/JOSAA.29.001606
         """
 
-        for name, pod in view.pods.items():
+        for i in range(self.p.number_of_slices-1):
             # Forward multislice, calculate exit waves
-            for i in range(self.p.number_of_slices-1):
+            for name, pod in view.pods.items():
                 # exit wave for this slice
                 self._exits[i][pod.pr_view] = self._probe[i][pod.pr_view] * self._object[i][pod.ob_view]
                 # incident wave for next slice
                 self._probe[i+1][pod.pr_view] = self.fw(self._exits[i][pod.pr_view])
 
+        for name, pod in view.pods.items():
             # Exit wave for last slice
             self._exits[-1][pod.pr_view] = self._probe[-1][pod.pr_view] * self._object[-1][pod.ob_view]
-
             # Save final state into pod (need for ptypy fourier update)
             pod.probe = self._probe[-1][pod.pr_view]
             pod.object = self._object[-1][pod.ob_view]
@@ -161,7 +161,6 @@ class ePIE_multislice(stochastic.EPIE):
             for name, pod in view.pods.items():
                 # Backwards propagation of the probe
                 pod.exit = self.bw(self._probe[i+1][pod.pr_view])
-
                 # Save state into pods
                 pod.probe = self._probe[i][pod.pr_view]
                 pod.object = self._object[i][pod.ob_view]
