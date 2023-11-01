@@ -47,6 +47,17 @@ class ePIE_multislice(stochastic.EPIE):
     """
     def __init__(self, ptycho_parent, pars=None):
         super(ePIE_multislice, self).__init__(ptycho_parent, pars)
+        self.article = dict(
+            title='{Ptychographic transmission microscopy in three dimensions using a multi-slice approach',
+            author='A. M. Maiden et al.',
+            journal='J. Opt. Soc. Am. A',
+            volume=29,
+            year=2012,
+            page=1606,
+            doi='10.1364/JOSAA.29.001606',
+            comment='The 3PIE reconstruction algorithm',
+        )
+        self.ptycho.citations.add_article(**self.article)
 
     def engine_initialize(self):
         super().engine_initialize()
