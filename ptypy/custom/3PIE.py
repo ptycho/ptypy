@@ -14,14 +14,14 @@ from ptypy import io
 import numpy as np
 
 @register()
-class threePIE(stochastic.EPIE):
+class ThreePIE(stochastic.EPIE):
     """
     An extension of EPIE to include multislice
 
     Defaults:
 
     [name]
-    default = threePIE
+    default = ThreePIE
     type = str
     help =
     doc =
@@ -46,7 +46,7 @@ class threePIE(stochastic.EPIE):
 
     """
     def __init__(self, ptycho_parent, pars=None):
-        super(threePIE, self).__init__(ptycho_parent, pars)
+        super(ThreePIE, self).__init__(ptycho_parent, pars)
         self.article = dict(
             title='{Ptychographic transmission microscopy in three dimensions using a multi-slice approach',
             author='A. M. Maiden et al.',
