@@ -38,6 +38,12 @@ class ThreePIE(stochastic.EPIE):
     help = Thickness of a single slice in meters
     doc =
 
+    [slice_start_iteration]
+    default = 0
+    type = int, list, tuple
+    help = iteration number to start using a specific slice
+    doc = 
+
     [fslices]
     default = slices.h5
     type = str
@@ -74,7 +80,13 @@ class ThreePIE(stochastic.EPIE):
         # ToDo:
         #    - allow for non equal slice spacing
         #    - allow for start_slice_update at a freely chosen iteration
-        #      for each slice separately
+        #      for each slice separately - works, but not if the 
+        #      most downstream slice is switched off
+
+        if isinstance(self.p.slice_start_iteration, int):
+            self.p.slice_start_iteration = np.ones(self.p.number_of_slices) * self.p.slice_start_iteration
+        #if ĺen(self.p.slice_start_iteration) != self.p.number_of_slices:
+        #    logger.info(f'dimension of given slice_start_iteration ({ĺen(self.p.slice_start_iteration)}) does not match number of slices ({self.p.number_of_slices})')
 
         scan = list(self.ptycho.model.scans.values())[0]
         geom = scan.geometries[0]
@@ -124,6 +136,7 @@ class ThreePIE(stochastic.EPIE):
         slices_info.slice_thickness = self.p.slice_thickness
         slices_info.objects = {ob.ID: {ID: S._to_dict() for ID, S in ob.storages.items()}
                                for ob in self._object}
+        slices_info.slice_start_iteration = self.p.slice_start_iteration
 
         header = {'description': 'multi-slices result details.'}
 
@@ -142,46 +155,60 @@ class ThreePIE(stochastic.EPIE):
         """
 
         for i in range(self.p.number_of_slices-1):
-            # Forward multislice, calculate exit waves
             for name, pod in view.pods.items():
                 # exit wave for this slice
-                self._exits[i][pod.pr_view] = self._probe[i][pod.pr_view] * self._object[i][pod.ob_view]
+                if self.curiter >= self.p.slice_start_iteration[i]:
+                    self._exits[i][pod.pr_view] = self._probe[i][pod.pr_view] * self._object[i][pod.ob_view]
+                else:
+                    self._exits[i][pod.pr_view] = self._probe[i][pod.pr_view] * 1. 
                 # incident wave for next slice
                 self._probe[i+1][pod.pr_view] = self.fw(self._exits[i][pod.pr_view])
 
         for name, pod in view.pods.items():
             # Exit wave for last slice
-            self._exits[-1][pod.pr_view] = self._probe[-1][pod.pr_view] * self._object[-1][pod.ob_view]
+            if self.curiter >= self.p.slice_start_iteration[-1]:
+                self._exits[-1][pod.pr_view] = self._probe[-1][pod.pr_view] * self._object[-1][pod.ob_view]
+            else:
+                self._exits[-1][pod.pr_view] = self._probe[-1][pod.pr_view] * 1. 
             # Save final state into pod (need for ptypy fourier update)
             pod.probe = self._probe[-1][pod.pr_view]
             pod.object = self._object[-1][pod.ob_view]
+            pod.exit = self._exits[-1][pod.pr_view]
 
         # Fourier update
         error = self.fourier_update(view)
 
         # Object/probe update for the last slice
-        self.object_update(view, {pod.ID:self._exits[-1][pod.pr_view] for name, pod in view.pods.items()})
-        self.probe_update(view, {pod.ID:self._exits[-1][pod.pr_view] for name, pod in view.pods.items()})
-        for name, pod in view.pods.items():
-            self._object[-1][pod.ob_view] = pod.object
-            self._probe[-1][pod.pr_view] = pod.probe
+        if self.curiter >= self.p.slice_start_iteration[-1]:
+            self.object_update(view, {pod.ID:self._exits[-1][pod.pr_view] for name, pod in view.pods.items()})
+            self.probe_update(view, {pod.ID:self._exits[-1][pod.pr_view] for name, pod in view.pods.items()})
+            for name, pod in view.pods.items():
+                self._object[-1][pod.ob_view] = pod.object
+                self._probe[-1][pod.pr_view] = pod.probe
+        else:
+            for name, pod in view.pods.items():
+                self._probe[-1][pod.pr_view] = pod.exit * 1. 
 
         # Object/probe update for other slices (backwards)
         for i in range(self.p.number_of_slices-2, -1, -1):
+            if self.curiter >= self.p.slice_start_iteration[i]:
 
-            for name, pod in view.pods.items():
-                # Backwards propagation of the probe
-                pod.exit = self.bw(self._probe[i+1][pod.pr_view])
-                # Save state into pods
-                pod.probe = self._probe[i][pod.pr_view]
-                pod.object = self._object[i][pod.ob_view]
+                for name, pod in view.pods.items():
+                    # Backwards propagation of the probe
+                    pod.exit = self.bw(self._probe[i+1][pod.pr_view])
+                    # Save state into pods
+                    pod.probe = self._probe[i][pod.pr_view]
+                    pod.object = self._object[i][pod.ob_view]
 
-            # Actual object/probe update
-            self.object_update(view, {pod.ID:self._exits[i][pod.pr_view] for name, pod in view.pods.items()})                
-            self.probe_update(view, {pod.ID:self._exits[i][pod.pr_view] for name, pod in view.pods.items()})
-            for name, pod in view.pods.items():
-                self._object[i][pod.ob_view] = pod.object
-                self._probe[i][pod.pr_view] = pod.probe
+                # Actual object/probe update
+                self.object_update(view, {pod.ID:self._exits[i][pod.pr_view] for name, pod in view.pods.items()})                
+                self.probe_update(view, {pod.ID:self._exits[i][pod.pr_view] for name, pod in view.pods.items()})
+                for name, pod in view.pods.items():
+                    self._object[i][pod.ob_view] = pod.object
+                    self._probe[i][pod.pr_view] = pod.probe
+            else:
+                for name, pod in view.pods.items():
+                    self._probe[i][pod.pr_view] = self.bw(self._probe[i+1][pod.pr_view])
 
         # set the object as the product of all slices for better live plotting
         self.ob.fill(self._object[0])
