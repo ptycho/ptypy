@@ -278,7 +278,7 @@ class LiveScan(PtyScan):
             self.preprocess_RS['average_x_at_RS'] = self.info.average_x_at_RS
         if self.info.average_x_at_RS is not None:
             self.preprocess_RS['average_x_at_RS'] = self.info.average_x_at_RS
-        # if self.info.maskfile is not None:
+        # if self.info.maskfile is not None and (self.info.rebin_at_RS or self.info.crop_at_RS):
         #     self.preprocess_RS['maskfile'] = self.info.maskfile
 
         self.socket.send_json(['preprocess', self.preprocess_RS])
@@ -294,12 +294,16 @@ class LiveScan(PtyScan):
                 self.data_background = np.mean(self.data_background, axis=0)## check data type, change to float 32
             if self.info.crop_at_RS is not None:
                 self.data_background = u.crop_pad_symmetric_2d(self.data_background, (self.info.crop_at_RS, self.info.crop_at_RS), center=self.p.center)[0]
+            if self.info.rebin_at_RS is not None:
+                self.data_background = u.rebin_2d(self.data_background, self.info.rebin_at_RS)[0]
 
         if self.info.maskfile:
             with h5py.File(self.info.maskfile, 'r') as hf:
                 self.mask_data = np.array(hf.get('mask'))
             if self.info.crop_at_RS is not None:
                 self.mask_data = u.crop_pad_symmetric_2d(self.mask_data, (self.info.crop_at_RS, self.info.crop_at_RS), center=self.p.center)[0]
+            if self.info.rebin_at_RS is not None:
+                self.mask_data = u.rebin_2d(self.mask_data, self.info.rebin_at_RS)[0]
             logger_info('############## Loading mask! mask.shape = %s, np.sum(mask) = %s' % (str(self.mask_data.shape), str(np.sum(self.mask_data))))  ### DEBUG
 
 
@@ -362,6 +366,7 @@ class LiveScan(PtyScan):
         if not self.interaction_started:
             self.BackTrace(plotlog=self.BT_logfname)
 
+        self.socket.send_json(['check'])
         msg = self.socket.recv_json()
         logger.info('#### check message = %s' % msg)
 
@@ -500,6 +505,7 @@ class LiveScan(PtyScan):
         if self.loadnr == 1 and 'new_center' in msgs[0].keys():
             self.info.center = msgs[0]['new_center']
         if self.loadnr == 1 and 'RS_rebinned' in msgs[0].keys():
+            print(f'self.info.psize = {self.info.psize}, self.info.rebin_at_RS = {self.info.rebin_at_RS}, self.meta.psize = {self.meta.psize}')  ###DEBUG
             if msgs[0]['RS_rebinned']:
                 # Maybe not the best solution to let rebin_at_RS be of type bool,
                 # since the only way of seeing the rebinning factor used in RS is
@@ -507,16 +513,25 @@ class LiveScan(PtyScan):
                 self.info.shape = u.expect2(self.info.shape) // self.info.rebin_at_RS
                 if self.info.psize is not None:
                     self.meta.psize = u.expect2(self.info.psize) * self.info.rebin_at_RS
+                    self.info.psize = u.expect2(self.info.psize) * self.info.rebin_at_RS
             #     self.rebin = 1
             # else:
             #     # Setting this to False to get correct info when writing to .ptyd
             #     self.info.rebin_at_RS = False
-
-        if self.info.rebin_at_RS:
+        if self.loadnr == 1 and len(imgs) == 3:
+            # Then imgs contain both diff, weights and mask.
+            w = imgs[1]
+            self.mask_data = imgs[2]
+            imgs = imgs[0]
+            print(f'w.shape = {w.shape}, imgs.shape = {imgs.shape}, mask.shape = {self.mask_data.shape}')  ### DEBUG
+        elif self.info.rebin_at_RS:
             # Then imgs contain both diff and weights.
+            print(f'len(imgs) = {len(imgs)}')### DEBUG
             w = imgs[1]
             imgs = imgs[0]
             print(f'w.shape = {w.shape}, imgs.shape = {imgs.shape}')### DEBUG
+            print(f'w.shape = {w.shape}, imgs.shape = {imgs.shape}, mask.shape = {self.mask_data.shape}, bgdata.shape = {self.data_background.shape}')  ### DEBUG
+
 
         imgs = imgs.astype(np.float32)
         # repackage data and return
@@ -550,8 +565,8 @@ class LiveScan(PtyScan):
                     weight[i] = np.ones_like(raw[i])
                     weight[i][np.where(raw[i] == 2 ** 32 - 1)] = 0
                     weight[i][np.where(raw[i] < 0)] = 0
-                    if self.info.maskfile:
-                        weight[i] = weight[i] * self.mask_data
+                if self.info.maskfile:
+                    weight[i] = weight[i] * self.mask_data
                 logger_info('### weight[i].shape = %s' % str(weight[i].shape)) ### DEBUG
             except Exception as err:
                 logger.info('### load exception')  ### DEBUG
