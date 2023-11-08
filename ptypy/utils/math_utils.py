@@ -16,7 +16,7 @@ from .misc import *
 
 __all__ = ['smooth_step', 'abs2', 'norm2', 'norm', 'delxb', 'delxc', 'delxf',
            'ortho', 'gauss_fwhm', 'gaussian', 'gf', 'cabs2', 'gf_2d', 'c_gf',
-           'gaussian2D', 'rl_deconvolution']
+           'gaussian2D', 'rl_deconvolution', 'sign']
 
 
 def cabs2(A):
@@ -329,3 +329,8 @@ def rl_deconvolution(data, mtf, numiter):
     for n in range(numiter):
         u *= convolve(data / (convolve(u) + 1e-6))
     return u
+
+def sign(n):
+    """Handle complex number of sign function, returning z/|z|
+    """
+    return np.where(np.isclose(n, 0), 0, n/np.abs(n))
