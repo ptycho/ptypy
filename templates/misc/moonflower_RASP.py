@@ -48,7 +48,6 @@ p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'RASP'
 p.engines.engine00.numiter = 80
-# p.engines.engine00.obj_smooth_std = 3
 
 # prepare and run
 if __name__ == "__main__":
