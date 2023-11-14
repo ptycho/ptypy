@@ -135,25 +135,6 @@ class RASP(projectional._ProjectionEngine):
         self.pr_sum_nmr.fill(0.)
         self.pr_sum_dnm.fill(0.)
 
-        # skip modifying the data (zero)
-        if parallel.master:
-            for name, s in self.ob.storages.items():
-                # The amplitude of the regularization term has to be scaled with the
-                # power of the probe (which is estimated from the power in diffraction patterns).
-                # This estimate assumes that the probe power is uniformly distributed through the
-                # array and therefore underestimate the strength of the probe terms.
-                cfact = self.p.object_inertia * self.mean_power
-
-            for name, s in self.pr.storages.items():
-                # Instead of Npts_scan, the number of views should be considered
-                # Please note that a call to s.views may be
-                # slow for many views in the probe.
-                cfact = self.p.probe_inertia * len(s.views) / s.data.shape[0]
-                self.pr_sum_dnm.storages[name].fill(cfact)
-        else:
-            self.ob_sum_dnm.fill(0.0)
-            self.pr_sum_dnm.fill(0.0)
-
         rng.shuffle(vieworder)
 
         error_dct = {}
