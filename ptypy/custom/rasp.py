@@ -207,17 +207,26 @@ class RASP(projectional._ProjectionEngine):
             pod.probe += ob_conj*(pod.exit - ex_old[name]) / object_norm
 
     def rasp_averaging(self):
+
         for name, s in self.ob.storages.items():
             ob_sum_nmr = self.ob_sum_nmr.storages[name].data
             ob_sum_dnm = self.ob_sum_dnm.storages[name].data
+
+            parallel.allreduce(ob_sum_nmr)
+            parallel.allreduce(ob_sum_dnm)
 
             # avoid division by zero
             is_zero = np.isclose(ob_sum_dnm, 0)
             s.data = np.where(is_zero, ob_sum_nmr, ob_sum_nmr / ob_sum_dnm)
 
+            self.clip_object(s)
+
         for name, p in self.pr.storages.items():
             pr_sum_nmr = self.pr_sum_nmr.storages[name].data
             pr_sum_dnm = self.pr_sum_dnm.storages[name].data
+
+            parallel.allreduce(pr_sum_nmr)
+            parallel.allreduce(pr_sum_dnm)
 
             # avoid division by zero
             is_zero = np.isclose(pr_sum_dnm, 0)
