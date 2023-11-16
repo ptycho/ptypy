@@ -76,20 +76,13 @@ class RASP(projectional._ProjectionEngine):
         self.pr_sum_dnm = self.pr.copy(self.pr.ID + '_pr_sum_dnm')
 
         if self.p.probe_power_correction:
+            # correct the initial probe's power
             self.probe_power_correction()
 
     def probe_power_correction(self):
-        # find probe power from brightest diffraction pattern
-        probe_power = 0
-        for d in self.di.storages.values():
-            max_ind = np.argmax(np.sum(d.data, axis=(1,2)))
-            current_pp = np.sum(d.data[max_ind, :, :])
-            if current_pp > probe_power:
-                probe_power = current_pp
-
-        # correct the initial probe's power
         for name, pod in self.pods.items():
-            pod.probe *= np.sqrt(probe_power / (pod.probe.size * np.sum(u.abs2(pod.probe))))
+            mp = pod.model.diff.max_power
+            pod.probe *= np.sqrt(mp / (pod.probe.size * np.sum(u.abs2(pod.probe))))
 
     def engine_iterate(self, num=1):
         """
