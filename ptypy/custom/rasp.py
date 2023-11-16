@@ -156,6 +156,25 @@ class RASP(projectional._ProjectionEngine):
 
         return error_dct
 
+    def engine_finalize(self):
+        super().engine_finalize()
+
+        # remove helper containers
+        containers = [
+            self.ob_sum_nmr,
+            self.ob_sum_dnm,
+            self.pr_sum_nmr,
+            self.pr_sum_dnm]
+
+        for c in containers:
+            logger.debug('Attempt to remove container %s' % c.ID)
+            del self.ptycho.containers[c.ID]
+
+        del self.ob_sum_nmr
+        del self.ob_sum_dnm
+        del self.pr_sum_nmr
+        del self.pr_sum_dnm
+
     def fourier_update(self, view):
         """
         General implementation of Fourier update (copied from stochastic)
