@@ -78,6 +78,10 @@ class SwmrLoader(Hdf5Loader):
         
     def _prepare_intensity_and_positions(self):
         super()._prepare_intensity_and_positions()
+        sh = np.array(self.data_shape)
+        sh[0] = self.fhandle_intensities[self.p.intensities.live_key].shape[0]
+        self.data_shape = tuple(sh)
+        print("self.data_shape", self.data_shape)
         self.kf = KeyFollower((self.fhandle_intensities[self.p.intensities.live_key],
                                self.fhandle_positions_slow[self.p.positions.live_slow_key],
                                self.fhandle_positions_fast[self.p.positions.live_fast_key]),
