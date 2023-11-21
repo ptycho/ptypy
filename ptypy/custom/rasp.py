@@ -8,18 +8,21 @@ import time
 
 import numpy as np
 
-from ..engines import projectional, register
+from ..engines import base, projectional, register
 from ..engines.utils import projection_update_generalized, log_likelihood
 from ..core import geometry
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 from ..utils import Param
 from ..utils.verbose import logger, log
 from ..utils import parallel
 from .. import io
 from .. import utils as u
 
+__all__ = ['RASP']
+
 
 @register()
-class RASP(projectional._ProjectionEngine):
+class RASP(base.PositionCorrectionEngine):
     """
     Regularised Average Successive Projections
 
@@ -30,6 +33,90 @@ class RASP(projectional._ProjectionEngine):
     type = str
     help =
     doc =
+
+    [probe_update_start]
+    default = 2
+    type = int
+    lowlim = 0
+    help = Number of iterations before probe update starts
+
+    [subpix_start]
+    default = 0
+    type = int
+    lowlim = 0
+    help = Number of iterations before starting subpixel interpolation
+
+    [subpix]
+    default = 'linear'
+    type = str
+    help = Subpixel interpolation; 'fourier','linear' or None for no interpolation
+    choices = ['fourier','linear',None]
+
+    [update_object_first]
+    default = True
+    type = bool
+    help = If True update object before probe
+
+    [overlap_converge_factor]
+    default = 0.05
+    type = float
+    lowlim = 0.0
+    help = Threshold for interruption of the inner overlap loop
+    doc = The inner overlap loop refines the probe and the object simultaneously. This loop is escaped as soon as the overall change in probe, relative to the first iteration, is less than this value.
+
+    [overlap_max_iterations]
+    default = 10
+    type = int
+    lowlim = 1
+    help = Maximum of iterations for the overlap constraint inner loop
+
+    [probe_inertia]
+    default = 1e-9
+    type = float
+    lowlim = 0.0
+    help = Weight of the current probe estimate in the update
+
+    [object_inertia]
+    default = 1e-4
+    type = float
+    lowlim = 0.0
+    help = Weight of the current object in the update
+
+    [fourier_power_bound]
+    default = None
+    type = float
+    help = If rms error of model vs diffraction data is smaller than this value, Fourier constraint is met
+    doc = For Poisson-sampled data, the theoretical value for this parameter is 1/4. Set this value higher for noisy data. By default, power bound is calculated using fourier_relax_factor
+
+    [fourier_relax_factor]
+    default = 0.05
+    type = float
+    lowlim = 0.0
+    help = A factor used to calculate the Fourier power bound as 0.25 * fourier_relax_factor**2 * maximum power in diffraction data
+    doc = Set this value higher for noisy data.
+
+    [obj_smooth_std]
+    default = None
+    type = float
+    lowlim = 0
+    help = Gaussian smoothing (pixel) of the current object prior to update
+    doc = If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.
+
+    [clip_object]
+    default = None
+    type = tuple
+    help = Clip object amplitude into this interval
+
+    [probe_center_tol]
+    default = None
+    type = float
+    lowlim = 0.0
+    help = Pixel radius around optical axes that the probe mass center must reside in
+
+    [compute_log_likelihood]
+    default = True
+    type = bool
+    help = A switch for computing the log-likelihood error (this can impact the performance of the engine)
 
     [alpha]
     default = 1.
@@ -49,6 +136,8 @@ class RASP(projectional._ProjectionEngine):
     help = A switch to correct probe power
     """
 
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
+
     def __init__(self, ptycho_parent, pars=None):
         super().__init__(ptycho_parent, pars)
 
@@ -67,13 +156,37 @@ class RASP(projectional._ProjectionEngine):
     def engine_initialize(self):
         super().engine_initialize()
 
+        self.error = []
+
         # these are the sum for averaging the global object/probe
         # they are added for each 'successive projection'
         # nmr and dnm stand for numerator and denominator respectively
-        self.ob_sum_nmr = self.ob.copy(self.ob.ID + '_ob_sum_nmr')
-        self.ob_sum_dnm = self.ob.copy(self.ob.ID + '_ob_sum_dnm')
-        self.pr_sum_nmr = self.pr.copy(self.pr.ID + '_pr_sum_nmr')
-        self.pr_sum_dnm = self.pr.copy(self.pr.ID + '_pr_sum_dnm')
+        self.ob_sum_nmr = self.ob.copy(self.ob.ID + '_ob_sum_nmr', fill=0.)
+        self.ob_sum_dnm = self.ob.copy(self.ob.ID + '_ob_sum_dnm', fill=0., dtype='real')
+        self.pr_sum_nmr = self.pr.copy(self.pr.ID + '_pr_sum_nmr', fill=0.)
+        self.pr_sum_dnm = self.pr.copy(self.pr.ID + '_pr_sum_dnm', fill=0., dtype='real')
+
+    def engine_prepare(self):
+        """Copied from _ProjectionEngine (a large part of it)
+        """
+
+        if self.ptycho.new_data:
+
+            # recalculate everything
+            mean_power = 0.
+            self.pbound_scan = {}
+            for s in self.di.storages.values():
+                if self.p.fourier_power_bound is None:
+                    pb = .25 * self.p.fourier_relax_factor**2 * s.pbound_stub
+                else:
+                    pb = self.p.fourier_power_bound
+                log(4, "power bound for scan %s = %f" %(s.label, pb))
+                if not self.pbound_scan.get(s.label):
+                    self.pbound_scan[s.label] = pb
+                else:
+                    self.pbound_scan[s.label] = max(pb, self.pbound_scan[s.label])
+                mean_power += s.mean_power
+            self.mean_power = mean_power / len(self.di.storages)
 
         if self.p.probe_power_correction:
             # correct the initial probe's power
@@ -136,20 +249,19 @@ class RASP(projectional._ProjectionEngine):
             if not view.active:
                 continue
 
-            # A copy of the old exit wave, object and probe
+            # A copy of the old exit wave and object
             ex_old = {}
             ob_old = {}
-            pr_old = {}
             for name, pod in view.pods.items():
                 ex_old[name] = pod.object * pod.probe
                 ob_old[name] = pod.object.copy()
-                pr_old[name] = pod.probe.copy()
 
             error_dct[name] = self.fourier_update(view)
 
-            # update object/probe and accumulate their sum for averaging next
-            self.object_update(view, ex_old, ob_old, pr_old)
-            self.probe_update(view, ex_old, ob_old, pr_old)
+            # update object first, then probe, and accumulate their sum for
+            # averaging after going through all the views
+            self.object_update(view, ex_old)
+            self.probe_update(view, ex_old, ob_old)
 
         # RASP
         self.rasp_averaging()
@@ -185,7 +297,7 @@ class RASP(projectional._ProjectionEngine):
         View to diffraction data
         """
 
-        err_fmag, err_exit = projection_update_generalized(view, self._a, self._b, self._c)
+        err_fmag, err_exit = projection_update_generalized(view, a=0, b=1, c=1)
 
         if self.p.compute_log_likelihood:
             err_phot = log_likelihood(view)
@@ -194,21 +306,22 @@ class RASP(projectional._ProjectionEngine):
 
         return np.array([err_fmag, err_phot, err_exit])
 
-    def object_update(self, view, ex_old, ob_old, pr_old):
+    def object_update(self, view, ex_old):
 
         for name, pod in view.pods.items():
-            pr_conj = np.conj(pr_old[name])
-            pr_abs2 = u.abs2(pr_old[name])
+            pr_conj = np.conj(pod.probe)
+            pr_abs2 = u.abs2(pod.probe)
 
             self.ob_sum_nmr[pod.ob_view] += pr_conj * pod.exit
             self.ob_sum_dnm[pod.ob_view] += pr_abs2
 
             probe_norm = np.mean(pr_abs2)*self.p.alpha + pr_abs2
-            pod.object = ob_old[name] + 0.5*pr_conj*(pod.exit - ex_old[name]) / probe_norm
+            pod.object += 0.5*pr_conj*(pod.exit - ex_old[name]) / probe_norm
 
-    def probe_update(self, view, ex_old, ob_old, pr_old):
+    def probe_update(self, view, ex_old, ob_old):
 
         for name, pod in view.pods.items():
+            # it is important to use ob_old, but not the updated pod.object
             ob_conj = np.conj(ob_old[name])
             ob_abs2 = u.abs2(ob_old[name])
 
@@ -243,3 +356,45 @@ class RASP(projectional._ProjectionEngine):
             # avoid division by zero
             is_zero = np.isclose(pr_sum_dnm, 0)
             p.data = np.where(is_zero, pr_sum_nmr, pr_sum_nmr / pr_sum_dnm)
+
+    def clip_object(self, ob):
+        """Copied from _ProjectionEngine
+        """
+
+        # Clip object (This call takes like one ms. Not time critical)
+        if self.p.clip_object is not None:
+            clip_min, clip_max = self.p.clip_object
+            ampl_obj = np.abs(ob.data)
+            phase_obj = np.exp(1j * np.angle(ob.data))
+            too_high = (ampl_obj > clip_max)
+            too_low = (ampl_obj < clip_min)
+            ob.data[too_high] = clip_max * phase_obj[too_high]
+            ob.data[too_low] = clip_min * phase_obj[too_low]
+
+    def center_probe(self):
+        """Copied from _ProjectionEngine
+        """
+
+        if self.p.probe_center_tol is not None:
+            for name, pr_s in self.pr.storages.items():
+                c1 = u.mass_center(u.abs2(pr_s.data).sum(0))
+                c2 = np.asarray(pr_s.shape[-2:]) // 2
+                # fft convention should however use geometry instead
+                if u.norm(c1 - c2) < self.p.probe_center_tol:
+                    break
+                # SC: possible BUG here, wrong input parameter
+                pr_s.data[:] = u.shift_zoom(pr_s.data, (1.,)*3,
+                        (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+
+                # shift the object
+                ob_s = pr_s.views[0].pod.ob_view.storage
+                ob_s.data[:] = u.shift_zoom(ob_s.data, (1.,)*3,
+                        (0, c1[0], c1[1]), (0, c2[0], c2[1]))
+
+                # shift the exit waves, loop through different exit wave views
+                for pv in pr_s.views:
+                    pv.pod.exit = u.shift_zoom(pv.pod.exit, (1.,)*2,
+                            (c1[0], c1[1]), (c2[0], c2[1]))
+
+                log(4,'Probe recentered from %s to %s'
+                            % (str(tuple(c1)), str(tuple(c2))))
