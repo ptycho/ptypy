@@ -134,6 +134,12 @@ class RASP(base.PositionCorrectionEngine):
     default = True
     type = bool
     help = A switch to correct probe power
+
+    [random_seed]
+    default = None
+    type = int
+    lowlim = 0
+    help = the seed to the random number generator for shuffling views
     """
 
     SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
@@ -232,7 +238,7 @@ class RASP(base.PositionCorrectionEngine):
     def overlap_update(self):
 
         vieworder = list(self.di.views.keys())
-        rng = np.random.default_rng()
+        rng = np.random.default_rng(self.p.random_seed)
 
         # reset the accumulated sum of object/probe before going through all
         # the diffraction view for this iteration

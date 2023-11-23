@@ -163,7 +163,7 @@ class RASP_serial(RASP):
             pID, oID, eID = prep.poe_IDs
 
             # Keep a list of view indices
-            prep.rng = np.random.default_rng()
+            prep.rng = np.random.default_rng(self.p.random_seed)
             prep.vieworder = np.arange(prep.addr.shape[0])
 
             # Modify addresses, copy pa into ea and remove da/ma
