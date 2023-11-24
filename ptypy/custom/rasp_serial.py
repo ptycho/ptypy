@@ -40,10 +40,6 @@ class RASP_serial(RASP):
     def __init__(self, ptycho_parent, pars=None):
         super().__init__(ptycho_parent, pars)
 
-        self._a = 0.
-        self._b = 1.
-        self._c = 1.
-
         self.benchmark = u.Param()
 
         # Stores all information needed with respect to the diffraction storages.
@@ -216,8 +212,10 @@ class RASP_serial(RASP):
                 ob = self.ob.S[oID].data
                 pr = self.pr.S[pID].data
 
+                # the copy is important to prevent vieworder being modified,
+                # which is always sorted
+                vieworder = prep.vieworder.copy()
                 # shuffle view order
-                vieworder = prep.vieworder
                 prep.rng.shuffle(vieworder)
 
                 # reset the accumulated sum of object/probe before going
@@ -406,3 +404,39 @@ class RASP_serial(RASP):
 
                 prep.err_fourier = error_state
                 prep.addr = addr
+
+    def engine_finalize(self):
+        """
+        try deleting ever helper contianer
+        """
+        if parallel.master and self.benchmark.calls_fourier:
+            print("----- BENCHMARKS ----")
+            acc = 0.
+            for name in sorted(self.benchmark.keys()):
+                t = self.benchmark[name]
+                if name[0] in 'ABCDEFGHI':
+                    print('%20s : %1.3f ms per iteration' % (name, t / self.benchmark.calls_fourier * 1000))
+                    acc += t
+                elif str(name) == 'rasp_ob_pr_update':
+                    print('%20s : %1.3f ms per call. %d calls' % (
+                        name, t / self.benchmark.calls_rasp_ob_pr_update * 1000, self.benchmark.calls_rasp_ob_pr_update))
+                elif str(name) == 'rasp_averaging':
+                    print('%20s : %1.3f ms per call. %d calls' % (
+                        name, t / self.benchmark.calls_rasp_averaging * 1000, self.benchmark.calls_rasp_averaging))
+
+            print('%20s : %1.3f ms per iteration. %d calls' % (
+                'Fourier_total', acc / self.benchmark.calls_fourier * 1000, self.benchmark.calls_fourier))
+
+        self._reset_benchmarks()
+
+        if self.do_position_refinement:
+            for label, d in self.di.storages.items():
+                prep = self.diff_info[d.ID]
+                res = self.kernels[prep.label].resolution
+                for i,view in enumerate(d.views):
+                    for j,(pname, pod) in enumerate(view.pods.items()):
+                        delta = (prep.original_addr[i][j][1][1:] - prep.addr[i][j][1][1:]) * res
+                        pod.ob_view.coord += delta
+                        pod.ob_view.storage.update_views(pod.ob_view)
+
+        super().engine_finalize()

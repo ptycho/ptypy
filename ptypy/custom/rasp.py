@@ -147,6 +147,10 @@ class RASP(base.PositionCorrectionEngine):
     def __init__(self, ptycho_parent, pars=None):
         super().__init__(ptycho_parent, pars)
 
+        self._a = 0.
+        self._b = 1.
+        self._c = 1.
+
         self.article = dict(
                 title='Regularised Average Successive Projections: A Brilliant Ptychographic Algorithm',
                 author='A. M. Maiden et al.',
@@ -175,6 +179,9 @@ class RASP(base.PositionCorrectionEngine):
     def engine_prepare(self):
         """Copied from _ProjectionEngine (a large part of it)
         """
+
+        # create RNG only once
+        self.rng = np.random.default_rng(self.p.random_seed)
 
         if self.ptycho.new_data:
 
@@ -238,7 +245,9 @@ class RASP(base.PositionCorrectionEngine):
     def overlap_update(self):
 
         vieworder = list(self.di.views.keys())
-        rng = np.random.default_rng(self.p.random_seed)
+        # the sorting is important to ensure they are the same input to RNG in
+        # every iteration
+        vieworder.sort()
 
         # reset the accumulated sum of object/probe before going through all
         # the diffraction view for this iteration
@@ -247,7 +256,7 @@ class RASP(base.PositionCorrectionEngine):
         self.pr_sum_nmr.fill(0.)
         self.pr_sum_dnm.fill(0.)
 
-        rng.shuffle(vieworder)
+        self.rng.shuffle(vieworder)
 
         error_dct = {}
         for name in vieworder:
@@ -303,7 +312,8 @@ class RASP(base.PositionCorrectionEngine):
         View to diffraction data
         """
 
-        err_fmag, err_exit = projection_update_generalized(view, a=0, b=1, c=1)
+        err_fmag, err_exit = projection_update_generalized(view, a=self._a,
+                                                           b=self._b, c=self._c)
 
         if self.p.compute_log_likelihood:
             err_phot = log_likelihood(view)
