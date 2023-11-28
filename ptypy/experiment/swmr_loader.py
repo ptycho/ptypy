@@ -8,6 +8,7 @@ This file is part of the PTYPY package.
     :license: see LICENSE for details.
 """
 import h5py as h5
+import numpy as np
 
 from ptypy.experiment import register
 from ptypy.experiment.hdf5_loader import Hdf5Loader
@@ -58,6 +59,19 @@ class SwmrLoader(Hdf5Loader):
           They are zero at the scan start, but non-zero when the position
           is complete.
 
+    [positions.fast_key_with_expected_shape]
+    default = None
+    type = str
+    help = Key for fast axis inside the positions file with expected shape
+    doc = The shape of this key entry is used to estimate the expected 
+          scan trajectory mapping and the total nr. of expected frames. 
+
+    [positions.slow_key_with_expected_shape]
+    default = None
+    type = str
+    help = Key for slow axis inside the positions file with expected shape
+    doc = The shape of this key entry is used to estimate the expected 
+          scan trajectory mapping and the total nr. of expected frames. 
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, swmr=True, **kwargs)
@@ -78,10 +92,15 @@ class SwmrLoader(Hdf5Loader):
         
     def _prepare_intensity_and_positions(self):
         super()._prepare_intensity_and_positions()
-        sh = np.array(self.data_shape)
-        sh[0] = self.fhandle_intensities[self.p.intensities.live_key].shape[0]
-        self.data_shape = tuple(sh)
+        self.positions_slow_shape = self.fhandle_positions_slow[self.p.positions.slow_key_with_expected_shape].shape
+        self.positions_fast_shape = self.fhandle_positions_slow[self.p.positions.fast_key_with_expected_shape].shape
+        if len(self.data_shape[:-2]) == 2:
+            self.data_shape = self.positions_slow_shape + self.positions_fast_shape + tuple(np.array(self.data_shape)[-2:])
+        elif len(self.data_shape[:-2]) == 1:
+            self.data_shape = (self.positions_slow_shape[0],) + tuple(np.array(self.data_shape)[-2:])
         print("self.data_shape", self.data_shape)
+        print("self.positions_slow_shape", self.positions_slow_shape)
+        print("self.positions_fast_shape", self.positions_fast_shape)
         self.kf = KeyFollower((self.fhandle_intensities[self.p.intensities.live_key],
                                self.fhandle_positions_slow[self.p.positions.live_slow_key],
                                self.fhandle_positions_fast[self.p.positions.live_fast_key]),
@@ -89,13 +108,16 @@ class SwmrLoader(Hdf5Loader):
         
     def compute_scan_mapping_and_trajectory(self,*args):
         super().compute_scan_mapping_and_trajectory(*args)
-        assert isinstance(self.slow_axis, h5.Dataset), "Scantype = {:s} and mapped={:} is not compatible with the SwmrLoader".format(self._scantype, self._ismapped)
+        #assert isinstance(self.slow_axis, h5.Dataset), "Scantype = {:s} and mapped={:} is not compatible with the SwmrLoader".format(self._scantype, self._ismapped)
 
     def get_data_chunk(self, *args, **kwargs):
         self.kf.refresh()
         self.intensities.refresh()
-        self.slow_axis.refresh()
-        self.fast_axis.refresh()
+        try:
+            self.slow_axis.refresh()
+            self.fast_axis.refresh()
+        except AttributeError:
+            print("Can't refresh position keys")
         # refreshing here to update before Ptyscan.get_data_chunk calls check and load
         return super().get_data_chunk(*args, **kwargs)
 
