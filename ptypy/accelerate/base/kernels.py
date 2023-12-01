@@ -33,6 +33,7 @@ class FourierUpdateKernel(BaseKernel):
         # temporary buffer arrays
         self.npy.fdev = None
         self.npy.ferr = None
+        self.npy.af = None
 
         self.kernels = [
             'fourier_error',
@@ -48,6 +49,7 @@ class FourierUpdateKernel(BaseKernel):
         # temporary buffer arrays
         self.npy.fdev = np.zeros(self.fshape, dtype=np.float32)
         self.npy.ferr = np.zeros(self.fshape, dtype=np.float32)
+        self.npy.af = np.zeros(self.fshape, dtype=np.float32)
 
     def fourier_error(self, b_aux, addr, mag, mask, mask_sum):
         # reference shape (write-to shape)
@@ -66,6 +68,9 @@ class FourierUpdateKernel(BaseKernel):
         # all modes incoherently
         tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
         af = np.sqrt(abs2(tf).sum(1))
+
+        # store it to avoid re-calculate later
+        self.npy.af[:maxz] = af
 
         # calculate difference to real data (g_mag)
         fdev[:] = af - mag
@@ -90,6 +95,9 @@ class FourierUpdateKernel(BaseKernel):
         # all modes incoherently
         tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
         af = np.sqrt(abs2(tf).sum(1))
+
+        # store it to avoid re-calculate later
+        self.npy.af[:maxz] = af
 
         # calculate difference to real data (g_mag)
         fdev[:] = af - mag
@@ -148,7 +156,7 @@ class FourierUpdateKernel(BaseKernel):
         renorm[ind] = np.sqrt(pbound / err_sum[ind])
         renorm = renorm.reshape((renorm.shape[0], 1, 1))
 
-        af = fdev + mag
+        af = self.npy.af[:maxz]
         fm[:] = (1 - mask) + mask * (mag + fdev * renorm) / (af + self.denom)
 
         #fm[:] = mag / (af + 1e-6)
@@ -176,7 +184,8 @@ class FourierUpdateKernel(BaseKernel):
         # local values
         fm = np.ones((maxz, sh[1], sh[2]), np.float32)
 
-        af = fdev + mag
+        af = self.npy.af[:maxz]
+
         fm[:] = (1 - mask) + mask * mag / (af + self.denom)
 
         # upcasting
