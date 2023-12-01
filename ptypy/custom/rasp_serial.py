@@ -178,6 +178,11 @@ class RASP_serial(RASP):
             prep.pr_sum_nmr = np.zeros_like(self.pr.S[pID].data, dtype=np.complex64)
             prep.pr_sum_dnm = np.zeros_like(self.pr.S[pID].data, dtype=np.float32)
 
+            # store IDs from all views for shuffling
+            scan_model = self.ptycho.model.scans[prep.label]
+            prep.view_IDs_all = [v.ID for v in scan_model.diff_views]
+            prep.view_IDs_all.sort()
+
             if self.p.probe_power_correction:
                 pr_S = self.pr.S[pID]
                 probe_sz = pr_S.data.size
@@ -214,9 +219,8 @@ class RASP_serial(RASP):
 
                 # the copy is important to prevent vieworder being modified,
                 # which is always sorted
-                vieworder = prep.vieworder.copy()
-                # shuffle view order
-                prep.rng.shuffle(vieworder)
+                vieworder_all = prep.view_IDs_all.copy()
+                prep.rng.shuffle(vieworder_all)
 
                 # reset the accumulated sum of object/probe before going
                 # through all the diffraction view for this iteration
@@ -230,8 +234,14 @@ class RASP_serial(RASP):
                 pr_sum_dnm.fill(0)
 
                 # Iterate through views
-                for i in vieworder:
+                for vname in vieworder_all:
+                    # only proceed for active view, which is in prep.view_IDs
+                    # for this particular rank
+                    if vname not in prep.view_IDs:
+                        continue
+
                     # Get local adress and arrays
+                    i = prep.view_IDs.index(vname)
                     addr = prep.addr[i,None]
                     ex_from, ex_to = prep.addr_ex[i]
                     ex = prep.ex[ex_from:ex_to]
