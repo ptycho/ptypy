@@ -341,7 +341,7 @@ def basic_fourier_update_LEGACY(diff_view, pbound=None, alpha=1., LL_error=True)
     I = diff_view.data
 
     # Get the mask
-    fmask = diff_view.pod.mask
+    fmask = diff_view.pod.mask.astype(I.dtype)
 
     # For log likelihood error
     if LL_error is True:
