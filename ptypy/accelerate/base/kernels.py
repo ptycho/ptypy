@@ -443,11 +443,12 @@ class AuxiliaryWaveKernel(BaseKernel):
         aux = b_aux[:maxz * nmodes]
         flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
         rows, cols = ex.shape[-2:]
+
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            tmp = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] * \
-                  pr[prc[0], :, :] * c_po + \
-                  ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * c_e
+            tmp = (1-c_po) * ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] +\
+                  c_po * pr[prc[0], :, :] * ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
             aux[ind, :, :] = tmp
+
         return
 
     def build_exit(self, b_aux, addr, ob, pr, ex, alpha=1):
