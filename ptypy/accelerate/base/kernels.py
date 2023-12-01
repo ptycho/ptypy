@@ -65,7 +65,7 @@ class FourierUpdateKernel(BaseKernel):
         # build model from complex fourier magnitudes, summing up 
         # all modes incoherently
         tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
-        af = np.sqrt((np.abs(tf) ** 2).sum(1))
+        af = np.sqrt(abs2(tf).sum(1))
 
         # calculate difference to real data (g_mag)
         fdev[:] = af - mag
@@ -89,7 +89,7 @@ class FourierUpdateKernel(BaseKernel):
         # build model from complex fourier magnitudes, summing up 
         # all modes incoherently
         tf = aux.reshape(maxz, self.nmodes, sh[1], sh[2])
-        af = np.sqrt((np.abs(tf) ** 2).sum(1))
+        af = np.sqrt(abs2(tf).sum(1))
 
         # calculate difference to real data (g_mag)
         fdev[:] = af - mag
