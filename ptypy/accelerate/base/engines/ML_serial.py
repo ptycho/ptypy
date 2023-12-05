@@ -145,6 +145,9 @@ class ML_serial(ML):
     def _get_smooth_gradient(self, data, sigma):
         return self.smooth_gradient(data)
 
+    def _get_smooth_gradient_fft(self, data, sigma):
+        return self.smooth_gradient(data)
+
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new
         # Smoothing preconditioner
@@ -231,7 +234,8 @@ class ML_serial(ML):
             # Smoothing preconditioner
             if self.smooth_gradient:
                 for name, s in self.ob_h.storages.items():
-                    s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
+                    # s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
+                    s.data[:] -= self._get_smooth_gradient_fft(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
             else:
                 self.ob_h -= self.ob_grad
 
@@ -272,7 +276,7 @@ class ML_serial(ML):
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
 
     def position_update(self):
-        """ 
+        """
         Position refinement
         """
         if not self.do_position_refinement:
@@ -283,7 +287,7 @@ class ML_serial(ML):
         # Update positions
         if do_update_pos:
             """
-            Iterates through all positions and refines them by a given algorithm. 
+            Iterates through all positions and refines them by a given algorithm.
             """
             log(4, "----------- START POS REF -------------")
             for dID in self.di.S.keys():
@@ -308,7 +312,7 @@ class ML_serial(ML):
                 max_oby = ob.shape[-2] - aux.shape[-2] - 1
                 max_obx = ob.shape[-1] - aux.shape[-1] - 1
 
-                # We need to re-calculate the current error 
+                # We need to re-calculate the current error
                 PCK.build_aux(aux, addr, ob, pr)
                 aux[:] = FW(aux)
                 PCK.log_likelihood_ml(aux, addr, I, w, err_phot)
@@ -338,7 +342,7 @@ class ML_serial(ML):
                 for i,view in enumerate(d.views):
                     for j,(pname, pod) in enumerate(view.pods.items()):
                         delta = (prep.addr[i][j][1][1:] - prep.original_addr[i][j][1][1:]) * res
-                        pod.ob_view.coord += delta 
+                        pod.ob_view.coord += delta
                         pod.ob_view.storage.update_views(pod.ob_view)
             self.ptycho.record_positions = True
 
