@@ -336,33 +336,39 @@ class GaussianSmoothingKernel:
         self.blockdim_x = 4
         self.blockdim_y = 16
 
-
-        # At least 2 blocks per SM
-        self.max_shared_per_block = 48 * 1024 // 2
-        self.max_shared_per_block_complex = self.max_shared_per_block / 2 * np.dtype(np.float32).itemsize
-        self.max_kernel_radius = int(self.max_shared_per_block_complex / self.blockdim_y)
-
+        # explicit opt-in to use the max dynamic shared memory available on the
+        # device for these two kernels
         self.convolution_row = load_kernel(
-            "convolution_row", file="convolution.cu", subs={
+            "convolution_row", file="convolution.cu", use_max_shm_optin=True,
+            subs={
                 'BDIM_X': self.blockdim_x,
                 'BDIM_Y': self.blockdim_y,
                 'DTYPE': self.stype,
                 'MATH_TYPE': self.kernel_type
         })
         self.convolution_col = load_kernel(
-        "convolution_col", file="convolution.cu", subs={
+            "convolution_col", file="convolution.cu", use_max_shm_optin=True,
+            subs={
                 'BDIM_X': self.blockdim_y,   # NOTE: we swap x and y in this columns
                 'BDIM_Y': self.blockdim_x,
                 'DTYPE': self.stype,
                 'MATH_TYPE': self.kernel_type
         })
+
+        # At least 2 blocks per SM
+        max_shm = min(self.convolution_row.max_dynamic_shared_size_bytes,
+                      self.convolution_col.max_dynamic_shared_size_bytes)
+        # 1 kB is reserved by the device
+        self.max_shared_per_block = (max_shm - 1024) // 2
+        self.max_shared_per_block_complex = self.max_shared_per_block / 2 * np.dtype(np.float32).itemsize
+        self.max_kernel_radius = int(self.max_shared_per_block_complex / self.blockdim_y)
+
         # pre-allocate kernel memory on gpu, with max-radius to accomodate
         dtype=np.float32 if self.kernel_type == 'float' else np.float64
         self.kernel_gpu = gpuarray.empty((self.max_kernel_radius,), dtype=dtype)
         # keep track of previus radius and std to determine if we need to transfer again
         self.r = 0
         self.std = 0
-
 
     def convolution(self, data, mfs, tmp=None):
         """

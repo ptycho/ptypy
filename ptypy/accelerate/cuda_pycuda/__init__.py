@@ -1,5 +1,6 @@
 import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
+from pycuda._driver import function_attribute
 import numpy as np
 import os
 kernel_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'cuda_common'))
@@ -37,11 +38,13 @@ def get_context(new_context=False, new_queue=False):
         #                                                     str(parallel.rank_local)))
     if queue is None or new_queue:
         queue = cuda.Stream()
-    
+
     return context, queue
 
 
-def load_kernel(name, subs={}, file=None):
+def load_kernel(name, subs={}, file=None, use_max_shm_optin=False):
+
+    global context
 
     if file is None:
         if isinstance(name, str):
@@ -59,9 +62,31 @@ def load_kernel(name, subs={}, file=None):
     escaped = fn.replace("\\", "\\\\")
     kernel = '#line 1 "{}"\n'.format(escaped) + kernel
     mod = SourceModule(kernel, include_dirs=[np.get_include()], no_extern_c=True, options=debug_options)
-    
-    if isinstance(name, str):
-        return mod.get_function(name)
-    else:  # tuple
-        return tuple(mod.get_function(n) for n in name)
 
+    # explicit opt-in to use the max shared memory available for this device
+    if use_max_shm_optin:
+        dev = context.get_device()
+        try:
+            max_shm = dev.get_attribute(cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK_OPTIN)
+        except:
+            # if anything is wrong, set to the default static limit
+            max_shm = 48 * 1024
+
+    if isinstance(name, str):
+        func = mod.get_function(name)
+        if use_max_shm_optin:
+            try:
+                func.set_attribute(function_attribute.MAX_DYNAMIC_SHARED_SIZE_BYTES, max_shm)
+            except:
+                pass
+        return func
+    else:  # tuple
+        func = tuple(mod.get_function(n) for n in name)
+        if use_max_shm_optin:
+            for f in func:
+                try:
+                    # reference to the function
+                    f.set_attribute(function_attribute.MAX_DYNAMIC_SHARED_SIZE_BYTES, max_shm)
+                except:
+                    pass
+        return func
