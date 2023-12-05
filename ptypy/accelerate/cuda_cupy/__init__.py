@@ -31,7 +31,9 @@ def get_context(new_queue=False):
     return queue
 
 
-def load_kernel(name, subs={}, file=None, options=None):
+def load_kernel(name, subs={}, file=None, options=None, use_max_shm_optin=False):
+
+    global device
 
     if file is None:
         if isinstance(name, str):
@@ -54,10 +56,31 @@ def load_kernel(name, subs={}, file=None, options=None):
     if options is not None:
         opt += list(options)
     module = cp.RawModule(code=kernel, options=tuple(opt))
+
+    # explicit opt-in to use the max shared memory available for this device
+    if use_max_shm_optin:
+        devprop = cp.cuda.runtime.getDeviceProperties(device)
+        # default to the static limit
+        max_shm = devprop.get('sharedMemPerBlockOptin', 48*1024)
+
     if isinstance(name, str):
-        return module.get_function(name)
+        func = module.get_function(name)
+        if use_max_shm_optin:
+            try:
+                func.max_dynamic_shared_size_bytes = max_shm
+            except:
+                pass
+        return func
     else:  # tuple
-        return tuple(module.get_function(n) for n in name)
+        func = tuple(module.get_function(n) for n in name)
+        if use_max_shm_optin:
+            for f in func:
+                try:
+                    # reference to the function
+                    f.max_dynamic_shared_size_bytes = max_shm
+                except:
+                    pass
+        return func
 
 def log_device_memory_stats(level=4, heading: str ='Device Memory Stats'):
         mempool = cp.get_default_memory_pool()
