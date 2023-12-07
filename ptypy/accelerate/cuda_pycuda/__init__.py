@@ -40,7 +40,7 @@ def ctx_hook(type, value, tb):
 
 sys.excepthook = ctx_hook
 
-def get_context(new_context=False, new_queue=False):
+def get_context(new_queue=False):
 
     global queue
 
@@ -53,10 +53,9 @@ def get_context(new_context=False, new_queue=False):
             parallel.rank, parallel.rank_local, cuda.Device.count()
         ))
 
-    # create a new primary context through pycuda interface either
-    #     - there is no current context, or
-    #     - when explicitly asked
-    if (context := cuda.Context.get_current()) is None or new_context:
+    # the existing context will always be the primary context, unless
+    # explicitly created elsewhere
+    if (context := cuda.Context.get_current()) is None:
         from pycuda import autoprimaryctx
         context = autoprimaryctx.context
 

@@ -69,9 +69,9 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
         Prepare for reconstruction.
         """
         # Context, Multi GPU communicator and Stream (needs to be in this order)
-        self.context, self.queue = get_context(new_context=False, new_queue=False)
+        self.context, self.queue = get_context(new_queue=False)
         self.multigpu = get_multi_gpu_communicator()
-        self.context, self.queue = get_context(new_context=False, new_queue=True)
+        self.context, self.queue = get_context(new_queue=True)
 
         # Gaussian Smoothing Kernel
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
