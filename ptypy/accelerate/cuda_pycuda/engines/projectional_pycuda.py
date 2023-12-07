@@ -555,9 +555,6 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
         for name, s in self.pr.S.items():
             s.data = np.copy(s.data)
 
-        self.context.pop()
-        self.context.detach()
-
         # we don't need the  "benchmarking" in DM_serial
         super().engine_finalize(benchmark=False)
 

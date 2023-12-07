@@ -163,8 +163,6 @@ class ML_pycuda(ML_serial):
         fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
         if not fit:
             log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
-            self.context.pop()
-            self.context.detach()
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
@@ -301,7 +299,7 @@ class ML_pycuda(ML_serial):
         return err
 
     def position_update(self):
-        """ 
+        """
         Position refinement
         """
         if not self.do_position_refinement or (not self.curiter):
@@ -342,7 +340,7 @@ class ML_pycuda(ML_serial):
                 max_oby = ob.shape[-2] - aux.shape[-2] - 1
                 max_obx = ob.shape[-1] - aux.shape[-1] - 1
 
-                # We need to re-calculate the current error 
+                # We need to re-calculate the current error
                 PCK.build_aux(aux, addr, ob, pr)
                 PROP.fw(aux, aux)
                 PCK.queue.wait_for_event(ev)
@@ -351,9 +349,9 @@ class ML_pycuda(ML_serial):
                 cuda.memcpy_dtod(dest=error_state.ptr,
                                     src=err_phot.ptr,
                                     size=err_phot.nbytes)
-                
+
                 PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
-                                
+
                 log(4, 'Position refinement trial: iteration %s' % (self.curiter))
                 for i in range(PCK.mangler.nshifts):
                     PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
@@ -422,8 +420,6 @@ class ML_pycuda(ML_serial):
 
 
         #self.queue.synchronize()
-        self.context.pop()
-        self.context.detach()
         super().engine_finalize()
 
 class GaussianModel(BaseModelSerial):
