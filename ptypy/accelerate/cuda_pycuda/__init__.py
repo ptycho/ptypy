@@ -1,3 +1,4 @@
+import sys
 import os
 
 import numpy as np
@@ -20,6 +21,24 @@ os.environ['CUDA_DEVICE'] = str(parallel.rank_local)
 
 queue = None
 
+
+def ctx_hook(type, value, tb):
+    # if an exception is raised, do the clean-up
+    cuda.init()
+    context = cuda.Context.get_current()
+
+    # clean-up before raising exception
+    if context is not None:
+        context.pop()
+        context = None
+        from pycuda.tools import clear_context_caches
+        clear_context_caches()
+
+    sys.__excepthook__(type, value, tb)
+    # hard exit to prevent _finish_up trying again (skip atexit)
+    os._exit(1)
+
+sys.excepthook = ctx_hook
 
 def get_context(new_context=False, new_queue=False):
 
