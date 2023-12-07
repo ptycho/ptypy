@@ -79,7 +79,7 @@ class ML_pycuda(ML_serial):
         """
         Prepare for ML reconstruction.
         """
-        self.context, self.queue = get_context(new_context=True, new_queue=True)
+        self.context, self.queue = get_context(new_context=False, new_queue=True)
 
         if self.p.use_cuda_device_memory_pool:
             self._dmp = DeviceMemoryPool()

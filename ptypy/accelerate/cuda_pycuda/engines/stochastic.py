@@ -68,7 +68,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         """
         Prepare for reconstruction.
         """
-        self.context, self.queue = get_context(new_context=True, new_queue=True)
+        self.context, self.queue = get_context(new_context=False, new_queue=True)
 
         # initialise kernels for centring probe if required
         if self.p.probe_center_tol is not None:
