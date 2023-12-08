@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
+from pycuda.tools import DeviceMemoryPool
 
 from ptypy.utils import parallel
 
@@ -20,6 +21,7 @@ else:
 os.environ['CUDA_DEVICE'] = str(parallel.rank_local)
 
 queue = None
+dev_pool = None
 
 
 def ctx_hook(type, value, tb):
@@ -63,6 +65,16 @@ def get_context(new_queue=False):
         queue = cuda.Stream()
 
     return context, queue
+
+
+def get_dev_pool():
+    global dev_pool
+
+    # retain a single global instance of device memory pool
+    if dev_pool is None:
+        dev_pool = DeviceMemoryPool()
+
+    return dev_pool
 
 
 def load_kernel(name, subs={}, file=None):
