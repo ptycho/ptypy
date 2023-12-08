@@ -15,14 +15,13 @@ import numpy as np
 from pycuda import gpuarray
 import pycuda.driver as cuda
 import pycuda.cumath
-from pycuda.tools import DeviceMemoryPool
 
 from ptypy.engines import register
 from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
 from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
-from .. import get_context
+from .. import get_context, get_dev_pool
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, TransposeKernel
@@ -82,10 +81,10 @@ class ML_pycuda(ML_serial):
         self.context, self.queue = get_context(new_queue=True)
 
         if self.p.use_cuda_device_memory_pool:
-            self._dmp = DeviceMemoryPool()
-            self.allocate = self._dmp.allocate
+            self._dev_pool = get_dev_pool()
+            self.allocate = self._dev_pool.allocate
         else:
-            self._dmp = None
+            self._dev_pool = None
             self.allocate = cuda.mem_alloc
 
         self.qu_htod = cuda.Stream()
@@ -679,11 +678,11 @@ class Regul_del2_pycuda(object):
         self.DELK_f = DerivativesKernel(np.float32, queue=queue)
 
         if allocator is None:
-            self._dmp = DeviceMemoryPool()
-            self.allocator=self._dmp.allocate
+            self._dev_pool = get_dev_pool()
+            self.allocator=self._dev_pool.allocate
         else:
             self.allocator = allocator
-            self._dmp= None
+            self._dev_pool= None
 
         empty = lambda x: gpuarray.empty(x.shape, x.dtype, allocator=self.allocator)
 
