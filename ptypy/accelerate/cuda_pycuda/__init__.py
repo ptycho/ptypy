@@ -24,23 +24,18 @@ queue = None
 dev_pool = None
 
 
-def ctx_hook(type, value, tb):
-    # if an exception is raised, do the clean-up
-    cuda.init()
-    context = cuda.Context.get_current()
+def _pycuda_excepthook(type, value, tb):
+    global dev_pool
 
-    # clean-up before raising exception
-    if context is not None:
-        context.pop()
-        context = None
-        from pycuda.tools import clear_context_caches
-        clear_context_caches()
+    # memory pool clean-up, avoid memory leak in the case of raising exception
+    if dev_pool is not None:
+        # only do the clean-up if it is present
+        dev_pool.stop_holding()
 
+    # raise the original exception
     sys.__excepthook__(type, value, tb)
-    # hard exit to prevent _finish_up trying again (skip atexit)
-    os._exit(1)
+sys.excepthook = _pycuda_excepthook
 
-sys.excepthook = ctx_hook
 
 def get_context(new_queue=False):
 
