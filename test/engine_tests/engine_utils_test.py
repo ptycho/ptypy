@@ -7,7 +7,6 @@ This file is part of the PTYPY package.
 """
 
 import unittest
-from test import utils as tu
 import numpy as np
 from ptypy import utils as u
 from ptypy.core import Ptycho
