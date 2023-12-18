@@ -98,7 +98,7 @@ class TestDefaultParameters(unittest.TestCase):
         self.assertEqual(c.GEO_PREFIX, 'G',
                          'Default prefix changed.')
 
-        self.assertEqual(c.MEGAPIXEL_LIMIT, 500,
+        self.assertEqual(c.MEGAPIXEL_LIMIT, 100,
                          'Default MEGAPIXEL_LIMIT changed.')
 
 
