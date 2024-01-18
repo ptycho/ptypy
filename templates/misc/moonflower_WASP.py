@@ -5,7 +5,7 @@ of actual data. It uses the test Scan class
 """
 from ptypy.core import Ptycho
 from ptypy import utils as u
-from ptypy.custom import rasp
+from ptypy.custom import WASP
 import numpy as np
 
 import tempfile
@@ -46,7 +46,7 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'RASP'
+p.engines.engine00.name = 'WASP'
 p.engines.engine00.numiter = 80
 
 # prepare and run

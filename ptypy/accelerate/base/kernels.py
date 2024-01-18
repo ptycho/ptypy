@@ -661,7 +661,7 @@ class PoUpdateKernel(BaseKernel):
             pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]).real
         return
 
-    def rasp_ob_pr_update(self, addr, ob, pr, ex, aux, ob_sum_nmr, ob_sum_dnm,
+    def wasp_ob_pr_update(self, addr, ob, pr, ex, aux, ob_sum_nmr, ob_sum_dnm,
                           pr_sum_nmr, pr_sum_dnm, alpha=1, beta=1):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
@@ -683,7 +683,7 @@ class PoUpdateKernel(BaseKernel):
             pr_sum_nmr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += ob_conj * ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
             pr_sum_dnm[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += ob_abs2
 
-    def rasp_averaging(self, ob, pr, ob_sum_nmr, ob_sum_dnm, pr_sum_nmr, pr_sum_dnm):
+    def wasp_averaging(self, ob, pr, ob_sum_nmr, ob_sum_dnm, pr_sum_nmr, pr_sum_dnm):
         # for current object
         is_zero = np.isclose(ob_sum_dnm, 0)
         ob[:] = np.where(is_zero, ob_sum_nmr, ob_sum_nmr / ob_sum_dnm)

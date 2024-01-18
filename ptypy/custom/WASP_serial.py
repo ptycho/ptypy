@@ -2,7 +2,7 @@ import numpy as np
 import time
 
 from ..engines import register
-from .rasp import RASP
+from .WASP import WASP
 from ..utils.verbose import logger, log
 from ..utils import parallel
 from .. import utils as u
@@ -10,18 +10,18 @@ from ..accelerate.base.kernels import FourierUpdateKernel, AuxiliaryWaveKernel, 
 from ..accelerate.base import array_utils as au
 from ..accelerate.base.engines import projectional_serial
 
-__all__ = ['RASP_serial']
+__all__ = ['WASP_serial']
 
 
 @register()
-class RASP_serial(RASP):
+class WASP_serial(WASP):
     """
-    Regularised Average Successive Projections
+    Weighted Average of Sequential Projections
 
     Defaults:
 
     [name]
-    default = RASP_serial
+    default = WASP_serial
     type = str
     help =
     doc =
@@ -64,11 +64,11 @@ class RASP_serial(RASP):
         self.benchmark.D_iProp = 0.
         self.benchmark.E_Build_exit = 0.
         self.benchmark.F_LLerror = 0.
-        self.benchmark.rasp_ob_pr_update = 0.
-        self.benchmark.rasp_averaging = 0.
+        self.benchmark.wasp_ob_pr_update = 0.
+        self.benchmark.wasp_averaging = 0.
         self.benchmark.calls_fourier = 0
-        self.benchmark.calls_rasp_ob_pr_update = 0
-        self.benchmark.calls_rasp_averaging = 0
+        self.benchmark.calls_wasp_ob_pr_update = 0
+        self.benchmark.calls_wasp_averaging = 0
 
     def _setup_kernels(self):
         """
@@ -291,15 +291,15 @@ class RASP_serial(RASP):
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
                     self.benchmark.A_Build_aux += time.time() - t1
 
-                    # RASP ob and pr local update
+                    # WASP ob and pr local update
                     t1 = time.time()
 
-                    POK.rasp_ob_pr_update(addr, ob, pr, ex, aux, ob_sum_nmr,
+                    POK.wasp_ob_pr_update(addr, ob, pr, ex, aux, ob_sum_nmr,
                                           ob_sum_dnm, pr_sum_nmr, pr_sum_dnm,
                                           alpha=self.p.alpha, beta=self.p.beta)
 
-                    self.benchmark.rasp_ob_pr_update += time.time() - t1
-                    self.benchmark.calls_rasp_ob_pr_update += 1
+                    self.benchmark.wasp_ob_pr_update += time.time() - t1
+                    self.benchmark.calls_wasp_ob_pr_update += 1
 
                     ## compute log-likelihood
                     if self.p.compute_log_likelihood:
@@ -314,7 +314,7 @@ class RASP_serial(RASP):
                                                        np.hstack(prep.err_exit)]).T)
                 error_dct.update(zip(prep.view_IDs, errs))
 
-                # RASP averaging
+                # WASP averaging
                 t1 = time.time()
 
                 # collect the sums
@@ -323,10 +323,10 @@ class RASP_serial(RASP):
                 parallel.allreduce(pr_sum_nmr)
                 parallel.allreduce(pr_sum_dnm)
 
-                POK.rasp_averaging(ob, pr, ob_sum_nmr, ob_sum_dnm, pr_sum_nmr, pr_sum_dnm)
+                POK.wasp_averaging(ob, pr, ob_sum_nmr, ob_sum_dnm, pr_sum_nmr, pr_sum_dnm)
 
-                self.benchmark.rasp_averaging += time.time() - t1
-                self.benchmark.calls_rasp_averaging += 1
+                self.benchmark.wasp_averaging += time.time() - t1
+                self.benchmark.calls_wasp_averaging += 1
 
                 # Clip object (This call takes like one ms. Not time critical)
                 if self.p.clip_object is not None:
@@ -427,12 +427,12 @@ class RASP_serial(RASP):
                 if name[0] in 'ABCDEFGHI':
                     print('%20s : %1.3f ms per iteration' % (name, t / self.benchmark.calls_fourier * 1000))
                     acc += t
-                elif str(name) == 'rasp_ob_pr_update':
+                elif str(name) == 'wasp_ob_pr_update':
                     print('%20s : %1.3f ms per call. %d calls' % (
-                        name, t / self.benchmark.calls_rasp_ob_pr_update * 1000, self.benchmark.calls_rasp_ob_pr_update))
-                elif str(name) == 'rasp_averaging':
+                        name, t / self.benchmark.calls_wasp_ob_pr_update * 1000, self.benchmark.calls_wasp_ob_pr_update))
+                elif str(name) == 'wasp_averaging':
                     print('%20s : %1.3f ms per call. %d calls' % (
-                        name, t / self.benchmark.calls_rasp_averaging * 1000, self.benchmark.calls_rasp_averaging))
+                        name, t / self.benchmark.calls_wasp_averaging * 1000, self.benchmark.calls_wasp_averaging))
 
             print('%20s : %1.3f ms per iteration. %d calls' % (
                 'Fourier_total', acc / self.benchmark.calls_fourier * 1000, self.benchmark.calls_fourier))

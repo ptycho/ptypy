@@ -1,5 +1,5 @@
 """
-An implementation of the Regularised Average Successive Projections (RASP)
+An implementation of the Weighted Average of Sequential Projections (WASP)
 ptychographic algorithm
 
 Authors: Andy Maiden
@@ -18,18 +18,18 @@ from ..utils import parallel
 from .. import io
 from .. import utils as u
 
-__all__ = ['RASP']
+__all__ = ['WASP']
 
 
 @register()
-class RASP(base.PositionCorrectionEngine):
+class WASP(base.PositionCorrectionEngine):
     """
-    Regularised Average Successive Projections
+    Weighted Average of Sequential Projections
 
     Defaults:
 
     [name]
-    default = RASP
+    default = WASP
     type = str
     help =
     doc =
@@ -278,8 +278,8 @@ class RASP(base.PositionCorrectionEngine):
             self.object_update(view, ex_old)
             self.probe_update(view, ex_old, ob_old)
 
-        # RASP
-        self.rasp_averaging()
+        # WASP
+        self.wasp_averaging()
 
         return error_dct
 
@@ -347,7 +347,7 @@ class RASP(base.PositionCorrectionEngine):
             object_norm = self.p.beta + ob_abs2
             pod.probe += ob_conj*(pod.exit - ex_old[name]) / object_norm
 
-    def rasp_averaging(self):
+    def wasp_averaging(self):
 
         for name, s in self.ob.storages.items():
             ob_sum_nmr = self.ob_sum_nmr.storages[name].data
