@@ -57,31 +57,6 @@ class WASP(base.PositionCorrectionEngine):
     type = bool
     help = If True update object before probe
 
-    [overlap_converge_factor]
-    default = 0.05
-    type = float
-    lowlim = 0.0
-    help = Threshold for interruption of the inner overlap loop
-    doc = The inner overlap loop refines the probe and the object simultaneously. This loop is escaped as soon as the overall change in probe, relative to the first iteration, is less than this value.
-
-    [overlap_max_iterations]
-    default = 10
-    type = int
-    lowlim = 1
-    help = Maximum of iterations for the overlap constraint inner loop
-
-    [probe_inertia]
-    default = 1e-9
-    type = float
-    lowlim = 0.0
-    help = Weight of the current probe estimate in the update
-
-    [object_inertia]
-    default = 1e-4
-    type = float
-    lowlim = 0.0
-    help = Weight of the current object in the update
-
     [fourier_power_bound]
     default = None
     type = float
