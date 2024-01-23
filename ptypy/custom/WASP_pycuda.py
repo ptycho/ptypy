@@ -330,9 +330,11 @@ class WASP_pycuda(WASP_serial):
                     AWK.build_aux2_no_ex(aux, addr, ob, pr)
 
                     # WASP ob and pr local update
-                    POK.wasp_ob_pr_update(addr, ob, pr, ex, aux, ob_sum_nmr,
-                                          ob_sum_dnm, pr_sum_nmr, pr_sum_dnm,
-                                          alpha=self.p.alpha, beta=self.p.beta)
+                    ob_old = ob.copy()
+                    POK.ob_update_wasp(addr, ob, pr, ex, aux, ob_sum_nmr,
+                                       ob_sum_dnm, alpha=self.p.alpha)
+                    POK.pr_update_wasp(addr, pr, ob_old, ex, aux, pr_sum_nmr,
+                                       pr_sum_dnm, beta=self.p.beta)
 
 
                     ## compute log-likelihood
