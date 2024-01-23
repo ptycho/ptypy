@@ -294,9 +294,11 @@ class WASP_serial(WASP):
                     # WASP ob and pr local update
                     t1 = time.time()
 
-                    POK.wasp_ob_pr_update(addr, ob, pr, ex, aux, ob_sum_nmr,
-                                          ob_sum_dnm, pr_sum_nmr, pr_sum_dnm,
-                                          alpha=self.p.alpha, beta=self.p.beta)
+                    ob_old = ob.copy()
+                    POK.ob_update_wasp(addr, ob, pr, ex, aux, ob_sum_nmr,
+                                       ob_sum_dnm, alpha=self.p.alpha)
+                    POK.pr_update_wasp(addr, pr, ob_old, ex, aux, pr_sum_nmr,
+                                       pr_sum_dnm, beta=self.p.beta)
 
                     self.benchmark.wasp_ob_pr_update += time.time() - t1
                     self.benchmark.calls_wasp_ob_pr_update += 1

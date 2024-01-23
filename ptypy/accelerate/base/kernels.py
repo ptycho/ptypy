@@ -661,8 +661,22 @@ class PoUpdateKernel(BaseKernel):
             pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols]).real
         return
 
-    def wasp_ob_pr_update(self, addr, ob, pr, ex, aux, ob_sum_nmr, ob_sum_dnm,
-                          pr_sum_nmr, pr_sum_dnm, alpha=1, beta=1):
+    def ob_update_wasp(self, addr, ob, pr, ex, aux, ob_sum_nmr, ob_sum_dnm, alpha=1):
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            pr_conj = pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj()
+            pr_abs2 = abs2(pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols])
+            deltaEW = ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] - aux[ind, :, :]
+
+            ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += 0.5 * pr_conj * deltaEW / (pr_abs2.mean() * alpha + pr_abs2)
+
+            ob_sum_nmr[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += pr_conj * ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
+            ob_sum_dnm[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += pr_abs2
+
+    def pr_update_wasp(self, addr, pr, ob, ex, aux, pr_sum_nmr, pr_sum_dnm, beta=1):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = ex.shape[-2:]
@@ -670,15 +684,9 @@ class PoUpdateKernel(BaseKernel):
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             ob_conj = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj()
             ob_abs2 = abs2(ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols])
-            pr_conj = pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj()
-            pr_abs2 = abs2(pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols])
             deltaEW = ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] - aux[ind, :, :]
 
-            ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += 0.5 * pr_conj * deltaEW / (pr_abs2.mean() * alpha + pr_abs2)
             pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += ob_conj * deltaEW / (beta + ob_abs2)
-
-            ob_sum_nmr[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += pr_conj * ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
-            ob_sum_dnm[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += pr_abs2
 
             pr_sum_nmr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += ob_conj * ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
             pr_sum_dnm[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += ob_abs2
