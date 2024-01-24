@@ -780,7 +780,11 @@ class NanomaxContrast(NanomaxStepscanSep2019):
     def pad_to_size(self, frame, value):
         ny, nx = np.shape(frame)
         cy, cx = self.info.tmp_center
-        dy, dx = self.info.shape
+        try:
+            iter(self.info.shape)
+            dy, dx = self.info.shape 
+        except TypeError:
+            dy, dx = self.info.shape, self.info.shape
         ry, rx = dy//2 , dx//2
         pad_xl   = rx - cx
         pad_xu   = rx + cx - nx 
@@ -820,7 +824,11 @@ class NanomaxContrast(NanomaxStepscanSep2019):
 
             # the center of the full frames is (now) known, and thus the indices for the cropping can be defined
             cy, cx  = self.info.center
-            dy, dx  = self.info.shape
+            try:
+                iter(self.info.shape)
+                dy, dx = self.info.shape 
+            except TypeError:
+                dy, dx = self.info.shape, self.info.shape
             logger.info(f'Found the center of the full frames at {self.info.center}')
             logger.info(f'Will crop all diffraction patterns on load to a size of {self.info.shape}')
             self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(cy)-dy//2, int(cx)-dy//2
