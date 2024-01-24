@@ -325,7 +325,8 @@ class WASP_serial(WASP):
                 parallel.allreduce(pr_sum_nmr)
                 parallel.allreduce(pr_sum_dnm)
 
-                POK.wasp_averaging(ob, pr, ob_sum_nmr, ob_sum_dnm, pr_sum_nmr, pr_sum_dnm)
+                POK.ob_avg_wasp(ob, ob_sum_nmr, ob_sum_dnm)
+                POK.pr_avg_wasp(pr, pr_sum_nmr, pr_sum_dnm)
 
                 self.benchmark.wasp_averaging += time.time() - t1
                 self.benchmark.calls_wasp_averaging += 1
