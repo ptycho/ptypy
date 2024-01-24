@@ -130,6 +130,7 @@ illumination_desc.from_string(r"""
     	 - *<template>* : one of the templates inillumination module
     	
     	In script, you may pass a numpy.ndarray here directly as the model. It is considered as incoming wavefront and will be propagated according to `propagation` with an optional `aperture` applied before.
+    choices = ['recon','stxm',None]
     userlevel = 0
 
     [photons]

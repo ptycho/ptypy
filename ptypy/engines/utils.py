@@ -20,7 +20,7 @@ def dynamic_load(path, baselist, fail_silently = True):
 
     :param path: Path to Python files.
     """
-    
+
     import os
     import glob
     import re
@@ -28,40 +28,40 @@ def dynamic_load(path, baselist, fail_silently = True):
 
     # Loop through paths
     engine_path = {}
-    
+
     try:
         # Complete directory path
         directory = os.path.abspath(os.path.expanduser(path))
-    
+
         if not os.path.exists(directory):
             # Continue silently
             raise IOError('Engine path %s does not exist.'
                            % str(directory))
-    
+
         # Get list of python files
         py_files = glob.glob(directory + '/*.py')
         if not py_files:
-            raise IOError('Directory %s does not contain Python files,' 
+            raise IOError('Directory %s does not contain Python files,'
                                             % str(directory))
-    
+
         # Loop through files to find engines
         for filename in py_files:
             modname = os.path.splitext(os.path.split(filename)[-1])[0]
-    
+
             # Find classes
             res = re.findall(
                 r'^class (.*)\((.*)\)', open(filename, 'r').read(), re.M)
-    
+
             for classname, basename in res:
                 if (basename in baselist) and classname not in baselist:
                     # Match!
                     engine_path[classname] = (modname, filename)
                     u.logger.info("Found Engine '%s' in file '%s'"
                                   % (classname, filename))
-    
+
         # Load engines that have been found
         for classname, mf in engine_path.items():
-    
+
             # Import module
             modname, filename = mf
             print(modname, filename)
@@ -115,7 +115,7 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
     .. math::
         x = 1 - a - b
 
-    and 
+    and
 
     .. math::
        y = 1 - c
@@ -158,8 +158,9 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
     # Get measured data
     I = diff_view.data
 
-    # Get the mask
-    fmask = diff_view.pod.mask
+    # Get the mask (cast to the same type as diff, for precision when operating
+    # with other numerical arrays)
+    fmask = diff_view.pod.mask.astype(I.dtype)
 
     # Propagate the exit waves
     for name, pod in diff_view.pods.items():
@@ -340,7 +341,7 @@ def basic_fourier_update_LEGACY(diff_view, pbound=None, alpha=1., LL_error=True)
     I = diff_view.data
 
     # Get the mask
-    fmask = diff_view.pod.mask
+    fmask = diff_view.pod.mask.astype(I.dtype)
 
     # For log likelihood error
     if LL_error is True:

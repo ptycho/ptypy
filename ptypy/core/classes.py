@@ -81,7 +81,7 @@ GEO_PREFIX = 'G'
 
 # Hard-coded limit in array size
 # TODO: make this dynamic from available memory.
-MEGAPIXEL_LIMIT = 50
+MEGAPIXEL_LIMIT = 100
 
 
 class Base(object):
@@ -709,8 +709,8 @@ class Storage(Base):
 
             megapixels = np.array(new_shape).astype(float).prod() / 1e6
             if megapixels > MEGAPIXEL_LIMIT:
-                raise RuntimeError('Arrays larger than %dM not supported. You '
-                                   'requested %.2fM pixels.' % (MEGAPIXEL_LIMIT, megapixels))
+                logger.warning('Arrays larger than %dM not recommended. You '
+                               'requested %.2fM pixels.' % (MEGAPIXEL_LIMIT, megapixels))
 
             # Apply Nd misfit
             if self.data is not None:

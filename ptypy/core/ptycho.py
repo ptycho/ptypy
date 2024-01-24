@@ -82,6 +82,7 @@ class Ptycho(Base):
        - ``INSPECT``:  Object Information
        - ``DEBUG``:    Debug
     type = str, int
+    choices = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'INSPECT', 'DEBUG']
     userlevel = 0
 
     [data_type]
@@ -90,6 +91,7 @@ class Ptycho(Base):
     doc = Reconstruction floating number precision (``'single'`` or
           ``'double'``)
     type = str
+    choices = ['single', 'double']
     userlevel = 1
 
     [run]
@@ -155,7 +157,8 @@ class Ptycho(Base):
     doc = Choose a reconstruction file format for after engine completion.
        - ``'minimal'``: Bare minimum of information
        - ``'dls'``:    Custom format for Diamond Light Source
-    choices = 'minimal','dls'
+       - ``'used_params'``: Same as minimal but including all used parameters 
+    choices = 'minimal','dls','used_params'
 
     [io.interaction]
     default = None
@@ -248,6 +251,7 @@ class Ptycho(Base):
     help = Options for default plotter or template name
     doc = Flexible layout for default plotter is not implemented yet. Please choose one of the
       templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``
+    choices = ['default', 'black_and_white', 'nearfield', 'minimal', 'weak']
     userlevel = 2
 
     [io.autoplot.dump]
@@ -269,6 +273,7 @@ class Ptycho(Base):
     help = Produce timings for benchmarking the performance of data loaders and engines
     doc = Switch to get timings and save results to a json file in p.io.home
         Choose ``'all'`` for timing data loading, engine_init, engine_prepare, engine_iterate and engine_finalize
+    choices = ['all', 'loading', 'engine_init', 'engine_prepare', 'engine_iterate', 'engine_finalize']
     userlevel = 2
 
     [scans]
@@ -351,6 +356,7 @@ class Ptycho(Base):
         self.mask = None
         self.model = None
         self.new_data = None
+        self.state_dict = dict()
 
         # Communication
         self.interactor = None
@@ -532,7 +538,7 @@ class Ptycho(Base):
         with LogTime(self.p.io.benchmark == 'all') as t:
             while not self.new_data:
                 self.new_data = self.model.new_data()
-            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
+        if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
         # Print stats
         parallel.barrier()
@@ -985,9 +991,14 @@ class Ptycho(Base):
                 if len(self.runtime.iter_info) > 0:
                     dump.runtime.iter_info = [self.runtime.iter_info[-1]]
 
+                if self.record_positions:
+                    dump.positions = {}
+                    for ID, S in self.obj.storages.items():
+                        dump.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
+
                 content = dump
 
-            elif kind == 'minimal' or kind == 'dls':
+            elif kind in ('minimal', 'dls', 'used_params'):
                 # if self.interactor is not None:
                 #    self.interactor.stop()
                 logger.info('Generating shallow copies of probe, object and '
@@ -1002,7 +1013,7 @@ class Ptycho(Base):
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
                     logger.warning("The parameters we are saving won't pass a validator check!")
-                minimal.pars = self.p.copy()  # _to_dict(Recursive=True)
+                minimal.pars = self.p.copy(depth=99)  # _to_dict(Recursive=True)
                 minimal.runtime = self.runtime.copy()
 
                 content = minimal
@@ -1015,6 +1026,13 @@ class Ptycho(Base):
 
                 for ID, S in self.obj.storages.items():
                     content.obj[ID]['grids'] = S.grids()
+
+            if kind == 'used_params':
+                for name, engine in self.engines.items():
+                    content.pars.engines[name] = engine.p
+                for name, scan in self.model.scans.items():
+                    content.pars.scans[name] = scan.p
+                    content.pars.scans[name].data = scan.ptyscan.p
 
             if kind in ['minimal', 'dls'] and self.record_positions:
                 content.positions = {}
@@ -1098,7 +1116,45 @@ class Ptycho(Base):
                            cmap='gray')
             fignum += 1
 
-    
+
+    def copy_state(self, name="baseline", overwrite=False):
+        """
+        Store a copy of the current state of object/probe
+
+        Warning: This feature is under development and syntax might change!
+        """
+        if name in self.state_dict:
+            logger.warning("A state with name {:s} exists already".format(name))
+            if overwrite:
+                logger.warning("Overwrite {:s} state".format(name))                
+                del self.state_dict[name]
+            else:
+                return
+        self.state_dict[name] = {}
+        self.state_dict[name]["ob"] = self.obj.copy()
+        self.state_dict[name]["pr"] = self.probe.copy()
+        self.state_dict[name]["runtime"] = self.runtime.copy(depth=99)
+        logger.info("Saved a copy of object and probe as the {:s} state".format(name))
+            
+    def restore_state(self, name="baseline", reformat_exit=True):
+        """
+        Restore object/probe based on a previously saved copy
+
+        Warning: This feature is under development and syntax might change!
+        """
+        if name in self.state_dict:
+            for ID,S in self.probe.storages.items():
+                S.data[:] = self.state_dict[name]["pr"].storages[ID].data
+            for ID,S in self.obj.storages.items():
+                S.data[:] = self.state_dict[name]["ob"].storages[ID].data
+        self.runtime = self.state_dict[name]["runtime"]
+        
+        # Reformat/Recalculate exit waves
+        if reformat_exit:
+            self.exit.reformat()
+            for scan in self.model.scans.values():
+                scan._initialize_exit(list(self.pods.values()))
+
     def _redistribute_data(self, div = 'rect', obj_storage=None):
         """
         This function redistributes data among nodes, so that each

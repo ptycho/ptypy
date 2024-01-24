@@ -28,6 +28,7 @@ p.io.autosave = u.Param(active=False)
 p.io.autoplot = u.Param(active=False)
 p.io.interaction = u.Param()
 p.io.interaction.server = u.Param(active=False)
+p.io.benchmark = "all"
 
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()

@@ -71,6 +71,7 @@ class ScanModel(object):
     default = farfield
     help = Propagation type
     doc = Either "farfield" or "nearfield"
+    choices = ['farfield', 'nearfield']
     userlevel = 1
 
     [ffttype]
@@ -78,6 +79,7 @@ class ScanModel(object):
     default = scipy
     help = FFT library
     doc = Choose from "numpy", "scipy" or "fftw"
+    choices = ['numpy', 'scipy', 'fftw']
     userlevel = 1
 
     [data]
@@ -906,6 +908,7 @@ class _Full(object):
        - ``'irregular'``: no assumption
       **[not implemented]**
     type = str
+    choices = ['achromatic', 'linear', 'irregular']
     userlevel = 2
 
     [coherence.probe_dispersion]
@@ -917,6 +920,7 @@ class _Full(object):
        - ``'irregular'``: no assumption
       **[not implemented]**
     type = str
+    choices = ['achromatic', 'linear', 'irregular']
     userlevel = 2
 
     [resolution]
