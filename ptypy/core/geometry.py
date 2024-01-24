@@ -7,7 +7,7 @@ This file is part of the PTYPY package.
     :license: see LICENSE for details.
 """
 import numpy as np
-from scipy.fftpack import fft 
+from scipy import fftpack as scipyfft 
 
 from .. import utils as u
 from ..utils.verbose import logger
@@ -471,8 +471,8 @@ class FFTchooser(object):
         self.ifft = lambda x: fftw_np.ifft2(x, planner_effort=pe)
 
     def _scipy_fft(self):
-        self.fft = lambda x: fft.fft2(x).astype(x.dtype)
-        self.ifft = lambda x: fft.ifft2(x).astype(x.dtype)
+        self.fft = lambda x: scipyfft.fft2(x).astype(x.dtype)
+        self.ifft = lambda x: scipyfft.ifft2(x).astype(x.dtype)
 
     def _numpy_fft(self):
         self.fft = lambda x: np.ascontiguousarray(np.fft.fft2(x).astype(x.dtype))
