@@ -887,6 +887,18 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             'MATH_TYPE': self.math_type,
             'ACC_TYPE': self.accumulator_type
         })
+        self.ob_avg_wasp_cuda = load_kernel("ob_avg_wasp", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
+        self.pr_avg_wasp_cuda = load_kernel("pr_avg_wasp", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
 
     def ob_update(self, addr, ob, obn, pr, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
@@ -1185,6 +1197,26 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             np.float32(beta),
             block=(bx, by, 1),
             grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
+            stream=self.queue)
+
+    def ob_avg_wasp(self, ob, ob_sum_nmr, ob_sum_dnm):
+        obsh = [np.int32(ax) for ax in ob.shape]
+        bx = 64
+        by = 1
+        self.ob_avg_wasp_cuda(ob, ob_sum_nmr, ob_sum_dnm,
+            obsh[0], obsh[1], obsh[2],
+            block=(bx, by, 1),
+            grid=(1, int((obsh[1] + by - 1)//by), int(obsh[0])),
+            stream=self.queue)
+
+    def pr_avg_wasp(self, pr, pr_sum_nmr, pr_sum_dnm):
+        prsh = [np.int32(ax) for ax in pr.shape]
+        bx = 64
+        by = 1
+        self.pr_avg_wasp_cuda(pr, pr_sum_nmr, pr_sum_dnm,
+            prsh[0], prsh[1], prsh[2],
+            block=(bx, by, 1),
+            grid=(1, int((prsh[1] + by - 1)//by), int(prsh[0])),
             stream=self.queue)
 
 
