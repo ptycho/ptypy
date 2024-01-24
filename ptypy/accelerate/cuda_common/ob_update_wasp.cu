@@ -50,6 +50,8 @@ extern "C" __global__ void ob_update_wasp(
 
   probe += pa[0] * E * F + pa[1] * F + pa[2];
   obj += oa[0] * H * I + oa[1] * I + oa[2];
+  obj_sum_nmr += oa[0] * H * I + oa[1] * I + oa[2];
+  obj_sum_dnm += oa[0] * H * I + oa[1] * I + oa[2];
   aux += bid * B * C;
   const MATH_TYPE probe_abs2_mean_val = probe_abs2_mean[0];
   const MATH_TYPE alpha = alpha_;

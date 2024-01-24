@@ -49,6 +49,8 @@ extern "C" __global__ void pr_update_wasp(
   const int* ea = addr + 6 + bid * addr_stride;
 
   probe += pa[0] * E * F + pa[1] * F + pa[2];
+  probe_sum_nmr += pa[0] * E * F + pa[1] * F + pa[2];
+  probe_sum_dnm += pa[0] * E * F + pa[1] * F + pa[2];
   obj += oa[0] * H * I + oa[1] * I + oa[2];
   aux += bid * B * C;
   const MATH_TYPE beta = beta_;
