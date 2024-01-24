@@ -62,12 +62,16 @@ class WASP_pycuda(WASP_serial):
         self.ma_data = None
         self.mag_data = None
         self.ex_data = None
+        self.multigpu = None
 
     def engine_initialize(self):
         """
         Prepare for reconstruction.
         """
-        self.context, self.queue = get_context(new_context=True, new_queue=True)
+        # Context, Multi GPU communicator and Stream (needs to be in this order)
+        self.context, self.queue = get_context(new_context=True, new_queue=False)
+        self.multigpu = get_multi_gpu_communicator()
+        self.context, self.queue = get_context(new_context=False, new_queue=True)
 
         # initialise kernels for centring probe if required
         if self.p.probe_center_tol is not None:
@@ -77,6 +81,9 @@ class WASP_pycuda(WASP_serial):
             self.A2SK = Abs2SumKernel(dtype=self.pr.dtype, queue=self.queue)
             # interpolated shift kernel
             self.ISK = InterpolatedShiftKernel(queue=self.queue)
+
+        # Clip Magnitudes Kernel
+        self.CMK = ClipMagnitudesKernel(queue=self.queue)
 
         super().engine_initialize()
         self.qu_htod = cuda.Stream()
@@ -342,21 +349,33 @@ class WASP_pycuda(WASP_serial):
                         PROP.fw(aux, aux)
                         FUK.log_likelihood2(aux, addr, mag, ma, err_phot)
 
+                # WASP averaging
+
+                # collect the sums
+                self.multigpu.allReduceSum(ob_sum_nmr)
+                self.multigpu.allReduceSum(ob_sum_dnm)
+                self.multigpu.allReduceSum(pr_sum_nmr)
+                self.multigpu.allReduceSum(pr_sum_dnm)
+
+                POK.ob_avg_wasp(ob, ob_sum_nmr, ob_sum_dnm)
+                POK.pr_avg_wasp(pr, pr_sum_nmr, pr_sum_dnm)
+
+                # Clip object
+                if self.p.clip_object is not None:
+                    self.clip_object(ob)
+                    self.queue.synchronize()
+
                 data_ex.record_done(self.queue, 'compute')
                 if iblock + len(self.ex_data) < len(self.dID_list):
                     data_ex.from_gpu(self.qu_dtoh)
 
-            # WASP averaging
-
-
-
-            # TODO swap direction
+            # swap direction
             self.dID_list.reverse()
 
             # Re-center probe
             self.center_probe()
 
-            # TODO position update
+            # position update
             self.position_update()
 
             self.curiter += 1
@@ -382,3 +401,113 @@ class WASP_pycuda(WASP_serial):
 
         self.error = error
         return error
+
+    def clip_object(self, ob):
+        """
+        Clips magnitudes of object into given range.
+        """
+        cmin, cmax = self.p.clip_object
+        self.CMK.clip_magnitudes_to_range(ob, cmin, cmax)
+
+    def position_update(self):
+        """
+        Position refinement
+        (Copied from _ProjectionEngine_pycuda)
+        """
+        if not self.do_position_refinement or (not self.curiter):
+            return
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
+
+        # Update positions
+        if do_update_pos:
+            """
+            Iterates through all positions and refines them by a given algorithm.
+            """
+            log(4, "----------- START POS REF -------------")
+            for dID in self.di.S.keys():
+
+                prep = self.diff_info[dID]
+                pID, oID, eID = prep.poe_IDs
+                ma = self.ma.S[dID].gpu
+                ob = self.ob.S[oID].gpu
+                pr = self.pr.S[pID].gpu
+                kern = self.kernels[prep.label]
+                aux = kern.aux
+                addr = prep.addr_gpu
+                original_addr = prep.original_addr
+                mangled_addr = prep.mangled_addr_gpu
+                mag = prep.mag
+                ma_sum = prep.ma_sum
+                err_fourier = prep.err_fourier_gpu
+                error_state = prep.error_state_gpu
+
+                PCK = kern.PCK
+                TK  = kern.TK
+                PROP = kern.PROP
+
+                # Keep track of object boundaries
+                max_oby = ob.shape[-2] - aux.shape[-2] - 1
+                max_obx = ob.shape[-1] - aux.shape[-1] - 1
+
+                # We need to re-calculate the current error
+                PCK.build_aux(aux, addr, ob, pr)
+                PROP.fw(aux, aux)
+                if self.p.position_refinement.metric == "fourier":
+                    PCK.fourier_error(aux, addr, mag, ma, ma_sum)
+                    PCK.error_reduce(addr, err_fourier)
+                if self.p.position_refinement.metric == "photon":
+                    PCK.log_likelihood(aux, addr, mag, ma, err_fourier)
+                cuda.memcpy_dtod(dest=error_state.ptr,
+                                    src=err_fourier.ptr,
+                                    size=err_fourier.nbytes)
+
+                PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
+
+                log(4, 'Position refinement trial: iteration %s' % (self.curiter))
+                for i in range(PCK.mangler.nshifts):
+                    PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
+                    PCK.build_aux(aux, mangled_addr, ob, pr)
+                    PROP.fw(aux, aux)
+                    if self.p.position_refinement.metric == "fourier":
+                        PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
+                        PCK.error_reduce(mangled_addr, err_fourier)
+                    if self.p.position_refinement.metric == "photon":
+                        PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
+                    PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
+
+                cuda.memcpy_dtod(dest=err_fourier.ptr,
+                                    src=error_state.ptr,
+                                    size=err_fourier.nbytes)
+                if use_tiles:
+                    s1 = addr.shape[0] * addr.shape[1]
+                    s2 = addr.shape[2] * addr.shape[3]
+                    TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
+
+    def engine_finalize(self):
+        """
+        clear GPU data and destroy context.
+        """
+        self.ex_data = None
+        self.ma_data = None
+        self.mag_data = None
+
+        for name, s in self.ob.S.items():
+            del s.gpu
+        for name, s in self.pr.S.items():
+            del s.gpu
+        for dID, prep in self.diff_info.items():
+            prep.addr = prep.addr_gpu.get()
+
+        # copy data to cpu
+        # this kills the pagelock memory (otherwise we get segfaults in h5py)
+        for name, s in self.pr.S.items():
+            s.data = np.copy(s.data)
+        for name, s in self.ob.S.items():
+            s.data = np.copy(s.data)
+
+        self.context.pop()
+        self.context.detach()
+
+        super().engine_finalize()
