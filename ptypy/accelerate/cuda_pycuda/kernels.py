@@ -1172,8 +1172,6 @@ class PoUpdateKernel(ab.PoUpdateKernel):
 
     def pr_update_wasp(self, addr, pr, ob, ex, aux, pr_sum_nmr, pr_sum_dnm,
                        beta=1):
-        ob_abs2 = (ob * ob.conj()).real
-
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
         exsh = [np.int32(ax) for ax in ex.shape]
