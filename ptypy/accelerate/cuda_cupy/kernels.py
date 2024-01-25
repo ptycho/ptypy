@@ -903,6 +903,30 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             'MATH_TYPE': self.math_type,
             'ACC_TYPE': self.accumulator_type
         })
+        self.ob_update_wasp_cuda = load_kernel("ob_update_wasp", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
+        self.pr_update_wasp_cuda = load_kernel("pr_update_wasp", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
+        self.ob_avg_wasp_cuda = load_kernel("ob_avg_wasp", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
+        self.pr_avg_wasp_cuda = load_kernel("pr_avg_wasp", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
 
     def ob_update(self, addr, ob, obn, pr, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
@@ -1180,6 +1204,97 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                   pr,
                   prsh[0], prsh[1], prsh[2],
                   addr))
+
+    def ob_update_wasp(self, addr, ob, pr, ex, aux, ob_sum_nmr, ob_sum_dnm,
+                       alpha=1):
+        if self.queue is not None:
+            self.queue.use()
+
+        pr_abs2 = (pr * pr.conj()).real
+        pr_abs2_mean = cp.sum(pr_abs2) / pr_abs2.size # any better way?
+
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        exsh = [np.int32(ax) for ax in ex.shape]
+
+        # atomics version only
+        if addr.shape[3] != 3 or addr.shape[2] != 5:
+            raise ValueError('Address not in required shape for tiled ob_update')
+
+        num_pods = np.int32(addr.shape[0] * addr.shape[1])
+        bx = 64
+        by = 1
+        self.ob_update_wasp_cuda(
+                grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
+                block=(bx, by, 1),
+                args=(ex, aux,
+                      exsh[0], exsh[1], exsh[2],
+                      pr,
+                      pr_abs2,
+                      prsh[0], prsh[1], prsh[2],
+                      ob,
+                      ob_sum_nmr,
+                      ob_sum_dnm,
+                      obsh[0], obsh[1], obsh[2],
+                      addr,
+                      pr_abs2_mean,
+                      np.float32(alpha)))
+
+    def pr_update_wasp(self, addr, pr, ob, ex, aux, pr_sum_nmr, pr_sum_dnm,
+                       beta=1):
+        if self.queue is not None:
+            self.queue.use()
+
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        exsh = [np.int32(ax) for ax in ex.shape]
+
+        # atomics version only
+        if addr.shape[3] != 3 or addr.shape[2] != 5:
+            raise ValueError('Address not in required shape for tiled ob_update')
+
+        num_pods = np.int32(addr.shape[0] * addr.shape[1])
+        bx = 64
+        by = 1
+        self.pr_update_wasp_cuda(
+                grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
+                block=(bx, by, 1),
+                args=(ex, aux,
+                      exsh[0], exsh[1], exsh[2],
+                      pr,
+                      pr_sum_nmr,
+                      pr_sum_dnm,
+                      prsh[0], prsh[1], prsh[2],
+                      ob,
+                      obsh[0], obsh[1], obsh[2],
+                      addr,
+                      np.float32(beta)))
+
+    def ob_avg_wasp(self, ob, ob_sum_nmr, ob_sum_dnm):
+        if self.queue is not None:
+            self.queue.use()
+
+        obsh = [np.int32(ax) for ax in ob.shape]
+        bx = 64
+        by = 1
+        self.ob_avg_wasp_cuda(
+                grid=(1, int((obsh[1] + by - 1)//by), int(obsh[0])),
+                block=(bx, by, 1),
+                args=(ob, ob_sum_nmr, ob_sum_dnm,
+                      obsh[0], obsh[1], obsh[2]))
+
+    def pr_avg_wasp(self, pr, pr_sum_nmr, pr_sum_dnm):
+        if self.queue is not None:
+            self.queue.use()
+
+        prsh = [np.int32(ax) for ax in pr.shape]
+        bx = 64
+        by = 1
+        self.pr_avg_wasp_cuda(
+                grid=(1, int((prsh[1] + by - 1)//by), int(prsh[0])),
+                block=(bx, by, 1),
+                args=(pr, pr_sum_nmr, pr_sum_dnm,
+                      prsh[0], prsh[1], prsh[2]))
 
 
 class PositionCorrectionKernel(ab.PositionCorrectionKernel):
