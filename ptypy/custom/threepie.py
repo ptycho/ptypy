@@ -50,6 +50,12 @@ class ThreePIE(stochastic.EPIE):
     help = File path for the slice data
     doc =
 
+    [object_regularization_rate]
+    default = 0.0
+    type = float
+    help = regularization rate for object slices
+    doc =
+
     """
     def __init__(self, ptycho_parent, pars=None):
         super(ThreePIE, self).__init__(ptycho_parent, pars)
@@ -227,4 +233,30 @@ class ThreePIE(stochastic.EPIE):
         for i in range(1, self.p.number_of_slices):
             self.ob *= self._object[i]
 
+        if self.p.object_regularization_rate > 0:
+            self.apply_object_regularization()
+
         return error
+
+    def apply_object_regularization(self):
+        # single mode implementation
+        # only valide for slices with identical thickness
+        assert(self.p.number_of_slices > 1)
+        assert(isinstance(self.p.slice_thickness, float))
+
+        shape = self._object[0].S["Sscan_00G00"].data.shape[1:]
+        psize = self._object[0].S["Sscan_00G00"].psize[0]
+        kz = np.fft.fftfreq(self.p.number_of_slices, self.p.slice_thickness)[..., np.newaxis, np.newaxis]
+        ky = np.fft.fftfreq(shape[0], psize)[..., np.newaxis]
+        kx = np.fft.fftfreq(shape[1], psize)
+
+        # calculate the weight array
+        w = 1 - 2*np.arctan2(self.p.object_regularization_rate**2 * kz**2, kx**2+ky**2+np.spacing(1))/np.pi
+
+        current_object = np.fft.ifftn(np.fft.fftn([self._object[i].S["Sscan_00G00"].data[0,...] for i in range(len(self._object))]) * w)
+
+        print("object shape", self._object[0].S["Sscan_00G00"].data.shape)
+        print("w shape", w.shape)
+        print("current shape", current_object.shape)
+        for i in range(len(self._object)):
+            self._object[i].S["Sscan_00G00"].data[0, ...] = current_object[i, ...]
