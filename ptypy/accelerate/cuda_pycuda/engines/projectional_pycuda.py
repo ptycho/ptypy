@@ -69,9 +69,9 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
         Prepare for reconstruction.
         """
         # Context, Multi GPU communicator and Stream (needs to be in this order)
-        self.context, self.queue = get_context(new_context=True, new_queue=False)
+        self.context, self.queue = get_context(new_queue=False)
         self.multigpu = get_multi_gpu_communicator()
-        self.context, self.queue = get_context(new_context=False, new_queue=True)
+        self.context, self.queue = get_context(new_queue=True)
 
         # Gaussian Smoothing Kernel
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
@@ -554,9 +554,6 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
         # this kills the pagelock memory (otherwise we get segfaults in h5py)
         for name, s in self.pr.S.items():
             s.data = np.copy(s.data)
-
-        self.context.pop()
-        self.context.detach()
 
         # we don't need the  "benchmarking" in DM_serial
         super().engine_finalize(benchmark=False)

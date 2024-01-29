@@ -64,8 +64,6 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
         fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
         if not fit:
             log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
-            self.context.pop()
-            self.context.detach()
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
@@ -138,7 +136,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
             self.ex_data.add_data_block()
             self.ma_data.add_data_block()
             self.mag_data.add_data_block()
-        
+
     def engine_iterate(self, num=1):
         """
         Compute one iteration.
@@ -148,7 +146,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
         atomics_probe = self.p.probe_update_cuda_atomics
         atomics_object = self.p.object_update_cuda_atomics
         use_tiles = (not atomics_object) or (not atomics_probe)
-        
+
         for it in range(num):
 
             error = {}
@@ -311,7 +309,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
                 # Update positions
                 if do_update_pos:
                     """
-                    Iterates through all positions and refines them by a given algorithm. 
+                    Iterates through all positions and refines them by a given algorithm.
                     """
                     log(4, "----------- START POS REF -------------")
                     for dID in self.di.S.keys():
@@ -347,7 +345,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
                         # wait for data to arrive
                         self.queue.wait_for_event(ev_mag)
 
-                        # We need to re-calculate the current error 
+                        # We need to re-calculate the current error
                         if self.p.position_refinement.metric == "fourier":
                             PCK.fourier_error(aux, addr, mag, ma, ma_sum)
                             PCK.error_reduce(addr, err_fourier)

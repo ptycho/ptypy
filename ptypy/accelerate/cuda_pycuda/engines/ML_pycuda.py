@@ -15,14 +15,13 @@ import numpy as np
 from pycuda import gpuarray
 import pycuda.driver as cuda
 import pycuda.cumath
-from pycuda.tools import DeviceMemoryPool
 
 from ptypy.engines import register
 from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
 from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
-from .. import get_context
+from .. import get_context, get_dev_pool
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, TransposeKernel
@@ -79,13 +78,13 @@ class ML_pycuda(ML_serial):
         """
         Prepare for ML reconstruction.
         """
-        self.context, self.queue = get_context(new_context=True, new_queue=True)
+        self.context, self.queue = get_context(new_queue=True)
 
         if self.p.use_cuda_device_memory_pool:
-            self._dmp = DeviceMemoryPool()
-            self.allocate = self._dmp.allocate
+            self._dev_pool = get_dev_pool()
+            self.allocate = self._dev_pool.allocate
         else:
-            self._dmp = None
+            self._dev_pool = None
             self.allocate = cuda.mem_alloc
 
         self.qu_htod = cuda.Stream()
@@ -163,8 +162,6 @@ class ML_pycuda(ML_serial):
         fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
         if not fit:
             log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
-            self.context.pop()
-            self.context.detach()
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
@@ -301,7 +298,7 @@ class ML_pycuda(ML_serial):
         return err
 
     def position_update(self):
-        """ 
+        """
         Position refinement
         """
         if not self.do_position_refinement or (not self.curiter):
@@ -342,7 +339,7 @@ class ML_pycuda(ML_serial):
                 max_oby = ob.shape[-2] - aux.shape[-2] - 1
                 max_obx = ob.shape[-1] - aux.shape[-1] - 1
 
-                # We need to re-calculate the current error 
+                # We need to re-calculate the current error
                 PCK.build_aux(aux, addr, ob, pr)
                 PROP.fw(aux, aux)
                 PCK.queue.wait_for_event(ev)
@@ -351,9 +348,9 @@ class ML_pycuda(ML_serial):
                 cuda.memcpy_dtod(dest=error_state.ptr,
                                     src=err_phot.ptr,
                                     size=err_phot.nbytes)
-                
+
                 PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
-                                
+
                 log(4, 'Position refinement trial: iteration %s' % (self.curiter))
                 for i in range(PCK.mangler.nshifts):
                     PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
@@ -422,8 +419,6 @@ class ML_pycuda(ML_serial):
 
 
         #self.queue.synchronize()
-        self.context.pop()
-        self.context.detach()
         super().engine_finalize()
 
 class GaussianModel(BaseModelSerial):
@@ -683,11 +678,11 @@ class Regul_del2_pycuda(object):
         self.DELK_f = DerivativesKernel(np.float32, queue=queue)
 
         if allocator is None:
-            self._dmp = DeviceMemoryPool()
-            self.allocator=self._dmp.allocate
+            self._dev_pool = get_dev_pool()
+            self.allocator=self._dev_pool.allocate
         else:
             self.allocator = allocator
-            self._dmp= None
+            self._dev_pool= None
 
         empty = lambda x: gpuarray.empty(x.shape, x.dtype, allocator=self.allocator)
 
