@@ -4,8 +4,7 @@ from cupyx.scipy.fft import get_fft_plan
 from . import load_kernel
 import numpy as np
 
-
-class FFT_cuda(object):
+class FFT_base(object):
 
     def __init__(self, array, queue=None,
                  inplace=False,
@@ -18,16 +17,30 @@ class FFT_cuda(object):
         if dims < 2:
             raise AssertionError('Input array must be at least 2-dimensional')
         self.arr_shape = (array.shape[-2], array.shape[-1])
-        rows = self.arr_shape[0]
-        columns = self.arr_shape[1]
-        if rows != columns or rows not in [16, 32, 64, 128, 256, 512, 1024, 2048]:
-            raise ValueError(
-                "CUDA FFT only supports powers of 2 for rows/columns, from 16 to 2048")
         self.batches = int(np.prod(
             array.shape[0:dims-2]) if dims > 2 else 1)
         self.forward = forward
 
         self._load(array, pre_fft, post_fft, symmetric, forward)
+
+class FFT_cuda(FFT_base):
+
+    def __init__(self, array, queue=None,
+                 inplace=False,
+                 pre_fft=None,
+                 post_fft=None,
+                 symmetric=True,
+                 forward=True):
+        rows, columns = (array.shape[-2], array.shape[-1])
+        if rows != columns or rows not in [16, 32, 64, 128, 256, 512, 1024, 2048]:
+            raise ValueError(
+                "CUDA FFT only supports powers of 2 for rows/columns, from 16 to 2048")
+        super(FFT_cuda, self).__init__(array, queue=queue, 
+                                       inplace=inplace,
+                                       pre_fft=pre_fft,
+                                       post_fft=post_fft,
+                                       symmetric=symmetric,
+                                       forward=forward)
 
     def _load(self, array, pre_fft, post_fft, symmetric, forward):
         if pre_fft is not None:
@@ -71,7 +84,7 @@ class FFT_cuda(object):
         self.fftobj.ifft(input.data.ptr, output.data.ptr)
 
 
-class FFT_cupy(FFT_cuda):
+class FFT_cupy(FFT_base):
 
     @property
     def queue(self):

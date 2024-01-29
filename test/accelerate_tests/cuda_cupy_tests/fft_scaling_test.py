@@ -39,16 +39,16 @@ def get_reverse_cuFFT(f, stream,
 
 class FftScalingTest(CupyCudaTest):
 
-    def get_input(self):
-        rows = cols = 32
+    def get_input(self, size):
+        rows = cols = size
         batches = 1
         f = np.ones(shape=(batches, rows, cols), dtype=COMPLEX_TYPE)
         return f
 
     #### Trivial foward transform tests ####
 
-    def fwd_test(self, symmetric, factory, preffact=None, postfact=None, external=True):
-        f = self.get_input()
+    def fwd_test(self, symmetric, factory, preffact=None, postfact=None, external=True, size=32):
+        f = self.get_input(size)
         f_d = cp.asarray(f)
         if preffact is not None:
             pref = preffact * np.ones(shape=f.shape[-2:], dtype=np.complex64)
@@ -71,7 +71,7 @@ class FftScalingTest(CupyCudaTest):
         scale = 1.0 if not symmetric else 1.0 / np.sqrt(elements)
         expected = elements * scale * preffact * postfact
         self.assertAlmostEqual(f_back[0,0,0], expected)
-        np.testing.assert_array_almost_equal(f_back.flat[1:], 0)
+        np.testing.assert_array_almost_equal(f_back.flat[1:], 0, decimal=5)
 
     def test_fwd_noscale_cufft(self):
         self.fwd_test(False, get_forward_cuFFT)
@@ -121,11 +121,34 @@ class FftScalingTest(CupyCudaTest):
     def test_prepostfilt_fwd_scale_cufft_cupy(self):
         self.fwd_test(True, get_forward_cuFFT, postfact=2.0, preffact=1.5, external=False)
 
+    def test_fwd_not_power_two_noscale_cufft_cupy(self):
+        self.fwd_test(False, get_forward_cuFFT, external=False, size=20)
 
+    def test_fwd_not_power_two_scale_cufft_cupy(self):
+        self.fwd_test(True, get_forward_cuFFT, external=False, size=20)
+
+    def test_prefilt_fwd_not_power_two_noscale_cufft_cupy(self):
+        self.fwd_test(False, get_forward_cuFFT, preffact=2.0, external=False, size=20)
+
+    def test_prefilt_fwd_not_power_two_scale_cufft_cupy(self):
+        self.fwd_test(True, get_forward_cuFFT, preffact=2.0, external=False, size=20)
+
+    def test_postfilt_fwd_not_power_two_noscale_cufft_cupy(self):
+        self.fwd_test(False, get_forward_cuFFT, postfact=2.0, external=False, size=20)
+
+    def test_postfilt_fwd_not_power_two_scale_cufft_cupy(self):
+        self.fwd_test(True, get_forward_cuFFT, postfact=2.0, external=False, size=20)
+
+    def test_prepostfilt_not_power_two_fwd_noscale_cufft_cupy(self):
+        self.fwd_test(False, get_forward_cuFFT, postfact=2.0, preffact=1.5, external=False, size=20)
+
+    def test_prepostfilt_not_power_two_fwd_scale_cufft_cupy(self):
+        self.fwd_test(True, get_forward_cuFFT, postfact=2.0, preffact=1.5, external=False, size=20)
+        
     ############# Trivial inverse transform tests #########
 
-    def rev_test(self, symmetric, factory, preffact=None, postfact=None, external=True):
-        f = self.get_input()
+    def rev_test(self, symmetric, factory, preffact=None, postfact=None, external=True, size=32):
+        f = self.get_input(size)
         f_d = cp.asarray(f)
         if preffact is not None:
             pref = preffact * np.ones(shape=f.shape[-2:], dtype=np.complex64)
@@ -148,7 +171,7 @@ class FftScalingTest(CupyCudaTest):
         scale = 1.0 if not symmetric else np.sqrt(elements)
         expected = scale * preffact * postfact
         self.assertAlmostEqual(f_back[0,0,0], expected)
-        np.testing.assert_array_almost_equal(f_back.flat[1:], 0)
+        np.testing.assert_array_almost_equal(f_back.flat[1:], 0, decimal=5)
 
 
     def test_rev_noscale_cufft(self):
@@ -199,6 +222,29 @@ class FftScalingTest(CupyCudaTest):
     def test_prepostfilt_rev_scale_cufft_cupy(self):
         self.rev_test(True, get_reverse_cuFFT, postfact=1.5, preffact=2.0, external=False)
 
+    def test_rev_not_power_two_noscale_cufft_cupy(self):
+        self.rev_test(False, get_reverse_cuFFT, external=False, size=20)
+
+    def test_rev_not_power_two_scale_cufft_cupy(self):
+        self.rev_test(True, get_reverse_cuFFT, external=False, size=20)
+
+    def test_prefilt_rev_not_power_two_noscale_cufft_cupy(self):
+        self.rev_test(False, get_reverse_cuFFT, preffact=1.5, external=False, size=20)
+
+    def test_prefilt_rev_not_power_two_scale_cufft_cupy(self):
+        self.rev_test(True, get_reverse_cuFFT, preffact=1.5, external=False, size=20)
+
+    def test_postfilt_rev_not_power_two_noscale_cufft_cupy(self):
+        self.rev_test(False, get_reverse_cuFFT, postfact=1.5, external=False, size=20)
+
+    def test_postfilt_rev_not_power_two_scale_cufft_cupy(self):
+        self.rev_test(True, get_reverse_cuFFT, postfact=1.5, external=False, size=20)
+
+    def test_prepostfilt_rev_not_power_two_noscale_cufft_cupy(self):
+        self.rev_test(False, get_reverse_cuFFT, postfact=1.5, preffact=2.0, external=False, size=20)
+
+    def test_prepostfilt_rev_not_power_two_scale_cufft_cupy(self):
+        self.rev_test(True, get_reverse_cuFFT, postfact=1.5, preffact=2.0, external=False, size=20)
 
 if __name__ == '__main__':
     unittest.main()
