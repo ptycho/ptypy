@@ -92,6 +92,7 @@ class FftScalingTest(PyCudaTest):
     def test_fwd_noscale_cufft(self):
         self.fwd_test(False, get_forward_cuFFT)
     
+    @unittest.skip("Skcuda is currently broken")
     def test_fwd_noscale_cufft_skcuda(self):
         self.fwd_test(False, get_forward_cuFFT, external=False)
 
@@ -101,6 +102,7 @@ class FftScalingTest(PyCudaTest):
     def test_fwd_scale_cufft(self):
         self.fwd_test(True, get_forward_cuFFT)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_fwd_scale_cufft_skcuda(self):
         self.fwd_test(True, get_forward_cuFFT, external=False)
 
@@ -110,6 +112,7 @@ class FftScalingTest(PyCudaTest):
     def test_prefilt_fwd_noscale_cufft(self):
         self.fwd_test(False, get_forward_cuFFT, preffact=2.0)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_prefilt_fwd_noscale_cufft_skcuda(self):
         self.fwd_test(False, get_forward_cuFFT, preffact=2.0, external=False)
 
@@ -119,6 +122,7 @@ class FftScalingTest(PyCudaTest):
     def test_prefilt_fwd_scale_cufft(self):
         self.fwd_test(True, get_forward_cuFFT, preffact=2.0)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_prefilt_fwd_scale_cufft_skcuda(self):
         self.fwd_test(True, get_forward_cuFFT, preffact=2.0, external=False)
 
@@ -128,6 +132,7 @@ class FftScalingTest(PyCudaTest):
     def test_postfilt_fwd_noscale_cufft(self):
         self.fwd_test(False, get_forward_cuFFT, postfact=2.0)
     
+    @unittest.skip("Skcuda is currently broken")
     def test_postfilt_fwd_noscale_cufft_skcuda(self):
         self.fwd_test(False, get_forward_cuFFT, postfact=2.0, external=False)
 
@@ -137,6 +142,7 @@ class FftScalingTest(PyCudaTest):
     def test_postfilt_fwd_scale_cufft(self):
         self.fwd_test(True, get_forward_cuFFT, postfact=2.0)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_postfilt_fwd_scale_cufft_skcuda(self):
         self.fwd_test(True, get_forward_cuFFT, postfact=2.0, external=False)
 
@@ -146,6 +152,7 @@ class FftScalingTest(PyCudaTest):
     def test_prepostfilt_fwd_noscale_cufft(self):
         self.fwd_test(False, get_forward_cuFFT, postfact=2.0, preffact=1.5)
     
+    @unittest.skip("Skcuda is currently broken")
     def test_prepostfilt_fwd_noscale_cufft_skcuda(self):
         self.fwd_test(False, get_forward_cuFFT, postfact=2.0, preffact=1.5, external=False)
 
@@ -155,6 +162,7 @@ class FftScalingTest(PyCudaTest):
     def test_prepostfilt_fwd_scale_cufft(self):
         self.fwd_test(True, get_forward_cuFFT, postfact=2.0, preffact=1.5)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_prepostfilt_fwd_scale_cufft_skcuda(self):
         self.fwd_test(True, get_forward_cuFFT, postfact=2.0, preffact=1.5, external=False)
 
@@ -194,6 +202,7 @@ class FftScalingTest(PyCudaTest):
     def test_rev_noscale_cufft(self):
         self.rev_test(False, get_reverse_cuFFT)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_rev_noscale_cufft_skcuda(self):
         self.rev_test(False, get_reverse_cuFFT, external=False)
 
@@ -203,6 +212,7 @@ class FftScalingTest(PyCudaTest):
     def test_rev_scale_cufft(self):
         self.rev_test(True, get_reverse_cuFFT)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_rev_scale_cufft_skcuda(self):
         self.rev_test(True, get_reverse_cuFFT, external=False)
 
@@ -212,6 +222,7 @@ class FftScalingTest(PyCudaTest):
     def test_prefilt_rev_noscale_cufft(self):
         self.rev_test(False, get_reverse_cuFFT, preffact=1.5)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_prefilt_rev_noscale_cufft_skcuda(self):
         self.rev_test(False, get_reverse_cuFFT, preffact=1.5, external=False)
 
@@ -221,6 +232,7 @@ class FftScalingTest(PyCudaTest):
     def test_prefilt_rev_scale_cufft(self):
         self.rev_test(True, get_reverse_cuFFT, preffact=1.5)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_prefilt_rev_scale_cufft_skcuda(self):
         self.rev_test(True, get_reverse_cuFFT, preffact=1.5, external=False)
 
@@ -230,6 +242,7 @@ class FftScalingTest(PyCudaTest):
     def test_postfilt_rev_noscale_cufft(self):
         self.rev_test(False, get_reverse_cuFFT, postfact=1.5)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_postfilt_rev_noscale_cufft_skcuda(self):
         self.rev_test(False, get_reverse_cuFFT, postfact=1.5, external=False)
 
@@ -239,6 +252,7 @@ class FftScalingTest(PyCudaTest):
     def test_postfilt_rev_scale_cufft(self):
         self.rev_test(True, get_reverse_cuFFT, postfact=1.5)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_postfilt_rev_scale_cufft_skcuda(self):
         self.rev_test(True, get_reverse_cuFFT, postfact=1.5, external=False)
 
@@ -248,6 +262,7 @@ class FftScalingTest(PyCudaTest):
     def test_prepostfilt_rev_noscale_cufft(self):
         self.rev_test(False, get_reverse_cuFFT, postfact=1.5, preffact=2.0)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_prepostfilt_rev_noscale_cufft_skcuda(self):
         self.rev_test(False, get_reverse_cuFFT, postfact=1.5, preffact=2.0, external=False)
 
@@ -257,6 +272,7 @@ class FftScalingTest(PyCudaTest):
     def test_prepostfilt_rev_scale_cufft(self):
         self.rev_test(True, get_reverse_cuFFT, postfact=1.5, preffact=2.0)
 
+    @unittest.skip("Skcuda is currently broken")
     def test_prepostfilt_rev_scale_cufft_skcuda(self):
         self.rev_test(True, get_reverse_cuFFT, postfact=1.5, preffact=2.0, external=False)
 
