@@ -142,6 +142,7 @@ class FFT_skcuda(FFT_base):
             int((self.arr_shape[1] + 31) // 32),
             int(self.batches)
         )
+        import skcuda.fft as cu_fft
         self.plan = cu_fft.Plan(
             self.arr_shape,
             array.dtype,
