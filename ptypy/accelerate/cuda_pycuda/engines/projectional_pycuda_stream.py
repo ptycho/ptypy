@@ -387,9 +387,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
         for name, s in self.pr.S.items():
             s.data[:] = s.gpu.get()
 
-        # costly but needed to sync back with
-        # for name, s in self.ex.S.items():
-        #     s.data[:] = s.gpu.get()
+        # Gather errors
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
             err_phot = prep.err_phot_gpu.get()
