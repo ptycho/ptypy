@@ -34,7 +34,7 @@ extern "C" __global__ void ob_update_wasp(
     int H,
     int I,
     const int* __restrict__ addr,
-    const IN_TYPE* probe_abs2_mean,
+    const IN_TYPE* __restrict__ probe_abs2_mean,
     const IN_TYPE alpha_)
 {
   const int bid = blockIdx.z;
@@ -49,11 +49,13 @@ extern "C" __global__ void ob_update_wasp(
   const int* ea = addr + 6 + bid * addr_stride;
 
   probe += pa[0] * E * F + pa[1] * F + pa[2];
+  probe_abs2 += pa[0] * E * F + pa[1] * F + pa[2];
   obj += oa[0] * H * I + oa[1] * I + oa[2];
   obj_sum_nmr += oa[0] * H * I + oa[1] * I + oa[2];
   obj_sum_dnm += oa[0] * H * I + oa[1] * I + oa[2];
   aux += bid * B * C;
-  const MATH_TYPE probe_abs2_mean_val = probe_abs2_mean[0];
+  /*the abs2 mean of this probe mode*/
+  const MATH_TYPE probe_abs2_mean_val = probe_abs2_mean[pa[0]];
   const MATH_TYPE alpha = alpha_;
 
   assert(oa[0] * H * I + oa[1] * I + oa[2] + (B - 1) * I + C - 1 < G * H * I);
@@ -69,11 +71,9 @@ extern "C" __global__ void ob_update_wasp(
 
       /*(pr_abs2.mean() * alpha + pr_abs2)*/
       MATH_TYPE norm_val = probe_abs2_mean_val * alpha + probe_abs2_val;
-      /*MATH_TYPE norm_val = (MATH_TYPE(1) - A_val) * pr_norm_max_val + A_val * pr_norm[b * F + c];*/
 
       /*0.5 * pr_conj * deltaEW / (pr_abs2.mean() * alpha + pr_abs2)*/
       auto add_val_0 = MATH_TYPE(0.5) * conj(probe_val) * (exit_val - aux_val) / norm_val;
-      /*auto add_val_m = (A_val + B_val) * conj(probe_val) * (exit_val - aux_val) / norm_val;*/
       complex<OUT_TYPE> add_val = add_val_0;
       atomicAdd(&obj[b * I + c], add_val);
 
@@ -83,7 +83,6 @@ extern "C" __global__ void ob_update_wasp(
       atomicAdd(&obj_sum_nmr[b * I + c], add_val_nmr);
 
       /*pr_abs2*/
-      /*auto add_val_m = probe_abs2_val;*/
       OUT_TYPE add_val_dnm = probe_abs2_val;
       atomicAdd(&obj_sum_dnm[b * I + c], add_val_dnm);
   }

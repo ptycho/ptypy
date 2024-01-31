@@ -1141,7 +1141,12 @@ class PoUpdateKernel(ab.PoUpdateKernel):
     def ob_update_wasp(self, addr, ob, pr, ex, aux, ob_sum_nmr, ob_sum_dnm,
                        alpha=1):
         pr_abs2 = (pr * pr.conj()).real
-        pr_abs2_mean = gpuarray.sum(pr_abs2, stream=self.queue) / pr_abs2.size # any better way?
+        # this looks absolutely ugly, may need a separate kernel?
+        # PyCUDA doesn't provide sum across particular axis or a mean/avg method
+        pr_sz = pr_abs2.shape[1] * pr_abs2.shape[2]
+        pr_abs2_mean = gpuarray.empty(pr_abs2.shape[0], dtype=pr_abs2.dtype)
+        for k, pr_abs2_i in enumerate(pr_abs2):
+            pr_abs2_mean[k] = gpuarray.sum(pr_abs2_i, stream=self.queue) / pr_sz
 
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
