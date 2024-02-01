@@ -1207,11 +1207,9 @@ class PoUpdateKernel(ab.PoUpdateKernel):
 
     def ob_update_wasp(self, addr, ob, pr, ex, aux, ob_sum_nmr, ob_sum_dnm,
                        alpha=1):
-        if self.queue is not None:
-            self.queue.use()
-
-        pr_abs2 = (pr * pr.conj()).real
-        pr_abs2_mean = cp.sum(pr_abs2) / pr_abs2.size # any better way?
+        # ensure it is C-contiguous!
+        pr_abs2 = cp.ascontiguousarray((pr * pr.conj()).real)
+        pr_abs2_mean = cp.mean(pr_abs2, axis=(1,2))
 
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
@@ -1224,6 +1222,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         num_pods = np.int32(addr.shape[0] * addr.shape[1])
         bx = 64
         by = 1
+        if self.queue is not None:
+            self.queue.use()
         self.ob_update_wasp_cuda(
                 grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
                 block=(bx, by, 1),
