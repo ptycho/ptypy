@@ -487,6 +487,36 @@ class WASP_cupy(WASP_serial):
                     s2 = addr.shape[2] * addr.shape[3]
                     TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
 
+    def center_probe(self):
+        if self.p.probe_center_tol is not None:
+            for name, pr_s in self.pr.storages.items():
+                psum_d = self.A2SK.abs2sum(pr_s.gpu)
+                c1 = self.MCK.mass_center(psum_d).get()
+                c2 = (np.asarray(pr_s.shape[-2:]) // 2).astype(c1.dtype)
+
+                shift = c2 - c1
+                # exit if the current center of mass is within the tolerance
+                if u.norm(shift) < self.p.probe_center_tol:
+                    break
+
+                # shift the probe
+                pr_s.gpu = self.ISK.interpolate_shift(pr_s.gpu, shift)
+
+                # shift the object
+                ob_s = pr_s.views[0].pod.ob_view.storage
+                ob_s.gpu = self.ISK.interpolate_shift(ob_s.gpu, shift)
+
+                # shift the exit waves
+                for dID in self.di.S.keys():
+                    prep = self.diff_info[dID]
+                    pID, oID, eID = prep.poe_IDs
+                    if pID == name:
+                        prep.ex_full = self.ISK.interpolate_shift(prep.ex_full,
+                                                                  shift)
+
+                log(4, 'Probe recentered from %s to %s'
+                    % (str(tuple(c1)), str(tuple(c2))))
+
     def engine_finalize(self):
         """
         clear GPU data
