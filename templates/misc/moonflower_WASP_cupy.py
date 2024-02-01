@@ -5,7 +5,7 @@ of actual data. It uses the test Scan class
 """
 from ptypy.core import Ptycho
 from ptypy import utils as u
-from ptypy.custom import WASP_pycuda
+from ptypy.custom import WASP_cupy
 import numpy as np
 
 import tempfile
@@ -50,7 +50,7 @@ p.scans.MF.coherence = u.Param(num_probe_modes=2)
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'WASP_pycuda'
+p.engines.engine00.name = 'WASP_cupy'
 p.engines.engine00.numiter = 80
 p.engines.engine00.random_seed = 721
 
