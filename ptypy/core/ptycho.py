@@ -1119,7 +1119,7 @@ class Ptycho(Base):
 
     def copy_state(self, name="baseline", overwrite=False):
         """
-        Store a copy of the current state of object/probe
+        Store a copy of the current state of object/probe and exit
 
         Warning: This feature is under development and syntax might change!
         """
@@ -1133,12 +1133,14 @@ class Ptycho(Base):
         self.state_dict[name] = {}
         self.state_dict[name]["ob"] = self.obj.copy()
         self.state_dict[name]["pr"] = self.probe.copy()
+        self.state_dict[name]["ex"] = self.exit.copy()
         self.state_dict[name]["runtime"] = self.runtime.copy(depth=99)
         logger.info("Saved a copy of object and probe as the {:s} state".format(name))
             
     def restore_state(self, name="baseline", reformat_exit=True):
         """
         Restore object/probe based on a previously saved copy
+        The exit buffer can be reformatted or loaded from the state
 
         Warning: This feature is under development and syntax might change!
         """
@@ -1147,6 +1149,8 @@ class Ptycho(Base):
                 S.data[:] = self.state_dict[name]["pr"].storages[ID].data
             for ID,S in self.obj.storages.items():
                 S.data[:] = self.state_dict[name]["ob"].storages[ID].data
+            for ID,S in self.exit.storages.items():
+                S.data[:] = self.state_dict[name]["ex"].storages[ID].data   
         self.runtime = self.state_dict[name]["runtime"]
         
         # Reformat/Recalculate exit waves
