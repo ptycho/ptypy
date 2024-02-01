@@ -15,7 +15,8 @@ which will load engines such as ```DM_cupy```, ```RAAR_cupy```, ```ML_cupy```, `
 * added Euclidean noise model to core ML engine (special thanks to Jari Fowkes)
 * new saving mode "used_params" that will save parameters used during reconstruction into the output .ptyr file
 * introducing core functions ```copy_state``` and ```restore_data``` which allow for more efficient parameter sweeps
-* basic implementation of the ThreePIE algorithm (multislice) which is available as custom engine ```ptypy.custom.ThreePIE```
+* basic implementation of the ThreePIE algorithm (multislice) which is available as custom engine by importing the module
+  ```ptypy.custom.threepIE``` and using the engine as ```ThreePIE```
 * WASP?
 * NCCL allreduce used by default in CuPy engines but no further NCCL support in pycuda engines
 
