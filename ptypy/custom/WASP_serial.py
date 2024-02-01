@@ -183,11 +183,6 @@ class WASP_serial(WASP):
             prep.view_IDs_all = [v.ID for v in scan_model.diff_views]
             prep.view_IDs_all.sort()
 
-            if self.p.probe_power_correction:
-                pr_S = self.pr.S[pID]
-                probe_sz = pr_S.data.size
-                pr_S.data *= np.sqrt(self.max_power / (probe_sz * np.sum(au.abs2(pr_S.data))))
-
     def engine_iterate(self, num=1):
         """
         Compute one iteration.

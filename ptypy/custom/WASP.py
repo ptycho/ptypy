@@ -105,11 +105,6 @@ class WASP(base.PositionCorrectionEngine):
     lowlim = 0.0
     help = probe step parameter
 
-    [probe_power_correction]
-    default = True
-    type = bool
-    help = A switch to correct probe power
-
     [random_seed]
     default = None
     type = int
@@ -175,15 +170,6 @@ class WASP(base.PositionCorrectionEngine):
                     self.pbound_scan[s.label] = max(pb, self.pbound_scan[s.label])
                 mean_power += s.mean_power
             self.mean_power = mean_power / len(self.di.storages)
-
-        if self.p.probe_power_correction:
-            # correct the initial probe's power
-            self.probe_power_correction()
-
-    def probe_power_correction(self):
-        for name, pod in self.pods.items():
-            mp = pod.model.diff.max_power
-            pod.probe *= np.sqrt(mp / (pod.probe.size * np.sum(u.abs2(pod.probe))))
 
     def engine_iterate(self, num=1):
         """
