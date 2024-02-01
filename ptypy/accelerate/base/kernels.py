@@ -25,7 +25,7 @@ class FourierUpdateKernel(BaseKernel):
     def __init__(self, aux, nmodes=1):
 
         super(FourierUpdateKernel, self).__init__()
-        self.denom = 1e-10
+        self.denom = 1e-7
         self.nmodes = np.int32(nmodes)
         ash = aux.shape
         self.fshape = (ash[0] // nmodes, ash[1], ash[2])
@@ -220,7 +220,7 @@ class GradientDescentKernel(BaseKernel):
     def __init__(self, aux, nmodes=1):
 
         super(GradientDescentKernel, self).__init__()
-        self.denom = 1e-10
+        self.denom = 1e-7
         self.nmodes = np.int32(nmodes)
         ash = aux.shape
         self.bshape = ash
