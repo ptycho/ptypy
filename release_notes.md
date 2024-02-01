@@ -8,6 +8,16 @@ It can be imported using
 import ptypy
 ptypy.load_gpu_engines('cupy')
 ```
+which will load engines such as ```DM_cupy```, ```RAAR_cupy```, ```ML_cupy```, ```EPIE_cupy``` and ```SDR_cupy```.
+
+## Additional build changes
+
+* added Euclidean noise model to core ML engine (special thanks to Jari Fowkes)
+* new saving mode "used_params" that will save parameters used during reconstruction into the output .ptyr file
+* introducing core functions ```copy_state``` and ```restore_data``` which allow for more efficient parameter sweeps
+* basic implementation of the ThreePIE algorithm (multislice) which is available as custom engine ```ptypy.custom.ThreePIE```
+* WASP?
+* NCCL allreduce used by default in CuPy engines but no further NCCL support in pycuda engines
 
 
 # PtyPy 0.7.1 release notes
