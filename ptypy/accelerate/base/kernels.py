@@ -690,15 +690,9 @@ class PoUpdateKernel(BaseKernel):
             pr_sum_nmr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += ob_conj * ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols]
             pr_sum_dnm[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += ob_abs2
 
-    def ob_avg_wasp(self, ob, ob_sum_nmr, ob_sum_dnm):
-        # for current object
-        is_zero = np.isclose(ob_sum_dnm, 0)
-        ob[:] = np.where(is_zero, ob_sum_nmr, ob_sum_nmr / ob_sum_dnm)
-
-    def pr_avg_wasp(self, pr, pr_sum_nmr, pr_sum_dnm):
-        # for current probe
-        is_zero = np.isclose(pr_sum_dnm, 0)
-        pr[:] = np.where(is_zero, pr_sum_nmr, pr_sum_nmr / pr_sum_dnm)
+    def avg_wasp(self, arr, nmr, dnm):
+        is_zero = np.isclose(dnm, 0)
+        arr[:] = np.where(is_zero, nmr, nmr / dnm)
 
 
 class PositionCorrectionKernel(BaseKernel):
