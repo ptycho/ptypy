@@ -612,9 +612,11 @@ class Hdf5Loader(PtyScan):
         if self.p.frameorder.indices is None:
             return
         order = np.array(self.p.frameorder.indices, dtype=int)
+        print(order.max(), self.preview_indices.shape)
         if (order.max() > self.preview_indices.shape[-1]):
             log(3, "Given frameorder does not match dimensionality of data, keeping the original order")
             return
+        log(3, "Reordering indices")
         self.preview_indices = self.preview_indices.T[order].T
 
     def load_unmapped_raster_scan(self, indices):
