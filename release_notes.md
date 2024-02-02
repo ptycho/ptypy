@@ -1,5 +1,10 @@
 # PtyPy 0.8 release notes
 
+We're excited to bring you a new release, with new engines, CuPy support and
+other improvements.
+
+## GPU acceleration
+
 An alternative CUDA implementation based on [`cupy`](https://cupy.dev/) 
 has been implemented, providing the same feature as the `PyCuda` based
 engine. 
@@ -10,15 +15,22 @@ ptypy.load_gpu_engines('cupy')
 ```
 which will load engines such as ```DM_cupy```, ```RAAR_cupy```, ```ML_cupy```, ```EPIE_cupy``` and ```SDR_cupy```.
 
+
+## Engine updates
+
+* New WASP algorithm including GPU acceleration, available as custom engines by importing the module from ```ptypy.custom``` (thanks to Timothy Poon)
+* Experimental implementation of the ThreePIE algorithm (multislice) which is available as custom engine by importing the module
+  ```ptypy.custom.threepIE``` and using the engine as ```ThreePIE``` (thanks to Yiran Lu and Maik Kahnt)
+* We provide templates for both algorithms, we are working on additional documentation
+
 ## Additional build changes
 
-* added Euclidean noise model to core ML engine (special thanks to Jari Fowkes)
-* new saving mode "used_params" that will save parameters used during reconstruction into the output .ptyr file
-* introducing core functions ```copy_state``` and ```restore_data``` which allow for more efficient parameter sweeps
-* basic implementation of the ThreePIE algorithm (multislice) which is available as custom engine by importing the module
-  ```ptypy.custom.threepIE``` and using the engine as ```ThreePIE```
-* WASP?
-* NCCL allreduce used by default in CuPy engines but no further NCCL support in pycuda engines
+* Added Euclidean noise model to core ML engine (thanks to Jari Fowkes)
+* New saving mode "used_params" that will save parameters used during reconstruction into the output .ptyr file
+* Introducing core functions ```copy_state``` and ```restore_data``` which allow for more efficient parameter sweeps
+
+## Breaking change
+Removed NCCL support from pycuda engines to avoid dependency on CuPy. The new CuPy engines have been implemented with NCCL support. 
 
 
 # PtyPy 0.7.1 release notes
