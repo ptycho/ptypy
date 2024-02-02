@@ -1116,7 +1116,7 @@ class PoUpdateKernelTest(CupyCudaTest):
         np.testing.assert_allclose(pr_sum_dnm_dev.get(), pr_sum_dnm, rtol=1e-6, atol=1e-6,
                                    err_msg="The probe sum denominator has not been updated as expected")
 
-    def test_ob_avg_wasp_UNITY(self):
+    def test_avg_wasp_UNITY(self):
         '''
         setup
         '''
@@ -1149,8 +1149,8 @@ class PoUpdateKernelTest(CupyCudaTest):
         ob_sum_nmr_dev = cp.asarray(ob_sum_nmr)
         ob_sum_dnm_dev = cp.asarray(ob_sum_dnm)
 
-        POUK.ob_avg_wasp(object_array_dev, ob_sum_nmr_dev, ob_sum_dnm_dev)
-        nPOUK.ob_avg_wasp(object_array, ob_sum_nmr, ob_sum_dnm)
+        POUK.avg_wasp(object_array_dev, ob_sum_nmr_dev, ob_sum_dnm_dev)
+        nPOUK.avg_wasp(object_array, ob_sum_nmr, ob_sum_dnm)
 
         np.testing.assert_allclose(object_array_dev.get(), object_array, rtol=1e-6, atol=1e-6,
                                    err_msg="The object_array has not been updated as expected")
@@ -1158,49 +1158,6 @@ class PoUpdateKernelTest(CupyCudaTest):
                                    err_msg="The object_array sum numerator should be unchanged")
         np.testing.assert_allclose(ob_sum_dnm_dev.get(), ob_sum_dnm, rtol=1e-6, atol=1e-6,
                                    err_msg="The object_array sum denominator should be unchanged")
-
-    def test_pr_avg_wasp_UNITY(self):
-        '''
-        setup
-        '''
-        B = 5  # frame size y
-        C = 5  # frame size x
-
-        D = 2  # number of probe modes
-        E = B  # probe size y
-        F = C  # probe size x
-
-        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
-        for idx in range(D):
-            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
-
-        pr_sum_nmr = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
-        for idx in range(D):
-            pr_sum_nmr[idx] = np.arange(idx, idx+E*F).reshape(E,F) + 1j * np.arange(idx, idx+E*F).reshape(E,F)
-
-        pr_sum_dnm = pr_sum_nmr[:, ::-1, ::-1].copy().real
-
-
-        '''
-        test
-        '''
-        from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
-        nPOUK = npPoUpdateKernel()
-        POUK = PoUpdateKernel()
-
-        probe_dev = cp.asarray(probe)
-        pr_sum_nmr_dev = cp.asarray(pr_sum_nmr)
-        pr_sum_dnm_dev = cp.asarray(pr_sum_dnm)
-
-        POUK.pr_avg_wasp(probe_dev, pr_sum_nmr_dev, pr_sum_dnm_dev)
-        nPOUK.pr_avg_wasp(probe, pr_sum_nmr, pr_sum_dnm)
-
-        np.testing.assert_allclose(probe_dev.get(), probe, rtol=1e-6, atol=1e-6,
-                                   err_msg="The probe has not been updated as expected")
-        np.testing.assert_allclose(pr_sum_nmr_dev.get(), pr_sum_nmr, rtol=1e-6, atol=1e-6,
-                                   err_msg="The probe sum numerator should be unchanged")
-        np.testing.assert_allclose(pr_sum_dnm_dev.get(), pr_sum_dnm, rtol=1e-6, atol=1e-6,
-                                   err_msg="The probe sum denominator should be unchanged")
 
 if __name__ == '__main__':
     unittest.main()
