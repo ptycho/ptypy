@@ -354,8 +354,8 @@ class WASP_cupy(WASP_serial):
                 self.multigpu.allReduceSum(pr_sum_nmr)
                 self.multigpu.allReduceSum(pr_sum_dnm)
 
-                POK.ob_avg_wasp(ob, ob_sum_nmr, ob_sum_dnm)
-                POK.pr_avg_wasp(pr, pr_sum_nmr, pr_sum_dnm)
+                POK.avg_wasp(ob, ob_sum_nmr, ob_sum_dnm)
+                POK.avg_wasp(pr, pr_sum_nmr, pr_sum_dnm)
 
                 # Clip object
                 if self.p.clip_object is not None:
