@@ -69,9 +69,9 @@ class WASP_pycuda(WASP_serial):
         Prepare for reconstruction.
         """
         # Context, Multi GPU communicator and Stream (needs to be in this order)
-        self.context, self.queue = get_context(new_context=True, new_queue=False)
+        self.context, self.queue = get_context(new_queue=False)
         self.multigpu = get_multi_gpu_communicator()
-        self.context, self.queue = get_context(new_context=False, new_queue=True)
+        self.context, self.queue = get_context(new_queue=True)
 
         # initialise kernels for centring probe if required
         if self.p.probe_center_tol is not None:
