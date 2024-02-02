@@ -21,6 +21,7 @@ def choose_fft(fft_type, arr_shape):
         try:
             from ptypy.accelerate.cuda_pycuda.cufft import FFT_cuda as FFT
         except:
+            import filtered_cufft
             logger.warning('Unable to import cufft version - using Reikna instead')
             from ptypy.accelerate.cuda_pycuda.fft import FFT
     elif fft_type=='skcuda':
