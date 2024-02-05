@@ -4,7 +4,6 @@ Compilation tools for Nvidia builds of extension modules.
 import os, re
 import subprocess
 import sysconfig
-import pybind11
 from distutils.unixccompiler import UnixCCompiler
 from distutils.command.build_ext import build_ext
 
@@ -98,6 +97,7 @@ class NvccCompiler(UnixCCompiler):
         self.LD_FLAGS = [archflag, "-lcufft_static", "-lculibos", "-ldl", "-lrt", "-lpthread", "-cudart shared"]
         self.NVCC_FLAGS = ["-dc", archflag]
         self.CXXFLAGS = ['"-fPIC"']
+        import pybind11
         pybind_includes = [pybind11.get_include(), sysconfig.get_path('include')]  
         INCLUDES = pybind_includes + [self.CUDA['lib64'], module_dir]
         self.INCLUDES = ["-I%s" % ix for ix in INCLUDES]

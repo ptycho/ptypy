@@ -82,6 +82,7 @@ class Ptycho(Base):
        - ``INSPECT``:  Object Information
        - ``DEBUG``:    Debug
     type = str, int
+    choices = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'INSPECT', 'DEBUG']
     userlevel = 0
 
     [data_type]
@@ -90,6 +91,7 @@ class Ptycho(Base):
     doc = Reconstruction floating number precision (``'single'`` or
           ``'double'``)
     type = str
+    choices = ['single', 'double']
     userlevel = 1
 
     [run]
@@ -108,6 +110,12 @@ class Ptycho(Base):
     type = int
     lowlim = 1
     userlevel = 1
+
+    [min_frames_for_recon]
+    default = 0
+    type = int
+    help = Minimum number of frames to be loaded before reconstruction can start.
+    doc = For on-the-fly (live) processing, the first reconstruction engine will wait until this many frames have been loaded.
 
     [dry_run]
     default = False
@@ -149,7 +157,8 @@ class Ptycho(Base):
     doc = Choose a reconstruction file format for after engine completion.
        - ``'minimal'``: Bare minimum of information
        - ``'dls'``:    Custom format for Diamond Light Source
-    choices = 'minimal','dls'
+       - ``'used_params'``: Same as minimal but including all used parameters 
+    choices = 'minimal','dls','used_params'
 
     [io.interaction]
     default = None
@@ -242,6 +251,7 @@ class Ptycho(Base):
     help = Options for default plotter or template name
     doc = Flexible layout for default plotter is not implemented yet. Please choose one of the
       templates ``'default'``,``'black_and_white'``,``'nearfield'``, ``'minimal'`` or ``'weak'``
+    choices = ['default', 'black_and_white', 'nearfield', 'minimal', 'weak']
     userlevel = 2
 
     [io.autoplot.dump]
@@ -263,6 +273,7 @@ class Ptycho(Base):
     help = Produce timings for benchmarking the performance of data loaders and engines
     doc = Switch to get timings and save results to a json file in p.io.home
         Choose ``'all'`` for timing data loading, engine_init, engine_prepare, engine_iterate and engine_finalize
+    choices = ['all', 'loading', 'engine_init', 'engine_prepare', 'engine_iterate', 'engine_finalize']
     userlevel = 2
 
     [scans]
@@ -345,6 +356,7 @@ class Ptycho(Base):
         self.mask = None
         self.model = None
         self.new_data = None
+        self.state_dict = dict()
 
         # Communication
         self.interactor = None
@@ -524,7 +536,8 @@ class Ptycho(Base):
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs. Sets self.new_data
         with LogTime(self.p.io.benchmark == 'all') as t:
-            self.new_data = self.model.new_data()
+            while not self.new_data:
+                self.new_data = self.model.new_data()
         if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
         # Print stats
@@ -677,6 +690,10 @@ class Ptycho(Base):
                         engine.prepare()
                     if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
+                # Keep loading data, unless we have reached minimum nr. of frames or end of scan
+                if (len(self.diff.V) < self.p.min_frames_for_recon) and not self.model.end_of_scan:
+                    continue
+
                 auto_save = self.p.io.autosave
                 if auto_save.active and auto_save.interval > 0:
                     if engine.curiter % auto_save.interval == 0:
@@ -685,6 +702,11 @@ class Ptycho(Base):
                         self.save_run(auto, 'dump')
                         self.runtime.last_save = engine.curiter
                         logger.info(headerline())
+
+                # If not end of scan, expand total number of iterations
+                # This is to make sure that the specified nr. of iterations is guaranteed once all data is loaded
+                if not self.model.end_of_scan:
+                    engine.numiter += engine.p.numiter_contiguous
 
                 # One iteration
                 with LogTime(self.p.io.benchmark == 'all') as t:
@@ -703,14 +725,13 @@ class Ptycho(Base):
                                 'Exit %.2e' % tuple(err))
                     imsg = '%(engine)s: Iteration # %(iteration)d/%(numiter)d :: ' %info + \
                                    'Fourier %.2e, Photons %.2e, Exit %.2e' %tuple(err)
-                    if not self.p.io.autoplot.threaded:
+                    if (self.p.io.autoplot.active) and (not self.p.io.autoplot.threaded):
                         if not (info["iteration"] % self.p.io.autoplot.interval):
                             if self._jupyter_client is None:
-                                from IPython import display
                                 from ptypy.utils.plot_client import _JupyterClient
                                 self._jupyter_client = _JupyterClient(self, autoplot_pars=self.p.io.autoplot, layout_pars=self.p.io.autoplot.layout)
                             self._jupyter_client.runtime.update(self.runtime)
-                            display.display(self._jupyter_client.plot(title=imsg), clear=True)
+                            self._jupyter_client.display(imsg)
                     else:
                         ilog_streamer(imsg)
                     
@@ -970,9 +991,14 @@ class Ptycho(Base):
                 if len(self.runtime.iter_info) > 0:
                     dump.runtime.iter_info = [self.runtime.iter_info[-1]]
 
+                if self.record_positions:
+                    dump.positions = {}
+                    for ID, S in self.obj.storages.items():
+                        dump.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
+
                 content = dump
 
-            elif kind == 'minimal' or kind == 'dls':
+            elif kind in ('minimal', 'dls', 'used_params'):
                 # if self.interactor is not None:
                 #    self.interactor.stop()
                 logger.info('Generating shallow copies of probe, object and '
@@ -987,7 +1013,7 @@ class Ptycho(Base):
                     defaults_tree['ptycho'].validate(self.p) # check the parameters are actually able to be read back in
                 except RuntimeError:
                     logger.warning("The parameters we are saving won't pass a validator check!")
-                minimal.pars = self.p.copy()  # _to_dict(Recursive=True)
+                minimal.pars = self.p.copy(depth=99)  # _to_dict(Recursive=True)
                 minimal.runtime = self.runtime.copy()
 
                 content = minimal
@@ -1000,6 +1026,13 @@ class Ptycho(Base):
 
                 for ID, S in self.obj.storages.items():
                     content.obj[ID]['grids'] = S.grids()
+
+            if kind == 'used_params':
+                for name, engine in self.engines.items():
+                    content.pars.engines[name] = engine.p
+                for name, scan in self.model.scans.items():
+                    content.pars.scans[name] = scan.p
+                    content.pars.scans[name].data = scan.ptyscan.p
 
             if kind in ['minimal', 'dls'] and self.record_positions:
                 content.positions = {}
@@ -1083,7 +1116,49 @@ class Ptycho(Base):
                            cmap='gray')
             fignum += 1
 
-    
+
+    def copy_state(self, name="baseline", overwrite=False):
+        """
+        Store a copy of the current state of object/probe and exit
+
+        Warning: This feature is under development and syntax might change!
+        """
+        if name in self.state_dict:
+            logger.warning("A state with name {:s} exists already".format(name))
+            if overwrite:
+                logger.warning("Overwrite {:s} state".format(name))                
+                del self.state_dict[name]
+            else:
+                return
+        self.state_dict[name] = {}
+        self.state_dict[name]["ob"] = self.obj.copy()
+        self.state_dict[name]["pr"] = self.probe.copy()
+        self.state_dict[name]["ex"] = self.exit.copy()
+        self.state_dict[name]["runtime"] = self.runtime.copy(depth=99)
+        logger.info("Saved a copy of object and probe as the {:s} state".format(name))
+            
+    def restore_state(self, name="baseline", reformat_exit=True):
+        """
+        Restore object/probe based on a previously saved copy
+        The exit buffer can be reformatted or loaded from the state
+
+        Warning: This feature is under development and syntax might change!
+        """
+        if name in self.state_dict:
+            for ID,S in self.probe.storages.items():
+                S.data[:] = self.state_dict[name]["pr"].storages[ID].data
+            for ID,S in self.obj.storages.items():
+                S.data[:] = self.state_dict[name]["ob"].storages[ID].data
+            for ID,S in self.exit.storages.items():
+                S.data[:] = self.state_dict[name]["ex"].storages[ID].data   
+        self.runtime = self.state_dict[name]["runtime"]
+        
+        # Reformat/Recalculate exit waves
+        if reformat_exit:
+            self.exit.reformat()
+            for scan in self.model.scans.values():
+                scan._initialize_exit(list(self.pods.values()))
+
     def _redistribute_data(self, div = 'rect', obj_storage=None):
         """
         This function redistributes data among nodes, so that each

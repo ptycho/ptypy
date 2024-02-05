@@ -21,6 +21,7 @@ def choose_fft(fft_type, arr_shape):
         try:
             from ptypy.accelerate.cuda_pycuda.cufft import FFT_cuda as FFT
         except:
+            import filtered_cufft
             logger.warning('Unable to import cufft version - using Reikna instead')
             from ptypy.accelerate.cuda_pycuda.fft import FFT
     elif fft_type=='skcuda':
@@ -89,7 +90,7 @@ class PropagationKernel:
                     self._CPK.crop_pad_2d_simple(y, self._tmp)
                 else:
                     self._fft2.ift(x,y)
-            
+
             self.fw = _fw
             self.bw = _bw
 
@@ -110,11 +111,11 @@ class PropagationKernel:
             def _fw(x,y):
                 self._fft1.ft(x,y)
                 self._fft3.ift(y,y)
-            
+
             def _bw(x,y):
                 self._fft2.ft(x,y)
                 self._fft3.ift(y,y)
-                
+
             self.fw = _fw
             self.bw = _bw
         else:
@@ -303,7 +304,7 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                   block=(32, 32, 1),
                                   grid=(int(fmag.shape[0]*self.nmodes), 1, 1),
                                   stream=self.queue)
-    
+
     def fmag_update_nopbound(self, f, addr, fmag, fmask):
         fdev = self.gpu.fdev
         bx = 64
@@ -322,8 +323,8 @@ class FourierUpdateKernel(ab.FourierUpdateKernel):
                                   np.int32(self.fshape[1]),
                                   np.int32(self.fshape[2]),
                                   block=(bx, by, 1),
-                                  grid=(1, 
-                                    int((self.fshape[2] + by - 1) // by), 
+                                  grid=(1,
+                                    int((self.fshape[2] + by - 1) // by),
                                     int(fmag.shape[0]*self.nmodes)),
                                   stream=self.queue)
 
@@ -499,9 +500,9 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                             np.float32(c_e) if ex.dtype == np.complex64 else np.float64(c_e),
                             block=(bx, by, 1),
                             grid=(
-                                1, 
-                                int((ex.shape[1] + by - 1)//by), 
-                                int(maxz * nmodes)), 
+                                1,
+                                int((ex.shape[1] + by - 1)//by),
+                                int(maxz * nmodes)),
                             stream=self.queue)
 
 
@@ -544,8 +545,8 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                                        obr, obc,
                                        addr,
                                        np.float32(alpha), np.float32(tau),
-                                       block=(bx, by, 1), 
-                                       grid=(1, int((ex.shape[1] + by - 1) // by), int(maxz * nmodes)), 
+                                       block=(bx, by, 1),
+                                       grid=(1, int((ex.shape[1] + by - 1) // by), int(maxz * nmodes)),
                                        stream=self.queue)
     """
     def build_aux_no_ex(self, b_aux, addr, ob, pr, fac=1.0, add=False):
@@ -590,8 +591,8 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
                                   block=(bx, by, 1),
                                   grid=(1, int((b_aux.shape[-2] + by - 1)//by), int(maxz * nmodes)),
                                   stream=self.queue)
-    
-    
+
+
     def _cache_object_shape(self, ob):
         oid = id(ob)
 
@@ -611,7 +612,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.math_type = math_type
         if (accumulate_type not in ['double', 'float']) or (math_type not in ['double', 'float']):
             raise ValueError("accumulate and math types must be double for float")
- 
+
         self.gpu = Adict()
         self.gpu.LLden = None
         self.gpu.LLerr = None
@@ -632,9 +633,9 @@ class GradientDescentKernel(ab.GradientDescentKernel):
             'BDIM_Y': 32
         })
         self.fill_b_cuda, self.fill_b_reduce_cuda = load_kernel(
-            ('fill_b', 'fill_b_reduce'), 
+            ('fill_b', 'fill_b_reduce'),
             {
-                **subs, 
+                **subs,
                 'BDIM_X': 1024,
                 'OUT_TYPE': 'float' if self.ftype == np.float32 else 'double'
             },
@@ -814,7 +815,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
 
 class PoUpdateKernel(ab.PoUpdateKernel):
 
-    def __init__(self, queue_thread=None, 
+    def __init__(self, queue_thread=None,
         math_type='float', accumulator_type='float'):
         super(PoUpdateKernel, self).__init__()
         # and now initialise the cuda
@@ -875,7 +876,24 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             'MATH_TYPE': self.math_type,
             'ACC_TYPE': self.accumulator_type
         })
-
+        self.ob_update_wasp_cuda = load_kernel("ob_update_wasp", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
+        self.pr_update_wasp_cuda = load_kernel("pr_update_wasp", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
+        self.avg_wasp_cuda = load_kernel("avg_wasp", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
 
     def ob_update(self, addr, ob, obn, pr, ex, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
@@ -995,7 +1013,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                     np.int32(ex.shape[0]),
                                     np.int32(ex.shape[1]),
                                     np.int32(ex.shape[2]),
-                                    ob, pr, ex, addr, 
+                                    ob, pr, ex, addr,
                                     np.float32(fac) if ex.dtype == np.complex64 else np.float64(fac),
                                     block=(16, 16, 1), grid=grid, stream=self.queue)
 
@@ -1031,7 +1049,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             grid = (grid[0], grid[1], int(1))
             self.pr_update2_ML_cuda(prsh[-1], obsh[-2], obsh[-1],
                                  prsh[0], obsh[0], num_pods,
-                                 pr, ob, ex, addr, 
+                                 pr, ob, ex, addr,
                                  np.float32(fac) if ex.dtype == np.complex64 else np.float64(fac),
                                  block=(16, 16, 1), grid=grid, stream=self.queue)
 
@@ -1092,7 +1110,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
         obnsh = [np.int32(ax) for ax in obn.shape]
         bx = 64
         by = 1
-        self.ob_norm_local_cuda(obn, 
+        self.ob_norm_local_cuda(obn,
             obnsh[0], obnsh[1], obnsh[2],
             ob,
             obsh[0], obsh[1], obsh[2],
@@ -1101,18 +1119,92 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             grid=(1, int((obnsh[1] + by - 1)//by), int(obnsh[0])),
             stream=self.queue)
 
-    def pr_norm_local(self, addr, pr, prn):        
+    def pr_norm_local(self, addr, pr, prn):
         prsh  = [np.int32(ax) for ax in pr.shape]
         prnsh = [np.int32(ax) for ax in prn.shape]
         bx = 64
         by = 1
-        self.pr_norm_local_cuda(prn, 
+        self.pr_norm_local_cuda(prn,
             prnsh[0], prnsh[1], prnsh[2],
             pr,
             prsh[0], prsh[1], prsh[2],
             addr,
             block=(bx, by, 1),
             grid=(1, int((prnsh[1] + by - 1)//by), int(prnsh[0])),
+            stream=self.queue)
+
+    def ob_update_wasp(self, addr, ob, pr, ex, aux, ob_sum_nmr, ob_sum_dnm,
+                       alpha=1):
+        pr_abs2 = (pr * pr.conj()).real
+        # this looks absolutely ugly, may need a separate kernel?
+        # PyCUDA doesn't provide sum across particular axis or a mean/avg method
+        pr_sz = pr_abs2.shape[1] * pr_abs2.shape[2]
+        pr_abs2_mean = gpuarray.empty(pr_abs2.shape[0], dtype=pr_abs2.dtype)
+        for k, pr_abs2_i in enumerate(pr_abs2):
+            pr_abs2_mean[k] = gpuarray.sum(pr_abs2_i, stream=self.queue) / pr_sz
+
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        exsh = [np.int32(ax) for ax in ex.shape]
+
+        # atomics version only
+        if addr.shape[3] != 3 or addr.shape[2] != 5:
+            raise ValueError('Address not in required shape for tiled ob_update')
+
+        num_pods = np.int32(addr.shape[0] * addr.shape[1])
+        bx = 64
+        by = 1
+        self.ob_update_wasp_cuda(ex, aux,
+            exsh[0], exsh[1], exsh[2],
+            pr,
+            pr_abs2,
+            prsh[0], prsh[1], prsh[2],
+            ob,
+            ob_sum_nmr,
+            ob_sum_dnm,
+            obsh[0], obsh[1], obsh[2],
+            addr,
+            pr_abs2_mean,
+            np.float32(alpha),
+            block=(bx, by, 1),
+            grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
+            stream=self.queue)
+
+    def pr_update_wasp(self, addr, pr, ob, ex, aux, pr_sum_nmr, pr_sum_dnm,
+                       beta=1):
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        exsh = [np.int32(ax) for ax in ex.shape]
+
+        # atomics version only
+        if addr.shape[3] != 3 or addr.shape[2] != 5:
+            raise ValueError('Address not in required shape for tiled ob_update')
+
+        num_pods = np.int32(addr.shape[0] * addr.shape[1])
+        bx = 64
+        by = 1
+        self.pr_update_wasp_cuda(ex, aux,
+            exsh[0], exsh[1], exsh[2],
+            pr,
+            pr_sum_nmr,
+            pr_sum_dnm,
+            prsh[0], prsh[1], prsh[2],
+            ob,
+            obsh[0], obsh[1], obsh[2],
+            addr,
+            np.float32(beta),
+            block=(bx, by, 1),
+            grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
+            stream=self.queue)
+
+    def avg_wasp(self, arr, nmr, dnm):
+        arrsh = [np.int32(ax) for ax in arr.shape]
+        bx = 64
+        by = 1
+        self.avg_wasp_cuda(arr, nmr, dnm,
+            arrsh[0], arrsh[1], arrsh[2],
+            block=(bx, by, 1),
+            grid=(1, int((arrsh[1] + by - 1)//by), int(arrsh[0])),
             stream=self.queue)
 
 
@@ -1133,7 +1225,7 @@ class PositionCorrectionKernel(ab.PositionCorrectionKernel):
             raise ValueError('Only float or double math is supported')
         if accumulate_type not in ['float', 'double']:
             raise ValueError('Only float or double math is supported')
-        
+
         # add kernels
         self.math_type = math_type
         self.accumulate_type = accumulate_type

@@ -68,4 +68,4 @@ ptypy = "ptypy"
 
 [tool.setuptools.package-data]
 ptypy = ["resources/*",]
-"ptypy.accelerate.cuda_pycuda.cuda" = ["*.cu"]
+"ptypy.accelerate.cuda_common" = ["*.cu", "*.cuh"]

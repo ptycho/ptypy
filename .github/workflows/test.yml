@@ -24,30 +24,24 @@ jobs:
       max-parallel: 10
       fail-fast: false
       matrix:
-        python-version: ['3.7','3.8','3.9','3.10']
-        mpi: ['mpich', 'openmpi']
-    name: Testing with ${{ matrix.mpi }} and Python ${{ matrix.python-version }} 
+        python-version: ['3.8','3.9','3.10', '3.11']
+    name: Testing with Python ${{ matrix.python-version }} 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
-    - name: Set up MPI
-      uses: mpi4py/setup-mpi@v1
-      with:
-        mpi: ${{ matrix.mpi }}
+      uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version:  ${{ matrix.python-version }}
     - name: Add conda to system path
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         echo $CONDA/bin >> $GITHUB_PATH
-        conda update -n base conda
         conda --version
     - name: Install dependencies
       run: |
         # replace python version in core dependencies
-        sed -i 's/python=3.9/python=${{ matrix.python-version }}/' dependencies_core.yml
+        sed -i 's/python/python=${{ matrix.python-version }}/' dependencies_core.yml
         conda env update --file dependencies_core.yml --name base
         conda list	
     - name: Prepare ptypy

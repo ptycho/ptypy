@@ -2,7 +2,7 @@ name: ptypy_cufft
 channels:
   - conda-forge
 dependencies:
-  - python=3.9
+  - python
   - cmake>=3.8.0
   - pybind11
   - compilers

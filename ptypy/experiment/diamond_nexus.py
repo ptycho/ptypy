@@ -214,18 +214,18 @@ class DiamondNexus(PtyScan):
 
 
         if None not in [INPUT_FILE, ENERGY_KEY]:
-            self.p.energy = float(h5.File(INPUT_FILE, 'r')[ENERGY_KEY][()] * self.ENERGY_MULTIPLIER)
+            self.p.energy = float(h5.File(INPUT_FILE, 'r')[ENERGY_KEY][()].item() * self.ENERGY_MULTIPLIER)
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
 
 
         if None not in [INPUT_FILE, DISTANCE_KEY]:
-            self.p.distance = h5.File(INPUT_FILE, 'r')[DISTANCE_KEY][()]
+            self.p.distance = h5.File(INPUT_FILE, 'r')[DISTANCE_KEY][()].item()
             self.meta.distance = self.p.distance
             log(3, "loading distance={} from file".format(self.p.distance))
         
         if None not in [INPUT_FILE, PIXEL_SIZE_KEY]:
-            self.p.psize = h5.File(INPUT_FILE, 'r')[PIXEL_SIZE_KEY][()]
+            self.p.psize = h5.File(INPUT_FILE, 'r')[PIXEL_SIZE_KEY][()].item()
             self.meta.psize = self.p.psize
             log(3, "loading psize={} from file".format(self.p.psize))
 

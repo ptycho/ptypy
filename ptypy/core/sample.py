@@ -36,6 +36,7 @@ sample_desc.from_string(r"""
       processed according to `process` in order to *simulate* a sample from e.g. a thickness
       profile.
     type = str, array
+    choices = ['recon', 'stxm', 'None']
     userlevel = 0
 
     [fill]
@@ -361,7 +362,7 @@ def simulate(A, pars, energy, fill=1.0, prefix="", **kwargs):
         logger.info(prefix +
                     "Simulation resource is a thickness profile")
         # Enforce floats
-        ob = obj.astype(np.float)
+        ob = obj.astype(float)
         ob -= ob.min()
         if d is not None:
             logger.info(prefix + "Rescaling to maximum thickness")

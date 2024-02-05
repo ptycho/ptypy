@@ -348,6 +348,7 @@ class ML_serial(ML):
             prep = self.diff_info[d.ID]
             float_intens_coeff[label] = prep.float_intens_coeff
         self.ptycho.runtime["float_intens"] = parallel.gather_dict(float_intens_coeff)
+        super().engine_finalize()
 
 
 class BaseModelSerial(BaseModel):

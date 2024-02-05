@@ -42,6 +42,7 @@ class BaseEngine(object):
     type = int
     lowlim = 1
     help = Total number of iterations
+    doc = For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.
 
     [numiter_contiguous]
     default = 1
@@ -375,6 +376,7 @@ class PositionCorrectionEngine(BaseEngine):
     default = "fourier"
     type = str
     help = Error metric, can choose between "fourier" and "photon"
+    choices = ["fourier", "photon"]
     
     [position_refinement.record]
     default = False

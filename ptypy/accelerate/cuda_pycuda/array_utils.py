@@ -1,25 +1,10 @@
+from ptypy.accelerate.cuda_common.utils import map2ctype
+
 from . import load_kernel
 from pycuda import gpuarray
 import pycuda.driver as cuda
 from ptypy.utils import gaussian
 import numpy as np
-
-# maps a numpy dtype to the corresponding C type
-def map2ctype(dt):
-    if dt == np.float32:
-        return 'float'
-    elif dt == np.float64:
-        return 'double'
-    elif dt == np.complex64:
-        return 'complex<float>'
-    elif dt == np.complex128:
-        return 'complex<double>'
-    elif dt == np.int32:
-        return 'int'
-    elif dt == np.int64:
-        return 'long long'
-    else:
-        raise ValueError('No mapping for {}'.format(dt))
 
 
 class ArrayUtilsKernel:
@@ -285,7 +270,7 @@ class DerivativesKernel:
         axis = np.int32(axis)
 
         if axis == input.ndim - 1:
-            flat_dim = np.int32(np.product(input.shape[0:-1]))
+            flat_dim = np.int32(np.prod(input.shape[0:-1]))
             self.delxf_last(input, out, flat_dim, np.int32(input.shape[axis]),
                             block=self.last_axis_block,
                             grid=(
@@ -295,8 +280,8 @@ class DerivativesKernel:
                 stream=self.queue
             )
         else:
-            lower_dim = np.int32(np.product(input.shape[(axis+1):]))
-            higher_dim = np.int32(np.product(input.shape[:axis]))
+            lower_dim = np.int32(np.prod(input.shape[(axis+1):]))
+            higher_dim = np.int32(np.prod(input.shape[:axis]))
             gx = int(
                 (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
             gy = 1
@@ -316,7 +301,7 @@ class DerivativesKernel:
         axis = np.int32(axis)
 
         if axis == input.ndim - 1:
-            flat_dim = np.int32(np.product(input.shape[0:-1]))
+            flat_dim = np.int32(np.prod(input.shape[0:-1]))
             self.delxb_last(input, out, flat_dim, np.int32(input.shape[axis]),
                             block=self.last_axis_block,
                             grid=(
@@ -326,8 +311,8 @@ class DerivativesKernel:
                 stream=self.queue
             )
         else:
-            lower_dim = np.int32(np.product(input.shape[(axis+1):]))
-            higher_dim = np.int32(np.product(input.shape[:axis]))
+            lower_dim = np.int32(np.prod(input.shape[(axis+1):]))
+            higher_dim = np.int32(np.prod(input.shape[:axis]))
             gx = int(
                 (lower_dim + self.mid_axis_block[0] - 1) // self.mid_axis_block[0])
             gy = 1

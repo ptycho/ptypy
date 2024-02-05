@@ -147,7 +147,7 @@ def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],
     img_list = [img.astype(float) for img in img_list]
     dark_list = [dark.astype(float) for dark in dark_list]
     exp_list = [float(exp) for exp in exp_list]
-    mask_list = [mask.astype(np.int) for mask in mask_list]
+    mask_list = [mask.astype(int) for mask in mask_list]
 
     for img, dark, exp,mask in zip(img_list, dark_list,exp_list,mask_list):
         img[:] = abs(img - dark)
@@ -177,7 +177,7 @@ def hdr_image(img_list, exp_list, thresholds=[3000,50000], dark_list=[],
                                                  ix[j]][themask.astype(bool)]
                                              * max_exp/exp_list[ix[j]])
     else:
-        mask_sum = np.zeros_like(mask_list[0]).astype(np.int)
+        mask_sum = np.zeros_like(mask_list[0]).astype(int)
         img_hdr = np.zeros_like(img_list[0])
         for img, exp, mask in zip(img_list,exp_list,mask_list):
             img = img * max_exp/exp
