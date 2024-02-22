@@ -150,7 +150,9 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
 
         for it in range(num):
 
-            error = {}
+            reduced_error = np.zeros((3,))
+            reduced_error_count = 0
+            local_error = {}
 
             for inner in range(self.p.overlap_max_iterations):
 
@@ -393,9 +395,19 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
             err_phot = prep.err_phot_gpu.get()
             err_exit = prep.err_exit_gpu.get()
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
-            error.update(zip(prep.view_IDs, errs))
+            if self.p.record_local_error:
+                local_error.update(zip(prep.view_IDs, errs))
+            else:
+                reduced_error += errs.sum(axis=0)
+                reduced_error_count += errs.shape[0]
 
-        self.error = error
+        if self.p.record_local_error:
+            error = local_error
+        else:
+            # Gather errors across all MPI ranks
+            error = parallel.allreduce(reduced_error)
+            count = parallel.allreduce(reduced_error_count)
+            error /= count
         return error
 
     ## probe update

@@ -209,7 +209,11 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         queue.use()
 
         for it in range(num):
-            error = {}
+                        
+            reduced_error = np.zeros((3,))
+            reduced_error_count = 0
+            local_error = {}
+
             for dID in self.di.S.keys():
 
                 # find probe, object and exit ID in dependence of dID
@@ -294,9 +298,19 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             err_phot = prep.err_phot_gpu.get()
             err_exit = prep.err_exit_gpu.get()
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
-            error.update(zip(prep.view_IDs, errs))
+            if self.p.record_local_error:
+                local_error.update(zip(prep.view_IDs, errs))
+            else:
+                reduced_error += errs.sum(axis=0)
+                reduced_error_count += errs.shape[0]
 
-        self.error = error
+        if self.p.record_local_error:
+            error = local_error
+        else:
+            # Gather errors across all MPI ranks
+            error = parallel.allreduce(reduced_error)
+            count = parallel.allreduce(reduced_error_count)
+            error /= count
         return error
 
     def position_update(self):
