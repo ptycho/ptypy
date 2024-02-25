@@ -81,6 +81,11 @@ class Hdf5Loader(PtyScan):
     type = float
     help = Multiplicative factor that converts motor positions to metres.
 
+    [positions.slow_index]
+    default = None
+    type = int
+    help = Index along the final dimension
+
     [positions.fast_key]
     default = None
     type = str
@@ -90,6 +95,11 @@ class Hdf5Loader(PtyScan):
     default = 1.0
     type = float
     help = Multiplicative factor that converts motor positions to metres.
+
+    [positions.fast_index]
+    default = None
+    type = int
+    help = Index along the final dimension
 
     [positions.bounding_box]
     default =
@@ -425,12 +435,16 @@ class Hdf5Loader(PtyScan):
         self.fast_axis = self.fhandle_positions_fast[self.p.positions.fast_key]
         if self._is_spectro_scan and self.p.outer_index is not None:
             self.fast_axis = self.fast_axis[self.p.outer_index]
+        if self.p.positions.fast_index is not None:
+            self.fast_axis = self.fast_axis[:,self.p.positions.fast_index]
         self.positions_fast_shape = np.squeeze(self.fast_axis).shape if self.fast_axis.ndim > 2 else self.fast_axis.shape
 
         self.fhandle_positions_slow = h5.File(self.p.positions.file, 'r', swmr=self._is_swmr)
         self.slow_axis = self.fhandle_positions_slow[self.p.positions.slow_key]
         if self._is_spectro_scan and self.p.outer_index is not None:
             self.slow_axis = self.slow_axis[self.p.outer_index]
+        if self.p.positions.slow_index is not None:
+            self.slow_axis = self.slow_axis[:,self.p.positions.slow_index]
         self.positions_slow_shape = np.squeeze(self.slow_axis).shape if self.slow_axis.ndim > 2 else self.slow_axis.shape
 
         log(3, "The shape of the \n\tdiffraction intensities is: {}\n\tslow axis data:{}\n\tfast axis data:{}".format(self.data_shape,
