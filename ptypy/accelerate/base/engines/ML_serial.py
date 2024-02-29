@@ -23,12 +23,22 @@ from ptypy.engines.utils import Cnorm2, Cdot
 from ptypy.engines import register
 from ptypy.accelerate.base.kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ptypy.accelerate.base import address_manglers
+from ptypy.accelerate.base.array_utils import complex_gaussian_filter, complex_gaussian_filter_fft
 
 
 __all__ = ['ML_serial']
 
 @register()
 class ML_serial(ML):
+
+    """
+    Defaults:
+
+    [smooth_gradient.method]
+    default = convolution
+    type = str
+    help = Method to be used for smoothing the gradient, choose between ```convolution``` or ```fft```.
+    """
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -143,10 +153,12 @@ class ML_serial(ML):
         self.ML_model.prepare()
 
     def _get_smooth_gradient(self, data, sigma):
-        return self.smooth_gradient(data)
-
-    def _get_smooth_gradient_fft(self, data, sigma):
-        return self.smooth_gradient(data)
+        if self.p.smooth_gradient.method == "convolution":
+            return complex_gaussian_filter(data, sigma)
+        elif self.p.smooth_gradient_method == "fft":
+            return complex_gaussian_filter_fft(data, sigma)
+        else:
+            raise NotImplementedError("smooth_gradient.method can only be ```convolution``` or ```fft```.")
 
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new

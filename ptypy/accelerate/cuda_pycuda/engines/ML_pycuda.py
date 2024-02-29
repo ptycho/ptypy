@@ -90,10 +90,12 @@ class ML_pycuda(ML_serial):
         self.qu_htod = cuda.Stream()
         self.qu_dtoh = cuda.Stream()
 
-        self.GSK = GaussianSmoothingKernel(queue=self.queue)
-        self.GSK.tmp = None
+        if self.p.smooth_gradient.method == "convolution":
+            self.GSK = GaussianSmoothingKernel(queue=self.queue)
+            self.GSK.tmp = None
 
-        self.FGSK = FFTGaussianSmoothingKernel(queue=self.queue)
+        if self.p.smooth_gradient.method == "fft":
+            self.FGSK = FFTGaussianSmoothingKernel(queue=self.queue)
 
         # Real/Fourier Support Kernel
         self.RSK = {}
@@ -257,13 +259,14 @@ class ML_pycuda(ML_serial):
                 self._set_pr_ob_ref_for_data(dev=dev, container=container, sync_copy=sync_copy)
 
     def _get_smooth_gradient(self, data, sigma):
-        if self.GSK.tmp is None:
-            self.GSK.tmp = gpuarray.empty(data.shape, dtype=np.complex64)
-        self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
-        return data
-
-    def _get_smooth_gradient_fft(self, data, sigma):
-        self.FGSK.filter(data, sigma)
+        if self.p.smooth_gradient.method == "convolution":
+            if self.GSK.tmp is None:
+                self.GSK.tmp = gpuarray.empty(data.shape, dtype=np.complex64)
+            self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
+        elif self.p.smooth_gradient.method == "fft":
+            self.FGSK.filter(data, sigma)
+        else:
+            raise NotImplementedError("smooth_gradient.method can only be ```convolution``` or ```fft```.")
         return data
 
     def _replace_ob_grad(self):
