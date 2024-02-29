@@ -6,7 +6,7 @@ experimental nearfield conditions in the hard X-ray regime.
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import ptypy
-ptypy.load_gpu_engines(arch="cuda")
+ptypy.load_gpu_engines(arch="pycuda")
 
 import tempfile
 tmpdir = tempfile.gettempdir()
