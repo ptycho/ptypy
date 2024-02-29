@@ -588,5 +588,79 @@ class ArrayUtilsTest(PyCudaTest):
         FF.apply_filter(data_dev)
 
         output = au.fft_filter(data, kernel, prefactor, postfactor)
+        print(data_dev.get())
 
         np.testing.assert_allclose(output, data_dev.get(), rtol=1e-5, atol=1e-6)
+
+    def test_complex_gaussian_filter_fft_little_blurring_UNITY(self):
+        # Arrange
+        data = np.zeros((21, 21), dtype=np.complex64)
+        data[10:12, 10:12] = 2.0+2.0j
+        mfs = 0.2,0.2
+        data_dev = gpuarray.to_gpu(data)
+
+        # Act
+        FGSK = gau.FFTGaussianSmoothingKernel(queue=self.stream)
+        FGSK.filter(data_dev, mfs)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter_fft(data, mfs)
+        out = data_dev.get()
+        
+        np.testing.assert_allclose(out_exp, out, atol=1e-6)
+
+    def test_complex_gaussian_filter_fft_more_blurring_UNITY(self):
+        # Arrange
+        data = np.zeros((8, 8), dtype=np.complex64)
+        data[3:5, 3:5] = 2.0+2.0j
+        mfs = 3.0,4.0
+        data_dev = gpuarray.to_gpu(data)
+
+        # Act
+        FGSK = gau.FFTGaussianSmoothingKernel(queue=self.stream)
+        FGSK.filter(data_dev, mfs)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter_fft(data, mfs)
+        out = data_dev.get()
+
+        np.testing.assert_allclose(out_exp, out, atol=1e-6)
+
+    def test_complex_gaussian_filter_fft_nonsquare_UNITY(self):
+        # Arrange
+        data = np.zeros((32, 16), dtype=np.complex64)
+        data[3:4, 11:12] = 2.0+2.0j
+        data[3:5, 3:5] = 2.0+2.0j
+        data[20:25,3:5] = 2.0+2.0j
+        mfs = 1.0,1.0
+        data_dev = gpuarray.to_gpu(data)
+
+        # Act
+        FGSK = gau.FFTGaussianSmoothingKernel(queue=self.stream)
+        FGSK.filter(data_dev, mfs)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter_fft(data, mfs)
+        out = data_dev.get()
+
+        np.testing.assert_allclose(out_exp, out, atol=1e-6)
+
+    def test_complex_gaussian_filter_fft_batched(self):
+        # Arrange
+        batch_number = 2
+        A = 5
+        B = 5
+        data = np.zeros((batch_number, A, B), dtype=np.complex64)
+        data[:, 2:3, 2:3] = 2.0+2.0j
+        mfs = 3.0,4.0
+        data_dev = gpuarray.to_gpu(data)
+
+        # Act
+        FGSK = gau.FFTGaussianSmoothingKernel(queue=self.stream)
+        FGSK.filter(data_dev, mfs)
+
+        # Assert
+        out_exp = au.complex_gaussian_filter_fft(data, mfs)
+        out = data_dev.get()
+
+        np.testing.assert_allclose(out_exp, out, atol=1e-6)

@@ -56,6 +56,16 @@ def norm2(input):
     return np.sum(abs2(input))
 
 
+def gaussian_kernel_2d(shape, sigmau, sigmav):
+    """
+    2D Gaussian kernel using the last 2 dimension of given shape
+    Requires sigma for both dimensions (sigmau and sigmav)
+    """
+    u, v = np.fft.fftfreq(shape[-2]), np.fft.fftfreq(shape[-1])
+    uu, vv = np.meshgrid(u, v, sparse=True, indexing='ij')
+    kernel = np.exp(-2* ( (np.pi*sigmau)**2 * uu**2 + (np.pi*sigmav)**2 * vv**2 ) )
+    return kernel
+
 def complex_gaussian_filter(input, mfs):
     '''
     takes 2D and 3D arrays. Complex input, complex output. mfs has len 0<x<=2
@@ -68,6 +78,21 @@ def complex_gaussian_filter(input, mfs):
 
     return (ndi.gaussian_filter(np.real(input), mfs) + 1j * ndi.gaussian_filter(np.imag(input), mfs)).astype(
         input.dtype)
+
+
+def complex_gaussian_filter_fft(input, mfs):
+    '''
+    takes 2D and 3D arrays. Complex input, complex output. mfs has len 0<x<=2
+    '''
+    if len(mfs) > 2:
+        raise NotImplementedError("Only batches of 2D arrays allowed!")
+    elif len(mfs) == 1:
+        mfs = np.array([mfs,mfs])
+    else:
+        mfs = np.array(mfs)
+
+    k = gaussian_kernel_2d(input.shape, mfs[0], mfs[1]).astype(input.dtype)
+    return fft_filter(input, k)
 
 
 def fft_filter(input, kernel, prefactor=None, postfactor=None, forward=True):

@@ -1,4 +1,5 @@
 from ptypy.accelerate.cuda_common.utils import map2ctype
+from ptypy.accelerate.base.array_utils import gaussian_kernel_2d
 
 from . import load_kernel
 from pycuda import gpuarray
@@ -345,6 +346,10 @@ class FFTGaussianSmoothingKernel:
         self.sigma = sigma
         kernel = self._compute_kernel(shape, sigma)
 
+        # Extend kernel if needed
+        if len(shape) == 3:
+            kernel = np.tile(kernel, (shape[0],1,1))
+
         # Allocate filter
         kernel_dev = gpuarray.to_gpu(kernel)
         self.fft_filter.allocate(kernel=kernel_dev)
@@ -352,10 +357,13 @@ class FFTGaussianSmoothingKernel:
     def _compute_kernel(self, shape, sigma):
         # Create kernel
         self.sigma = sigma
-        u, v = np.fft.fftfreq(shape[-2]), np.fft.fftfreq(shape[-1])
-        uu, vv = np.meshgrid(u, v, sparse=True, indexing='ij')
-        kernel = np.exp(-2*(np.pi*sigma)**2 * (uu**2 + vv**2))
-        return kernel.astype(self.dtype)
+        if len(sigma) == 1:
+            sigma = np.array([sigma, sigma])
+        elif len(sigma) == 2:
+            sigma = np.array(sigma)
+        else:
+            raise NotImplementedError("Only batches of 2D arrays allowed!")
+        return gaussian_kernel_2d(shape, sigma[0], sigma[1]).astype(self.dtype)
 
     def filter(self, data, sigma=None):
         """
@@ -365,7 +373,7 @@ class FFTGaussianSmoothingKernel:
         """
         if self.sigma is None:
             self.allocate(shape=data.shape, sigma=sigma)
-        elif sigma is not None:
+        else:
             self.fft_filter.set_kernel(self._compute_kernel(data.shape, sigma))
         
         self.fft_filter.apply_filter(data)
