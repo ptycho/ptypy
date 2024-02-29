@@ -565,3 +565,28 @@ class ArrayUtilsTest(PyCudaTest):
 
         np.testing.assert_allclose(output, data_dev.get(), rtol=1e-5, atol=1e-6)
 
+    def test_fft_filter_batched_UNITY(self):
+        sh = (2,16, 35)
+        data = np.zeros(sh, dtype=np.complex64)
+        data.flat[:] = np.arange(np.prod(sh))
+        kernel = np.zeros_like(data)
+        kernel[:,0, 0] = 1.
+        kernel[:,0, 1] = 0.5
+
+        prefactor = np.zeros_like(data)
+        prefactor[:,:,2:] = 1.
+        postfactor = np.zeros_like(data)
+        postfactor[:,2:,:] = 1.
+
+        data_dev = gpuarray.to_gpu(data)
+        kernel_dev = gpuarray.to_gpu(kernel)
+        pre_dev = gpuarray.to_gpu(prefactor)
+        post_dev = gpuarray.to_gpu(postfactor)
+
+        FF = FFTFilterKernel(queue_thread=self.stream)
+        FF.allocate(kernel=kernel_dev, prefactor=pre_dev, postfactor=post_dev)
+        FF.apply_filter(data_dev)
+
+        output = au.fft_filter(data, kernel, prefactor, postfactor)
+
+        np.testing.assert_allclose(output, data_dev.get(), rtol=1e-5, atol=1e-6)
