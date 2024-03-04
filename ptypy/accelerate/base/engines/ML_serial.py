@@ -34,7 +34,7 @@ class ML_serial(ML):
     """
     Defaults:
 
-    [smooth_gradient.method]
+    [smooth_gradient_method]
     default = convolution
     type = str
     help = Method to be used for smoothing the gradient, choose between ```convolution``` or ```fft```.
@@ -153,12 +153,12 @@ class ML_serial(ML):
         self.ML_model.prepare()
 
     def _get_smooth_gradient(self, data, sigma):
-        if self.p.smooth_gradient.method == "convolution":
+        if self.p.smooth_gradient_method == "convolution":
             return complex_gaussian_filter(data, sigma)
         elif self.p.smooth_gradient_method == "fft":
             return complex_gaussian_filter_fft(data, sigma)
         else:
-            raise NotImplementedError("smooth_gradient.method can only be ```convolution``` or ```fft```.")
+            raise NotImplementedError("smooth_gradient_method should be ```convolution``` or ```fft```.")
 
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new
@@ -246,8 +246,7 @@ class ML_serial(ML):
             # Smoothing preconditioner
             if self.smooth_gradient:
                 for name, s in self.ob_h.storages.items():
-                    # s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
-                    s.data[:] -= self._get_smooth_gradient_fft(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
+                    s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
             else:
                 self.ob_h -= self.ob_grad
 
