@@ -24,12 +24,19 @@ try:
     )
     cmdclass = {"build_ext": CustomBuildExt}
     EXTBUILD_MESSAGE = "The filtered cufft extension has been successfully installed.\n"
-except:
+except EnvironmentError as e:
     EXTBUILD_MESSAGE = '*' * 75 + "\n"
     EXTBUILD_MESSAGE += "Could not install the filtered cufft extension.\n"
-    EXTBUILD_MESSAGE += "Make sure to have CUDA >= 10 and pybind11 installed.\n"
+    EXTBUILD_MESSAGE += "Make sure to have CUDA >= 10 installed.\n"
     EXTBUILD_MESSAGE += '*' * 75 + "\n"
-
+    EXTBUILD_MESSAGE += 'Error message: ' + str(e)
+except ImportError as e:
+    EXTBUILD_MESSAGE = '*' * 75 + "\n"
+    EXTBUILD_MESSAGE += "Could not install the filtered cufft extension.\n"
+    EXTBUILD_MESSAGE += "Make sure to have pybind11 installed.\n"
+    EXTBUILD_MESSAGE += '*' * 75 + "\n"
+    EXTBUILD_MESSAGE += 'Error message: ' + str(e)
+    
 exclude_packages = []
 package_list = setuptools.find_packages(exclude=exclude_packages)
 setup(
