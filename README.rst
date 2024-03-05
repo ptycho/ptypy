@@ -21,8 +21,8 @@ PtyPy - Ptychography Reconstruction for Python
 
 |ptypysite|
 
-.. image:: https://github.com/ptycho/ptypy/workflows/ptypy%20tests/badge.svg?branch=master
-    :target: https://github.com/ptycho/ptypy/actions
+.. image:: https://github.com/ptycho/ptypy/actions/workflows/test.yml/badge.svg?branch=master
+    :target: https://github.com/ptycho/ptypy/actions/workflows/test.yml
 
 Welcome Ptychonaut!
 -------------------
