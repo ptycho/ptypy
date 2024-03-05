@@ -158,7 +158,9 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
 
         for it in range(num):
 
-            error = {}
+            reduced_error = np.zeros((3,))
+            reduced_error_count = 0
+            local_error = {}
 
             for inner in range(self.p.overlap_max_iterations):
 
@@ -403,20 +405,26 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
             cp.asnumpy(s.gpu, stream=self.queue, out=s.data)
         for name, s in self.pr.S.items():
             cp.asnumpy(s.gpu, stream=self.queue, out=s.data)
-
-        self.queue.synchronize()
         
-        # costly but needed to sync back with
-        # for name, s in self.ex.S.items():
-        #     s.data[:] = s.gpu.get()
+        # Gather errors from device
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
             err_phot = prep.err_phot_gpu.get()
             err_exit = prep.err_exit_gpu.get()
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
-            error.update(zip(prep.view_IDs, errs))
+            if self.p.record_local_error:
+                local_error.update(zip(prep.view_IDs, errs))
+            else:
+                reduced_error += errs.sum(axis=0)
+                reduced_error_count += errs.shape[0]
 
-        self.error = error
+        if self.p.record_local_error:
+            error = local_error
+        else:
+            # Gather errors across all MPI ranks
+            error = parallel.allreduce(reduced_error)
+            count = parallel.allreduce(reduced_error_count)
+            error /= count
         return error
 
     # probe update
