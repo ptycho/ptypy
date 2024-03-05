@@ -294,17 +294,6 @@ class ML(PositionCorrectionEngine):
             t2 = time.time()
             if self.p.all_line_coeffs:
                 B = self.ML_model.poly_line_all_coeffs(self.ob_h, self.pr_h)
-            else:
-                B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
-            tc += time.time() - t2
-
-            if np.isinf(B).any() or np.isnan(B).any():
-                logger.warning(
-                    'Warning! inf or nan found! Trying to continue...')
-                B[np.isinf(B)] = 0.
-                B[np.isnan(B)] = 0.
-
-            if self.p.all_line_coeffs:
                 diffB = np.arange(1,len(B))*B[1:] # coefficients of poly derivative
                 roots = np.roots(np.flip(diffB.astype(np.double))) # roots only supports double
                 real_roots = np.real(roots[np.isreal(roots)]) # not interested in complex roots
@@ -313,8 +302,13 @@ class ML(PositionCorrectionEngine):
                 else: # find real root with smallest poly objective
                     evalp = lambda root: np.polyval(np.flip(B),root)
                     self.tmin = dt(min(real_roots, key=evalp)) # root with smallest poly objective
-            else: # same as above but quicker when poly quadratic
+            else:
+                B = self.ML_model.poly_line_coeffs(self.ob_h, self.pr_h)
+                # same as above but quicker when poly quadratic
                 self.tmin = dt(-0.5 * B[1] / B[2])
+                
+            tc += time.time() - t2
+                
             self.ob_h *= self.tmin
             self.pr_h *= self.tmin
             self.ob += self.ob_h
@@ -614,6 +608,12 @@ class GaussianModel(BaseModel):
                 B += Brenorm * self.regularizer.poly_line_coeffs(
                     ob_h.storages[name].data, s.data)
 
+        if np.isinf(B).any() or np.isnan(B).any():
+            logger.warning(
+                'Warning! inf or nan found! Trying to continue...')
+            B[np.isinf(B)] = 0.
+            B[np.isnan(B)] = 0.
+
         self.B = B
 
         return B
@@ -692,6 +692,12 @@ class GaussianModel(BaseModel):
                 for name, s in self.ob.storages.items():
                     B[:3] += Brenorm * self.regularizer.poly_line_coeffs(
                         ob_h.storages[name].data, s.data)
+
+            if np.isinf(B).any() or np.isnan(B).any():
+                logger.warning(
+                    'Warning! inf or nan found! Trying to continue...')
+                B[np.isinf(B)] = 0.
+                B[np.isnan(B)] = 0.
 
             self.B = B
 
@@ -844,6 +850,12 @@ class PoissonModel(BaseModel):
                 B += Brenorm * self.regularizer.poly_line_coeffs(
                     ob_h.storages[name].data, s.data)
 
+        if np.isinf(B).any() or np.isnan(B).any():
+            logger.warning(
+                'Warning! inf or nan found! Trying to continue...')
+            B[np.isinf(B)] = 0.
+            B[np.isnan(B)] = 0.
+
         self.B = B
 
         return B
@@ -921,6 +933,12 @@ class PoissonModel(BaseModel):
             for name, s in self.ob.storages.items():
                 B[:3] += Brenorm * self.regularizer.poly_line_coeffs(
                     ob_h.storages[name].data, s.data)
+
+        if np.isinf(B).any() or np.isnan(B).any():
+            logger.warning(
+                'Warning! inf or nan found! Trying to continue...')
+            B[np.isinf(B)] = 0.
+            B[np.isnan(B)] = 0.
 
         self.B = B
 
@@ -1088,6 +1106,12 @@ class EuclidModel(BaseModel):
                 B += Brenorm * self.regularizer.poly_line_coeffs(
                     ob_h.storages[name].data, s.data)
 
+        if np.isinf(B).any() or np.isnan(B).any():
+            logger.warning(
+                'Warning! inf or nan found! Trying to continue...')
+            B[np.isinf(B)] = 0.
+            B[np.isnan(B)] = 0.
+
         self.B = B
 
         return B
@@ -1171,6 +1195,12 @@ class EuclidModel(BaseModel):
             for name, s in self.ob.storages.items():
                 B[:3] += Brenorm * self.regularizer.poly_line_coeffs(
                     ob_h.storages[name].data, s.data)
+
+        if np.isinf(B).any() or np.isnan(B).any():
+            logger.warning(
+                'Warning! inf or nan found! Trying to continue...')
+            B[np.isinf(B)] = 0.
+            B[np.isnan(B)] = 0.
 
         self.B = B
 
