@@ -42,7 +42,7 @@ jobs:
       run: |
         # There is a bug in the most recent version (24.1.2)
         conda install conda=24.1.1
-	conda --version
+        conda --version
     - name: Install dependencies
       run: |
         # replace python version in core dependencies
