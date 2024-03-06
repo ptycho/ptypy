@@ -22,7 +22,7 @@ extern "C" __global__ void batched_multiply(const complex<IN_TYPE>* input,
   int gy = threadIdx.y + blockIdx.y * blockDim.y;
   int gz = threadIdx.z + blockIdx.z * blockDim.z;
 
-  if (gx > columns || gy > rows || gz > nBatches)
+  if (gx > rows || gy > columns || gz > nBatches)
     return;
 
   auto val = input[gz * rows * columns + gy * rows + gx];
