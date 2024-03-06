@@ -41,7 +41,7 @@ jobs:
     - name: Change conda version
       run: |
         # There is a bug in the most recent version (24.1.2)
-        conda install conda=23.11.0
+        conda install conda=23.11.0 python=3.11
         conda --version
     - name: Install dependencies
       run: |
