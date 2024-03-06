@@ -38,6 +38,11 @@ jobs:
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         echo $CONDA/bin >> $GITHUB_PATH
         conda --version
+    - name: Change conda version
+      run: |
+        # There is a bug in the most recent version (24.1.2)
+        conda install conda=24.1.1
+	conda --version
     - name: Install dependencies
       run: |
         # replace python version in core dependencies
