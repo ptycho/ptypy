@@ -357,10 +357,10 @@ class FFTGaussianSmoothingKernel:
     def _compute_kernel(self, shape, sigma):
         # Create kernel
         sigma = np.array(sigma)
-        if sigma.ndim <= 1:
+        if sigma.size == 1:
             sigma = np.array([sigma, sigma])
-        if sigma.ndim > 2:
-            raise NotImplementedError("Only batches of 2D arrays allowed!")    
+        if sigma.size > 2:
+            raise NotImplementedError("Only batches of 2D arrays allowed!")
         self.sigma = sigma
         return gaussian_kernel_2d(shape, sigma[0], sigma[1]).astype(self.dtype)
 

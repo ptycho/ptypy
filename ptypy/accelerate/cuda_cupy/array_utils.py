@@ -2,6 +2,7 @@ import cupy as cp
 import numpy as np
 
 from ptypy.accelerate.cuda_common.utils import map2ctype
+from ptypy.accelerate.base.array_utils import gaussian_kernel_2d
 from ptypy.utils.math_utils import gaussian
 from . import load_kernel
 
@@ -320,6 +321,59 @@ class DerivativesKernel:
             gz = int(higher_dim)
             self.delxb_mid((gx, gy, gz), self.mid_axis_block, (input,
                            out, lower_dim, higher_dim, np.int32(input.shape[axis])))
+
+
+class FFTGaussianSmoothingKernel:
+    def __init__(self, queue=None, kernel_type='float'):
+        if kernel_type not in ['float', 'double']:
+            raise ValueError('Invalid data type for kernel')
+        self.kernel_type = kernel_type
+        self.dtype = np.complex64
+        self.stype = "complex<float>"
+        self.queue = queue
+        self.sigma = None
+
+        from .kernels import FFTFilterKernel
+
+        # Create general FFT filter object 
+        self.fft_filter = FFTFilterKernel(queue_thread=queue)
+        
+    def allocate(self, shape, sigma=1.):
+
+        # Create kernel
+        self.sigma = sigma
+        kernel = self._compute_kernel(shape, sigma)
+
+        # Extend kernel if needed
+        if len(shape) == 3:
+            kernel = np.tile(kernel, (shape[0],1,1))
+
+        # Allocate filter
+        kernel_dev = cp.asarray(kernel)
+        self.fft_filter.allocate(kernel=kernel_dev)
+
+    def _compute_kernel(self, shape, sigma):
+        # Create kernel
+        sigma = np.array(sigma)
+        if sigma.size == 1:
+            sigma = np.array([sigma, sigma])
+        if sigma.size > 2:
+            raise NotImplementedError("Only batches of 2D arrays allowed!")
+        self.sigma = sigma
+        return gaussian_kernel_2d(shape, sigma[0], sigma[1]).astype(self.dtype)
+
+    def filter(self, data, sigma=None):
+        """
+        Apply filter in-place
+        
+        If sigma is not None: reallocate a new fft filter first.
+        """
+        if self.sigma is None:
+            self.allocate(shape=data.shape, sigma=sigma)
+        else:
+            self.fft_filter.set_kernel(self._compute_kernel(data.shape, sigma))
+        
+        self.fft_filter.apply_filter(data)
 
 
 class GaussianSmoothingKernel:
