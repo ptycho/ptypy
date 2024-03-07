@@ -63,6 +63,37 @@ class ArrayUtilsKernel:
     def norm2(self, A, out=None):
         return self.dot(A, A, out)
 
+class BatchedMultiplyKernel:
+    def __init__(self, array, queue=None, math_type=np.complex64):
+        self.queue = queue
+        self.array_shape = array.shape[-2:]
+        self.batches = int(np.prod(array.shape[0:array.ndim-2]) if array.ndim > 2 else 1)
+        self.batched_multiply_cuda = load_kernel("batched_multiply", {
+            'MPY_DO_SCALE': 'true',
+            'MPY_DO_FILT': 'true',
+            'IN_TYPE': 'float' if array.dtype==np.complex64 else 'double',
+            'OUT_TYPE': 'float' if array.dtype==np.complex64 else 'double',
+            'MATH_TYPE': 'float' if math_type==np.complex64 else 'double'
+        })
+        self.block = (32,32,1)
+        self.grid = (
+            int((self.array_shape[0] + 31) // 32),
+            int((self.array_shape[1] + 31) // 32),
+            int(self.batches)
+        )
+
+    def multiply(self, x,y, scale=1.):
+        assert x.dtype == y.dtype, "Input arrays must be of same data type"
+        assert x.shape[-2:] == y.shape[-2:], "Input arrays must be of the same size in last 2 dims"
+        if self.queue is not None:
+            self.queue.use()
+        self.batched_multiply_cuda(self.grid,
+                                   self.block,
+                                   args=(x,x,y,
+                                   np.float32(scale),
+                                   np.int32(self.batches),
+                                   np.int32(self.array_shape[0]),
+                                   np.int32(self.array_shape[1])))
 
 class TransposeKernel:
 

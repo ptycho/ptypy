@@ -79,6 +79,23 @@ class ArrayUtilsTest(CupyCudaTest):
         AU = gau.ArrayUtilsKernel(acc_dtype=np.float64)
         AU.dot(A_dev, A_dev)
 
+    def test_batched_multiply(self):
+        # Arrange
+        sh = (3,14,24)
+        ksh = (14,24)
+        data = (np.random.random(sh) + 1j* np.random.random(sh)).astype(np.complex64)
+        kernel = (np.random.random(ksh) + 1j* np.random.random(ksh)).astype(np.complex64)
+        data_dev = cp.asarray(data)
+        kernel_dev = cp.asarray(kernel)
+
+        # Act
+        BM = gau.BatchedMultiplyKernel(data_dev)
+        BM.multiply(data_dev, kernel_dev, scale=2.)
+
+        # Assert
+        expected = data * kernel * 2.
+        np.testing.assert_array_almost_equal(data_dev.get(), expected)
+
     def test_transpose_2D(self):
         # Arrange
         inp, _ = np.indices((5, 3), dtype=np.int32)
@@ -584,8 +601,6 @@ class ArrayUtilsTest(CupyCudaTest):
         FF.apply_filter(data_dev)
 
         output = au.fft_filter(data, kernel, prefactor, postfactor)
-        print(data_dev.get())
-
         np.testing.assert_allclose(output, data_dev.get(), rtol=1e-5, atol=1e-6)
 
     def test_complex_gaussian_filter_fft_little_blurring_UNITY(self):
