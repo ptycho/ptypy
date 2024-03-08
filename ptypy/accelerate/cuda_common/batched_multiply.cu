@@ -22,10 +22,11 @@ extern "C" __global__ void batched_multiply(const complex<IN_TYPE>* input,
   int gy = threadIdx.y + blockIdx.y * blockDim.y;
   int gz = threadIdx.z + blockIdx.z * blockDim.z;
 
-  if (gx > rows || gy > columns || gz > nBatches)
+  if (gx > rows - 1 || gy > columns - 1 || gz > nBatches)
     return;
 
   auto val = input[gz * rows * columns + gy * rows + gx];
+
   if (MPY_DO_FILT)  // set at compile-time
   {
     val *= filter[gy * rows + gx];
