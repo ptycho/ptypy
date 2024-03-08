@@ -52,7 +52,7 @@ sim.illumination.propagation.focussed = None
 sim.illumination.propagation.parallel = 0.03
 sim.illumination.propagation.spot_size = None
 
-imgfile = "/".join([str(pathlib.Path(__file__).parent.resolve()), '../../resources/ptypy_logo_1M.png'])
+imgfile = "/".join([str(pathlib.Path(__file__).parent.resolve()), '../../ptypy/resources/ptypy_logo_1M.png'])
 sim.sample = u.Param()
 sim.sample.model = -u.rgb2complex(u.imload(imgfile)[::-1,:,:-1])
 sim.sample.process = u.Param()

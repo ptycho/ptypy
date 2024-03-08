@@ -6,6 +6,8 @@ experimental farfield conditions and with a focused optical laser beam.
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import ptypy.simulations as sim
+import ptypy
+ptypy.load_gpu_engines(arch="cupy")
 
 import pathlib
 import numpy as np
@@ -21,8 +23,8 @@ p.run = None
 p.io = u.Param()
 p.io.home = "/".join([tmpdir, "ptypy"])
 p.io.autosave = u.Param(active=False)
-p.io.autoplot = u.Param(active=True)
-p.io.autoplot.layout='minimal'
+p.io.autoplot = u.Param(active=False, layout="minimal")
+p.io.interaction = u.Param(active=False)
 
 # Simulation parameters
 sim = u.Param()
@@ -50,7 +52,7 @@ sim.illumination.propagation.focussed = None
 sim.illumination.propagation.parallel = 0.03
 sim.illumination.propagation.spot_size = None
 
-imgfile = "/".join([str(pathlib.Path(__file__).parent.resolve()), '../ptypy/resources/ptypy_logo_1M.png'])
+imgfile = "/".join([str(pathlib.Path(__file__).parent.resolve()), '../../ptypy/resources/ptypy_logo_1M.png'])
 sim.sample = u.Param()
 sim.sample.model = -u.rgb2complex(u.imload(imgfile)[::-1,:,:-1])
 sim.sample.process = u.Param()
@@ -89,11 +91,10 @@ p.scans.ptypy.data.update(sim)
 # Reconstruction parameters
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM'
+p.engines.engine00.name = 'DM_cupy'
 p.engines.engine00.numiter = 40
 p.engines.engine00.fourier_relax_factor = 0.05
 
 u.verbose.set_level("info")
-
 if __name__ == "__main__":
     P = Ptycho(p,level=5)
