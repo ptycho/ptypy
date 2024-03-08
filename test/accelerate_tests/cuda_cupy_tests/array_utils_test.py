@@ -656,7 +656,7 @@ class ArrayUtilsTest(CupyCudaTest):
 
         np.testing.assert_allclose(out_exp, out, atol=1e-6)
 
-    def test_complex_gaussian_filter_fft_batched(self):
+    def test_complex_gaussian_filter_fft_batched_UNITY(self):
         # Arrange
         batch_number = 2
         A = 5
