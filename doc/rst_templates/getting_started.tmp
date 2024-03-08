@@ -86,10 +86,39 @@ Install the recommended version like so
     (ptypy_full)$ pip install .
 
 
-Recommended install for GPU support
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Recommended install for GPU support with CuPy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We support an accelerated version of |ptypy|_ for CUDA-capable
+GPUs based on our own kernels and the
+`CuPy <https://cupy.dev/>`_ package.
+
+Install the dependencies for this version like so.
+::
+
+    $ conda env create -f ptypy/accelerate/cuda_cupy/dependencies.yml
+    $ conda activate ptypy_cupy
+    (ptypy_cupy)$ pip install .
+
+
+While we use the `CuPy FFT <https://docs.cupy.dev/en/stable/reference/fft.html>`_ to
+provide a filtered FFT, i.e. a FFT that is fused with a pointwise
+matrix multiplication, you can optionally also install a version
+based on cufft and callbacks. Due to the nature of this extension it
+needs to be built for fixed array sizes externally. The currently supported 
+array sizes are 16, 32, 64, 128, 256, 512, 1024 and 2048.
+::
+
+    $ conda activate ptypy_cupy
+    (ptypy_cupy)$ cd cufft
+    (ptypy_cupy)$ conda env update --file dependencies.yml --name ptypy_cupy
+    (ptypy_cupy)$ pip install .
+
+
+Install for GPU support with PyCUDA
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Alternatively, we also support an accelerated version of |ptypy|_ for CUDA-capable
 GPUs based on our own kernels and the
 `PyCUDA <https://pypi.org/project/pycuda/>`_ package.
 
@@ -105,7 +134,8 @@ While we use `Reikna <https://pypi.org/project/reikna/>`_ to
 provide a filtered FFT, i.e. a FFT that is fused with a pointwise
 matrix multiplication, you can optionally also install a version
 based on cufft and callbacks. Due to the nature of this extension it
-needs to be built for fixed array sizes externally.
+needs to be built for fixed array sizes externally. The currently supported 
+array sizes are 16, 32, 64, 128, 256, 512, 1024 and 2048.
 ::
 
     $ conda activate ptypy_pycuda
