@@ -128,10 +128,10 @@ needs to be built for fixed array sizes externally and currently supports array
 sizes of 16, 32, 64, 128, 256, 512, 1024 and 2048.
 ::
 
-    $ conda activate ptypy_pycuda
-    (ptypy_pycuda)$ cd cufft
-    (ptypy_pycuda)$ conda env update --file dependencies.yml --name ptypy_pycuda
-    (ptypy_pycuda)$ pip install .
+    $ conda activate ptypy_cupy
+    (ptypy_cupy)$ cd cufft
+    (ptypy_cupy)$ conda env update --file dependencies.yml --name ptypy_cupy
+    (ptypy_cupy)$ pip install .
 
 
 Optional packages
