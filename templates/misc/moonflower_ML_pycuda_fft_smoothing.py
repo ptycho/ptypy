@@ -56,7 +56,7 @@ p.engines.engine00.reg_del2_amplitude = 1.             # Amplitude of the Gaussi
 p.engines.engine00.scale_precond = True
 p.engines.engine00.smooth_gradient = 50.
 p.engines.engine00.smooth_gradient_decay = 1/50.
-p.engines.engine00.smooth_gradient_metehod = "fft" # with method "convolution" there can be shared memory issues
+p.engines.engine00.smooth_gradient_method = "fft" # with method "convolution" there can be shared memory issues
 p.engines.engine00.floating_intensities = False
 
 # prepare and run

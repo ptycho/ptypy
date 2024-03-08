@@ -378,10 +378,6 @@ class FFTGaussianSmoothingKernel:
         self.sigma = sigma
         kernel = self._compute_kernel(shape, sigma)
 
-        # Extend kernel if needed
-        if len(shape) == 3:
-            kernel = np.tile(kernel, (shape[0],1,1))
-
         # Allocate filter
         kernel_dev = gpuarray.to_gpu(kernel)
         self.fft_filter.allocate(kernel=kernel_dev)
@@ -394,7 +390,14 @@ class FFTGaussianSmoothingKernel:
         if sigma.size > 2:
             raise NotImplementedError("Only batches of 2D arrays allowed!")
         self.sigma = sigma
-        return gaussian_kernel_2d(shape, sigma[0], sigma[1]).astype(self.dtype)
+
+        kernel = gaussian_kernel_2d(shape, sigma[0], sigma[1]).astype(self.dtype)
+
+        # Extend kernel if needed
+        if len(shape) == 3:
+            kernel = np.tile(kernel, (shape[0],1,1))
+
+        return kernel
 
     def filter(self, data, sigma=None):
         """
