@@ -63,7 +63,7 @@ Features
     $ mpiexec -n [nodes] python <your_ptypy_script>.py
 
 * **GPU acceleration** based on custom kernels, CuPy or PyCUDA/reikna.
-  See examples in ``templates/accelerate``. 
+  See examples in ``templates/accelerate``, ``templates/engines/pycuda`` and ``templates/engines/cupy``.
 
 * A **client-server** approach for visualization and control based on 
   `ZeroMQ <http://www.zeromq.org>`_ .
@@ -104,7 +104,7 @@ Ptypy depends on standard python packages:
 GPU support
 -----------
 
-We support an accelerated version of |ptypy|_ for CUDA-capable GPUs based on our own kernels and the
+We support an accelerated version of |ptypy| for CUDA-capable GPUs based on our own kernels and the
 `CuPy <https://cupy.dev/>`_ package. We recommend to install the dependencies for this version like so.
 ::
 
