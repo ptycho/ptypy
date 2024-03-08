@@ -171,7 +171,7 @@ class RealSupportKernel:
 
 
 class FFTFilterKernel:
-    def __init__(self, queue_thread=None, fft='cuda'):
+    def __init__(self, queue_thread=None, fft='cupy'):
         # Current implementation recompiles every time there is a change in input shape.
         self.queue = queue_thread
         self._fft_type = fft

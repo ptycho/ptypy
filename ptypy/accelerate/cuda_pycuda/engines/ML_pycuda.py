@@ -262,7 +262,11 @@ class ML_pycuda(ML_serial):
         if self.p.smooth_gradient_method == "convolution":
             if self.GSK.tmp is None:
                 self.GSK.tmp = gpuarray.empty(data.shape, dtype=np.complex64)
-            self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
+            try:
+                self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
+            except MemoryError:
+                raise RuntimeError("Convolution kernel too large for direct convolution on GPU",
+                                   "Please reduce parameter smooth_gradient or set smooth_gradient_method='fft'.")
         elif self.p.smooth_gradient_method == "fft":
             self.FGSK.filter(data, sigma)
         else:
