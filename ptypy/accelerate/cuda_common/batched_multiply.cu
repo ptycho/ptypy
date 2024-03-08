@@ -26,11 +26,6 @@ extern "C" __global__ void batched_multiply(const complex<IN_TYPE>* input,
     return;
 
   auto val = input[gz * rows * columns + gy * rows + gx];
-  //printf("gx = %d, gy = %d, gz = %d, val= %.1f +i%.1f\n", gz,gy,gz, val.real(), val.imag());
-  //printf("threads: x=%d y=%d z=%d\n", threadIdx.x, threadIdx.y, threadIdx.z);
-  //printf("blocks: x=%d y=%d z=%d\n", blockIdx.x, blockIdx.y, blockIdx.z);
-  //printf("grids: x=%d y=%d z=%d\n", blockDim.x, blockDim.y, blockDim.z);
-
 
   if (MPY_DO_FILT)  // set at compile-time
   {
