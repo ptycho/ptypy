@@ -63,7 +63,7 @@ Features
     $ mpiexec -n [nodes] python <your_ptypy_script>.py
 
 * **GPU acceleration** based on custom kernels, CuPy or PyCUDA/reikna.
-  See examples in ``templates/accelerate``, ``templates/engines/pycuda`` and ``templates/engines/cupy``.
+  See examples in ``templates/accelerate``, ``templates/engines/cupy`` and ``templates/engines/pycuda``.
 
 * A **client-server** approach for visualization and control based on 
   `ZeroMQ <http://www.zeromq.org>`_ .
