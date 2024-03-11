@@ -498,6 +498,29 @@ class PositionCorrectionEngine(BaseEngine):
 
         self.ptycho.record_positions = True
 
+class PtychoTomoEngine(PositionCorrectionEngine):
+    """
+    A sub class engine that supports ptycho-tomography
+
+    Defaults:
+
+    [tomo]
+    default = False
+    type = Param, bool
+    help = If True it enables ptycho-tomographic reconstructions
+
+    """
+
+    def __init__(self, ptycho_parent, pars):
+        """
+        Position Correction engine.
+        """
+        super(PtychoTomoEngine, self).__init__(ptycho_parent, pars)
+
+        
+
+
+
 
 class Base3dBraggEngine(BaseEngine):
     """
