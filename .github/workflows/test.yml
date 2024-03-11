@@ -24,7 +24,7 @@ jobs:
       max-parallel: 10
       fail-fast: false
       matrix:
-        python-version: # There is a bug in conda 24.1.2 for Python < 3.12
+        python-version: # There is a bug in conda 24.1.2 for Python < 3.12 so we pin the version to 23.11.0
           - python: "3.8"
             conda: "23.11.0"
           - python: "3.9"
