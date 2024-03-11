@@ -49,7 +49,7 @@ jobs:
         echo $CONDA/bin >> $GITHUB_PATH
         conda --version
     - name: Change conda version if necessary
-      if: ${{ matrix.python-version.conda }} != 'latest'  
+      if: ${{ matrix.python-version.conda }} == '23.11.0'
       run: |
         conda install conda=${{ matrix.python-version.conda }} python=${{ matrix.python-version.python }}
         conda --version
