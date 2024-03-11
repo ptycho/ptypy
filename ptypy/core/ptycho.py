@@ -1151,7 +1151,7 @@ class Ptycho(Base):
                 S.data[:] = self.state_dict[name]["ob"].storages[ID].data
             for ID,S in self.exit.storages.items():
                 S.data[:] = self.state_dict[name]["ex"].storages[ID].data   
-        self.runtime = self.state_dict[name]["runtime"]
+        self.runtime = self.state_dict[name]["runtime"].copy(depth=99)
         
         # Reformat/Recalculate exit waves
         if reformat_exit:

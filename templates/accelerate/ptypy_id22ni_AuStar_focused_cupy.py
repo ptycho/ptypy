@@ -6,7 +6,7 @@ experimental farfield conditions and with a focused beam in the hard X-ray regim
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import ptypy
-ptypy.load_gpu_engines(arch="pycuda")
+ptypy.load_gpu_engines(arch="cupy")
 
 import numpy as np
 import tempfile
@@ -100,7 +100,7 @@ p.scans.scan00.data.save = None
 # Reconstruction parameters
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_pycuda'
+p.engines.engine00.name = 'DM_cupy'
 p.engines.engine00.numiter = 150
 p.engines.engine00.fourier_relax_factor = 0.05
 p.engines.engine00.numiter_contiguous = 1

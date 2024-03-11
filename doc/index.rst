@@ -35,7 +35,8 @@ Highlights
   
     $ mpiexec/mpirun -n [nodes] python <your_ptypy_script>.py
 
-* **GPU acceleration** based on custom kernels, pycuda, and reikna.
+* **GPU acceleration** based on custom kernels, CuPy or PyCUDA/reikna.
+  See examples in ``templates/accelerate``, ``templates/engines/cupy`` and ``templates/engines/pycuda``.
 
 * A **client-server** approach for visualization and control based on 
   `ZeroMQ <http://www.zeromq.org>`_ .
