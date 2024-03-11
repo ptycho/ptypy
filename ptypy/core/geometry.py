@@ -7,7 +7,7 @@ This file is part of the PTYPY package.
     :license: see LICENSE for details.
 """
 import numpy as np
-from scipy import fftpack
+import scipy.fft
 
 from .. import utils as u
 from ..utils.verbose import logger
@@ -55,7 +55,7 @@ class Geo(Base):
         If set to True, changes to properties like :py:meth:`energy`,
         :py:meth:`lam`, :py:meth:`shape` or :py:meth:`psize` will cause
         a call to :py:meth:`update`.
-    
+
 
     Default geometry parameters. See also :py:data:`.scan.geometry`
 
@@ -471,8 +471,8 @@ class FFTchooser(object):
         self.ifft = lambda x: fftw_np.ifft2(x, planner_effort=pe)
 
     def _scipy_fft(self):
-        self.fft = lambda x: fftpack.fft2(x).astype(x.dtype)
-        self.ifft = lambda x: fftpack.ifft2(x).astype(x.dtype)
+        self.fft = lambda x: scipy.fft.fft2(x).astype(x.dtype)
+        self.ifft = lambda x: scipy.fft.ifft2(x).astype(x.dtype)
 
     def _numpy_fft(self):
         self.fft = lambda x: np.ascontiguousarray(np.fft.fft2(x).astype(x.dtype))

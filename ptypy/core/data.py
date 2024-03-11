@@ -114,6 +114,7 @@ class PtyScan(object):
     default = data
     help = Determines what will be loaded in parallel
     doc = Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
+    choices = ['data', 'common', 'all']
 
     [rebin]
     type = int
@@ -122,7 +123,7 @@ class PtyScan(object):
     doc = Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
     userlevel = 1
     lowlim = 1
-    uplim = 8
+    uplim = 32
 
     [orientation]
     type = int, tuple, list
@@ -139,6 +140,7 @@ class PtyScan(object):
        <newline>
        Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, 
        do_flipud, do_fliplr)``
+    choices = [0, 1, 2, 3, 4, 5, 6, 7]
     userlevel = 1
 
     [min_frames]
@@ -797,7 +799,7 @@ class PtyScan(object):
             rebin = self.rebin
             if rebin <= 1:
                 pass
-            elif (rebin in range(2, 6)
+            elif (rebin in range(2, 32+1)
                   and (((sh / float(rebin)) % 1) == 0.0).all()):
                 mask = w > 0
                 d = u.rebin_2d(d, rebin)

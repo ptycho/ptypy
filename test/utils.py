@@ -16,6 +16,7 @@ import tempfile
 import numpy as np
 from ptypy import utils as u
 from ptypy.core import Ptycho
+from ptypy.utils import parallel
 
 
 def get_test_data_path(name):
@@ -76,6 +77,11 @@ def EngineTestRunner(engine_params,propagator='farfield',output_path='./', outpu
     if init_correct_probe:
         P.probe.S['SMFG00'].data[0] = P.model.scans['MF'].ptyscan.pr
     P.run()
+
+    # important for subdividing data, ensure a fresh start if a test will be
+    # run afterwards
+    parallel.loadmanager.reset()
+
     return P
 
 
@@ -164,4 +170,9 @@ def EngineTestRunner2(engine_params,propagator='farfield',output_path='./', outp
     p.engines.engine00 = engine_params
     P = Ptycho(p, level=4)
     P.run()
+
+    # important for subdividing data, ensure a fresh start if a test will be
+    # run afterwards
+    parallel.loadmanager.reset()
+
     return P
