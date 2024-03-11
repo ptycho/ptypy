@@ -9,12 +9,11 @@ This file is part of the PTYPY package.
 """
 
 import numpy as np
-import time
 import cupy as cp
 
 from ptypy import utils as u
-from ptypy.accelerate.cuda_cupy import get_context, log_device_memory_stats
-from ptypy.utils.verbose import logger, log
+from ptypy.accelerate.cuda_cupy import get_context
+from ptypy.utils.verbose import log
 from ptypy.utils import parallel
 from ptypy.engines import register
 from ptypy.engines.projectional import DMMixin, RAARMixin
@@ -119,12 +118,16 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             # create buffer arrays
             ash = (fpc * nmodes,) + tuple(geo.shape)
             aux = np.zeros(ash, dtype=np.complex64)
+            mempool = cp.get_default_memory_pool()
+            mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
+            if not int(mem) // aux.nbytes:
+                log(1,"Cannot fit memory into device, if possible reduce frames per block or nr. of modes. Exiting...")
+                raise SystemExit("ptypy has been exited.")
             kern.aux = cp.asarray(aux)
 
             # setup kernels, one for each SCAN.
             log(4, "Setting up FourierUpdateKernel")
-            kern.FUK = FourierUpdateKernel(
-                aux, nmodes, queue_thread=self.queue)
+            kern.FUK = FourierUpdateKernel(aux, nmodes, queue_thread=self.queue)
             kern.FUK.allocate()
 
             log(4, "Setting up PoUpdateKernel")
@@ -142,15 +145,13 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             kern.TK = TransposeKernel(queue=self.queue)
 
             log(4, "Setting up PropagationKernel")
-            kern.PROP = PropagationKernel(
-                aux, geo.propagator, self.queue, self.p.fft_lib)
+            kern.PROP = PropagationKernel(aux, geo.propagator, self.queue, self.p.fft_lib)
             kern.PROP.allocate()
             kern.resolution = geo.resolution[0]
 
             if self.do_position_refinement:
                 log(4, "Setting up PositionCorrectionKernel")
-                kern.PCK = PositionCorrectionKernel(
-                    aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
+                kern.PCK = PositionCorrectionKernel(aux, nmodes, self.p.position_refinement, geo.resolution, queue_thread=self.queue)
                 kern.PCK.allocate()
             log(4, "Kernel setup completed")
 
@@ -179,8 +180,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             prep = self.diff_info[d.ID]
             prep.addr_gpu = cp.asarray(prep.addr)
             if use_tiles:
-                prep.addr2 = np.ascontiguousarray(
-                    np.transpose(prep.addr, (2, 3, 0, 1)))
+                prep.addr2 = np.ascontiguousarray(np.transpose(prep.addr, (2, 3, 0, 1)))
                 prep.addr2_gpu = cp.asarray(prep.addr2)
             if self.do_position_refinement:
                 prep.mangled_addr_gpu = prep.addr_gpu.copy()
@@ -262,8 +262,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
 
                 # build exit wave
                 #AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._b,
-                              c_po=self._a, c_e=-(self._a + self._b))
+                AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._b, c_po=self._a, c_e=-(self._a + self._b))
                 FUK.exit_error(aux, addr)
                 FUK.error_reduce(addr, err_exit)
 
@@ -294,8 +293,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             err_fourier = prep.err_fourier_gpu.get()
             err_phot = prep.err_phot_gpu.get()
             err_exit = prep.err_exit_gpu.get()
-            errs = np.ascontiguousarray(
-                np.vstack([err_fourier, err_phot, err_exit]).T)
+            errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
             error.update(zip(prep.view_IDs, errs))
 
         self.error = error
@@ -307,12 +305,9 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         """
         if not self.do_position_refinement or (not self.curiter):
             return
-        do_update_pos = (self.p.position_refinement.stop >
-                         self.curiter >= self.p.position_refinement.start)
-        do_update_pos &= (self.curiter %
-                          self.p.position_refinement.interval) == 0
-        use_tiles = (not self.p.probe_update_cuda_atomics) or (
-            not self.p.object_update_cuda_atomics)
+        do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+        do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
         # Update positions
         if do_update_pos:
@@ -364,18 +359,15 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
 
                 log(4, 'Position refinement trial: iteration %s' % (self.curiter))
                 for i in range(PCK.mangler.nshifts):
-                    PCK.mangler.get_address(
-                        i, addr, mangled_addr, max_oby, max_obx)
+                    PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
                     PCK.build_aux(aux, mangled_addr, ob, pr)
                     PROP.fw(aux, aux)
                     if self.p.position_refinement.metric == "fourier":
                         PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
                         PCK.error_reduce(mangled_addr, err_fourier)
                     if self.p.position_refinement.metric == "photon":
-                        PCK.log_likelihood(
-                            aux, mangled_addr, mag, ma, err_fourier)
-                    PCK.update_addr_and_error_state(
-                        addr, error_state, mangled_addr, err_fourier)
+                        PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
+                    PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
 
                 cp.cuda.runtime.memcpyAsync(dst=err_fourier.data.ptr,
                                             src=error_state.data.ptr,
@@ -413,8 +405,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
                     prep = self.diff_info[dID]
                     pID, oID, eID = prep.poe_IDs
                     if pID == name:
-                        self.ex.S[eID].gpu = self.ISK.interpolate_shift(
-                            self.ex.S[eID].gpu, shift)
+                        self.ex.S[eID].gpu = self.ISK.interpolate_shift(self.ex.S[eID].gpu, shift)
 
                 log(4, 'Probe recentered from %s to %s'
                     % (str(tuple(c1)), str(tuple(c2))))
@@ -533,8 +524,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         if support is not None:
             if storage.ID not in self.FSK:
                 supp = support.astype(np.complex64)
-                self.FSK[storage.ID] = FourierSupportKernel(
-                    supp, self.queue, self.p.fft_lib)
+                self.FSK[storage.ID] = FourierSupportKernel(supp, self.queue, self.p.fft_lib)
                 self.FSK[storage.ID].allocate()
             self.FSK[storage.ID].apply_fourier_support(storage.gpu)
 
@@ -542,8 +532,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         support = self._probe_support.get(storage.ID)
         if support is not None:
             if storage.ID not in self.RSK:
-                self.RSK[storage.ID] = RealSupportKernel(
-                    support.astype(np.complex64))
+                self.RSK[storage.ID] = RealSupportKernel(support.astype(np.complex64))
                 self.RSK[storage.ID].allocate()
             self.RSK[storage.ID].apply_real_support(storage.gpu)
 
@@ -584,12 +573,10 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             prep.addr = prep.addr_gpu.get()
             del prep.addr_gpu
 
-
         mempool = cp.get_default_memory_pool()
         mempool.free_all_blocks()
         pinned_pool = cp.get_default_pinned_memory_pool()
         pinned_pool.free_all_blocks()
-
 
         # we don't need the  "benchmarking" in DM_serial
         super().engine_finalize(benchmark=False)

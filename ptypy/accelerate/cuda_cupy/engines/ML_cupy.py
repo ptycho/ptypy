@@ -165,6 +165,8 @@ class ML_cupy(ML_serial):
         # TODO grow blocks dynamically
         nma = min(fit, MAX_BLOCKS)
         log_device_memory_stats(4)
+        log(4, 'Free memory available: {:.2f} GB'.format(float(mem)/(1024**3)))
+        log(4, 'Memory to be allocated per block: {:.2f} GB'.format(float(blk)/(1024**3)))
         log(4, 'CuPy max blocks fitting on GPU: ma_arrays={}'.format(nma))
         # reset memory or create new
         self.w_data = GpuDataManager(ma_mem, 0, nma, False)

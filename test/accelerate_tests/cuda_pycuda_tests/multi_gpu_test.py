@@ -85,7 +85,3 @@ class GpuDataTest(unittest.TestCase):
     @unittest.skipIf(not mgpu.have_cuda_mpi, "Cuda-aware MPI not available")
     def test_multigpu_cudampi(self):
         self.multigpu_tester(mgpu.MultiGpuCommunicatorCudaMpi())
-
-    @unittest.skipIf(not mgpu.have_nccl, "NCCL not available")
-    def test_multigpu_nccl(self):
-        self.multigpu_tester(mgpu.MultiGpuCommunicatorNccl())

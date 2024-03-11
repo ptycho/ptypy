@@ -193,7 +193,7 @@ class Hdf5Loader(PtyScan):
     default =
     type = Param
     help = Parameters for the filtering of frames
-    doc = The shape of loaded data is assumed to hvae the same dimensionality as data.shape[:-2]
+    doc = The shape of loaded data is assumed to have the same dimensionality as data.shape[:-2]
 
     [framefilter.file]
     default = None
@@ -298,6 +298,18 @@ class Hdf5Loader(PtyScan):
     help = Switch for loading data from electron ptychography experiments.
     doc = If True, the energy provided in keV will be considered as electron energy
           and converted to electron wavelengths.
+
+    [frameorder]
+    default =
+    type = Param
+    help = Parameters for the re-ordering of frames
+    doc = The shape of loaded array of indices is matching the dimensionality of the loaded intensity
+
+    [frameorder.indices]
+    default = None
+    type = list, ndarray
+    help = This is the array or list with the re-ordered indices.
+
     """
 
     def __init__(self, pars=None, swmr=False, **kwargs):
@@ -596,6 +608,16 @@ class Hdf5Loader(PtyScan):
             log(3, "center is %s, auto_center: %s" % (self.info.center, self.info.auto_center))
             log(3, "The loader will not do any cropping.")
 
+    def _reorder_preview_indices(self):
+        if self.p.frameorder.indices is None:
+            return
+        order = np.array(self.p.frameorder.indices, dtype=int)
+        if (order.max() > self.preview_indices.shape[-1]):
+            log(3, "Given frameorder does not match dimensionality of data, keeping the original order")
+            return
+        log(3, "Reordering indices")
+        self.preview_indices = self.preview_indices.T[order].T
+
     def load_unmapped_raster_scan(self, indices):
         intensities = {}
         positions = {}
@@ -732,6 +754,7 @@ class Hdf5Loader(PtyScan):
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
                 if self.framefilter is not None:
                     self.preview_indices = self.preview_indices[:,self.framefilter[indices[1][::skip,::skip], indices[0][::skip,::skip]].flatten()]
+                self._reorder_preview_indices()
                 self.num_frames = len(self.preview_indices[0])
 
             else:
@@ -748,6 +771,7 @@ class Hdf5Loader(PtyScan):
                 self.preview_indices = indices[::skip]
                 if self.framefilter is not None:
                     self.preview_indices = self.preview_indices[self.framefilter[indices][::skip]]
+                self._reorder_preview_indices()
                 self.num_frames = len(self.preview_indices)
 
         elif ((len(positions_fast_shape)>1) and (len(positions_slow_shape)>1)) and data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
@@ -776,6 +800,7 @@ class Hdf5Loader(PtyScan):
             self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()])
             if self.framefilter:
                 log(3, "Framefilter not supported for this case")
+            self._reorder_preview_indices()
             self.num_frames = len(self.preview_indices[0])
             self._ismapped = False
             self._scantype = 'raster'
@@ -809,6 +834,7 @@ class Hdf5Loader(PtyScan):
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
                 if self.framefilter:
                     log(3, "Framefilter not supported for this case")
+                self._reorder_preview_indices()
                 self.num_frames = len(self.preview_indices[0])
                 self._ismapped = True
                 self._scantype = 'raster'
@@ -840,6 +866,7 @@ class Hdf5Loader(PtyScan):
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
                 if self.framefilter:
                     log(3, "Framefilter not supported for this case")
+                self._reorder_preview_indices()
                 self.num_frames = len(self.preview_indices[0])
                 self._ismapped = False
                 self._scantype = 'raster'

@@ -76,17 +76,17 @@ class PoUpdateKernelTest(CupyCudaTest):
 
         object_array_denominator = np.empty_like(object_array, dtype=FLOAT_TYPE)
         for idx in range(G):
-            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2) 
+            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2)
 
         probe_denominator = np.empty_like(probe, dtype=FLOAT_TYPE)
         for idx in range(D):
-            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2) 
+            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2)
 
-        return (cp.asarray(addr), 
-            cp.asarray(object_array), 
-            cp.asarray(object_array_denominator), 
-            cp.asarray(probe), 
-            cp.asarray(exit_wave), 
+        return (cp.asarray(addr),
+            cp.asarray(object_array),
+            cp.asarray(object_array_denominator),
+            cp.asarray(probe),
+            cp.asarray(exit_wave),
             cp.asarray(probe_denominator))
 
 
@@ -96,7 +96,7 @@ class PoUpdateKernelTest(CupyCudaTest):
                                 err_msg='PoUpdateKernel does not have the correct functions registered.')
 
     def ob_update_REGRESSION_tester(self, atomics=True):
-        
+
         B = 5  # frame size y
         C = 5  # frame size x
 
@@ -291,7 +291,7 @@ class PoUpdateKernelTest(CupyCudaTest):
         '''
         object_array_denominator = np.empty_like(object_array, dtype=FLOAT_TYPE)
         for idx in range(G):
-            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2) 
+            object_array_denominator[idx] = np.ones((H, I)) * (5 * idx + 2)
 
 
         POUK = PoUpdateKernel()
@@ -330,7 +330,7 @@ class PoUpdateKernelTest(CupyCudaTest):
 
     def test_ob_update_atomics_UNITY(self):
         self.ob_update_UNITY_tester(atomics=True)
-    
+
     def test_ob_update_tiled_UNITY(self):
         self.ob_update_UNITY_tester(atomics=False)
 
@@ -394,7 +394,7 @@ class PoUpdateKernelTest(CupyCudaTest):
         '''
         probe_denominator = np.empty_like(probe, dtype=FLOAT_TYPE)
         for idx in range(D):
-            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2) 
+            probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2)
 
         POUK = PoUpdateKernel()
 
@@ -929,7 +929,7 @@ class PoUpdateKernelTest(CupyCudaTest):
         POUK = PoUpdateKernel()
 
         probe_dev = cp.asarray(probe)
-        probe_norm_dev = cp.asarray(probe_norm) 
+        probe_norm_dev = cp.asarray(probe_norm)
         addr_dev = cp.asarray(addr)
 
         POUK.pr_norm_local(addr_dev,  probe_dev, probe_norm_dev)
@@ -938,6 +938,226 @@ class PoUpdateKernelTest(CupyCudaTest):
         np.testing.assert_allclose(probe_norm_dev.get(), probe_norm, rtol=1e-6, atol=1e-6,
                                       err_msg="The probe norm has not been updated as expected")
 
+    def test_ob_update_wasp_UNITY(self):
+        '''
+        setup
+        '''
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+        H = B + npts_greater_than  #  object size y
+        I = C + npts_greater_than  #  object size x
+
+        scan_pts = 1  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+        auxiliary_wave = exit_wave.copy() * 1.5
+
+        ob_sum_nmr = np.zeros(shape=(G,H,I), dtype=COMPLEX_TYPE)
+        ob_sum_dnm = np.zeros(shape=(G,H,I), dtype=FLOAT_TYPE)
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):#
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+
+        '''
+        test
+        '''
+        from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
+        nPOUK = npPoUpdateKernel()
+        POUK = PoUpdateKernel()
+
+        object_array_dev = cp.asarray(object_array)
+        probe_dev = cp.asarray(probe)
+        exit_wave_dev = cp.asarray(exit_wave)
+        auxiliary_wave_dev = cp.asarray(auxiliary_wave)
+        ob_sum_nmr_dev = cp.asarray(ob_sum_nmr)
+        ob_sum_dnm_dev = cp.asarray(ob_sum_dnm)
+        addr_dev = cp.asarray(addr)
+
+        POUK.ob_update_wasp(addr_dev, object_array_dev, probe_dev,
+                            exit_wave_dev, auxiliary_wave_dev, ob_sum_nmr_dev,
+                            ob_sum_dnm_dev)
+
+        nPOUK.ob_update_wasp(addr, object_array, probe, exit_wave,
+                             auxiliary_wave, ob_sum_nmr, ob_sum_dnm)
+
+        np.testing.assert_allclose(object_array_dev.get(), object_array, rtol=1e-6, atol=1e-6,
+                                   err_msg="The object has not been updated as expected")
+        np.testing.assert_allclose(ob_sum_nmr_dev.get(), ob_sum_nmr, rtol=1e-6, atol=1e-6,
+                                   err_msg="The object sum numerator has not been updated as expected")
+        np.testing.assert_allclose(ob_sum_dnm_dev.get(), ob_sum_dnm, rtol=1e-6, atol=1e-6,
+                                   err_msg="The object sum denominator has not been updated as expected")
+
+    def test_pr_update_wasp_UNITY(self):
+        '''
+        setup
+        '''
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        D = 2  # number of probe modes
+        E = B  # probe size y
+        F = C  # probe size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+        H = B + npts_greater_than  #  object size y
+        I = C + npts_greater_than  #  object size x
+
+        scan_pts = 1  # one dimensional scan point number
+
+        total_number_scan_positions = scan_pts ** 2
+        total_number_modes = G * D
+        A = total_number_scan_positions * total_number_modes # this is a 16 point scan pattern (4x4 grid) over all the modes
+
+        probe = np.empty(shape=(D, E, F), dtype=COMPLEX_TYPE)
+        for idx in range(D):
+            probe[idx] = np.ones((E, F)) * (idx + 1) + 1j * np.ones((E, F)) * (idx + 1)
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        exit_wave = np.empty(shape=(A, B, C), dtype=COMPLEX_TYPE)
+        for idx in range(A):
+            exit_wave[idx] = np.ones((B, C)) * (idx + 1) + 1j * np.ones((B, C)) * (idx + 1)
+        auxiliary_wave = exit_wave.copy() * 1.5
+
+        pr_sum_nmr = np.zeros(shape=(D,E,F), dtype=COMPLEX_TYPE)
+        pr_sum_dnm = np.zeros(shape=(D,E,F), dtype=FLOAT_TYPE)
+
+        X, Y = np.meshgrid(range(scan_pts), range(scan_pts))
+        X = X.reshape((total_number_scan_positions))
+        Y = Y.reshape((total_number_scan_positions))
+
+        addr = np.zeros((total_number_scan_positions, total_number_modes, 5, 3), dtype=INT_TYPE)
+
+        exit_idx = 0
+        position_idx = 0
+        for xpos, ypos in zip(X, Y):#
+            mode_idx = 0
+            for pr_mode in range(D):
+                for ob_mode in range(G):
+                    addr[position_idx, mode_idx] = np.array([[pr_mode, 0, 0],
+                                                             [ob_mode, ypos, xpos],
+                                                             [exit_idx, 0, 0],
+                                                             [0, 0, 0],
+                                                             [0, 0, 0]], dtype=INT_TYPE)
+                    mode_idx += 1
+                    exit_idx += 1
+            position_idx += 1
+
+
+        '''
+        test
+        '''
+        from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
+        nPOUK = npPoUpdateKernel()
+        POUK = PoUpdateKernel()
+
+        object_array_dev = cp.asarray(object_array)
+        probe_dev = cp.asarray(probe)
+        exit_wave_dev = cp.asarray(exit_wave)
+        auxiliary_wave_dev = cp.asarray(auxiliary_wave)
+        pr_sum_nmr_dev = cp.asarray(pr_sum_nmr)
+        pr_sum_dnm_dev = cp.asarray(pr_sum_dnm)
+        addr_dev = cp.asarray(addr)
+
+        POUK.pr_update_wasp(addr_dev, probe_dev, object_array_dev,
+                            exit_wave_dev, auxiliary_wave_dev, pr_sum_nmr_dev,
+                            pr_sum_dnm_dev)
+
+        nPOUK.pr_update_wasp(addr, probe, object_array, exit_wave,
+                             auxiliary_wave, pr_sum_nmr, pr_sum_dnm)
+
+        np.testing.assert_allclose(probe_dev.get(), probe, rtol=1e-6, atol=1e-6,
+                                   err_msg="The probe has not been updated as expected")
+        np.testing.assert_allclose(pr_sum_nmr_dev.get(), pr_sum_nmr, rtol=1e-6, atol=1e-6,
+                                   err_msg="The probe sum numerator has not been updated as expected")
+        np.testing.assert_allclose(pr_sum_dnm_dev.get(), pr_sum_dnm, rtol=1e-6, atol=1e-6,
+                                   err_msg="The probe sum denominator has not been updated as expected")
+
+    def test_avg_wasp_UNITY(self):
+        '''
+        setup
+        '''
+        B = 5  # frame size y
+        C = 5  # frame size x
+
+        npts_greater_than = 2  # how many points bigger than the probe the object is.
+        G = 2  # number of object modes
+        H = B + npts_greater_than  #  object size y
+        I = C + npts_greater_than  #  object size x
+
+        object_array = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            object_array[idx] = np.ones((H, I)) * (3 * idx + 1) + 1j * np.ones((H, I)) * (3 * idx + 1)
+
+        ob_sum_nmr = np.empty(shape=(G, H, I), dtype=COMPLEX_TYPE)
+        for idx in range(G):
+            ob_sum_nmr[idx] = np.arange(idx, idx+H*I).reshape(H,I) + 1j * np.arange(idx, idx+H*I).reshape(H,I)
+
+        ob_sum_dnm = ob_sum_nmr[:, ::-1, ::-1].copy().real
+
+        '''
+        test
+        '''
+        from ptypy.accelerate.base.kernels import PoUpdateKernel as npPoUpdateKernel
+        nPOUK = npPoUpdateKernel()
+        POUK = PoUpdateKernel()
+
+        object_array_dev = cp.asarray(object_array)
+        ob_sum_nmr_dev = cp.asarray(ob_sum_nmr)
+        ob_sum_dnm_dev = cp.asarray(ob_sum_dnm)
+
+        POUK.avg_wasp(object_array_dev, ob_sum_nmr_dev, ob_sum_dnm_dev)
+        nPOUK.avg_wasp(object_array, ob_sum_nmr, ob_sum_dnm)
+
+        np.testing.assert_allclose(object_array_dev.get(), object_array, rtol=1e-6, atol=1e-6,
+                                   err_msg="The object_array has not been updated as expected")
+        np.testing.assert_allclose(ob_sum_nmr_dev.get(), ob_sum_nmr, rtol=1e-6, atol=1e-6,
+                                   err_msg="The object_array sum numerator should be unchanged")
+        np.testing.assert_allclose(ob_sum_dnm_dev.get(), ob_sum_dnm, rtol=1e-6, atol=1e-6,
+                                   err_msg="The object_array sum denominator should be unchanged")
 
 if __name__ == '__main__':
     unittest.main()

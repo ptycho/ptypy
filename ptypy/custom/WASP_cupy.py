@@ -1,74 +1,76 @@
-# -*- coding: utf-8 -*-
-"""
-Accelerated stochastic reconstruction engine.
-
-This file is part of the PTYPY package.
-
-    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: see LICENSE for details.
-"""
+import time
 
 import numpy as np
-import time
-from pycuda import gpuarray
-import pycuda.driver as cuda
+import cupy as cp
+import cupyx
 
-from ptypy import utils as u
-from ptypy.utils.verbose import logger, log
-from ptypy.utils import parallel
-from ptypy.engines import register
-from ptypy.engines.stochastic import EPIEMixin, SDRMixin
-from ptypy.accelerate.base.engines.stochastic import _StochasticEngineSerial
-from ptypy.accelerate.base import address_manglers
-from .. import get_context
-from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel,\
-        PositionCorrectionKernel, PropagationKernel
-from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel,\
-        TransposeKernel, MaxAbs2Kernel, MassCenterKernel, Abs2SumKernel,\
-        InterpolatedShiftKernel
-from ..mem_utils import make_pagelocked_paired_arrays as mppa
-from ..mem_utils import GpuDataManager
+from ..engines import register
+from .WASP_serial import WASP_serial
+from ..utils.verbose import logger, log
+from ..utils import parallel
+from .. import utils as u
 
-MPI = False
+from ..accelerate.cuda_cupy import get_context
+from ..accelerate.cuda_cupy.kernels import (FourierUpdateKernel,
+    AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel,
+    PropagationKernel)
+from ..accelerate.cuda_cupy.array_utils import (ArrayUtilsKernel,
+    GaussianSmoothingKernel, TransposeKernel, ClipMagnitudesKernel,
+    MaxAbs2Kernel, MassCenterKernel, Abs2SumKernel, InterpolatedShiftKernel)
+from ..accelerate.cuda_cupy.mem_utils import make_pagelocked_paired_arrays as mppa
+from ..accelerate.cuda_cupy.mem_utils import GpuDataManager
+from ..accelerate.cuda_cupy.multi_gpu import get_multi_gpu_communicator
+
+
+__all__ = ['WASP_cupy']
 
 EX_MA_BLOCKS_RATIO = 2
-MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
-#MAX_BLOCKS = 10  # can be used to limit the number of blocks, simulating that they don't fit
+# can be used to limit the number of blocks, simulating that they don't fit
+MAX_BLOCKS = 99999
+# MAX_BLOCKS = 10  # can be used to limit the number of blocks, simulating that they don't fit
 
-class _StochasticEnginePycuda(_StochasticEngineSerial):
-
+@register()
+class WASP_cupy(WASP_serial):
     """
-    An accelerated implementation of a stochastic algorithm for ptychography
+    Weighted Average of Sequential Projections
 
     Defaults:
+
+    [name]
+    default = WASP_cupy
+    type = str
+    help =
+    doc =
 
     [fft_lib]
     default = reikna
     type = str
-    help = Choose the pycuda-compatible FFT module.
+    help = Choose the cupy-compatible FFT module.
     doc = One of:
       - ``'reikna'`` : the reikna packaga (fast load, competitive compute for streaming)
       - ``'cuda'`` : ptypy's cuda wrapper (delayed load, but fastest compute if all data is on GPU)
       - ``'skcuda'`` : scikit-cuda (fast load, slowest compute due to additional store/load stages)
     choices = 'reikna','cuda','skcuda'
     userlevel = 2
-
     """
 
     def __init__(self, ptycho_parent, pars=None):
         """
-        Accelerated base engine for stochastic algorithms.
+        Weighted Average of Sequential Projections
         """
         super().__init__(ptycho_parent, pars)
         self.ma_data = None
         self.mag_data = None
         self.ex_data = None
+        self.multigpu = None
 
     def engine_initialize(self):
         """
         Prepare for reconstruction.
         """
-        self.context, self.queue = get_context(new_queue=True)
+        # Context, Multi GPU communicator and Stream (needs to be in this order)
+        self.queue = get_context(new_queue=False)
+        self.multigpu = get_multi_gpu_communicator()
 
         # initialise kernels for centring probe if required
         if self.p.probe_center_tol is not None:
@@ -79,9 +81,12 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
             # interpolated shift kernel
             self.ISK = InterpolatedShiftKernel(queue=self.queue)
 
+        # Clip Magnitudes Kernel
+        self.CMK = ClipMagnitudesKernel(queue=self.queue)
+
         super().engine_initialize()
-        self.qu_htod = cuda.Stream()
-        self.qu_dtoh = cuda.Stream()
+        self.qu_htod = cp.cuda.Stream()
+        self.qu_dtoh = cp.cuda.Stream()
 
     def _setup_kernels(self):
         """
@@ -111,7 +116,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
             # create buffer arrays
             ash = (nmodes,) + tuple(geo.shape)
             aux = np.zeros(ash, dtype=np.complex64)
-            kern.aux = gpuarray.to_gpu(aux)
+            kern.aux = cp.asarray(aux)
 
             # setup kernels, one for each SCAN.
             log(4, "Setting up FourierUpdateKernel")
@@ -155,20 +160,19 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                 ex_mem = max(kern.aux.nbytes * fpc, ex_mem)
             mag_mem = max(kern.FUK.gpu.fdev.nbytes * fpc, mag_mem)
         ma_mem = mag_mem
-        mem = cuda.mem_get_info()[0]
+        mem = cp.cuda.runtime.memGetInfo()[0]
         blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
-        fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
+        # leave 200MB room for safety
+        fit = int(mem - 200 * 1024 * 1024) // blk
         if not fit:
-            log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
+            log(1, "Cannot fit memory into device, if possible reduce frames per block. Exiting...")
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
         nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)
         nma = min(fit, MAX_BLOCKS)
 
-        log(4, 'Free memory available: {:.2f} GB'.format(float(mem)/(1024**3)))
-        log(4, 'Memory to be allocated per block: {:.2f} GB'.format(float(blk)/(1024**3)))
-        log(4, 'PyCUDA max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
+        log(3, 'cupy max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
         # reset memory or create new
         self.ex_data = GpuDataManager(ex_mem, 0, nex, True)
         self.ma_data = GpuDataManager(ma_mem, 0, nma, False)
@@ -185,7 +189,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
 
         for label, d in self.di.storages.items():
             prep = self.diff_info[d.ID]
-            prep.addr_gpu = gpuarray.to_gpu(prep.addr)
+            prep.addr_gpu = cp.asarray(prep.addr)
             if self.do_position_refinement:
                 prep.mangled_addr_gpu = prep.addr_gpu.copy()
 
@@ -194,23 +198,30 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
             prep = self.diff_info[dID]
             pID, oID, eID = prep.poe_IDs
 
-            prep.ma_sum_gpu = gpuarray.to_gpu(prep.ma_sum)
-            prep.err_fourier_gpu = gpuarray.to_gpu(prep.err_fourier)
-            prep.err_phot_gpu = gpuarray.to_gpu(prep.err_phot)
-            prep.err_exit_gpu = gpuarray.to_gpu(prep.err_exit)
+            prep.ma_sum_gpu = cp.asarray(prep.ma_sum)
+            prep.err_fourier_gpu = cp.asarray(prep.err_fourier)
+            prep.err_phot_gpu = cp.asarray(prep.err_phot)
+            prep.err_exit_gpu = cp.asarray(prep.err_exit)
             if self.do_position_refinement:
-                prep.error_state_gpu = gpuarray.empty_like(prep.err_fourier_gpu)
-            prep.obn = gpuarray.to_gpu(prep.obn)
-            prep.prn = gpuarray.to_gpu(prep.prn)
+                prep.error_state_gpu = cp.empty_like(prep.err_fourier_gpu)
+
+            # these are the sum for averaging the global object/probe
+            # they are added for each 'successive projection'
+            # nmr and dnm stand for numerator and denominator respectively
+            prep.ob_sum_nmr = cp.asarray(prep.ob_sum_nmr)
+            prep.ob_sum_dnm = cp.asarray(prep.ob_sum_dnm)
+            prep.pr_sum_nmr = cp.asarray(prep.pr_sum_nmr)
+            prep.pr_sum_dnm = cp.asarray(prep.pr_sum_dnm)
+
             # prepare page-locked mems:
             ma = self.ma.S[dID].data.astype(np.float32)
-            prep.ma = cuda.pagelocked_empty(ma.shape, ma.dtype, order="C", mem_flags=4)
+            prep.ma = cupyx.empty_pinned(ma.shape, ma.dtype, order="C")
             prep.ma[:] = ma
             ex = self.ex.S[eID].data
-            prep.ex = cuda.pagelocked_empty(ex.shape, ex.dtype, order="C", mem_flags=4)
+            prep.ex = cupyx.empty_pinned(ex.shape, ex.dtype, order="C")
             prep.ex[:] = ex
             mag = prep.mag
-            prep.mag = cuda.pagelocked_empty(mag.shape, mag.dtype, order="C", mem_flags=4)
+            prep.mag = cupyx.empty_pinned(mag.shape, mag.dtype, order="C")
             prep.mag[:] = mag
 
             self.ex_data.add_data_block()
@@ -246,9 +257,21 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                 ob = self.ob.S[oID].gpu
                 pr = self.pr.S[pID].gpu
 
-                # shuffle view order
-                vieworder = prep.vieworder
-                prep.rng.shuffle(vieworder)
+                # the copy is important to prevent vieworder being modified,
+                # which is always sorted
+                vieworder_all = prep.view_IDs_all.copy()
+                prep.rng.shuffle(vieworder_all)
+
+                # reset the accumulated sum of object/probe before going
+                # through all the diffraction view for this iteration
+                ob_sum_nmr = prep.ob_sum_nmr
+                ob_sum_dnm = prep.ob_sum_dnm
+                pr_sum_nmr = prep.pr_sum_nmr
+                pr_sum_dnm = prep.pr_sum_dnm
+                ob_sum_nmr.fill(0)
+                ob_sum_dnm.fill(0)
+                pr_sum_nmr.fill(0)
+                pr_sum_dnm.fill(0)
 
                 # Schedule ex, ma, mag to device
                 ev_ex, ex_full, data_ex = self.ex_data.to_gpu(prep.ex, dID, self.qu_htod)
@@ -260,27 +283,27 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                 prep.mag_full = mag_full
                 prep.ma_full = ma_full
 
-                ## synchronize h2d stream with compute stream
-                self.queue.wait_for_event(ev_ex)
+                # synchronize h2d stream with compute stream
+                self.queue.wait_event(ev_ex)
 
                 # Iterate through views
-                for i in vieworder:
+                for vname in vieworder_all:
+                    # only proceed for active view, which is in prep.view_IDs
+                    # for this particular rank
+                    if vname not in prep.view_IDs:
+                        continue
 
                     # Get local adress and arrays
+                    i = prep.view_IDs.index(vname)
                     addr = prep.addr_gpu[i,None]
                     ex_from, ex_to = prep.addr_ex[i]
                     ex = prep.ex_full[ex_from:ex_to]
                     mag = prep.mag_full[i,None]
                     ma = prep.ma_full[i,None]
                     ma_sum = prep.ma_sum_gpu[i,None]
-                    obn = prep.obn
-                    prn = prep.prn
                     err_phot = prep.err_phot_gpu[i,None]
                     err_fourier = prep.err_fourier_gpu[i,None]
                     err_exit = prep.err_exit_gpu[i,None]
-
-                    # position update
-                    self.position_update_local(prep,i)
 
                     ## build auxilliary wave
                     AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c, c_e=1-self._c)
@@ -289,14 +312,14 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                     PROP.fw(aux, aux)
 
                     ## Deviation from measured data
-                    self.queue.wait_for_event(ev_mag)
+                    self.queue.wait_event(ev_mag)
                     if self.p.compute_fourier_error:
-                        self.queue.wait_for_event(ev_ma)
+                        self.queue.wait_event(ev_ma)
                         FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                         FUK.error_reduce(addr, err_fourier)
                     else:
                         FUK.fourier_deviation(aux, addr, mag)
-                        self.queue.wait_for_event(ev_ma)
+                        self.queue.wait_event(ev_ma)
                     FUK.fmag_update_nopbound(aux, addr, mag, ma)
 
                     ## backward FFT
@@ -311,25 +334,33 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                     ## build auxilliary wave (ob * pr product)
                     AWK.build_aux2_no_ex(aux, addr, ob, pr)
 
-                    # object update
-                    POK.pr_norm_local(addr, pr, prn)
-                    POK.ob_update_local(addr, ob, pr, ex, aux, prn, a=self._ob_a, b=self._ob_b)
-
-                    # probe update
-                    if self._object_norm_is_global and self._pr_a == 0:
-                        obn_max = gpuarray.empty((1,), dtype=np.float32)
-                        MAK.max_abs2(ob, obn_max)
-                        obn.fill(np.float32(0.), stream=self.queue)
-                    else:
-                        POK.ob_norm_local(addr, ob, obn)
-                        obn_max = gpuarray.max(obn, stream=self.queue)
-                    if self.p.probe_update_start <= self.curiter:
-                        POK.pr_update_local(addr, pr, ob, ex, aux, obn, obn_max, a=self._pr_a, b=self._pr_b)
+                    # WASP ob and pr local update
+                    ob_old = ob.copy()
+                    POK.ob_update_wasp(addr, ob, pr, ex, aux, ob_sum_nmr,
+                                       ob_sum_dnm, alpha=self.p.alpha)
+                    POK.pr_update_wasp(addr, pr, ob_old, ex, aux, pr_sum_nmr,
+                                       pr_sum_dnm, beta=self.p.beta)
 
                     ## compute log-likelihood
                     if self.p.compute_log_likelihood:
                         PROP.fw(aux, aux)
                         FUK.log_likelihood2(aux, addr, mag, ma, err_phot)
+
+                # WASP averaging
+
+                # collect the sums
+                self.multigpu.allReduceSum(ob_sum_nmr)
+                self.multigpu.allReduceSum(ob_sum_dnm)
+                self.multigpu.allReduceSum(pr_sum_nmr)
+                self.multigpu.allReduceSum(pr_sum_dnm)
+
+                POK.avg_wasp(ob, ob_sum_nmr, ob_sum_dnm)
+                POK.avg_wasp(pr, pr_sum_nmr, pr_sum_dnm)
+
+                # Clip object
+                if self.p.clip_object is not None:
+                    self.clip_object(ob)
+                    self.queue.synchronize()
 
                 data_ex.record_done(self.queue, 'compute')
                 if iblock + len(self.ex_data) < len(self.dID_list):
@@ -341,6 +372,9 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
             # Re-center probe
             self.center_probe()
 
+            # position update
+            self.position_update()
+
             self.curiter += 1
             self.ex_data.syncback = False
 
@@ -348,9 +382,9 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         self.queue.synchronize()
 
         for name, s in self.ob.S.items():
-            s.gpu.get_async(stream=self.qu_dtoh, ary=s.data)
+            cp.asnumpy(s.gpu, stream=self.queue, out=s.data)
         for name, s in self.pr.S.items():
-            s.gpu.get_async(stream=self.qu_dtoh, ary=s.data)
+            cp.asnumpy(s.gpu, stream=self.queue, out=s.data)
 
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
@@ -365,71 +399,93 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         self.error = error
         return error
 
-    def position_update_local(self, prep, i):
-        if not self.do_position_refinement:
+    def clip_object(self, ob):
+        """
+        Clips magnitudes of object into given range.
+        """
+        cmin, cmax = self.p.clip_object
+        self.CMK.clip_magnitudes_to_range(ob, cmin, cmax)
+
+    def position_update(self):
+        """
+        Position refinement
+        (Copied from _ProjectionEngine_cupy)
+        """
+        if not self.do_position_refinement or (not self.curiter):
             return
         do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
+        use_tiles = (not self.p.probe_update_cuda_atomics) or ( not self.p.object_update_cuda_atomics)
 
         # Update positions
         if do_update_pos:
+            self.queue.use()
             """
             Iterates through all positions and refines them by a given algorithm.
             """
-            #log(4, "----------- START POS REF -------------")
-            pID, oID, eID = prep.poe_IDs
-            mag = prep.mag_full[i,None]
-            ma = prep.ma_full[i,None]
-            ma_sum = prep.ma_sum_gpu[i,None]
-            ob = self.ob.S[oID].gpu
-            pr = self.pr.S[pID].gpu
-            kern = self.kernels[prep.label]
-            aux = kern.aux
-            addr = prep.addr_gpu[i,None]
-            mangled_addr = prep.mangled_addr_gpu[i,None]
-            err_fourier = prep.err_fourier_gpu[i,None]
-            error_state = prep.error_state_gpu[i,None]
+            log(4, "----------- START POS REF -------------")
+            for dID in self.di.S.keys():
 
-            PCK = kern.PCK
-            PROP = kern.PROP
+                prep = self.diff_info[dID]
+                pID, oID, eID = prep.poe_IDs
+                ma = self.ma.S[dID].gpu
+                ob = self.ob.S[oID].gpu
+                pr = self.pr.S[pID].gpu
+                kern = self.kernels[prep.label]
+                aux = kern.aux
+                addr = prep.addr_gpu
+                original_addr = prep.original_addr
+                mangled_addr = prep.mangled_addr_gpu
+                mag = prep.mag
+                ma_sum = prep.ma_sum
+                err_fourier = prep.err_fourier_gpu
+                error_state = prep.error_state_gpu
 
-            # Keep track of object boundaries
-            max_oby = ob.shape[-2] - aux.shape[-2] - 1
-            max_obx = ob.shape[-1] - aux.shape[-1] - 1
+                PCK = kern.PCK
+                TK = kern.TK
+                PROP = kern.PROP
 
-            # We need to re-calculate the current error
-            PCK.build_aux(aux, addr, ob, pr)
-            PROP.fw(aux, aux)
-            #self.queue.wait_for_event(ev_mag)
-            #self.queue.wait_for_event(ev_ma)
+                # Keep track of object boundaries
+                max_oby = ob.shape[-2] - aux.shape[-2] - 1
+                max_obx = ob.shape[-1] - aux.shape[-1] - 1
 
-            if self.p.position_refinement.metric == "fourier":
-                PCK.fourier_error(aux, addr, mag, ma, ma_sum)
-                PCK.error_reduce(addr, err_fourier)
-            if self.p.position_refinement.metric == "photon":
-                PCK.log_likelihood(aux, addr, mag, ma, err_fourier)
-            cuda.memcpy_dtod_async(dest=error_state.ptr,
-                                    src=err_fourier.ptr,
-                                    size=err_fourier.nbytes, stream=self.queue)
-
-            PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
-
-            #log(4, 'Position refinement trial: iteration %s' % (self.curiter))
-            for i in range(PCK.mangler.nshifts):
-                PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
-                PCK.build_aux(aux, mangled_addr, ob, pr)
+                # We need to re-calculate the current error
+                PCK.build_aux(aux, addr, ob, pr)
                 PROP.fw(aux, aux)
                 if self.p.position_refinement.metric == "fourier":
-                    PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
-                    PCK.error_reduce(mangled_addr, err_fourier)
+                    PCK.fourier_error(aux, addr, mag, ma, ma_sum)
+                    PCK.error_reduce(addr, err_fourier)
                 if self.p.position_refinement.metric == "photon":
-                    PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
-                PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
+                    PCK.log_likelihood(aux, addr, mag, ma, err_fourier)
+                cp.cuda.runtime.memcpyAsync(dst=error_state.data.ptr,
+                                            src=err_fourier.data.ptr,
+                                            size=err_fourier.nbytes,
+                                            kind=3,  # device to device
+                                            stream=self.queue.ptr)
 
-            cuda.memcpy_dtod_async(dest=err_fourier.ptr,
-                                    src=error_state.ptr,
-                                    size=err_fourier.nbytes, stream=self.queue)
+                PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
 
+                log(4, 'Position refinement trial: iteration %s' % (self.curiter))
+                for i in range(PCK.mangler.nshifts):
+                    PCK.mangler.get_address( i, addr, mangled_addr, max_oby, max_obx)
+                    PCK.build_aux(aux, mangled_addr, ob, pr)
+                    PROP.fw(aux, aux)
+                    if self.p.position_refinement.metric == "fourier":
+                        PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
+                        PCK.error_reduce(mangled_addr, err_fourier)
+                    if self.p.position_refinement.metric == "photon":
+                        PCK.log_likelihood(aux, mangled_addr, mag, ma, err_fourier)
+                    PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
+
+                cp.cuda.runtime.memcpyAsync(dst=err_fourier.data.ptr,
+                                            src=error_state.data.ptr,
+                                            size=err_fourier.nbytes,
+                                            kind=3,
+                                            stream=self.queue.ptr)  # d2d
+                if use_tiles:
+                    s1 = addr.shape[0] * addr.shape[1]
+                    s2 = addr.shape[2] * addr.shape[3]
+                    TK.transpose(addr.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
 
     def center_probe(self):
         if self.p.probe_center_tol is not None:
@@ -456,15 +512,14 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
                     pID, oID, eID = prep.poe_IDs
                     if pID == name:
                         prep.ex_full = self.ISK.interpolate_shift(prep.ex_full,
-                                shift)
+                                                                  shift)
 
-                log(4,'Probe recentered from %s to %s'
-                            % (str(tuple(c1)), str(tuple(c2))))
-
+                log(4, 'Probe recentered from %s to %s'
+                    % (str(tuple(c1)), str(tuple(c2))))
 
     def engine_finalize(self):
         """
-        clear GPU data and destroy context.
+        clear GPU data
         """
         self.ex_data = None
         self.ma_data = None
@@ -485,44 +540,3 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
             s.data = np.copy(s.data)
 
         super().engine_finalize()
-
-
-@register()
-class EPIE_pycuda(_StochasticEnginePycuda, EPIEMixin):
-    """
-    An accelerated implementation of the EPIE algorithm.
-
-    Defaults:
-
-    [name]
-    default = EPIE_pycuda
-    type = str
-    help =
-    doc =
-
-    """
-
-    def __init__(self, ptycho_parent, pars=None):
-        _StochasticEnginePycuda.__init__(self, ptycho_parent, pars)
-        EPIEMixin.__init__(self, self.p.alpha, self.p.beta)
-        ptycho_parent.citations.add_article(**self.article)
-
-@register()
-class SDR_pycuda(_StochasticEnginePycuda, SDRMixin):
-    """
-    An accelerated implementation of the semi-implicit relaxed Douglas-Rachford (SDR) algorithm.
-
-    Defaults:
-
-    [name]
-    default = SDR_pycuda
-    type = str
-    help =
-    doc =
-
-    """
-
-    def __init__(self, ptycho_parent, pars=None):
-        _StochasticEnginePycuda.__init__(self, ptycho_parent, pars)
-        SDRMixin.__init__(self, self.p.sigma, self.p.tau, self.p.beta_probe, self.p.beta_object)
-        ptycho_parent.citations.add_article(**self.article)

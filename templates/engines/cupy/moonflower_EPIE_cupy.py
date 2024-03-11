@@ -5,7 +5,8 @@ of actual data. It uses the test Scan class
 """
 from ptypy.core import Ptycho
 from ptypy import utils as u
-from ptypy.custom import threepie
+import ptypy
+ptypy.load_gpu_engines(arch="cupy")
 
 import tempfile
 tmpdir = tempfile.gettempdir()
@@ -18,13 +19,9 @@ p.verbose_level = "info"
 # set home path
 p.io = u.Param()
 p.io.home =  "/".join([tmpdir, "ptypy"])
-
-# saving intermediate results
 p.io.autosave = u.Param(active=False)
-
-# opens plotting GUI if interaction set to active)
-p.io.autoplot = u.Param(active=True)
-p.io.interaction = u.Param(active=True)
+p.io.autoplot = u.Param(active=False)
+p.io.interaction = u.Param(active=False)
 
 # max 200 frames (128x128px) of diffraction data
 p.scans = u.Param()
@@ -48,18 +45,15 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'ThreePIE'
+p.engines.engine00.name = 'EPIE_cupy'
 p.engines.engine00.numiter = 200
 p.engines.engine00.probe_center_tol = None
 p.engines.engine00.compute_log_likelihood = True
 p.engines.engine00.object_norm_is_global = True
 p.engines.engine00.alpha = 1
 p.engines.engine00.beta = 1
-p.engines.engine00.probe_update_start = 0
-p.engines.engine00.number_of_slices = 2
-p.engines.engine00.slice_thickness = 60e-9
+p.engines.engine00.probe_update_start = 2
 
 # prepare and run
 if __name__ == "__main__":
     P = Ptycho(p,level=5)
-
