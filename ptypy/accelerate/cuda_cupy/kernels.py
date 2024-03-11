@@ -170,6 +170,34 @@ class RealSupportKernel:
         x *= self.support
 
 
+class FFTFilterKernel:
+    def __init__(self, queue_thread=None, fft='cupy'):
+        # Current implementation recompiles every time there is a change in input shape.
+        self.queue = queue_thread
+        self._fft_type = fft
+        self._fft1 = None
+        self._fft2 = None
+    def allocate(self, kernel, prefactor=None, postfactor=None, forward=True):
+        FFT = choose_fft(kernel.shape[-2:], fft_type=self._fft_type)
+
+        self._fft1 = FFT(kernel, self.queue,
+                        pre_fft=prefactor,
+                        post_fft=kernel,
+                        symmetric=True,
+                        forward=forward)
+        self._fft2 = FFT(kernel, self.queue,
+                         post_fft=postfactor,
+                        symmetric=True,
+                        forward=not forward)
+
+    def set_kernel(self, kernel):
+        self._fft1.post_fft.set(kernel)
+
+    def apply_filter(self, x):
+        self._fft1.ft(x, x)
+        self._fft2.ift(x, x)
+
+
 class FourierUpdateKernel(ab.FourierUpdateKernel):
 
     def __init__(self, aux, nmodes=1, queue_thread=None, accumulate_type='float', math_type='float'):
