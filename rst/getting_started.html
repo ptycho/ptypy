@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Getting started with Ptypy &#8212; ptypy 0.6.0 documentation</title>
+    <title>Getting started with Ptypy &#8212; ptypy 0.8.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/header.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -53,7 +53,7 @@
         <li class="right" >
           <a href="../content.html" title="Quicklinks"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.8.1 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Getting started with Ptypy</a></li> 
       </ul>
     </div>  
@@ -135,26 +135,42 @@ $ conda activate ptypy_full
 </pre></div>
 </div>
 </section>
-<section id="recommended-install-for-gpu-support">
-<h4>Recommended install for GPU support<a class="headerlink" href="#recommended-install-for-gpu-support" title="Permalink to this headline">¶</a></h4>
+<section id="recommended-install-for-gpu-support-with-cupy">
+<h4>Recommended install for GPU support with CuPy<a class="headerlink" href="#recommended-install-for-gpu-support-with-cupy" title="Permalink to this headline">¶</a></h4>
 <p>We support an accelerated version of <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a> for CUDA-capable
+GPUs based on our own kernels and the
+<a class="reference external" href="https://cupy.dev/">CuPy</a> package.</p>
+<p>Install the dependencies for this version like so.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ conda env create -f ptypy/accelerate/cuda_cupy/dependencies.yml
+$ conda activate ptypy_cupy
+(ptypy_cupy)$ pip install .
+</pre></div>
+</div>
+</section>
+<section id="install-for-gpu-support-with-pycuda">
+<h4>Install for GPU support with PyCUDA<a class="headerlink" href="#install-for-gpu-support-with-pycuda" title="Permalink to this headline">¶</a></h4>
+<p>Alternatively, we also support an accelerated version of <a class="reference external" href="http://www.github.com/ptycho/ptypy/">PtyPy</a> for CUDA-capable
 GPUs based on our own kernels and the
 <a class="reference external" href="https://pypi.org/project/pycuda/">PyCUDA</a> package.</p>
 <p>Install the dependencies for this version like so.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ conda env create -f accelerate/cuda_pycuda/dependencies.yml
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ conda env create -f ptypy/accelerate/cuda_pycuda/dependencies.yml
 $ conda activate ptypy_pycuda
 (ptypy_pycuda)$ pip install .
 </pre></div>
 </div>
-<p>While we use <a class="reference external" href="https://pypi.org/project/reikna/">Reikna</a> to
-provide a filtered FFT, i.e. a FFT that is fused with a pointwise
-matrix multiplication, you can optionally also install a version
-based on cufft and callbacks. Due to the nature of this extension it
-needs to be built for fixed array sizes externally.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ conda activate ptypy_pycuda
-(ptypy_pycuda)$ cd cufft
-(ptypy_pycuda)$ conda env update --file dependencies.yml --name ptypy_pycuda
-(ptypy_pycuda)$ pip install .
+<p>We use <a class="reference external" href="https://pypi.org/project/reikna/">Reikna</a> to
+provide a filtered FFT, i.e. a FFT that is fused with a pointwise matrix multiplication.</p>
+</section>
+<section id="optional-installation-of-filtered-cufft">
+<h4>Optional installation of filtered cufft<a class="headerlink" href="#optional-installation-of-filtered-cufft" title="Permalink to this headline">¶</a></h4>
+<p>For optimal performance with both CuPy and PyCUDA engines, you can optionally install a version
+of the filtered FFT based on cufft and callbacks. Due to the nature of this extension it
+needs to be built for fixed array sizes externally and currently supports array
+sizes of 16, 32, 64, 128, 256, 512, 1024 and 2048.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ conda activate ptypy_cupy
+(ptypy_cupy)$ cd cufft
+(ptypy_cupy)$ conda env update --file dependencies.yml --name ptypy_cupy
+(ptypy_cupy)$ pip install .
 </pre></div>
 </div>
 </section>
@@ -481,7 +497,8 @@ Observe what changes in the reconstruction when scan parameters change.</p>
 <span class="linenos">51</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine00</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">80</span>
 <span class="linenos">52</span>
 <span class="linenos">53</span><span class="c1"># prepare and run</span>
-<span class="linenos">54</span><span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="linenos">54</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="linenos">55</span>    <span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -567,7 +584,8 @@ branch <a class="reference internal" href="parameters.html#id3" title="engine"><
 <span class="linenos">31</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine01</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;ML&#39;</span>
 <span class="linenos">32</span><span class="n">p</span><span class="o">.</span><span class="n">engines</span><span class="o">.</span><span class="n">engine01</span><span class="o">.</span><span class="n">numiter</span> <span class="o">=</span> <span class="mi">20</span>
 <span class="linenos">33</span>
-<span class="linenos">34</span><span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="linenos">34</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="linenos">35</span>    <span class="n">P</span> <span class="o">=</span> <span class="n">Ptycho</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -663,13 +681,13 @@ branch <a class="reference internal" href="parameters.html#id3" title="engine"><
         <li class="right" >
           <a href="../content.html" title="Quicklinks"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.8.1 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Getting started with Ptypy</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
     </div>
   </body>
 </html>

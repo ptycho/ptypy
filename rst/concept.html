@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Concepts and Classes &#8212; ptypy 0.6.0 documentation</title>
+    <title>Concepts and Classes &#8212; ptypy 0.8.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/header.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -54,7 +54,7 @@
         <li class="right" >
           <a href="getting_started.html" title="Getting started with Ptypy"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.8.1 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Concepts and Classes</a></li> 
       </ul>
     </div>  
@@ -272,7 +272,7 @@ and the corresponding <em>numpy</em> syntax, ptypy offers acces through a
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.core.classes</span> <span class="kn">import</span> <span class="n">DEFAULT_ACCESSRULE</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ar</span> <span class="o">=</span> <span class="n">DEFAULT_ACCESSRULE</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">ar</span><span class="p">)</span>
-<span class="go">* id3VN2C5P1LG           : ptypy.utils.parameters.Param(6)</span>
+<span class="go">* id3V1AJ3O73G           : ptypy.utils.parameters.Param(6)</span>
 <span class="go">  * storageID            : None</span>
 <span class="go">  * shape                : None</span>
 <span class="go">  * coord                : None</span>
@@ -1133,9 +1133,9 @@ modulus constraint.</p>
 </div>
 <p>We start off with a small number of iterations.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">iterate</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
-<span class="go">438068.617220052</span>
-<span class="go">315551.7952469447</span>
-<span class="go">237508.33369270526</span>
+<span class="go">438026.50735607144</span>
+<span class="go">315508.66172933887</span>
+<span class="go">237978.26703255248</span>
 </pre></div>
 </div>
 <p>We note that the error (here only displayed for 3 iterations) is
@@ -1167,18 +1167,18 @@ clear what object is reconstructed</span><a class="headerlink" href="#ownengine-
 </figure>
 <p>Ok, let us do some more iterations. 36 will do.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">iterate</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="mi">36</span><span class="p">)</span>
-<span class="go">159471.3627333081</span>
-<span class="go">91979.67770205697</span>
-<span class="go">60626.5538798497</span>
-<span class="go">47254.777031521044</span>
-<span class="go">37146.52291323999</span>
-<span class="go">28057.178745169895</span>
-<span class="go">22256.575584983428</span>
-<span class="go">19983.492177719774</span>
-<span class="go">18427.198025867903</span>
-<span class="go">17726.22051379099</span>
-<span class="go">18077.448874346344</span>
-<span class="go">17713.97643463526</span>
+<span class="go">158603.9740395377</span>
+<span class="go">91072.73033678501</span>
+<span class="go">61211.753241738574</span>
+<span class="go">46684.904276998306</span>
+<span class="go">37483.80987198136</span>
+<span class="go">28430.613557863566</span>
+<span class="go">22350.477334251234</span>
+<span class="go">19980.413638760696</span>
+<span class="go">18558.9012019789</span>
+<span class="go">17776.334601063198</span>
+<span class="go">17781.86195633913</span>
+<span class="go">17806.30507956264</span>
 </pre></div>
 </div>
 <p>Error is still on a steady descent. Let us look at the final
@@ -1303,13 +1303,13 @@ It’s a bunch of flowers !</span><a class="headerlink" href="#ownengine-05" tit
         <li class="right" >
           <a href="getting_started.html" title="Getting started with Ptypy"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.8.1 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Concepts and Classes</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
     </div>
   </body>
 </html>

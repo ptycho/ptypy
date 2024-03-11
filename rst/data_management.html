@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Data management &#8212; ptypy 0.6.0 documentation</title>
+    <title>Data management &#8212; ptypy 0.8.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/header.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -53,7 +53,7 @@
         <li class="right" >
           <a href="concept.html" title="Concepts and Classes"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.8.1 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Data management</a></li> 
       </ul>
     </div>  
@@ -325,7 +325,7 @@ Omitting any of these parameters or setting the value of the dataset to
 <blockquote>
 <div><ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">version</span></code> is ptypy version this dataset was prepared with
-(current version is 0.6.0, see <code class="xref py py-data docutils literal notranslate"><span class="pre">version</span></code>).</p></li>
+(current version is 0.8.1.dev6f61b9d9, see <code class="xref py py-data docutils literal notranslate"><span class="pre">version</span></code>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">label</span></code> is a custom user label. Choose a unique label to your liking.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">num_frames</span></code> indicates how many diffraction image frames are
 expected in the dataset (see <code class="xref py py-data docutils literal notranslate"><span class="pre">num_frames</span></code>)
@@ -522,6 +522,7 @@ registered are those of the parent class, <cite>PtyScan</cite>:</p>
 <span class="go">help = Determines what will be loaded in parallel</span>
 <span class="go">type = str</span>
 <span class="go">doc = Choose from ``None``, ``&#39;data&#39;``, ``&#39;common&#39;``, ``&#39;all&#39;``</span>
+<span class="go">choices = [&#39;data&#39;, &#39;common&#39;, &#39;all&#39;]</span>
 
 <span class="go">[rebin]</span>
 <span class="go">default = None</span>
@@ -530,7 +531,7 @@ registered are those of the parent class, <cite>PtyScan</cite>:</p>
 <span class="go">doc = Rebinning factor for the raw data frames. ``&#39;None&#39;`` or ``1`` both mean *no binning*</span>
 <span class="go">userlevel = 1</span>
 <span class="go">lowlim = 1</span>
-<span class="go">uplim = 8</span>
+<span class="go">uplim = 32</span>
 
 <span class="go">[orientation]</span>
 <span class="go">default = None</span>
@@ -547,6 +548,7 @@ registered are those of the parent class, <cite>PtyScan</cite>:</p>
 <span class="go">     &lt;newline&gt;</span>
 <span class="go">     Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,</span>
 <span class="go">     do_flipud, do_fliplr)``</span>
+<span class="go">choices = [0, 1, 2, 3, 4, 5, 6, 7]</span>
 <span class="go">userlevel = 1</span>
 
 <span class="go">[min_frames]</span>
@@ -645,7 +647,7 @@ class. For each parameter, most important are the <em>type</em>, <em>default</em
 <em>help</em> string. The decorator does more than collect this information: it also
 generates from it a class variable called <cite>DEFAULT</cite>, which stores all defaults:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">NumpyScan</span><span class="o">.</span><span class="n">DEFAULT</span><span class="p">,</span> <span class="n">noheader</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-<span class="go">* id3VML8DHOKG           : ptypy.utils.parameters.Param(20)</span>
+<span class="go">* id3V4ANI238G           : ptypy.utils.parameters.Param(20)</span>
 <span class="go">  * name                 : PtyScan</span>
 <span class="go">  * dfile                : None</span>
 <span class="go">  * chunk_format         : .chunk%02d</span>
@@ -957,7 +959,7 @@ with <a class="reference internal" href="ptypy.utils.html#ptypy.utils.verbose.re
 concatenated, but the length of iterables or dicts is always indicated
 in parantheses.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">NPS</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">80</span><span class="p">),</span> <span class="n">noheader</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-<span class="go">* id3VML8BIFGG           : dict(3)</span>
+<span class="go">* id3V4AQEBE20           : dict(3)</span>
 <span class="go">  * common               : ptypy.utils.parameters.Param(8)</span>
 <span class="go">    * version            : 0.1</span>
 <span class="go">    * num_frames         : 116</span>
@@ -969,18 +971,18 @@ in parantheses.</p>
 <span class="go">    * distance           : 7.19</span>
 <span class="go">  * chunk                : ptypy.utils.parameters.Param(6)</span>
 <span class="go">    * indices            : list(80)</span>
-<span class="go">      * id46QVP3G        : 0</span>
-<span class="go">      * id46QVP4G        : 1</span>
-<span class="go">      * id46QVP5G        : 2</span>
-<span class="go">      * id46QVP6G        : 3</span>
-<span class="go">      * id46QVP7G        : 4</span>
+<span class="go">      * id2M979S98S8     : 0</span>
+<span class="go">      * id2M979S98T8     : 1</span>
+<span class="go">      * id2M979S98U8     : 2</span>
+<span class="go">      * id2M979S98V8     : 3</span>
+<span class="go">      * id2M979S9908     : 4</span>
 <span class="go">      * ...              : ....</span>
 <span class="go">    * indices_node       : list(80)</span>
-<span class="go">      * id46QVP3G        : 0</span>
-<span class="go">      * id46QVP4G        : 1</span>
-<span class="go">      * id46QVP5G        : 2</span>
-<span class="go">      * id46QVP6G        : 3</span>
-<span class="go">      * id46QVP7G        : 4</span>
+<span class="go">      * id2M979S98S8     : 0</span>
+<span class="go">      * id2M979S98T8     : 1</span>
+<span class="go">      * id2M979S98U8     : 2</span>
+<span class="go">      * id2M979S98V8     : 3</span>
+<span class="go">      * id2M979S9908     : 4</span>
 <span class="go">      * ...              : ....</span>
 <span class="go">    * num                : 0</span>
 <span class="go">    * data               : dict(80)</span>
@@ -1147,27 +1149,27 @@ in parantheses.</p>
 <span class="go">      * 79               : [256x256 bool array]</span>
 <span class="go">    * positions          : [80x2 float64 array]</span>
 <span class="go">  * iterable             : list(80)</span>
-<span class="go">    * id3VML8BPTI0       : dict(4)</span>
+<span class="go">    * id3V4AQCNFO0       : dict(4)</span>
 <span class="go">      * index            : 0</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0. 0.]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VML8D8FO0       : dict(4)</span>
+<span class="go">    * id3V4ANG90M0       : dict(4)</span>
 <span class="go">      * index            : 1</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.         0.00041562]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VML8BRNBG       : dict(4)</span>
+<span class="go">    * id3V4ANH7UC0       : dict(4)</span>
 <span class="go">      * index            : 2</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.00039528 0.00012844]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VML8BRML0       : dict(4)</span>
+<span class="go">    * id3V4ANI69A0       : dict(4)</span>
 <span class="go">      * index            : 3</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [ 0.0002443  -0.00033625]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VML8BPUQ0       : dict(4)</span>
+<span class="go">    * id3V4ANI6B60       : dict(4)</span>
 <span class="go">      * index            : 4</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [-0.0002443  -0.00033625]]</span>
@@ -1176,7 +1178,7 @@ in parantheses.</p>
 
 
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">verbose</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">NPS</span><span class="o">.</span><span class="n">auto</span><span class="p">(</span><span class="mi">80</span><span class="p">),</span> <span class="n">noheader</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-<span class="go">* id3VMKO25OA0           : dict(3)</span>
+<span class="go">* id3V4ANI6C80           : dict(3)</span>
 <span class="go">  * common               : ptypy.utils.parameters.Param(8)</span>
 <span class="go">    * version            : 0.1</span>
 <span class="go">    * num_frames         : 116</span>
@@ -1188,18 +1190,18 @@ in parantheses.</p>
 <span class="go">    * distance           : 7.19</span>
 <span class="go">  * chunk                : ptypy.utils.parameters.Param(6)</span>
 <span class="go">    * indices            : list(36)</span>
-<span class="go">      * id46QVRJG        : 80</span>
-<span class="go">      * id46QVRKG        : 81</span>
-<span class="go">      * id46QVRLG        : 82</span>
-<span class="go">      * id46QVRMG        : 83</span>
-<span class="go">      * id46QVRNG        : 84</span>
+<span class="go">      * id2M979S9BC8     : 80</span>
+<span class="go">      * id2M979S9BD8     : 81</span>
+<span class="go">      * id2M979S9BE8     : 82</span>
+<span class="go">      * id2M979S9BF8     : 83</span>
+<span class="go">      * id2M979S9BG8     : 84</span>
 <span class="go">      * ...              : ....</span>
 <span class="go">    * indices_node       : list(36)</span>
-<span class="go">      * id46QVRJG        : 80</span>
-<span class="go">      * id46QVRKG        : 81</span>
-<span class="go">      * id46QVRLG        : 82</span>
-<span class="go">      * id46QVRMG        : 83</span>
-<span class="go">      * id46QVRNG        : 84</span>
+<span class="go">      * id2M979S9BC8     : 80</span>
+<span class="go">      * id2M979S9BD8     : 81</span>
+<span class="go">      * id2M979S9BE8     : 82</span>
+<span class="go">      * id2M979S9BF8     : 83</span>
+<span class="go">      * id2M979S9BG8     : 84</span>
 <span class="go">      * ...              : ....</span>
 <span class="go">    * num                : 1</span>
 <span class="go">    * data               : dict(36)</span>
@@ -1278,27 +1280,27 @@ in parantheses.</p>
 <span class="go">      * 115              : [256x256 bool array]</span>
 <span class="go">    * positions          : [36x2 float64 array]</span>
 <span class="go">  * iterable             : list(36)</span>
-<span class="go">    * id3VML8C0D5G       : dict(4)</span>
+<span class="go">    * id3V4ANI6BQ0       : dict(4)</span>
 <span class="go">      * index            : 80</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.0018532 0.0016686]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VML8DDGCG       : dict(4)</span>
+<span class="go">    * id3V4ANGAKA0       : dict(4)</span>
 <span class="go">      * index            : 81</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.0021597 0.0012469]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VML8C0F90       : dict(4)</span>
+<span class="go">    * id3V4ANI6D60       : dict(4)</span>
 <span class="go">      * index            : 82</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.0023717  0.00077061]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VML8D9180       : dict(4)</span>
+<span class="go">    * id3V4AQEBFK0       : dict(4)</span>
 <span class="go">      * index            : 83</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [0.0024801  0.00026067]]</span>
 <span class="go">      * mask             : [256x256 bool array]</span>
-<span class="go">    * id3VML8C0D80       : dict(4)</span>
+<span class="go">    * id3V4ANG7O20       : dict(4)</span>
 <span class="go">      * index            : 84</span>
 <span class="go">      * data             : [256x256 int32 array]</span>
 <span class="go">      * position         : [array = [ 0.0024801  -0.00026067]]</span>
@@ -1328,7 +1330,7 @@ input paramaters.</p>
 <code class="xref py py-func docutils literal notranslate"><span class="pre">h5info()</span></code></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ptypy.io</span> <span class="kn">import</span> <span class="n">h5info</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">h5info</span><span class="p">(</span><span class="n">NPS</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">dfile</span><span class="p">))</span>
-<span class="go">File created : Wed Dec  7 16:30:29 2022</span>
+<span class="go">File created : Mon Mar 11 09:53:29 2024</span>
 <span class="go"> * chunks [dict 6]:</span>
 <span class="go">     * 0 [dict 4]:</span>
 <span class="go">         * data [20x256x256 int32 array]</span>
@@ -1363,24 +1365,24 @@ input paramaters.</p>
 <span class="go"> * info [dict 23]:</span>
 <span class="go">     * add_poisson_noise [scalar = False]</span>
 <span class="go">     * auto_center [scalar = False]</span>
-<span class="go">     * base_path [string = &quot;/tmp/ptypy/sim/&quot;]</span>
+<span class="go">     * base_path [string = &quot;b&#39;/tmp/ptypy/sim/&#39;&quot;]</span>
 <span class="go">     * center [array = [128. 128.]]</span>
-<span class="go">     * chunk_format [string = &quot;.chunk%02d&quot;]</span>
-<span class="go">     * dfile [string = &quot;/tmp/ptypy/sim/npy.ptyd&quot;]</span>
+<span class="go">     * chunk_format [string = &quot;b&#39;.chunk%02d&#39;&quot;]</span>
+<span class="go">     * dfile [string = &quot;b&#39;/tmp/ptypy/sim/npy.ptyd&#39;&quot;]</span>
 <span class="go">     * distance [scalar = 7.19]</span>
 <span class="go">     * energy [scalar = 7.2]</span>
 <span class="go">     * experimentID [None]</span>
 <span class="go">     * label [None]</span>
-<span class="go">     * load_parallel [string = &quot;data&quot;]</span>
+<span class="go">     * load_parallel [string = &quot;b&#39;data&#39;&quot;]</span>
 <span class="go">     * min_frames [scalar = 1]</span>
-<span class="go">     * name [string = &quot;numpyscan&quot;]</span>
+<span class="go">     * name [string = &quot;b&#39;numpyscan&#39;&quot;]</span>
 <span class="go">     * num_frames [None]</span>
 <span class="go">     * orientation [None]</span>
 <span class="go">     * positions_scan [116x2 float64 array]</span>
 <span class="go">     * positions_theory [None]</span>
 <span class="go">     * psize [scalar = 0.000172]</span>
 <span class="go">     * rebin [scalar = 1]</span>
-<span class="go">     * save [string = &quot;append&quot;]</span>
+<span class="go">     * save [string = &quot;b&#39;append&#39;&quot;]</span>
 <span class="go">     * shape [array = [256 256]]</span>
 <span class="go">     * version [scalar = 0.1]</span>
 <span class="go">     * weight2d [scalar = True]</span>
@@ -1502,13 +1504,13 @@ should be passed via the dict <code class="xref py py-data docutils literal notr
         <li class="right" >
           <a href="concept.html" title="Concepts and Classes"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.8.1 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Data management</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
     </div>
   </body>
 </html>

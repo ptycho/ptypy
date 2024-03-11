@@ -524,6 +524,7 @@ registered are those of the parent class, `PtyScan`:
    help = Determines what will be loaded in parallel
    type = str
    doc = Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
+   choices = ['data', 'common', 'all']
    
    [rebin]
    default = None
@@ -532,7 +533,7 @@ registered are those of the parent class, `PtyScan`:
    doc = Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
    userlevel = 1
    lowlim = 1
-   uplim = 8
+   uplim = 32
    
    [orientation]
    default = None
@@ -549,6 +550,7 @@ registered are those of the parent class, `PtyScan`:
    	<newline>
    	Alternatively, a 3-tuple of booleans may be provided ``(do_transpose,
    	do_flipud, do_fliplr)``
+   choices = [0, 1, 2, 3, 4, 5, 6, 7]
    userlevel = 1
    
    [min_frames]
@@ -650,7 +652,7 @@ generates from it a class variable called `DEFAULT`, which stores all defaults:
 ::
 
    >>> print(u.verbose.report(NumpyScan.DEFAULT, noheader=True))
-   * id3VML8DHOKG           : ptypy.utils.parameters.Param(20)
+   * id3V4ANI238G           : ptypy.utils.parameters.Param(20)
      * name                 : PtyScan
      * dfile                : None
      * chunk_format         : .chunk%02d
@@ -1000,7 +1002,7 @@ in parantheses.
 ::
 
    >>> print(u.verbose.report(NPS.auto(80), noheader=True))
-   * id3VML8BIFGG           : dict(3)
+   * id3V4AQEBE20           : dict(3)
      * common               : ptypy.utils.parameters.Param(8)
        * version            : 0.1
        * num_frames         : 116
@@ -1012,18 +1014,18 @@ in parantheses.
        * distance           : 7.19
      * chunk                : ptypy.utils.parameters.Param(6)
        * indices            : list(80)
-         * id46QVP3G        : 0
-         * id46QVP4G        : 1
-         * id46QVP5G        : 2
-         * id46QVP6G        : 3
-         * id46QVP7G        : 4
+         * id2M979S98S8     : 0
+         * id2M979S98T8     : 1
+         * id2M979S98U8     : 2
+         * id2M979S98V8     : 3
+         * id2M979S9908     : 4
          * ...              : ....
        * indices_node       : list(80)
-         * id46QVP3G        : 0
-         * id46QVP4G        : 1
-         * id46QVP5G        : 2
-         * id46QVP6G        : 3
-         * id46QVP7G        : 4
+         * id2M979S98S8     : 0
+         * id2M979S98T8     : 1
+         * id2M979S98U8     : 2
+         * id2M979S98V8     : 3
+         * id2M979S9908     : 4
          * ...              : ....
        * num                : 0
        * data               : dict(80)
@@ -1190,27 +1192,27 @@ in parantheses.
          * 79               : [256x256 bool array]
        * positions          : [80x2 float64 array]
      * iterable             : list(80)
-       * id3VML8BPTI0       : dict(4)
+       * id3V4AQCNFO0       : dict(4)
          * index            : 0
          * data             : [256x256 int32 array]
          * position         : [array = [0. 0.]]
          * mask             : [256x256 bool array]
-       * id3VML8D8FO0       : dict(4)
+       * id3V4ANG90M0       : dict(4)
          * index            : 1
          * data             : [256x256 int32 array]
          * position         : [array = [0.         0.00041562]]
          * mask             : [256x256 bool array]
-       * id3VML8BRNBG       : dict(4)
+       * id3V4ANH7UC0       : dict(4)
          * index            : 2
          * data             : [256x256 int32 array]
          * position         : [array = [0.00039528 0.00012844]]
          * mask             : [256x256 bool array]
-       * id3VML8BRML0       : dict(4)
+       * id3V4ANI69A0       : dict(4)
          * index            : 3
          * data             : [256x256 int32 array]
          * position         : [array = [ 0.0002443  -0.00033625]]
          * mask             : [256x256 bool array]
-       * id3VML8BPUQ0       : dict(4)
+       * id3V4ANI6B60       : dict(4)
          * index            : 4
          * data             : [256x256 int32 array]
          * position         : [array = [-0.0002443  -0.00033625]]
@@ -1219,7 +1221,7 @@ in parantheses.
    
    
    >>> print(u.verbose.report(NPS.auto(80), noheader=True))
-   * id3VMKO25OA0           : dict(3)
+   * id3V4ANI6C80           : dict(3)
      * common               : ptypy.utils.parameters.Param(8)
        * version            : 0.1
        * num_frames         : 116
@@ -1231,18 +1233,18 @@ in parantheses.
        * distance           : 7.19
      * chunk                : ptypy.utils.parameters.Param(6)
        * indices            : list(36)
-         * id46QVRJG        : 80
-         * id46QVRKG        : 81
-         * id46QVRLG        : 82
-         * id46QVRMG        : 83
-         * id46QVRNG        : 84
+         * id2M979S9BC8     : 80
+         * id2M979S9BD8     : 81
+         * id2M979S9BE8     : 82
+         * id2M979S9BF8     : 83
+         * id2M979S9BG8     : 84
          * ...              : ....
        * indices_node       : list(36)
-         * id46QVRJG        : 80
-         * id46QVRKG        : 81
-         * id46QVRLG        : 82
-         * id46QVRMG        : 83
-         * id46QVRNG        : 84
+         * id2M979S9BC8     : 80
+         * id2M979S9BD8     : 81
+         * id2M979S9BE8     : 82
+         * id2M979S9BF8     : 83
+         * id2M979S9BG8     : 84
          * ...              : ....
        * num                : 1
        * data               : dict(36)
@@ -1321,27 +1323,27 @@ in parantheses.
          * 115              : [256x256 bool array]
        * positions          : [36x2 float64 array]
      * iterable             : list(36)
-       * id3VML8C0D5G       : dict(4)
+       * id3V4ANI6BQ0       : dict(4)
          * index            : 80
          * data             : [256x256 int32 array]
          * position         : [array = [0.0018532 0.0016686]]
          * mask             : [256x256 bool array]
-       * id3VML8DDGCG       : dict(4)
+       * id3V4ANGAKA0       : dict(4)
          * index            : 81
          * data             : [256x256 int32 array]
          * position         : [array = [0.0021597 0.0012469]]
          * mask             : [256x256 bool array]
-       * id3VML8C0F90       : dict(4)
+       * id3V4ANI6D60       : dict(4)
          * index            : 82
          * data             : [256x256 int32 array]
          * position         : [array = [0.0023717  0.00077061]]
          * mask             : [256x256 bool array]
-       * id3VML8D9180       : dict(4)
+       * id3V4AQEBFK0       : dict(4)
          * index            : 83
          * data             : [256x256 int32 array]
          * position         : [array = [0.0024801  0.00026067]]
          * mask             : [256x256 bool array]
-       * id3VML8C0D80       : dict(4)
+       * id3V4ANG7O20       : dict(4)
          * index            : 84
          * data             : [256x256 int32 array]
          * position         : [array = [ 0.0024801  -0.00026067]]
@@ -1379,7 +1381,7 @@ We can analyse the saved ``npy.ptyd`` with
 
    >>> from ptypy.io import h5info
    >>> print(h5info(NPS.info.dfile))
-   File created : Wed Dec  7 16:30:29 2022
+   File created : Mon Mar 11 09:53:29 2024
     * chunks [dict 6]:
         * 0 [dict 4]:
             * data [20x256x256 int32 array]
@@ -1414,24 +1416,24 @@ We can analyse the saved ``npy.ptyd`` with
     * info [dict 23]:
         * add_poisson_noise [scalar = False]
         * auto_center [scalar = False]
-        * base_path [string = "/tmp/ptypy/sim/"]
+        * base_path [string = "b'/tmp/ptypy/sim/'"]
         * center [array = [128. 128.]]
-        * chunk_format [string = ".chunk%02d"]
-        * dfile [string = "/tmp/ptypy/sim/npy.ptyd"]
+        * chunk_format [string = "b'.chunk%02d'"]
+        * dfile [string = "b'/tmp/ptypy/sim/npy.ptyd'"]
         * distance [scalar = 7.19]
         * energy [scalar = 7.2]
         * experimentID [None]
         * label [None]
-        * load_parallel [string = "data"]
+        * load_parallel [string = "b'data'"]
         * min_frames [scalar = 1]
-        * name [string = "numpyscan"]
+        * name [string = "b'numpyscan'"]
         * num_frames [None]
         * orientation [None]
         * positions_scan [116x2 float64 array]
         * positions_theory [None]
         * psize [scalar = 0.000172]
         * rebin [scalar = 1]
-        * save [string = "append"]
+        * save [string = "b'append'"]
         * shape [array = [256 256]]
         * version [scalar = 0.1]
         * weight2d [scalar = True]

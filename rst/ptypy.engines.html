@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>ptypy.engines package &#8212; ptypy 0.6.0 documentation</title>
+    <title>ptypy.engines package &#8212; ptypy 0.8.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/header.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -54,7 +54,7 @@
         <li class="right" >
           <a href="ptypy.core.html" title="ptypy.core package"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.8.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">ptypy.engines package</a></li> 
       </ul>
@@ -139,7 +139,7 @@
 <p>Maximum likelihood reconstruction engine.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ptypy.engines.ML.ML.DEFAULT">
-<span class="sig-name descname"><span class="pre">DEFAULT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'ML_type':</span> <span class="pre">'gaussian',</span> <span class="pre">'floating_intensities':</span> <span class="pre">False,</span> <span class="pre">'intensity_renormalization':</span> <span class="pre">1.0,</span> <span class="pre">'name':</span> <span class="pre">'ML',</span> <span class="pre">'numiter':</span> <span class="pre">20,</span> <span class="pre">'numiter_contiguous':</span> <span class="pre">1,</span> <span class="pre">'position_refinement':</span> <span class="pre">{'amplitude':</span> <span class="pre">1e-06,</span> <span class="pre">'amplitude_decay':</span> <span class="pre">True,</span> <span class="pre">'interval':</span> <span class="pre">1,</span> <span class="pre">'max_shift':</span> <span class="pre">2e-06,</span> <span class="pre">'method':</span> <span class="pre">'Annealing',</span> <span class="pre">'metric':</span> <span class="pre">'fourier',</span> <span class="pre">'nshifts':</span> <span class="pre">4,</span> <span class="pre">'record':</span> <span class="pre">False,</span> <span class="pre">'start':</span> <span class="pre">None,</span> <span class="pre">'stop':</span> <span class="pre">None},</span> <span class="pre">'probe_fourier_support':</span> <span class="pre">None,</span> <span class="pre">'probe_support':</span> <span class="pre">0.7,</span> <span class="pre">'probe_update_start':</span> <span class="pre">2,</span> <span class="pre">'record_local_error':</span> <span class="pre">False,</span> <span class="pre">'reg_del2':</span> <span class="pre">False,</span> <span class="pre">'reg_del2_amplitude':</span> <span class="pre">0.01,</span> <span class="pre">'scale_precond':</span> <span class="pre">False,</span> <span class="pre">'scale_probe_object':</span> <span class="pre">1.0,</span> <span class="pre">'smooth_gradient':</span> <span class="pre">0.0,</span> <span class="pre">'smooth_gradient_decay':</span> <span class="pre">0.0}</span></em><a class="headerlink" href="#ptypy.engines.ML.ML.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">DEFAULT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'ML_type':</span> <span class="pre">'gaussian',</span> <span class="pre">'floating_intensities':</span> <span class="pre">False,</span> <span class="pre">'intensity_renormalization':</span> <span class="pre">1.0,</span> <span class="pre">'name':</span> <span class="pre">'ML',</span> <span class="pre">'numiter':</span> <span class="pre">20,</span> <span class="pre">'numiter_contiguous':</span> <span class="pre">1,</span> <span class="pre">'poly_line_coeffs':</span> <span class="pre">'quadratic',</span> <span class="pre">'position_refinement':</span> <span class="pre">{'amplitude':</span> <span class="pre">1e-06,</span> <span class="pre">'amplitude_decay':</span> <span class="pre">True,</span> <span class="pre">'interval':</span> <span class="pre">1,</span> <span class="pre">'max_shift':</span> <span class="pre">2e-06,</span> <span class="pre">'method':</span> <span class="pre">'Annealing',</span> <span class="pre">'metric':</span> <span class="pre">'fourier',</span> <span class="pre">'nshifts':</span> <span class="pre">4,</span> <span class="pre">'record':</span> <span class="pre">False,</span> <span class="pre">'start':</span> <span class="pre">None,</span> <span class="pre">'stop':</span> <span class="pre">None},</span> <span class="pre">'probe_fourier_support':</span> <span class="pre">None,</span> <span class="pre">'probe_support':</span> <span class="pre">0.7,</span> <span class="pre">'probe_update_start':</span> <span class="pre">2,</span> <span class="pre">'record_local_error':</span> <span class="pre">False,</span> <span class="pre">'reg_del2':</span> <span class="pre">False,</span> <span class="pre">'reg_del2_amplitude':</span> <span class="pre">0.01,</span> <span class="pre">'scale_precond':</span> <span class="pre">False,</span> <span class="pre">'scale_probe_object':</span> <span class="pre">1.0,</span> <span class="pre">'smooth_gradient':</span> <span class="pre">0.0,</span> <span class="pre">'smooth_gradient_decay':</span> <span class="pre">0.0}</span></em><a class="headerlink" href="#ptypy.engines.ML.ML.DEFAULT" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -268,7 +268,8 @@ engine_finalize</p>
 default = 20
 type = int
 lowlim = 1
-help = Total number of iterations</p>
+help = Total number of iterations
+doc = For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.</p>
 <p>[numiter_contiguous]
 default = 1
 type = int
@@ -416,7 +417,8 @@ help = Maximum distance from original position [m]</p>
 <p>[position_refinement.metric]
 default = “fourier”
 type = str
-help = Error metric, can choose between “fourier” and “photon”</p>
+help = Error metric, can choose between “fourier” and “photon”
+choices = [“fourier”, “photon”]</p>
 <p>[position_refinement.record]
 default = False
 type = bool
@@ -799,14 +801,14 @@ algorithms for ptychography.</p>
         <li class="right" >
           <a href="ptypy.core.html" title="ptypy.core package"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.8.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">ptypy.engines package</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
     </div>
   </body>
 </html>

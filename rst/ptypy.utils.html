@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>ptypy.utils package &#8212; ptypy 0.6.0 documentation</title>
+    <title>ptypy.utils package &#8212; ptypy 0.8.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/header.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -54,7 +54,7 @@
         <li class="right" >
           <a href="ptypy.simulations.html" title="ptypy.simulations package"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.8.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="ptypy.html" accesskey="U">ptypy package</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">ptypy.utils package</a></li> 
       </ul>
@@ -540,7 +540,7 @@ deviations of the Gaussian filter are given for each axis as a
 sequence, or as a single number, in which case it is equal for
 all axes.</p></li>
 <li><p><strong>order</strong> (<em>int</em><em> or </em><em>sequence of ints</em><em>, </em><em>optional</em>) – The order of the filter along each axis is given as a sequence
-of integers, or as a single number.  An order of 0 corresponds
+of integers, or as a single number. An order of 0 corresponds
 to convolution with a Gaussian kernel. A positive order
 corresponds to convolution with that derivative of a Gaussian.</p></li>
 <li><p><strong>output</strong> (<em>array</em><em> or </em><em>dtype</em><em>, </em><em>optional</em>) – The array in which to place the output, or the dtype of the
@@ -553,7 +553,8 @@ different modes can be specified along each axis. Default value is
 ‘reflect’. The valid values and their behavior is as follows:</p>
 <dl class="simple">
 <dt>’reflect’ (<cite>d c b a | a b c d | d c b a</cite>)</dt><dd><p>The input is extended by reflecting about the edge of the last
-pixel.</p>
+pixel. This mode is also sometimes referred to as half-sample
+symmetric.</p>
 </dd>
 <dt>’constant’ (<cite>k k k k | a b c d | k k k k</cite>)</dt><dd><p>The input is extended by filling all values beyond the edge with
 the same constant value, defined by the <cite>cval</cite> parameter.</p>
@@ -561,9 +562,20 @@ the same constant value, defined by the <cite>cval</cite> parameter.</p>
 <dt>’nearest’ (<cite>a a a a | a b c d | d d d d</cite>)</dt><dd><p>The input is extended by replicating the last pixel.</p>
 </dd>
 <dt>’mirror’ (<cite>d c b | a b c d | c b a</cite>)</dt><dd><p>The input is extended by reflecting about the center of the last
-pixel.</p>
+pixel. This mode is also sometimes referred to as whole-sample
+symmetric.</p>
 </dd>
 <dt>’wrap’ (<cite>a b c d | a b c d | a b c d</cite>)</dt><dd><p>The input is extended by wrapping around to the opposite edge.</p>
+</dd>
+</dl>
+<p>For consistency with the interpolation functions, the following mode
+names can also be used:</p>
+<dl class="simple">
+<dt>’grid-constant’</dt><dd><p>This is a synonym for ‘constant’.</p>
+</dd>
+<dt>’grid-mirror’</dt><dd><p>This is a synonym for ‘reflect’.</p>
+</dd>
+<dt>’grid-wrap’</dt><dd><p>This is a synonym for ‘wrap’.</p>
 </dd>
 </dl>
 </p></li>
@@ -582,7 +594,7 @@ Default is 4.0.</p></li>
 </dl>
 <p class="rubric">Notes</p>
 <p>The multidimensional filter is implemented as a sequence of
-one-dimensional convolution filters. The intermediate arrays are
+1-D convolution filters. The intermediate arrays are
 stored in the same data type as the output. Therefore, for output
 types with a limited precision, the results may be imprecise
 because intermediate results may be stored with insufficient
@@ -959,6 +971,25 @@ their object handles.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="ptypy.utils.misc.electron_wavelength">
+<span class="sig-prename descclassname"><span class="pre">ptypy.utils.misc.</span></span><span class="sig-name descname"><span class="pre">electron_wavelength</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">electron_energy</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.misc.electron_wavelength" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate electron wavelength based on energy in keV:</p>
+<div class="math notranslate nohighlight">
+\[\lambda = hc /  \sqrt{E * (2moc^2 + E)}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>electron_energy</strong> (<em>float</em>) – in units of keV</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>wavelength</strong> – in units of meter</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="ptypy.utils.misc.expect2">
 <span class="sig-prename descclassname"><span class="pre">ptypy.utils.misc.</span></span><span class="sig-name descname"><span class="pre">expect2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.misc.expect2" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates 1d numpy array with 2 entries generated from multiple inputs
@@ -1015,6 +1046,12 @@ debugging of input.</p>
 <dt class="sig sig-object py" id="ptypy.utils.misc.keV2nm">
 <span class="sig-prename descclassname"><span class="pre">ptypy.utils.misc.</span></span><span class="sig-name descname"><span class="pre">keV2nm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">keV</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.misc.keV2nm" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert photon energy in keV to wavelength (in vacuum) in nanometers.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.utils.misc.m2keV">
+<span class="sig-prename descclassname"><span class="pre">ptypy.utils.misc.</span></span><span class="sig-name descname"><span class="pre">m2keV</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.misc.m2keV" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert wavelength in meters to photon energy in keV.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -1183,6 +1220,11 @@ its characteristic shape (see the example below).</p>
 describes the commonly occurring distribution of samples influenced
 by a large number of tiny, random disturbances, each with its own
 unique distribution <a class="footnote-reference brackets" href="#id6" id="id3">2</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>New code should use the <code class="docutils literal notranslate"><span class="pre">normal</span></code> method of a <code class="docutils literal notranslate"><span class="pre">default_rng()</span></code>
+instance instead; please see the <span class="xref std std-ref">random-quick-start</span>.</p>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1207,6 +1249,8 @@ Otherwise, <code class="docutils literal notranslate"><span class="pre">np.broad
 <dl class="simple">
 <dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">scipy.stats.norm</span></code></dt><dd><p>probability density function, distribution or cumulative density function, etc.</p>
 </dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">Generator.normal</span></code></dt><dd><p>which should be used for new code.</p>
+</dd>
 </dl>
 </div>
 <p class="rubric">Notes</p>
@@ -1220,8 +1264,8 @@ is called the variance.</p>
 <p>The function has its peak at the mean, and its “spread” increases with
 the standard deviation (the function reaches 0.607 times its maximum at
 <span class="math notranslate nohighlight">\(x + \sigma\)</span> and <span class="math notranslate nohighlight">\(x - \sigma\)</span> <a class="footnote-reference brackets" href="#id6" id="id4">2</a>).  This implies that
-<cite>numpy.random.normal</cite> is more likely to return samples lying close to
-the mean, rather than those far away.</p>
+normal is more likely to return samples lying close to the mean, rather
+than those far away.</p>
 <p class="rubric">References</p>
 <dl class="footnote brackets">
 <dt class="label" id="id5"><span class="brackets">1</span></dt>
@@ -1278,13 +1322,21 @@ the probability density function:</p>
 <code class="docutils literal notranslate"><span class="pre">[low,</span> <span class="pre">high)</span></code> (includes low, but excludes high).  In other words,
 any value within the given interval is equally likely to be drawn
 by <cite>uniform</cite>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>New code should use the <code class="docutils literal notranslate"><span class="pre">uniform</span></code> method of a <code class="docutils literal notranslate"><span class="pre">default_rng()</span></code>
+instance instead; please see the <span class="xref std std-ref">random-quick-start</span>.</p>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>low</strong> (<em>float</em><em> or </em><em>array_like of floats</em><em>, </em><em>optional</em>) – Lower boundary of the output interval.  All values generated will be
 greater than or equal to low.  The default value is 0.</p></li>
 <li><p><strong>high</strong> (<em>float</em><em> or </em><em>array_like of floats</em>) – Upper boundary of the output interval.  All values generated will be
-less than high.  The default value is 1.0.</p></li>
+less than or equal to high.  The high limit may be included in the
+returned array of floats due to floating-point rounding in the
+equation <code class="docutils literal notranslate"><span class="pre">low</span> <span class="pre">+</span> <span class="pre">(high-low)</span> <span class="pre">*</span> <span class="pre">random_sample()</span></code>.  The default value
+is 1.0.</p></li>
 <li><p><strong>size</strong> (<em>int</em><em> or </em><em>tuple of ints</em><em>, </em><em>optional</em>) – Output shape.  If the given shape is, e.g., <code class="docutils literal notranslate"><span class="pre">(m,</span> <span class="pre">n,</span> <span class="pre">k)</span></code>, then
 <code class="docutils literal notranslate"><span class="pre">m</span> <span class="pre">*</span> <span class="pre">n</span> <span class="pre">*</span> <span class="pre">k</span></code> samples are drawn.  If size is <code class="docutils literal notranslate"><span class="pre">None</span></code> (default),
 a single value is returned if <code class="docutils literal notranslate"><span class="pre">low</span></code> and <code class="docutils literal notranslate"><span class="pre">high</span></code> are both scalars.
@@ -1311,6 +1363,8 @@ Otherwise, <code class="docutils literal notranslate"><span class="pre">np.broad
 </dd>
 <dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">rand</span></code></dt><dd><p>Convenience function that accepts dimensions as input, e.g., <code class="docutils literal notranslate"><span class="pre">rand(2,2)</span></code> would generate a 2-by-2 array of floats, uniformly distributed over <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1)</span></code>.</p>
 </dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">Generator.uniform</span></code></dt><dd><p>which should be used for new code.</p>
+</dd>
 </dl>
 </div>
 <p class="rubric">Notes</p>
@@ -1322,7 +1376,14 @@ Otherwise, <code class="docutils literal notranslate"><span class="pre">np.broad
 If <code class="docutils literal notranslate"><span class="pre">high</span></code> &lt; <code class="docutils literal notranslate"><span class="pre">low</span></code>, the results are officially undefined
 and may eventually raise an error, i.e. do not rely on this
 function to behave when passed arguments satisfying that
-inequality condition.</p>
+inequality condition. The <code class="docutils literal notranslate"><span class="pre">high</span></code> limit may be included in the
+returned array of floats due to floating-point rounding in the
+equation <code class="docutils literal notranslate"><span class="pre">low</span> <span class="pre">+</span> <span class="pre">(high-low)</span> <span class="pre">*</span> <span class="pre">random_sample()</span></code>. For example:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">5</span><span class="o">*</span><span class="mf">0.99999999</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span>
+<span class="go">5.0</span>
+</pre></div>
+</div>
 <p class="rubric">Examples</p>
 <p>Draw samples from the distribution:</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1000</span><span class="p">)</span>
@@ -1621,6 +1682,18 @@ is already a Param.</p></li>
 </dl>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.utils.parameters.param_from_json">
+<span class="sig-prename descclassname"><span class="pre">ptypy.utils.parameters.</span></span><span class="sig-name descname"><span class="pre">param_from_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parameters.param_from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert param tree from JSON file into Param().</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.utils.parameters.param_from_yaml">
+<span class="sig-prename descclassname"><span class="pre">ptypy.utils.parameters.</span></span><span class="sig-name descname"><span class="pre">param_from_yaml</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.parameters.param_from_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert param tree from YAML file into Param().</p>
+</dd></dl>
+
 </section>
 <section id="module-ptypy.utils.plot_client">
 <span id="ptypy-utils-plot-client-module"></span><h2>ptypy.utils.plot_client module<a class="headerlink" href="#module-ptypy.utils.plot_client" title="Permalink to this headline">¶</a></h2>
@@ -1643,7 +1716,7 @@ is already a Param.</p></li>
 <p>Create a client and attempt to connect to a running reconstruction server.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ptypy.utils.plot_client.MPLClient.DEFAULT">
-<span class="sig-name descname"><span class="pre">DEFAULT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'figsize':</span> <span class="pre">(16,</span> <span class="pre">10),</span> <span class="pre">'gridspecpars':</span> <span class="pre">(0.1,</span> <span class="pre">0.12,</span> <span class="pre">0.07,</span> <span class="pre">0.95,</span> <span class="pre">0.05,</span> <span class="pre">0.93),</span> <span class="pre">'home':</span> <span class="pre">'/tmp/ptypy/',</span> <span class="pre">'interactive':</span> <span class="pre">True,</span> <span class="pre">'movie':</span> <span class="pre">False,</span> <span class="pre">'ob':</span> <span class="pre">{'auto_display':</span> <span class="pre">['a',</span> <span class="pre">'p'],</span> <span class="pre">'clims':</span> <span class="pre">[None,</span> <span class="pre">[-3.141592653589793,</span> <span class="pre">3.141592653589793]],</span> <span class="pre">'cmaps':</span> <span class="pre">['gray',</span> <span class="pre">'hsv'],</span> <span class="pre">'crop':</span> <span class="pre">[0.3,</span> <span class="pre">0.3],</span> <span class="pre">'layers':</span> <span class="pre">None,</span> <span class="pre">'local_error':</span> <span class="pre">False,</span> <span class="pre">'mask':</span> <span class="pre">0.3,</span> <span class="pre">'rm_pr':</span> <span class="pre">True,</span> <span class="pre">'shape':</span> <span class="pre">None,</span> <span class="pre">'use_colorbar':</span> <span class="pre">True},</span> <span class="pre">'plot_error':</span> <span class="pre">[True,</span> <span class="pre">True,</span> <span class="pre">True],</span> <span class="pre">'pr':</span> <span class="pre">{'auto_display':</span> <span class="pre">['c'],</span> <span class="pre">'clims':</span> <span class="pre">[None,</span> <span class="pre">[-3.141592653589793,</span> <span class="pre">3.141592653589793]],</span> <span class="pre">'cmaps':</span> <span class="pre">['gray',</span> <span class="pre">'hsv'],</span> <span class="pre">'crop':</span> <span class="pre">[0.3,</span> <span class="pre">0.3],</span> <span class="pre">'layers':</span> <span class="pre">None,</span> <span class="pre">'local_error':</span> <span class="pre">False,</span> <span class="pre">'mask':</span> <span class="pre">0.3,</span> <span class="pre">'rm_pr':</span> <span class="pre">True,</span> <span class="pre">'shape':</span> <span class="pre">None,</span> <span class="pre">'use_colorbar':</span> <span class="pre">True},</span> <span class="pre">'simplified_aspect_ratios':</span> <span class="pre">False}</span></em><a class="headerlink" href="#ptypy.utils.plot_client.MPLClient.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">DEFAULT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'dpi':</span> <span class="pre">100,</span> <span class="pre">'figsize':</span> <span class="pre">(16,</span> <span class="pre">10),</span> <span class="pre">'gridspecpars':</span> <span class="pre">(0.1,</span> <span class="pre">0.12,</span> <span class="pre">0.07,</span> <span class="pre">0.95,</span> <span class="pre">0.05,</span> <span class="pre">0.93),</span> <span class="pre">'home':</span> <span class="pre">'/tmp/ptypy/',</span> <span class="pre">'interactive':</span> <span class="pre">True,</span> <span class="pre">'movie':</span> <span class="pre">False,</span> <span class="pre">'ob':</span> <span class="pre">{'auto_display':</span> <span class="pre">['a',</span> <span class="pre">'p'],</span> <span class="pre">'clims':</span> <span class="pre">[None,</span> <span class="pre">[-3.141592653589793,</span> <span class="pre">3.141592653589793]],</span> <span class="pre">'cmaps':</span> <span class="pre">['gray',</span> <span class="pre">'hsv'],</span> <span class="pre">'crop':</span> <span class="pre">[0.3,</span> <span class="pre">0.3],</span> <span class="pre">'layers':</span> <span class="pre">None,</span> <span class="pre">'local_error':</span> <span class="pre">False,</span> <span class="pre">'mask':</span> <span class="pre">0.3,</span> <span class="pre">'rm_pr':</span> <span class="pre">True,</span> <span class="pre">'shape':</span> <span class="pre">None,</span> <span class="pre">'use_colorbar':</span> <span class="pre">True},</span> <span class="pre">'plot_error':</span> <span class="pre">[True,</span> <span class="pre">True,</span> <span class="pre">True],</span> <span class="pre">'pr':</span> <span class="pre">{'auto_display':</span> <span class="pre">['c'],</span> <span class="pre">'clims':</span> <span class="pre">[None,</span> <span class="pre">[-3.141592653589793,</span> <span class="pre">3.141592653589793]],</span> <span class="pre">'cmaps':</span> <span class="pre">['gray',</span> <span class="pre">'hsv'],</span> <span class="pre">'crop':</span> <span class="pre">[0.3,</span> <span class="pre">0.3],</span> <span class="pre">'layers':</span> <span class="pre">None,</span> <span class="pre">'local_error':</span> <span class="pre">False,</span> <span class="pre">'mask':</span> <span class="pre">0.3,</span> <span class="pre">'rm_pr':</span> <span class="pre">True,</span> <span class="pre">'shape':</span> <span class="pre">None,</span> <span class="pre">'use_colorbar':</span> <span class="pre">True},</span> <span class="pre">'simplified_aspect_ratios':</span> <span class="pre">False}</span></em><a class="headerlink" href="#ptypy.utils.plot_client.MPLClient.DEFAULT" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -1662,12 +1735,12 @@ is already a Param.</p></li>
 <p>Create a client and attempt to connect to a running reconstruction server.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ptypy.utils.plot_client.MPLplotter.DEFAULT">
-<span class="sig-name descname"><span class="pre">DEFAULT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'figsize':</span> <span class="pre">(16,</span> <span class="pre">10),</span> <span class="pre">'gridspecpars':</span> <span class="pre">(0.1,</span> <span class="pre">0.12,</span> <span class="pre">0.07,</span> <span class="pre">0.95,</span> <span class="pre">0.05,</span> <span class="pre">0.93),</span> <span class="pre">'home':</span> <span class="pre">'/tmp/ptypy/',</span> <span class="pre">'interactive':</span> <span class="pre">True,</span> <span class="pre">'movie':</span> <span class="pre">False,</span> <span class="pre">'ob':</span> <span class="pre">{'auto_display':</span> <span class="pre">['a',</span> <span class="pre">'p'],</span> <span class="pre">'clims':</span> <span class="pre">[None,</span> <span class="pre">[-3.141592653589793,</span> <span class="pre">3.141592653589793]],</span> <span class="pre">'cmaps':</span> <span class="pre">['gray',</span> <span class="pre">'hsv'],</span> <span class="pre">'crop':</span> <span class="pre">[0.3,</span> <span class="pre">0.3],</span> <span class="pre">'layers':</span> <span class="pre">None,</span> <span class="pre">'local_error':</span> <span class="pre">False,</span> <span class="pre">'mask':</span> <span class="pre">0.3,</span> <span class="pre">'rm_pr':</span> <span class="pre">True,</span> <span class="pre">'shape':</span> <span class="pre">None,</span> <span class="pre">'use_colorbar':</span> <span class="pre">True},</span> <span class="pre">'plot_error':</span> <span class="pre">[True,</span> <span class="pre">True,</span> <span class="pre">True],</span> <span class="pre">'pr':</span> <span class="pre">{'auto_display':</span> <span class="pre">['c'],</span> <span class="pre">'clims':</span> <span class="pre">[None,</span> <span class="pre">[-3.141592653589793,</span> <span class="pre">3.141592653589793]],</span> <span class="pre">'cmaps':</span> <span class="pre">['gray',</span> <span class="pre">'hsv'],</span> <span class="pre">'crop':</span> <span class="pre">[0.3,</span> <span class="pre">0.3],</span> <span class="pre">'layers':</span> <span class="pre">None,</span> <span class="pre">'local_error':</span> <span class="pre">False,</span> <span class="pre">'mask':</span> <span class="pre">0.3,</span> <span class="pre">'rm_pr':</span> <span class="pre">True,</span> <span class="pre">'shape':</span> <span class="pre">None,</span> <span class="pre">'use_colorbar':</span> <span class="pre">True},</span> <span class="pre">'simplified_aspect_ratios':</span> <span class="pre">False}</span></em><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.DEFAULT" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">DEFAULT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'dpi':</span> <span class="pre">100,</span> <span class="pre">'figsize':</span> <span class="pre">(16,</span> <span class="pre">10),</span> <span class="pre">'gridspecpars':</span> <span class="pre">(0.1,</span> <span class="pre">0.12,</span> <span class="pre">0.07,</span> <span class="pre">0.95,</span> <span class="pre">0.05,</span> <span class="pre">0.93),</span> <span class="pre">'home':</span> <span class="pre">'/tmp/ptypy/',</span> <span class="pre">'interactive':</span> <span class="pre">True,</span> <span class="pre">'movie':</span> <span class="pre">False,</span> <span class="pre">'ob':</span> <span class="pre">{'auto_display':</span> <span class="pre">['a',</span> <span class="pre">'p'],</span> <span class="pre">'clims':</span> <span class="pre">[None,</span> <span class="pre">[-3.141592653589793,</span> <span class="pre">3.141592653589793]],</span> <span class="pre">'cmaps':</span> <span class="pre">['gray',</span> <span class="pre">'hsv'],</span> <span class="pre">'crop':</span> <span class="pre">[0.3,</span> <span class="pre">0.3],</span> <span class="pre">'layers':</span> <span class="pre">None,</span> <span class="pre">'local_error':</span> <span class="pre">False,</span> <span class="pre">'mask':</span> <span class="pre">0.3,</span> <span class="pre">'rm_pr':</span> <span class="pre">True,</span> <span class="pre">'shape':</span> <span class="pre">None,</span> <span class="pre">'use_colorbar':</span> <span class="pre">True},</span> <span class="pre">'plot_error':</span> <span class="pre">[True,</span> <span class="pre">True,</span> <span class="pre">True],</span> <span class="pre">'pr':</span> <span class="pre">{'auto_display':</span> <span class="pre">['c'],</span> <span class="pre">'clims':</span> <span class="pre">[None,</span> <span class="pre">[-3.141592653589793,</span> <span class="pre">3.141592653589793]],</span> <span class="pre">'cmaps':</span> <span class="pre">['gray',</span> <span class="pre">'hsv'],</span> <span class="pre">'crop':</span> <span class="pre">[0.3,</span> <span class="pre">0.3],</span> <span class="pre">'layers':</span> <span class="pre">None,</span> <span class="pre">'local_error':</span> <span class="pre">False,</span> <span class="pre">'mask':</span> <span class="pre">0.3,</span> <span class="pre">'rm_pr':</span> <span class="pre">True,</span> <span class="pre">'shape':</span> <span class="pre">None,</span> <span class="pre">'use_colorbar':</span> <span class="pre">True},</span> <span class="pre">'simplified_aspect_ratios':</span> <span class="pre">False}</span></em><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.DEFAULT" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="ptypy.utils.plot_client.MPLplotter.create_plot_from_tile_list">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create_plot_from_tile_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fignum</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_shape_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[(4,</span> <span class="pre">(2,</span> <span class="pre">2))]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">8)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.create_plot_from_tile_list" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create_plot_from_tile_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fignum</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_shape_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[(4,</span> <span class="pre">(2,</span> <span class="pre">2))]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">8)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dpi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.create_plot_from_tile_list" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -1677,7 +1750,7 @@ is already a Param.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="ptypy.utils.plot_client.MPLplotter.plot_all">
-<span class="sig-name descname"><span class="pre">plot_all</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">blocking</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.plot_all" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">plot_all</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.plot_all" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -1697,7 +1770,7 @@ is already a Param.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="ptypy.utils.plot_client.MPLplotter.update_plot_layout">
-<span class="sig-name descname"><span class="pre">update_plot_layout</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plot_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.update_plot_layout" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">update_plot_layout</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.MPLplotter.update_plot_layout" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate the plot layout.</p>
 </dd></dl>
 
@@ -1758,6 +1831,48 @@ be a waste of bandwidth if all that is required is a client that plots “on dem
 <dd><p>Stop loop plot</p>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.utils.plot_client.figure_from_ptycho">
+<span class="sig-prename descclassname"><span class="pre">ptypy.utils.plot_client.</span></span><span class="sig-name descname"><span class="pre">figure_from_ptycho</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.figure_from_ptycho" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a matplotlib figure displaying a reconstruction
+from a Ptycho instance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>P</strong> (<a class="reference internal" href="ptypy.core.html#ptypy.core.ptycho.Ptycho" title="ptypy.core.ptycho.Ptycho"><em>Ptycho</em></a>) – Ptycho instance</p></li>
+<li><p><strong>pars</strong> (<em>Plotting paramters</em><em>, </em><em>optional</em>) – plotting template as u.Param() istance</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>fig</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>matplotlib.figure.Figure</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ptypy.utils.plot_client.figure_from_ptyr">
+<span class="sig-prename descclassname"><span class="pre">ptypy.utils.plot_client.</span></span><span class="sig-name descname"><span class="pre">figure_from_ptyr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_client.figure_from_ptyr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a matplotlib figure displaying a reconstruction
+from a .ptyr file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<em>str</em>) – path to .ptyr file</p></li>
+<li><p><strong>pars</strong> (<em>Plotting paramters</em><em>, </em><em>optional</em>) – plotting template as u.Param() istance</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>fig</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>matplotlib.figure.Figure</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -1991,14 +2106,21 @@ in array</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="ptypy.utils.plot_utils.pause">
 <span class="sig-prename descclassname"><span class="pre">ptypy.utils.plot_utils.</span></span><span class="sig-name descname"><span class="pre">pause</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">interval</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptypy.utils.plot_utils.pause" title="Permalink to this definition">¶</a></dt>
-<dd><p>Pause for <em>interval</em> seconds.</p>
+<dd><p>Run the GUI event loop for <em>interval</em> seconds.</p>
 <p>If there is an active figure, it will be updated and displayed before the
 pause, and the GUI event loop (if any) will run during the pause.</p>
-<p>This can be used for crude animation.  For more complex animation, see
+<p>This can be used for crude animation.  For more complex animation use
 <code class="xref py py-mod docutils literal notranslate"><span class="pre">matplotlib.animation</span></code>.</p>
-<p class="rubric">Notes</p>
-<p>This function is experimental; its behavior may be changed or extended in a
-future release.</p>
+<p>If there is no active figure, sleep for <em>interval</em> seconds instead.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">matplotlib.animation</span></code></dt><dd><p>Proper animations</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">show</span></code></dt><dd><p>Show all figures and optional block until all figures are closed.</p>
+</dd>
+</dl>
+</div>
 </dd></dl>
 
 <dl class="py function">
@@ -2544,7 +2666,7 @@ prefix is</p>
 hold both command line arguments and Param-type parameter descriptions.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Variables</dt>
-<dd class="field-odd"><p><strong>~Descriptor.OPTIONS_DEF</strong> – A dictionary whose keys are attribute names and values are description
+<dd class="field-odd"><p><strong>OPTIONS_DEF</strong> – A dictionary whose keys are attribute names and values are description
 of the attribute. It this description contains the text “required” or
 “mandatory”, the attribute is registered as required.</p>
 </dd>
@@ -3015,14 +3137,14 @@ logger.info(‘This is an information’)
         <li class="right" >
           <a href="ptypy.simulations.html" title="ptypy.simulations package"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.8.1 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="ptypy.html" >ptypy package</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">ptypy.utils package</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
     </div>
   </body>
 </html>

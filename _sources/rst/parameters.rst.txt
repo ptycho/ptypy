@@ -236,7 +236,7 @@ scandata.PtyScan
 
    Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
 
-   *default* = ``None (>1, <8)``
+   *default* = ``None (>1, <32)``
 
 .. py:data:: scandata.PtyScan.orientation (int, tuple, list)
 
@@ -437,7 +437,7 @@ scandata.PtydScan
 
    Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
 
-   *default* = ``None (>1, <8)``
+   *default* = ``None (>1, <32)``
 
 .. py:data:: scandata.PtydScan.orientation (int, tuple, list)
 
@@ -645,7 +645,7 @@ scandata.MoonFlowerScan
 
    Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
 
-   *default* = ``None (>1, <8)``
+   *default* = ``None (>1, <32)``
 
 .. py:data:: scandata.MoonFlowerScan.orientation (int, tuple, list)
 
@@ -884,7 +884,7 @@ scandata.QuickScan
 
    Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
 
-   *default* = ``None (>1, <8)``
+   *default* = ``None (>1, <32)``
 
 .. py:data:: scandata.QuickScan.orientation (int, tuple, list)
 
@@ -1529,7 +1529,7 @@ scandata.SimScan
 
    Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
 
-   *default* = ``None (>1, <8)``
+   *default* = ``None (>1, <32)``
 
 .. py:data:: scandata.SimScan.orientation (int, tuple, list)
 
@@ -1763,6 +1763,14 @@ scan.ScanModel
 
    *default* = ``'farfield'``
 
+.. py:data:: scan.ScanModel.ffttype (str)
+
+   FFT library
+
+   Choose from "numpy", "scipy" or "fftw"
+
+   *default* = ``'scipy'``
+
 .. py:data:: scan.ScanModel.data (Param)
 
    Link to container for data preparation
@@ -1831,6 +1839,14 @@ scan.BlockScanModel
    Either "farfield" or "nearfield"
 
    *default* = ``'farfield'``
+
+.. py:data:: scan.BlockScanModel.ffttype (str)
+
+   FFT library
+
+   Choose from "numpy", "scipy" or "fftw"
+
+   *default* = ``'scipy'``
 
 .. py:data:: scan.BlockScanModel.data (Param)
 
@@ -1908,6 +1924,14 @@ scan.Vanilla
    Either "farfield" or "nearfield"
 
    *default* = ``'farfield'``
+
+.. py:data:: scan.Vanilla.ffttype (str)
+
+   FFT library
+
+   Choose from "numpy", "scipy" or "fftw"
+
+   *default* = ``'scipy'``
 
 .. py:data:: scan.Vanilla.data (Param)
 
@@ -2001,6 +2025,14 @@ scan.BlockVanilla
    Either "farfield" or "nearfield"
 
    *default* = ``'farfield'``
+
+.. py:data:: scan.BlockVanilla.ffttype (str)
+
+   FFT library
+
+   Choose from "numpy", "scipy" or "fftw"
+
+   *default* = ``'scipy'``
 
 .. py:data:: scan.BlockVanilla.data (Param)
 
@@ -2166,6 +2198,14 @@ scan.Full
    Either "farfield" or "nearfield"
 
    *default* = ``'farfield'``
+
+.. py:data:: scan.Full.ffttype (str)
+
+   FFT library
+
+   Choose from "numpy", "scipy" or "fftw"
+
+   *default* = ``'scipy'``
 
 .. py:data:: scan.Full.data (Param)
 
@@ -2666,6 +2706,14 @@ scan.BlockFull
 
    *default* = ``'farfield'``
 
+.. py:data:: scan.BlockFull.ffttype (str)
+
+   FFT library
+
+   Choose from "numpy", "scipy" or "fftw"
+
+   *default* = ``'scipy'``
+
 .. py:data:: scan.BlockFull.data (Param)
 
    Link to container for data preparation
@@ -3165,6 +3213,14 @@ scan.OPRModel
 
    *default* = ``'farfield'``
 
+.. py:data:: scan.OPRModel.ffttype (str)
+
+   FFT library
+
+   Choose from "numpy", "scipy" or "fftw"
+
+   *default* = ``'scipy'``
+
 .. py:data:: scan.OPRModel.data (Param)
 
    Link to container for data preparation
@@ -3313,6 +3369,14 @@ scan.BlockOPRModel
    Either "farfield" or "nearfield"
 
    *default* = ``'farfield'``
+
+.. py:data:: scan.BlockOPRModel.ffttype (str)
+
+   FFT library
+
+   Choose from "numpy", "scipy" or "fftw"
+
+   *default* = ``'scipy'``
 
 .. py:data:: scan.BlockOPRModel.data (Param)
 
@@ -3463,6 +3527,14 @@ scan.GradFull
 
    *default* = ``'farfield'``
 
+.. py:data:: scan.GradFull.ffttype (str)
+
+   FFT library
+
+   Choose from "numpy", "scipy" or "fftw"
+
+   *default* = ``'scipy'``
+
 .. py:data:: scan.GradFull.data (Param)
 
    Link to container for data preparation
@@ -3611,6 +3683,14 @@ scan.BlockGradFull
    Either "farfield" or "nearfield"
 
    *default* = ``'farfield'``
+
+.. py:data:: scan.BlockGradFull.ffttype (str)
+
+   FFT library
+
+   Choose from "numpy", "scipy" or "fftw"
+
+   *default* = ``'scipy'``
 
 .. py:data:: scan.BlockGradFull.data (Param)
 
@@ -3863,6 +3943,14 @@ scan.Bragg3dModel
 
    *default* = ``'farfield'``
 
+.. py:data:: scan.Bragg3dModel.ffttype (str)
+
+   FFT library
+
+   Choose from "numpy", "scipy" or "fftw"
+
+   *default* = ``'scipy'``
+
 .. py:data:: scan.Bragg3dModel.data (Param)
 
    Link to container for data preparation
@@ -3932,7 +4020,7 @@ engine.DM
 
    Total number of iterations
 
-   
+   For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.
 
    *default* = ``20 (>1)``
 
@@ -4200,7 +4288,7 @@ engine.RAAR
 
    Total number of iterations
 
-   
+   For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.
 
    *default* = ``20 (>1)``
 
@@ -4468,7 +4556,7 @@ engine.EPIE
 
    Total number of iterations
 
-   
+   For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.
 
    *default* = ``20 (>1)``
 
@@ -4664,7 +4752,7 @@ engine.SDR
 
    Total number of iterations
 
-   
+   For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.
 
    *default* = ``20 (>1)``
 
@@ -4868,7 +4956,7 @@ engine.ML
 
    Total number of iterations
 
-   
+   For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.
 
    *default* = ``20 (>1)``
 
@@ -5004,7 +5092,7 @@ engine.ML
 
    Likelihood model
 
-   One of ‘gaussian’, poisson’ or ‘euclid’. Only 'gaussian' is implemented.
+   One of ‘gaussian’, poisson’ or ‘euclid’.
 
    *default* = ``'gaussian'``
 
@@ -5080,6 +5168,14 @@ engine.ML
 
    *default* = ``2 (>0)``
 
+.. py:data:: engine.ML.poly_line_coeffs (str)
+
+   How many coefficients to be used in the the linesearch
+
+   choose between the 'quadratic' approximation (default) or 'all'
+
+   *default* = ``'quadratic'``
+
 
 engine.DM_3dBragg
 -----------------
@@ -5096,7 +5192,7 @@ engine.DM_3dBragg
 
    Total number of iterations
 
-   
+   For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.
 
    *default* = ``20 (>1)``
 
@@ -5483,6 +5579,14 @@ ptycho
 
    *default* = ``100000 (>1)``
 
+.. py:data:: ptycho.min_frames_for_recon (int)
+
+   Minimum number of frames to be loaded before reconstruction can start.
+
+   For on-the-fly (live) processing, the first reconstruction engine will wait until this many frames have been loaded.
+
+   *default* = ``0``
+
 .. py:data:: ptycho.dry_run (bool)
 
    Dry run switch
@@ -5536,6 +5640,7 @@ ptycho.io
    Choose a reconstruction file format for after engine completion.
    - ``'minimal'``: Bare minimum of information
    - ``'dls'``:    Custom format for Diamond Light Source
+   - ``'used_params'``: Same as minimal but including all used parameters
 
    *default* = ``'minimal'``
 

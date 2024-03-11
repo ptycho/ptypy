@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Parameter tree structure &#8212; ptypy 0.6.0 documentation</title>
+    <title>Parameter tree structure &#8212; ptypy 0.8.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/header.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -53,7 +53,7 @@
         <li class="right" >
           <a href="data_management.html" title="Data management"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.8.1 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Parameter tree structure</a></li> 
       </ul>
     </div>  
@@ -275,7 +275,7 @@ will be opened on demand for connecting clients.</p>
 <span class="sig-prename descclassname"><span class="pre">scandata.PtyScan.</span></span><span class="sig-name descname"><span class="pre">rebin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scandata.PtyScan.rebin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rebinning factor</p>
 <p>Rebinning factor for the raw data frames. <code class="docutils literal notranslate"><span class="pre">'None'</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code> both mean <em>no binning</em></p>
-<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">None</span> <span class="pre">(&gt;1,</span> <span class="pre">&lt;8)</span></code></p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">None</span> <span class="pre">(&gt;1,</span> <span class="pre">&lt;32)</span></code></p>
 </dd></dl>
 
 <dl class="py data">
@@ -463,7 +463,7 @@ well as saving is deactivated. If source is the path to a file, data will be sav
 <span class="sig-prename descclassname"><span class="pre">scandata.PtydScan.</span></span><span class="sig-name descname"><span class="pre">rebin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scandata.PtydScan.rebin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rebinning factor</p>
 <p>Rebinning factor for the raw data frames. <code class="docutils literal notranslate"><span class="pre">'None'</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code> both mean <em>no binning</em></p>
-<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">None</span> <span class="pre">(&gt;1,</span> <span class="pre">&lt;8)</span></code></p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">None</span> <span class="pre">(&gt;1,</span> <span class="pre">&lt;32)</span></code></p>
 </dd></dl>
 
 <dl class="py data">
@@ -657,7 +657,7 @@ Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).<
 <span class="sig-prename descclassname"><span class="pre">scandata.MoonFlowerScan.</span></span><span class="sig-name descname"><span class="pre">rebin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scandata.MoonFlowerScan.rebin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rebinning factor</p>
 <p>Rebinning factor for the raw data frames. <code class="docutils literal notranslate"><span class="pre">'None'</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code> both mean <em>no binning</em></p>
-<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">None</span> <span class="pre">(&gt;1,</span> <span class="pre">&lt;8)</span></code></p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">None</span> <span class="pre">(&gt;1,</span> <span class="pre">&lt;32)</span></code></p>
 </dd></dl>
 
 <dl class="py data">
@@ -876,7 +876,7 @@ Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).<
 <span class="sig-prename descclassname"><span class="pre">scandata.QuickScan.</span></span><span class="sig-name descname"><span class="pre">rebin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scandata.QuickScan.rebin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rebinning factor</p>
 <p>Rebinning factor for the raw data frames. <code class="docutils literal notranslate"><span class="pre">'None'</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code> both mean <em>no binning</em></p>
-<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">None</span> <span class="pre">(&gt;1,</span> <span class="pre">&lt;8)</span></code></p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">None</span> <span class="pre">(&gt;1,</span> <span class="pre">&lt;32)</span></code></p>
 </dd></dl>
 
 <dl class="py data">
@@ -1473,7 +1473,7 @@ is provided the array’s absolute value will be used to scale the refractive in
 <span class="sig-prename descclassname"><span class="pre">scandata.SimScan.</span></span><span class="sig-name descname"><span class="pre">rebin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scandata.SimScan.rebin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rebinning factor</p>
 <p>Rebinning factor for the raw data frames. <code class="docutils literal notranslate"><span class="pre">'None'</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code> both mean <em>no binning</em></p>
-<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">None</span> <span class="pre">(&gt;1,</span> <span class="pre">&lt;8)</span></code></p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">None</span> <span class="pre">(&gt;1,</span> <span class="pre">&lt;32)</span></code></p>
 </dd></dl>
 
 <dl class="py data">
@@ -1690,6 +1690,14 @@ Can be None, (dimx, dimy), or dim. In the latter case shape will be (dim, dim).<
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="scan.ScanModel.ffttype">
+<span class="sig-prename descclassname"><span class="pre">scan.ScanModel.</span></span><span class="sig-name descname"><span class="pre">ffttype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.ScanModel.ffttype" title="Permalink to this definition">¶</a></dt>
+<dd><p>FFT library</p>
+<p>Choose from “numpy”, “scipy” or “fftw”</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'scipy'</span></code></p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="scan.ScanModel.data">
 <span class="sig-prename descclassname"><span class="pre">scan.ScanModel.</span></span><span class="sig-name descname"><span class="pre">data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Param</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.ScanModel.data" title="Permalink to this definition">¶</a></dt>
 <dd><p>Link to container for data preparation</p>
@@ -1749,6 +1757,14 @@ as densely as the raw diffraction data.</p>
 <dd><p>Propagation type</p>
 <p>Either “farfield” or “nearfield”</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'farfield'</span></code></p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="scan.BlockScanModel.ffttype">
+<span class="sig-prename descclassname"><span class="pre">scan.BlockScanModel.</span></span><span class="sig-name descname"><span class="pre">ffttype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.BlockScanModel.ffttype" title="Permalink to this definition">¶</a></dt>
+<dd><p>FFT library</p>
+<p>Choose from “numpy”, “scipy” or “fftw”</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'scipy'</span></code></p>
 </dd></dl>
 
 <dl class="py data">
@@ -1817,6 +1833,14 @@ as densely as the raw diffraction data.</p>
 <dd><p>Propagation type</p>
 <p>Either “farfield” or “nearfield”</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'farfield'</span></code></p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="scan.Vanilla.ffttype">
+<span class="sig-prename descclassname"><span class="pre">scan.Vanilla.</span></span><span class="sig-name descname"><span class="pre">ffttype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.Vanilla.ffttype" title="Permalink to this definition">¶</a></dt>
+<dd><p>FFT library</p>
+<p>Choose from “numpy”, “scipy” or “fftw”</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'scipy'</span></code></p>
 </dd></dl>
 
 <dl class="py data">
@@ -1901,6 +1925,14 @@ as densely as the raw diffraction data.</p>
 <dd><p>Propagation type</p>
 <p>Either “farfield” or “nearfield”</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'farfield'</span></code></p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="scan.BlockVanilla.ffttype">
+<span class="sig-prename descclassname"><span class="pre">scan.BlockVanilla.</span></span><span class="sig-name descname"><span class="pre">ffttype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.BlockVanilla.ffttype" title="Permalink to this definition">¶</a></dt>
+<dd><p>FFT library</p>
+<p>Choose from “numpy”, “scipy” or “fftw”</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'scipy'</span></code></p>
 </dd></dl>
 
 <dl class="py data">
@@ -2053,6 +2085,14 @@ as densely as the raw diffraction data.</p>
 <dd><p>Propagation type</p>
 <p>Either “farfield” or “nearfield”</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'farfield'</span></code></p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="scan.Full.ffttype">
+<span class="sig-prename descclassname"><span class="pre">scan.Full.</span></span><span class="sig-name descname"><span class="pre">ffttype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.Full.ffttype" title="Permalink to this definition">¶</a></dt>
+<dd><p>FFT library</p>
+<p>Choose from “numpy”, “scipy” or “fftw”</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'scipy'</span></code></p>
 </dd></dl>
 
 <dl class="py data">
@@ -2528,6 +2568,14 @@ as densely as the raw diffraction data.</p>
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="scan.BlockFull.ffttype">
+<span class="sig-prename descclassname"><span class="pre">scan.BlockFull.</span></span><span class="sig-name descname"><span class="pre">ffttype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.BlockFull.ffttype" title="Permalink to this definition">¶</a></dt>
+<dd><p>FFT library</p>
+<p>Choose from “numpy”, “scipy” or “fftw”</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'scipy'</span></code></p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="scan.BlockFull.data">
 <span class="sig-prename descclassname"><span class="pre">scan.BlockFull.</span></span><span class="sig-name descname"><span class="pre">data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Param</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.BlockFull.data" title="Permalink to this definition">¶</a></dt>
 <dd><p>Link to container for data preparation</p>
@@ -3000,6 +3048,14 @@ as densely as the raw diffraction data.</p>
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="scan.OPRModel.ffttype">
+<span class="sig-prename descclassname"><span class="pre">scan.OPRModel.</span></span><span class="sig-name descname"><span class="pre">ffttype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.OPRModel.ffttype" title="Permalink to this definition">¶</a></dt>
+<dd><p>FFT library</p>
+<p>Choose from “numpy”, “scipy” or “fftw”</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'scipy'</span></code></p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="scan.OPRModel.data">
 <span class="sig-prename descclassname"><span class="pre">scan.OPRModel.</span></span><span class="sig-name descname"><span class="pre">data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Param</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.OPRModel.data" title="Permalink to this definition">¶</a></dt>
 <dd><p>Link to container for data preparation</p>
@@ -3133,6 +3189,14 @@ as densely as the raw diffraction data.</p>
 <dd><p>Propagation type</p>
 <p>Either “farfield” or “nearfield”</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'farfield'</span></code></p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="scan.BlockOPRModel.ffttype">
+<span class="sig-prename descclassname"><span class="pre">scan.BlockOPRModel.</span></span><span class="sig-name descname"><span class="pre">ffttype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.BlockOPRModel.ffttype" title="Permalink to this definition">¶</a></dt>
+<dd><p>FFT library</p>
+<p>Choose from “numpy”, “scipy” or “fftw”</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'scipy'</span></code></p>
 </dd></dl>
 
 <dl class="py data">
@@ -3272,6 +3336,14 @@ as densely as the raw diffraction data.</p>
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="scan.GradFull.ffttype">
+<span class="sig-prename descclassname"><span class="pre">scan.GradFull.</span></span><span class="sig-name descname"><span class="pre">ffttype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.GradFull.ffttype" title="Permalink to this definition">¶</a></dt>
+<dd><p>FFT library</p>
+<p>Choose from “numpy”, “scipy” or “fftw”</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'scipy'</span></code></p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="scan.GradFull.data">
 <span class="sig-prename descclassname"><span class="pre">scan.GradFull.</span></span><span class="sig-name descname"><span class="pre">data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Param</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.GradFull.data" title="Permalink to this definition">¶</a></dt>
 <dd><p>Link to container for data preparation</p>
@@ -3405,6 +3477,14 @@ as densely as the raw diffraction data.</p>
 <dd><p>Propagation type</p>
 <p>Either “farfield” or “nearfield”</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'farfield'</span></code></p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="scan.BlockGradFull.ffttype">
+<span class="sig-prename descclassname"><span class="pre">scan.BlockGradFull.</span></span><span class="sig-name descname"><span class="pre">ffttype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.BlockGradFull.ffttype" title="Permalink to this definition">¶</a></dt>
+<dd><p>FFT library</p>
+<p>Choose from “numpy”, “scipy” or “fftw”</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'scipy'</span></code></p>
 </dd></dl>
 
 <dl class="py data">
@@ -3643,6 +3723,14 @@ as densely as the raw diffraction data.</p>
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="scan.Bragg3dModel.ffttype">
+<span class="sig-prename descclassname"><span class="pre">scan.Bragg3dModel.</span></span><span class="sig-name descname"><span class="pre">ffttype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.Bragg3dModel.ffttype" title="Permalink to this definition">¶</a></dt>
+<dd><p>FFT library</p>
+<p>Choose from “numpy”, “scipy” or “fftw”</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'scipy'</span></code></p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="scan.Bragg3dModel.data">
 <span class="sig-prename descclassname"><span class="pre">scan.Bragg3dModel.</span></span><span class="sig-name descname"><span class="pre">data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Param</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scan.Bragg3dModel.data" title="Permalink to this definition">¶</a></dt>
 <dd><p>Link to container for data preparation</p>
@@ -3702,6 +3790,7 @@ as densely as the raw diffraction data.</p>
 <dt class="sig sig-object py" id="engine.DM.numiter">
 <span class="sig-prename descclassname"><span class="pre">engine.DM.</span></span><span class="sig-name descname"><span class="pre">numiter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#engine.DM.numiter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Total number of iterations</p>
+<p>For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">20</span> <span class="pre">(&gt;1)</span></code></p>
 </dd></dl>
 
@@ -3943,6 +4032,7 @@ as densely as the raw diffraction data.</p>
 <dt class="sig sig-object py" id="engine.RAAR.numiter">
 <span class="sig-prename descclassname"><span class="pre">engine.RAAR.</span></span><span class="sig-name descname"><span class="pre">numiter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#engine.RAAR.numiter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Total number of iterations</p>
+<p>For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">20</span> <span class="pre">(&gt;1)</span></code></p>
 </dd></dl>
 
@@ -4184,6 +4274,7 @@ as densely as the raw diffraction data.</p>
 <dt class="sig sig-object py" id="engine.EPIE.numiter">
 <span class="sig-prename descclassname"><span class="pre">engine.EPIE.</span></span><span class="sig-name descname"><span class="pre">numiter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#engine.EPIE.numiter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Total number of iterations</p>
+<p>For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">20</span> <span class="pre">(&gt;1)</span></code></p>
 </dd></dl>
 
@@ -4358,6 +4449,7 @@ as densely as the raw diffraction data.</p>
 <dt class="sig sig-object py" id="engine.SDR.numiter">
 <span class="sig-prename descclassname"><span class="pre">engine.SDR.</span></span><span class="sig-name descname"><span class="pre">numiter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#engine.SDR.numiter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Total number of iterations</p>
+<p>For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">20</span> <span class="pre">(&gt;1)</span></code></p>
 </dd></dl>
 
@@ -4539,6 +4631,7 @@ as densely as the raw diffraction data.</p>
 <dt class="sig sig-object py" id="engine.ML.numiter">
 <span class="sig-prename descclassname"><span class="pre">engine.ML.</span></span><span class="sig-name descname"><span class="pre">numiter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#engine.ML.numiter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Total number of iterations</p>
+<p>For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">20</span> <span class="pre">(&gt;1)</span></code></p>
 </dd></dl>
 
@@ -4662,7 +4755,7 @@ as densely as the raw diffraction data.</p>
 <dt class="sig sig-object py" id="engine.ML.ML_type">
 <span class="sig-prename descclassname"><span class="pre">engine.ML.</span></span><span class="sig-name descname"><span class="pre">ML_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#engine.ML.ML_type" title="Permalink to this definition">¶</a></dt>
 <dd><p>Likelihood model</p>
-<p>One of ‘gaussian’, poisson’ or ‘euclid’. Only ‘gaussian’ is implemented.</p>
+<p>One of ‘gaussian’, poisson’ or ‘euclid’.</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'gaussian'</span></code></p>
 </dd></dl>
 
@@ -4733,6 +4826,14 @@ as densely as the raw diffraction data.</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">(&gt;0)</span></code></p>
 </dd></dl>
 
+<dl class="py data">
+<dt class="sig sig-object py" id="engine.ML.poly_line_coeffs">
+<span class="sig-prename descclassname"><span class="pre">engine.ML.</span></span><span class="sig-name descname"><span class="pre">poly_line_coeffs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#engine.ML.poly_line_coeffs" title="Permalink to this definition">¶</a></dt>
+<dd><p>How many coefficients to be used in the the linesearch</p>
+<p>choose between the ‘quadratic’ approximation (default) or ‘all’</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'quadratic'</span></code></p>
+</dd></dl>
+
 </section>
 <section id="engine-dm-3dbragg">
 <h3>engine.DM_3dBragg<a class="headerlink" href="#engine-dm-3dbragg" title="Permalink to this headline">¶</a></h3>
@@ -4746,6 +4847,7 @@ as densely as the raw diffraction data.</p>
 <dt class="sig sig-object py" id="engine.DM_3dBragg.numiter">
 <span class="sig-prename descclassname"><span class="pre">engine.DM_3dBragg.</span></span><span class="sig-name descname"><span class="pre">numiter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#engine.DM_3dBragg.numiter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Total number of iterations</p>
+<p>For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">20</span> <span class="pre">(&gt;1)</span></code></p>
 </dd></dl>
 
@@ -5105,6 +5207,14 @@ Reduce this number if you run out of memory on the GPU.</p>
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="ptycho.min_frames_for_recon">
+<span class="sig-prename descclassname"><span class="pre">ptycho.</span></span><span class="sig-name descname"><span class="pre">min_frames_for_recon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptycho.min_frames_for_recon" title="Permalink to this definition">¶</a></dt>
+<dd><p>Minimum number of frames to be loaded before reconstruction can start.</p>
+<p>For on-the-fly (live) processing, the first reconstruction engine will wait until this many frames have been loaded.</p>
+<p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">0</span></code></p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="ptycho.dry_run">
 <span class="sig-prename descclassname"><span class="pre">ptycho.</span></span><span class="sig-name descname"><span class="pre">dry_run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ptycho.dry_run" title="Permalink to this definition">¶</a></dt>
 <dd><p>Dry run switch</p>
@@ -5154,7 +5264,8 @@ are relative paths will be relative to this directory.</p>
 <dd><p>Reconstruction file format</p>
 <p>Choose a reconstruction file format for after engine completion.
 - <code class="docutils literal notranslate"><span class="pre">'minimal'</span></code>: Bare minimum of information
-- <code class="docutils literal notranslate"><span class="pre">'dls'</span></code>:    Custom format for Diamond Light Source</p>
+- <code class="docutils literal notranslate"><span class="pre">'dls'</span></code>:    Custom format for Diamond Light Source
+- <code class="docutils literal notranslate"><span class="pre">'used_params'</span></code>: Same as minimal but including all used parameters</p>
 <p><em>default</em> = <code class="docutils literal notranslate"><span class="pre">'minimal'</span></code></p>
 </dd></dl>
 
@@ -5449,13 +5560,13 @@ Choose <code class="docutils literal notranslate"><span class="pre">'all'</span>
         <li class="right" >
           <a href="data_management.html" title="Data management"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.6.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../content.html">ptypy 0.8.1 documentation</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Parameter tree structure</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2015, Pierre Thibault, Bjoern Enders and others.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
     </div>
   </body>
 </html>
