@@ -98,7 +98,10 @@ class MultiGpuCommunicatorNccl(MultiGpuCommunicatorBase):
         # get a unique identifier for the NCCL communicator and
         # broadcast it to all MPI processes (assuming one device per process)
         if self.rank == 0:
-            self.id = nccl.get_unique_id()
+            try:
+                self.id = nccl.get_unique_id()
+            except:
+                self.id = None
         else:
             self.id = None
 
