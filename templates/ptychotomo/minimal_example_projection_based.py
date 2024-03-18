@@ -6,6 +6,8 @@ from ptypy import utils as u
 import ptypy.simulations as sim
 import ptypy.utils.tomo as tu
 
+from ptypy.custom import DM_ptycho_tomo
+
 import pathlib
 import numpy as np
 import tempfile
@@ -28,7 +30,7 @@ sim = u.Param()
 sim.energy = u.keV2m(1.0)/6.32e-7
 sim.distance = 15e-2
 sim.psize = 24e-6
-sim.shape = 16
+sim.shape = 32
 sim.xy = u.Param()
 sim.xy.model = "round"
 sim.xy.spacing = 0.3e-3
@@ -50,7 +52,7 @@ sim.illumination.propagation.parallel = 0.03
 sim.illumination.propagation.spot_size = None
 
 nangles = 5
-pshape = 32
+pshape = 64
 Afwd = tu.forward_projector_matrix_tomo(pshape, nangles)
 rmap = tu.refractive_index_map(pshape).ravel()
 proj = (Afwd @ rmap).reshape(nangles,pshape,pshape)
@@ -92,18 +94,19 @@ scan.data.name = 'SimScan'
 # Iterate over nr. of tomographic angles
 p.scans = u.Param()
 for i in range(nangles):
-    simi = sim.copy()
+    simi = sim.copy(depth=99)
     simi.sample.model = proj[i]
-    scani = scan.copy()
+    scani = scan.copy(depth=99)
     scani.data.update(simi)
     setattr(p.scans, f"scan{i}", scani)
 
 # Reconstruction parameters
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM'
+p.engines.engine00.name = 'DMPtychoTomo'
 p.engines.engine00.numiter = 40
 p.engines.engine00.fourier_relax_factor = 0.05
+p.engines.engine00.probe_center_tol = 1
 
 u.verbose.set_level("info")
 

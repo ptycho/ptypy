@@ -513,7 +513,7 @@ class PtychoTomoEngine(PositionCorrectionEngine):
 
     def __init__(self, ptycho_parent, pars):
         """
-        Position Correction engine.
+        Ptycho-tomography engine.
         """
         super(PtychoTomoEngine, self).__init__(ptycho_parent, pars)
 
