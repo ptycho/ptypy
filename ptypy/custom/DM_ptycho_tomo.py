@@ -8,9 +8,7 @@ import time
 import numpy as np
 
 from ..engines import base, projectional, register
-from ptypy.utils.tomo import forward_projector_matrix_ptychotomo, forward_projector_matrix_tomo, sirt_projectors2
-from ptypy.utils.simulation import refractive_index_map, Ptycho2DSimulation
-from ptypy.utils.utils import  scan_view_limits
+from ptypy.utils.tomo import forward_projector_matrix_ptychotomo, sirt_projectors2
 from ..engines.utils import projection_update_generalized, log_likelihood
 from ..core import geometry
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
@@ -82,20 +80,6 @@ class DMPtychoTomo(projectional.DM):
     def tomo_update(self, it):
 
         Nsirt = 1
-
-        #print(self.ptycho.obj.storages.__dir__())
-        # print(len(self.ptycho.obj.storages.items()))
-            #self.stacked_views = self.stack_data()
-        # for v in self.ptycho.obj.views.values():
-        #     print(np.shape(v.data))
-
-        # for _, S in self.ptycho.obj.storages.items():
-        #     print(np.shape([v.data for v in S.views]))
-        #pos = np.array([v.coord for v in self.ptycho.obj.views])
-        #    print(len(self.ptycho.obj.views.values()), np.shape(v.data))
-        #     print(v.data)
-
-        ##########################################################
         n = np.angle(self.stacked_views) - 1j*np.log(np.abs(self.stacked_views))
         CATR, CATRA = sirt_projectors2(self.APT)
         for k in range(Nsirt):

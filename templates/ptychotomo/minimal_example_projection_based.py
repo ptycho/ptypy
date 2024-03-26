@@ -37,12 +37,6 @@ sim.xy.spacing = 0.3e-3
 sim.xy.steps = 9
 sim.xy.extent = (5e-3,5e-3)
 
-###
-from ptypy.core import xy
-positions = xy.from_pars(sim.xy)
-
-###
-
 sim.illumination = u.Param()
 sim.illumination.model = None
 sim.illumination.photons = int(1e9)

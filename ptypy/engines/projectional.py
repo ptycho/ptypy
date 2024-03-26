@@ -183,15 +183,11 @@ class _ProjectionEngine(PositionCorrectionEngine):
         for name, s in self.ob_viewcover.storages.items():
             s.fill(s.get_view_coverage())
 
-        print(self.ptycho.new_data)
         #need modify this as well to have a volume
 
     def engine_iterate(self, num=1):
         """
         Compute `num` iterations.
-
-        # wanna compy this and add a tomo_update call at the end
-        # that should be the backproj
         """
         to = 0.
         tf = 0.
