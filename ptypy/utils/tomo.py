@@ -71,10 +71,12 @@ def sirt_projectors1(A,b):
     return C@A.T@R@b, C@A.T@R@A
 
 def sirt_projectors2(A):
+    print('Starting sirt_projectors2')
     R = sparse.lil_matrix((A.shape[0], A.shape[0]))
     R.setdiag(np.array(1./A.T.sum(axis=0))[0])
     C = sparse.lil_matrix((A.shape[1], A.shape[1]))
     C.setdiag(np.array(1./A.sum(axis=0))[0])
+    print('Finishing sirt_projectors2')
     return C@A.T@R, C@A.T@R@A
 
 def sample_volume(N):

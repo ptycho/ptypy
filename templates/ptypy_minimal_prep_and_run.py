@@ -30,7 +30,7 @@ p.scans = u.Param()
 p.scans.MF = u.Param()
 # now you have to specify which ScanModel to use with scans.XX.name,
 # just as you have to give 'name' for engines and PtyScan subclasses.
-p.scans.MF.name = 'BlockVanilla' # or 'BlockFull'
+p.scans.MF.name = 'BlockFull' #'BlockVanilla' # or
 p.scans.MF.data= u.Param()
 p.scans.MF.data.name = 'MoonFlowerScan'
 p.scans.MF.data.shape = 128
@@ -53,3 +53,5 @@ p.engines.engine00.numiter = 80
 # prepare and run
 if __name__ == "__main__":
     P = Ptycho(p,level=5)
+    # can do level 4 (up to recon)
+    # P.run
