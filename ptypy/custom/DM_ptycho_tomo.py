@@ -52,8 +52,8 @@ class DMPtychoTomo(projectional.DM):
 
         # # # Build ptycho-tomo projector
         self.APT = forward_projector_matrix_ptychotomo(self.Nx, self.Na, self.Nf, self.pos)
-        #CATR, CATRA = sirt_projectors2(self.APT)
-        #self.sirt_update = lambda x,b: (CATR@b - CATRA@x)
+        CATR, CATRA = sirt_projectors2(self.APT)
+        self.sirt_update = lambda x,b: (CATR@b - CATRA@x)
 
         # # Build volume
         self.stacked_views = self.stack_data()
@@ -65,8 +65,7 @@ class DMPtychoTomo(projectional.DM):
             pos = np.array([v.coord for v in S.views])
             all_pos.append(pos)
         pos = all_pos[0]
-        all_pos = []
-        return pos.T.astype(np.int32)
+        return pos.T
 
 
     def stack_data(self):
@@ -83,10 +82,11 @@ class DMPtychoTomo(projectional.DM):
         n = np.angle(self.stacked_views) - 1j*np.log(np.abs(self.stacked_views))
         CATR, CATRA = sirt_projectors2(self.APT)
         for k in range(Nsirt):
-
+            print(self.r.shape)
+            print(CATRA.shape)
             print(np.shape(CATRA@self.r))
-            print(np.shape(CATR@n.ravel()))
-            #r += self.sirt_update(self.r, n.ravel())
+            # print(np.shape(CATR@n.ravel()))
+            #self.r += self.sirt_update(self.r, n.ravel())
 
         # self.r[~self.m] = 0
         # self.stacked_views = np.exp(1j * (self.APT@self.r).reshape(self.Na, self.Ns, self.Nf, self.Nf))
