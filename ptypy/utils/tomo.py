@@ -57,13 +57,11 @@ def forward_projector_matrix_ptychotomo(vsize, nangles, fsize, pos):
         for k in range(npos):
             py,px = pos[:,k]
             pmask = np.logical_and(inds >= px, inds < px+fsize)
-            for j in np.arange(py, py+fsize, 1): 
+            for j in range(py, py+fsize):  
                 weights += list(w[mask&pmask])
                 camera_inds += list(inds[mask&pmask]-px + (j-py) * fsize + k * fsize * fsize + i * npos * fsize * fsize)
                 data_inds += list(data_unravel_indices[mask&pmask] + j * vsize * vsize)
 
-    camera_inds = [0 if i < 0 else int(i) for i in camera_inds]
-    data_inds = [0 if i < 0 else int(i) for i in data_inds]
     return sparse.coo_matrix((weights, (camera_inds, data_inds)))
 
 def sirt_projectors1(A,b):

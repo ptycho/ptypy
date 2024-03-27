@@ -62,7 +62,7 @@ class DMPtychoTomo(projectional.DM):
     def find_pos(self):
         all_pos = []
         for _, S in self.ptycho.obj.storages.items():
-            pos = np.array([v.coord for v in S.views])
+            pos = np.array([v.dlow for v in S.views])
             all_pos.append(pos)
         pos = all_pos[0]
         return pos.T
