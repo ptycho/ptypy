@@ -17,7 +17,7 @@ from ..utils import parallel
 from .. import io
 from .. import utils as u
 
-__all__ = ['WASP']
+__all__ = ['DMPtychoTomo']
 
 
 @register()
