@@ -10,6 +10,104 @@ This file is part of the PTYPY package.
 import numpy as np
 import scipy.sparse as sparse
 import scipy.ndimage as ndimage
+import astra
+
+class AstraTomoWrapperViewBased(object):
+    """
+
+    """
+    def __init___(self, obj, vol, angles):
+        self._obj = obj
+        self._vol = vol
+        self._angles = angles
+        self._create_proj_geometry()
+        self._create_volume_geometry()
+        self._create_proj_array()
+
+    def _create_proj_array(self):
+        self._proj_array = np.moveaxis(np.array([v.data for v in self._obj.views.values()]),2,0)
+        self._proj_id_real = astra.data3d.link("-sino", self._proj_geom, self._proj_array.real)
+        self._proj_id_imag = astra.data3d.link("-sino", self._proj_geom, self._proj_array.imag)
+
+    def _create_proj_geometry(self):
+        self._fsh = np.array([v.shape for v in self._obj.views.values()]).max(axis=0)
+        self._vec = np.zeros((len(self._obj.views),12))
+        for i,(k,v) in enumerate(self._obj.views.items):
+
+            alpha = self._angles[i]
+            y = v.dcoord[0]
+            x = v.dcoord[1]
+
+            # ray direction
+            self._vec[i,0] = np.sin(alpha)
+            self._vec[i,1] = -np.cos(alpha)
+            self._vec[i,2] = 0
+
+            # center of detector
+            self._vec[i,3] = y * np.cos(alpha)
+            self._vec[i,4] = x * np.sin(alpha)
+            self._vec[i,5] = x 
+            
+            # vector from detector pixel (0,0) to (0,1)
+            self._vec[i,6] = np.cos(alpha)
+            self._vec[i,7] = np.sin(alpha)
+            self._vec[i,8] = 0
+            
+            # vector from detector pixel (0,0) to (1,0)
+            self._vec[i,9] = 0
+            self._vec[i,10] = 0
+            self._vec[i,11] = 1
+
+        self._proj_geom = astra.create_proj_geom('parallel3d_vec',  self._fsh[0], self._fsh[1], self._vec)
+        return self._proj_geom
+
+    def _create_volume_geometry(self):
+        self._vol_geom = astra.create_vol_geom(self._vol.shape[0],self._vol.shape[1],self._vol.shape[2])
+        self._vol_id_real = astra.data3d.link("-vol", self._vol_geom, self._vol.real)
+        self._vol_id_imag = astra.data3d.link("-vol", self._vol_geom, self._vol.imag)
+        return self._vol_geom, self._vol_id
+
+    def forward(self):
+           
+        cfg = astra.astra_dict("FP3D_CUDA")
+        cfg["VolumeId"] = self._vol_id_real
+        cfg["ProjectionDataId"] = self._proj_id_real
+        alg_id_real = astra.algorithm.create(cfg)
+
+        cfg = astra.astra_dict("FP3D_CUDA")
+        cfg["VolumeId"] = self._vol_id_imag
+        cfg["ProjectionDataId"] = self._proj_id_imag
+        alg_id_imag = astra.algorithm.create(cfg)
+
+        astra.algorithm.run(alg_id_real)
+        astra.algorithm.run(alg_id_imag)
+
+        _proj_data_real = astra.data3d.get(self._proj_id_real)
+        _proj_data_imag = astra.data3d.get(self._proj_id_imag)
+
+        _ob_views_real = np.moveaxis(_proj_data_real, 0, 2)
+        _ob_views_imag = np.moveaxis(_proj_data_imag, 0, 2)
+        for i, (k,v) in enumerate(self._obj.views.items()):
+            v.data[:] = _ob_views_real[i] + 1j*_ob_views_imag
+
+    def backward(self, type="BP3D_CUDA", iter=1):
+        
+        cfg = astra.astra_dict(type)
+        cfg["ReconstructionDataId"] = self._vol_id_real
+        cfg["ProjectionDataId"] = self._proj_id_real
+        alg_id_real = astra.algorithm.create(cfg)
+
+        cfg = astra.astra_dict(type)
+        cfg["ReconstructionDataId"] = self._vol_id_imag
+        cfg["ProjectionDataId"] = self._proj_id_imag
+        alg_id_imag = astra.algorithm.create(cfg)
+
+        astra.algorithm.run(alg_id_real, iter)
+        astra.algorithm.run(alg_id_imag, iter)
+
+        vol_real = astra.data3d.get(self._vol_id_real)
+        vol_imag = astra.data3d.get(self._vol_id_imag)
+        self._vol = vol_real + 1j * vol_imag
 
 
 def _weights(x, dx=1, orig=0):
