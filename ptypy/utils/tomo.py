@@ -12,29 +12,32 @@ import scipy.sparse as sparse
 import scipy.ndimage as ndimage
 import astra
 
-class AstraTomoWrapperViewBased(object):
+class AstraTomoWrapperViewBased:
     """
 
     """
-    def __init___(self, obj, vol, angles):
+    def __init__(self, obj, vol, angles, obj_is_refractive_index=True):
         self._obj = obj
         self._vol = vol
         self._angles = angles
+        self._obj_is_rindex = obj_is_refractive_index
         self._create_proj_geometry()
         self._create_volume_geometry()
         self._create_proj_array()
 
     def _create_proj_array(self):
         self._proj_array = np.moveaxis(np.array([v.data for v in self._obj.views.values()]),2,0)
-        self._proj_id_real = astra.data3d.link("-sino", self._proj_geom, self._proj_array.real)
-        self._proj_id_imag = astra.data3d.link("-sino", self._proj_geom, self._proj_array.imag)
+        if not self._obj_is_rindex:
+            self._proj_array = np.angle(self._proj_array) - 1j * np.log(np.abs(self._proj_array))
+        self._proj_id_real = astra.data3d.create("-sino", self._proj_geom, self._proj_array.real)
+        self._proj_id_imag = astra.data3d.create("-sino", self._proj_geom, self._proj_array.imag)
 
     def _create_proj_geometry(self):
         self._fsh = np.array([v.shape for v in self._obj.views.values()]).max(axis=0)
         self._vec = np.zeros((len(self._obj.views),12))
-        for i,(k,v) in enumerate(self._obj.views.items):
+        for i,(k,v) in enumerate(self._obj.views.items()):
 
-            alpha = self._angles[i]
+            alpha = self._angles[v.storageID]
             y = v.dcoord[0]
             x = v.dcoord[1]
 
@@ -63,9 +66,9 @@ class AstraTomoWrapperViewBased(object):
 
     def _create_volume_geometry(self):
         self._vol_geom = astra.create_vol_geom(self._vol.shape[0],self._vol.shape[1],self._vol.shape[2])
-        self._vol_id_real = astra.data3d.link("-vol", self._vol_geom, self._vol.real)
-        self._vol_id_imag = astra.data3d.link("-vol", self._vol_geom, self._vol.imag)
-        return self._vol_geom, self._vol_id
+        self._vol_id_real = astra.data3d.create("-vol", self._vol_geom, self._vol.real)
+        self._vol_id_imag = astra.data3d.create("-vol", self._vol_geom, self._vol.imag)
+        return self._vol_geom
 
     def forward(self):
            
@@ -88,7 +91,10 @@ class AstraTomoWrapperViewBased(object):
         _ob_views_real = np.moveaxis(_proj_data_real, 0, 2)
         _ob_views_imag = np.moveaxis(_proj_data_imag, 0, 2)
         for i, (k,v) in enumerate(self._obj.views.items()):
-            v.data[:] = _ob_views_real[i] + 1j*_ob_views_imag
+            _obj = _ob_views_real[i] + 1j*_ob_views_imag
+            if not self._obj_is_rindex:
+                _obj = np.exp(1j * _obj)
+            v.data[:] = _obj
 
     def backward(self, type="BP3D_CUDA", iter=1):
         

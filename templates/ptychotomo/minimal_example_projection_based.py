@@ -5,9 +5,9 @@ from ptypy.core import Ptycho
 from ptypy import utils as u
 import ptypy.simulations as sim
 import ptypy.utils.tomo as tu
-
 from ptypy.custom import DM_ptycho_tomo
 
+import matplotlib.pyplot as plt
 import pathlib
 import numpy as np
 import tempfile
@@ -96,7 +96,7 @@ print('##########################')
 p.scans = u.Param()
 for i in range(nangles):
     simi = sim.copy(depth=99)
-    simi.sample.model = proj[i]
+    simi.sample.model = np.exp(1j * proj[i])
     scani = scan.copy(depth=99)
     scani.data.update(simi)
     setattr(p.scans, f"scan{i}", scani)
@@ -113,3 +113,32 @@ u.verbose.set_level("info")
 
 if __name__ == "__main__":
     P = Ptycho(p,level=5)
+
+    v0 = list(P.obj.views.values())[0]
+
+
+    angles = np.linspace(0, np.pi, nangles, endpoint=False)
+    angles_dict = {}
+    for i,k in enumerate(P.obj.S):
+        angles_dict[k] = angles[i]
+    vol = np.zeros((pshape, pshape, pshape), dtype=np.complex64)
+    T = tu.AstraTomoWrapperViewBased(P.obj, vol, angles_dict)
+    T.backward(type="SIRT3D_CUDA", iter=100)
+
+    # Plotting
+    X = np.real(rmap.reshape(pshape, pshape, pshape))
+    R = np.real(T._vol)
+    fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(6,4), dpi=100)
+    for i in range(3):
+        for j in range(2):
+            ax = axes[j,i]
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+        axes[0,i].set_title("sum(axis=%d)" %i)
+        axes[0,i].imshow(X.sum(axis=i))
+        axes[1,i].imshow(R.sum(axis=i))
+    axes[0,0].set_ylabel("Original")
+    axes[1,0].set_ylabel("Recons")
+    plt.show()
