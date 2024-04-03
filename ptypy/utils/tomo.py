@@ -16,19 +16,24 @@ class AstraTomoWrapperViewBased:
     """
 
     """
-    def __init__(self, obj, vol, angles, obj_is_refractive_index=True):
+    def __init__(self, obj, vol, angles, obj_is_refractive_index=True, mask_threshold=0):
         self._obj = obj
         self._vol = vol
         self._angles = angles
         self._obj_is_rindex = obj_is_refractive_index
+        self._mask_threshold = mask_threshold
         self._create_proj_geometry()
         self._create_volume_geometry()
         self._create_proj_array()
 
     def _create_proj_array(self):
-        self._proj_array = np.moveaxis(np.array([v.data for v in self._obj.views.values()]),2,0)
+        self._proj_array = np.moveaxis(np.array([v.data for v in self._obj.views.values()]),1,0)
         if not self._obj_is_rindex:
             self._proj_array = np.angle(self._proj_array) - 1j * np.log(np.abs(self._proj_array))
+        if self._mask_threshold:
+            for i,v in enumerate(self._obj.views.values()):
+                cover = v.storage.get_view_coverage().real > self._mask_threshold
+                self._proj_array[:,i,:] = (self._proj_array[:,i,:].real * cover[v.slice] + 1j * self._proj_array[:,i,:].imag * cover[v.slice])
         self._proj_id_real = astra.data3d.create("-sino", self._proj_geom, self._proj_array.real)
         self._proj_id_imag = astra.data3d.create("-sino", self._proj_geom, self._proj_array.imag)
 
@@ -38,8 +43,8 @@ class AstraTomoWrapperViewBased:
         for i,(k,v) in enumerate(self._obj.views.items()):
 
             alpha = self._angles[v.storageID]
-            y = v.dcoord[0]
-            x = v.dcoord[1]
+            y = v.dcoord[0] - v.storage.center[0]
+            x = v.dcoord[1] - v.storage.center[1]
 
             # ray direction
             self._vec[i,0] = np.sin(alpha)
@@ -47,9 +52,9 @@ class AstraTomoWrapperViewBased:
             self._vec[i,2] = 0
 
             # center of detector
-            self._vec[i,3] = y * np.cos(alpha)
+            self._vec[i,3] = x * np.cos(alpha)
             self._vec[i,4] = x * np.sin(alpha)
-            self._vec[i,5] = x 
+            self._vec[i,5] = y 
             
             # vector from detector pixel (0,0) to (0,1)
             self._vec[i,6] = np.cos(alpha)
@@ -78,7 +83,7 @@ class AstraTomoWrapperViewBased:
         alg_id_real = astra.algorithm.create(cfg)
 
         cfg = astra.astra_dict("FP3D_CUDA")
-        cfg["VolumeId"] = self._vol_id_imag
+        cfg["VolumeId"] = self._vol_id_imagproj
         cfg["ProjectionDataId"] = self._proj_id_imag
         alg_id_imag = astra.algorithm.create(cfg)
 
@@ -88,8 +93,8 @@ class AstraTomoWrapperViewBased:
         _proj_data_real = astra.data3d.get(self._proj_id_real)
         _proj_data_imag = astra.data3d.get(self._proj_id_imag)
 
-        _ob_views_real = np.moveaxis(_proj_data_real, 0, 2)
-        _ob_views_imag = np.moveaxis(_proj_data_imag, 0, 2)
+        _ob_views_real = np.moveaxis(_proj_data_real, 0, 1)
+        _ob_views_imag = np.moveaxis(_proj_data_imag, 0, 1)
         for i, (k,v) in enumerate(self._obj.views.items()):
             _obj = _ob_views_real[i] + 1j*_ob_views_imag
             if not self._obj_is_rindex:
@@ -186,9 +191,9 @@ def sample_volume(N):
     xx,yy,zz = np.meshgrid(np.arange(N)-N/2, np.arange(N)-N/2,np.arange(N)-N/2)
     m = lambda r,dx,dy,dz: np.sqrt((xx+dx)**2 + (yy+dy)**2 + (zz+dz)**2) < r
     vol[m(N//6,0,0,0)] = 1
-    vol[m(N//8,N//7,N//7,N//7)] = 2
+    vol[m(N//8,N//9,N//9,N//9)] = 2
     vol[m(N//12,N//12,0,0)] = 5
-    vol[m(N//12,0,N//6,0)] = 5
+    vol[m(N//12,0,N//8,0)] = 5
     return ndimage.gaussian_filter(vol,1)
 
 def refractive_index_map(Nx):
