@@ -8,8 +8,8 @@ import time
 import numpy as np
 
 from ..engines import base, projectional, register
-from ptypy.utils.tomo import forward_projector_matrix_ptychotomo, sirt_projectors2
 from ..engines.utils import projection_update_generalized, log_likelihood
+from ..utils.tomo import AstraTomoWrapperViewBased
 from ..core import geometry
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 from ..utils import Param
@@ -37,66 +37,39 @@ class DMPtychoTomo(projectional.DM):
     """
     def __init__(self, ptycho_parent, pars=None):
         super().__init__(ptycho_parent, pars)
+        # self.Nx = 64
+        # self.Na = 5
+        # self.Nf = 32
+        # self.Ns = 76
 
-        # Parameters
-        self.Nx = 64
-        self.Na = 5
-        self.Nf = 32
-        self.Ns = 76
+        # # # Build volume
+        # self.vol = np.zeros((self.Nx, self.Nx, self.Nx), dtype=complex)
 
-        self.num_projections = 5
-        self.num_positions = 76
+        # v0 = list(self.ptycho.obj.views.values())[0]
 
-        self.pos = self.find_pos()
-        # posx_pix, posy_pix = self.pos[1, :], self.pos[0, :]
+        # angles = np.linspace(0, np.pi, 5, endpoint=False)
+        # angles_dict = {}
+        # for i,k in enumerate(self.ptycho.obj.S):
+        #     angles_dict[k] = angles[i]
 
-        # # # Build ptycho-tomo projector
-        self.APT = forward_projector_matrix_ptychotomo(self.Nx, self.Na, self.Nf, self.pos)
-        CATR, CATRA = sirt_projectors2(self.APT)
-        self.sirt_update = lambda x,b: (CATR@b - CATRA@x)
+        # # # # Build ptycho-tomo projector
+        # self.projector = AstraTomoWrapperViewBased(self.ptycho.obj, vol=self.vol, angles=angles_dict)
 
-        # # Build volume
-        self.stacked_views = self.stack_data()
-        self.r = np.zeros((self.Nx, self.Nx, self.Nx), dtype=complex).ravel()
-
-    def find_pos(self):
-        all_pos = []
-        for _, S in self.ptycho.obj.storages.items():
-            pos = np.array([v.dlow for v in S.views])
-            all_pos.append(pos)
-        pos = all_pos[0]
-        return pos.T
-
-
-    def stack_data(self):
-        # stack = np.ones((5, 76, 32, 32), dtype=complex)
-        all_views_splitted = np.array_split(
-            np.array([v.data for v in self.ptycho.obj.views.values()]),
-            5
-        )
-        return all_views_splitted
-
+    
     def tomo_update(self, it):
+        
+        # # tomography (backward and forward)
+        # xx,yy,zz = np.meshgrid(np.arange(self.Nx)-self.Nx//2, 
+        #                        np.arange(self.Nx)-self.Nx//2, 
+        #                        np.arange(self.Nx)-self.Nx//2)
+        # M = np.sqrt(xx**2 + yy**2 + zz**2) < 10
+        # m = M.reshape((self.Nx, self.Nx, self.Nx))
 
-        Nsirt = 1
-        n = np.angle(self.stacked_views) - 1j*np.log(np.abs(self.stacked_views))
-        CATR, CATRA = sirt_projectors2(self.APT)
-        for k in range(Nsirt):
-            print(self.r.shape)
-            print(CATRA.shape)
-            print(np.shape(CATRA@self.r))
-            # print(np.shape(CATR@n.ravel()))
-            #self.r += self.sirt_update(self.r, n.ravel())
-
-        # self.r[~self.m] = 0
-        # self.stacked_views = np.exp(1j * (self.APT@self.r).reshape(self.Na, self.Ns, self.Nf, self.Nf))
-
-        ###############################################################
-        # initialise exit waves
-        # if it == 0:
-        #     for j in range(self.num_projections):
-        #         self.ptycho.exit[j] = self.ptycho.probe[j] * self.ptycho.obj[j]
+        # self.projector.backward()
+        # self.vol[~m] = 0
+        # self.projector.forward()
         return
+
 
     def engine_iterate(self, num=1):
         """

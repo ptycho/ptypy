@@ -78,12 +78,12 @@ class AstraTomoWrapperViewBased:
     def forward(self):
            
         cfg = astra.astra_dict("FP3D_CUDA")
-        cfg["VolumeId"] = self._vol_id_real
+        cfg["VolumeDataId"] = self._vol_id_real
         cfg["ProjectionDataId"] = self._proj_id_real
         alg_id_real = astra.algorithm.create(cfg)
 
         cfg = astra.astra_dict("FP3D_CUDA")
-        cfg["VolumeId"] = self._vol_id_imagproj
+        cfg["VolumeDataId"] = self._vol_id_imagproj
         cfg["ProjectionDataId"] = self._proj_id_imag
         alg_id_imag = astra.algorithm.create(cfg)
 
@@ -96,7 +96,7 @@ class AstraTomoWrapperViewBased:
         _ob_views_real = np.moveaxis(_proj_data_real, 0, 1)
         _ob_views_imag = np.moveaxis(_proj_data_imag, 0, 1)
         for i, (k,v) in enumerate(self._obj.views.items()):
-            _obj = _ob_views_real[i] + 1j*_ob_views_imag
+            _obj = _ob_views_real[i] + 1j*_ob_views_imag[i]
             if not self._obj_is_rindex:
                 _obj = np.exp(1j * _obj)
             v.data[:] = _obj
