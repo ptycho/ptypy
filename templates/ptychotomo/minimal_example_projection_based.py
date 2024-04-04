@@ -7,6 +7,7 @@ import ptypy.simulations as sim
 import ptypy.utils.tomo as tu
 from ptypy.custom import DM_ptycho_tomo
 
+import astra
 import matplotlib.pyplot as plt
 import pathlib
 import numpy as np
@@ -44,18 +45,22 @@ sim.illumination.aperture = u.Param()
 sim.illumination.aperture.diffuser = None
 sim.illumination.aperture.form = "circ"
 sim.illumination.aperture.size = 1.0e-3
-sim.illumination.aperture.edge = 2
+sim.illumination.aperture.edge = 10
 sim.illumination.aperture.central_stop = None
 sim.illumination.propagation = u.Param()
 sim.illumination.propagation.focussed = None
-sim.illumination.propagation.parallel = 0.03
+sim.illumination.propagation.parallel = 0.13
 sim.illumination.propagation.spot_size = None
 
-nangles = 5
-pshape = 64
-Afwd = tu.forward_projector_matrix_tomo(pshape, nangles)
-rmap = tu.refractive_index_map(pshape).ravel()
-proj = (Afwd @ rmap).reshape(nangles,pshape,pshape)
+nangles = 19
+pshape = 56
+angles = np.linspace(0, np.pi, nangles, endpoint=True)
+pgeom = astra.create_proj_geom("parallel3d", 1.0, 1.0, pshape, pshape, angles)
+vgeom = astra.create_vol_geom(pshape, pshape, pshape)
+rmap = tu.refractive_index_map(pshape)#.ravel()
+proj_real_id, proj_real = astra.create_sino3d_gpu(rmap.real, pgeom, vgeom)
+proj_imag_id, proj_imag = astra.create_sino3d_gpu(rmap.imag, pgeom, vgeom)
+proj = np.moveaxis(proj_real + 1j * proj_imag, 1,0)
 
 sim.sample = u.Param()
 #sim.sample.model = proj[0]
@@ -84,7 +89,11 @@ scan.illumination.aperture = u.Param()
 scan.illumination.aperture.diffuser = None
 scan.illumination.aperture.form = "circ"
 scan.illumination.aperture.size = 1.0e-3
-scan.illumination.aperture.edge = 10
+scan.illumination.aperture.edge = 15
+scan.illumination.propagation = u.Param()
+scan.illumination.propagation.focussed = None
+scan.illumination.propagation.parallel = 0.03
+scan.illumination.propagation.spot_size = None
 
 # Scan data (simulation) parameters
 scan.data = u.Param()
@@ -114,20 +123,20 @@ u.verbose.set_level("info")
 if __name__ == "__main__":
     P = Ptycho(p,level=5)
 
-    v0 = list(P.obj.views.values())[0]
-
-
-    angles = np.linspace(0, np.pi, nangles, endpoint=False)
+    # Tomography
     angles_dict = {}
     for i,k in enumerate(P.obj.S):
         angles_dict[k] = angles[i]
     vol = np.zeros((pshape, pshape, pshape), dtype=np.complex64)
-    T = tu.AstraTomoWrapperViewBased(P.obj, vol, angles_dict)
+    T = tu.AstraTomoWrapperViewBased(P.obj, vol, angles_dict, obj_is_refractive_index=False, mask_threshold=35)
     T.backward(type="SIRT3D_CUDA", iter=100)
 
     # Plotting
-    X = np.real(rmap.reshape(pshape, pshape, pshape))
+    xx,yy,zz = np.meshgrid(np.arange(pshape)-pshape//2, np.arange(pshape)-pshape//2, np.arange(pshape)-pshape//2)
+    M = np.sqrt(xx**2 + yy**2 + zz**2) < 20
+    X = rmap.reshape(pshape, pshape, pshape)
     R = np.real(T._vol)
+    I = np.imag(T._vol)
     fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(6,4), dpi=100)
     for i in range(3):
         for j in range(2):
@@ -136,9 +145,36 @@ if __name__ == "__main__":
             ax.set_yticks([])
             ax.set_xticklabels([])
             ax.set_yticklabels([])
-        axes[0,i].set_title("sum(axis=%d)" %i)
-        axes[0,i].imshow(X.sum(axis=i))
-        axes[1,i].imshow(R.sum(axis=i))
+    axes[0,0].set_title("slice(Z)")
+    axes[0,1].set_title("slice(Y)")
+    axes[0,2].set_title("slice(X)")
     axes[0,0].set_ylabel("Original")
+    axes[0,0].imshow((X.real)[pshape//2])
+    axes[0,1].imshow((X.real)[:,pshape//2])
+    axes[0,2].imshow((X.real)[:,:,pshape//2])
     axes[1,0].set_ylabel("Recons")
+    axes[1,0].imshow((R)[pshape//2])
+    axes[1,1].imshow((R)[:,pshape//2])
+    axes[1,2].imshow((R)[:,:,pshape//2])
+    plt.show()
+
+    fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(6,4), dpi=100)
+    for i in range(3):
+        for j in range(2):
+            ax = axes[j,i]
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+    axes[0,0].set_title("slice(Z)")
+    axes[0,1].set_title("slice(Y)")
+    axes[0,2].set_title("slice(X)")
+    axes[0,0].set_ylabel("Original")
+    axes[0,0].imshow((X.imag)[pshape//2])
+    axes[0,1].imshow((X.imag)[:,pshape//2])
+    axes[0,2].imshow((X.imag)[:,:,pshape//2])
+    axes[1,0].set_ylabel("Recons")
+    axes[1,0].imshow((I)[pshape//2])
+    axes[1,1].imshow((I)[:,pshape//2])
+    axes[1,2].imshow((I)[:,:,pshape//2])
     plt.show()
