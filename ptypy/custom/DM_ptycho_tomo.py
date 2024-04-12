@@ -9,7 +9,7 @@ import numpy as np
 
 from ..engines import base, projectional, register
 from ..engines.utils import projection_update_generalized, log_likelihood
-from ..utils.tomo import AstraTomoWrapperViewBased
+from ..utils.tomo import AstraTomoWrapperViewBased, AstraTomoWrapperProjectionBased
 from ..core import geometry
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 from ..utils import Param
@@ -37,38 +37,44 @@ class DMPtychoTomo(projectional.DM):
     """
     def __init__(self, ptycho_parent, pars=None):
         super().__init__(ptycho_parent, pars)
-        # self.Nx = 64
-        # self.Na = 5
-        # self.Nf = 32
-        # self.Ns = 76
+        pshape = list(self.ptycho.obj.S.values())[0].data.shape[-1]
+        n_angles = len(self.ptycho.obj.S)
 
         # # # Build volume
-        # self.vol = np.zeros((self.Nx, self.Nx, self.Nx), dtype=complex)
+        self.vol = np.zeros((pshape, pshape, pshape), dtype=np.complex64)
 
-        # v0 = list(self.ptycho.obj.views.values())[0]
+        angles = np.linspace(0, np.pi, n_angles, endpoint=True)
+        self.angles_dict = {}
+        for i,k in enumerate(self.ptycho.obj.S):
+            self.angles_dict[k] = angles[i]
 
-        # angles = np.linspace(0, np.pi, 5, endpoint=False)
-        # angles_dict = {}
-        # for i,k in enumerate(self.ptycho.obj.S):
-        #     angles_dict[k] = angles[i]
-
-        # # # # Build ptycho-tomo projector
-        # self.projector = AstraTomoWrapperViewBased(self.ptycho.obj, vol=self.vol, angles=angles_dict)
-
-    
-    def tomo_update(self, it):
+    def engine_prepare(self):
+        super().engine_prepare()
         
-        # # tomography (backward and forward)
-        # xx,yy,zz = np.meshgrid(np.arange(self.Nx)-self.Nx//2, 
-        #                        np.arange(self.Nx)-self.Nx//2, 
-        #                        np.arange(self.Nx)-self.Nx//2)
-        # M = np.sqrt(xx**2 + yy**2 + zz**2) < 10
-        # m = M.reshape((self.Nx, self.Nx, self.Nx))
+        # Can be changed into ProjectionBased
+        self.projector = AstraTomoWrapperViewBased (    
+            obj=self.ptycho.obj, 
+            vol=self.vol, 
+            angles=self.angles_dict, 
+            obj_is_refractive_index=False, 
+            mask_threshold=35
+            )
 
-        # self.projector.backward()
-        # self.vol[~m] = 0
-        # self.projector.forward()
-        return
+    def tomo_update(self):
+    
+        self.projector.apply_phase_shift_to_obj()
+        self.projector.do_conversion_and_set_proj_array()
+
+        self.projector.apply_mask_to_proj_array()
+        self.projector._create_astra_proj_array()
+
+        # Backward 
+        self.projector.backward(type='SIRT3D_CUDA', iter=100) 
+
+        #Forward
+        self.projector.forward(iter=100)
+
+        return self.projector._vol
 
 
     def engine_iterate(self, num=1):
@@ -102,9 +108,19 @@ class DMPtychoTomo(projectional.DM):
             t4 = time.time()
             tp += t4 - t3
 
-            # Tomography update
-            # TODO
-            self.tomo_update(it)
+            # Tomography update (only starts after 30it of ptycho)
+            iter = None
+            start_tomo_update = False
+            try:
+                iter = self.ptycho.runtime.iter_info[-1]['iteration']
+                if iter > 30:
+                    start_tomo_update = True
+            except:
+                pass
+
+            if start_tomo_update:
+                self.ptycho._vol = self.tomo_update()
+
 
             # count up
             self.curiter +=1
