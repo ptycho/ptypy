@@ -155,7 +155,7 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
     """
     Wrapper for the Astra projectors, method ViewBased.
     """
-    
+
     def _create_proj_geometry(self):
         self._fsh = np.array([v.shape for v in self._obj.views.values()]).max(axis=0)
         self._vec = np.zeros((len(self._obj.views),12))
@@ -190,6 +190,7 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
 
 
     def do_conversion_and_set_proj_array(self, _obj_is_rindex=False):
+        
         stacked_views = np.array([v.data for v in self._obj.views.values()])
         self._proj_array = np.moveaxis(stacked_views, 1, 0)
         if not _obj_is_rindex:

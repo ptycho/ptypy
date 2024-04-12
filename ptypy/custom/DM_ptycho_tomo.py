@@ -40,7 +40,6 @@ class DMPtychoTomo(projectional.DM):
         pshape = list(self.ptycho.obj.S.values())[0].data.shape[-1]
         n_angles = len(self.ptycho.obj.S)
 
-        # # # Build volume
         self.vol = np.zeros((pshape, pshape, pshape), dtype=np.complex64)
 
         angles = np.linspace(0, np.pi, n_angles, endpoint=True)
@@ -68,10 +67,8 @@ class DMPtychoTomo(projectional.DM):
         self.projector.apply_mask_to_proj_array()
         self.projector._create_astra_proj_array()
 
-        # Backward 
         self.projector.backward(type='SIRT3D_CUDA', iter=100) 
 
-        #Forward
         self.projector.forward(iter=100)
 
         return self.projector._vol
