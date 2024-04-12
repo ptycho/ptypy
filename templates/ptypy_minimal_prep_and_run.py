@@ -53,5 +53,3 @@ p.engines.engine00.numiter = 80
 # prepare and run
 if __name__ == "__main__":
     P = Ptycho(p,level=5)
-    # can do level 4 (up to recon)
-    # P.run

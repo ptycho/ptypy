@@ -183,8 +183,6 @@ class _ProjectionEngine(PositionCorrectionEngine):
         for name, s in self.ob_viewcover.storages.items():
             s.fill(s.get_view_coverage())
 
-        #need modify this as well to have a volume
-
     def engine_iterate(self, num=1):
         """
         Compute `num` iterations.
