@@ -403,10 +403,18 @@ class BaseModel(object):
         """
         raise NotImplementedError
 
-    def poly_line_coeffs(self, ob_h, pr_h):
+    def poly_line_coeffs_ob(self, ob_h, pr_h):
+        """
+        Compute the coefficients of the polynomial for line minimization
+        in direction h for the object
+        """
+        raise NotImplementedError
+
+    def poly_line_coeffs_pr(self, ob_h, pr_h):
         """
         Compute the coefficients of the polynomial for line minimization
         in direction h
+        in direction h for the probe
         """
         raise NotImplementedError
 
@@ -514,7 +522,7 @@ class GaussianModel(BaseModel):
     def poly_line_coeffs_ob(self, ob_h, pr_h):
         """
         Compute the coefficients of the polynomial for line minimization
-        in direction h
+        in direction h for the object
         """
 
         B = np.zeros((3,), dtype=np.longdouble)
@@ -582,7 +590,7 @@ class GaussianModel(BaseModel):
     def poly_line_coeffs_pr(self, ob_h, pr_h):
         """
         Compute the coefficients of the polynomial for line minimization
-        in direction h
+        in direction h for the probe
         """
 
         B = np.zeros((3,), dtype=np.longdouble)
