@@ -52,7 +52,7 @@ class AstraTomoWrapper:
 
     def _create_proj_array_and_ids(self):
         n_views = len(self._obj.views.values())
-        view_shape = self._obj.views.values()[0].shape
+        view_shape = list(self._obj.views.values())[0].shape
         proj_array_shape = (n_views, view_shape[0], view_shape[1])
         empty_proj_array = np.zeros(proj_array_shape, dtype=np.complex64)
         self._proj_array = np.moveaxis(empty_proj_array, 1, 0)
