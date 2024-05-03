@@ -641,10 +641,10 @@ class GaussianModel(BaseModel):
         parallel.allreduce(B)
 
         # Object regularizer
-        if self.regularizer:
-            for name, s in self.ob.storages.items():
-                B += Brenorm * self.regularizer.poly_line_coeffs(
-                    ob_h.storages[name].data, s.data)
+        # if self.regularizer:
+        #     for name, s in self.ob.storages.items():
+        #         B += Brenorm * self.regularizer.poly_line_coeffs(
+        #             ob_h.storages[name].data, s.data)
 
         if np.isinf(B).any() or np.isnan(B).any():
             logger.warning(
