@@ -5,7 +5,7 @@ from ptypy.core import Ptycho
 from ptypy import utils as u
 import ptypy.simulations as sim
 import ptypy.utils.tomo as tu
-from ptypy.custom import ML_separate_grads_ptycho-tomo
+from ptypy.custom import ML_separate_grads_ptychotomo, ML_separate_grads
 
 import astra
 import matplotlib.pyplot as plt
@@ -113,10 +113,13 @@ for i in range(nangles):
 # Reconstruction parameters
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'MLPtychoTomo'
-p.engines.engine00.numiter = 35
-p.engines.engine00.fourier_relax_factor = 0.05
-p.engines.engine00.probe_center_tol = 1
+p.engines.engine00.name = 'MLPtychoTomo'  
+p.engines.engine00.numiter = 400
+p.engines.engine00.probe_update_start = 0
+#p.engines.engine00.poly_line_coeffs = 'all'
+
+# p.engines.engine00.fourier_relax_factor = 0.05
+# p.engines.engine00.probe_center_tol = 1
 
 u.verbose.set_level("info")
 

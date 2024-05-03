@@ -48,8 +48,14 @@ class AstraTomoWrapper:
         self._mask_threshold = mask_threshold
         self._create_proj_geometry()
         self._create_vol_geom_and_ids()
+        self._create_proj_array_and_ids()
 
-    def _create_astra_proj_array(self):
+    def _create_proj_array_and_ids(self):
+        n_views = len(self._obj.views.values())
+        view_shape = self._obj.views.values()[0].shape
+        proj_array_shape = (n_views, view_shape[0], view_shape[1])
+        empty_proj_array = np.zeros(proj_array_shape, dtype=np.complex64)
+        self._proj_array = np.moveaxis(empty_proj_array, 1, 0)
         self._proj_id_real = astra.data3d.create("-sino", self._proj_geom, self._proj_array.real)
         self._proj_id_imag = astra.data3d.create("-sino", self._proj_geom, self._proj_array.imag)
 
@@ -57,22 +63,9 @@ class AstraTomoWrapper:
         raise NotImplementedError("Subclass needs to define this.") 
 
     def _create_vol_geom_and_ids(self):
-        self._vol_geom = astra.create_vol_geom(self._vol.shape[0],self._vol.shape[1],self._vol.shape[2])
+        self._vol_geom = astra.create_vol_geom(self._vol.shape[0], self._vol.shape[1], self._vol.shape[2])
         self._vol_id_real = astra.data3d.create("-vol", self._vol_geom, self._vol.real)
         self._vol_id_imag = astra.data3d.create("-vol", self._vol_geom, self._vol.imag)
-        return self._vol_geom
-
-    def apply_phase_shift_to_obj(self):
-
-        for key, s in self._obj.storages.items():
-            cover = s.get_view_coverage().real > self._mask_threshold
-            masked_data = np.angle(s.data)*cover
-            self._obj.storages[key].data[:] = s.data * np.exp(-1j * np.median(masked_data[masked_data!=0]))
-
-        ## PLOTTING
-        # stacked_views = np.array([v.data for v in self._obj.views.values()])
-        # view_i = stacked_views[18, :, :]
-        # self.plot_complex_array(view_i, title='View after phase shift on obj.storages')
 
     def plot_complex_array(self, X, title=''):
         norm = colors.Normalize(-5, 5)
@@ -88,15 +81,15 @@ class AstraTomoWrapper:
 
         fig.suptitle(title)
         fig.colorbar(im1, ax=axes.ravel().tolist())
-        plt.show()    
+        plt.show() 
 
-    def plot_vol(self, title=''):
-        pshape = self._vol.shape[0]
+    def plot_vol(self, vol, title=''):
+        pshape = vol.shape[0]
         rmap = tu.refractive_index_map(pshape)
         X = rmap.reshape(pshape, pshape, pshape)
-        R = np.real(self._vol)
-        I = np.imag(self._vol)
-        
+        R = np.real(vol)
+        I = np.imag(vol)
+
         pos_limit = max([np.max(X.real), np.max(R)])
         neg_limit = min([np.min(X.real), np.min(R)])
 
@@ -148,7 +141,7 @@ class AstraTomoWrapper:
         fig.suptitle('Imag part, '+ title)
         fig.colorbar(im1, ax=axes.ravel().tolist())
         plt.show()
-
+   
 
 
 class AstraTomoWrapperViewBased(AstraTomoWrapper):
@@ -189,34 +182,14 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
         return self._proj_geom
 
 
-    def do_conversion_and_set_proj_array(self, _obj_is_rindex=False):
-        
-        stacked_views = np.array([v.data for v in self._obj.views.values()])
-        self._proj_array = np.moveaxis(stacked_views, 1, 0)
-        if not _obj_is_rindex:
-            self._proj_array = np.angle(self._proj_array) - 1j * np.log(np.abs(self._proj_array))
-        
-        ## PLOTTING
-        # view_i = self._proj_array[:, 18, :]
-        # self.plot_complex_array(view_i, title='View after log conversion')
+    def _update_data_at_id_astra(self, matrix, id):
+        astra.data3d.store(id, matrix)
 
 
-    def apply_mask_to_proj_array(self):
+    def forward(self, input_vol, type = "FP3D_CUDA", iter=10, plot_one_view=False):
 
-        if self._mask_threshold != 0:
-            for i,v in enumerate(self._obj.views.values()):
-                cover = v.storage.get_view_coverage().real > self._mask_threshold 
-                real_part = self._proj_array[:,i,:].real  * cover[v.slice]
-                imag_part = self._proj_array[:,i,:].imag * cover[v.slice] 
-
-                self._proj_array[:,i,:] = (real_part + 1j * imag_part)
-
-        ## PLOTTING
-        # view_i = self._proj_array[:, 18, :]
-        # self.plot_complex_array(view_i, title='View after masking (before tomo)')
-
-
-    def forward(self, type = "FP3D_CUDA", iter=10):
+        self._update_data_at_id_astra(np.real(input_vol), self._vol_id_real)
+        self._update_data_at_id_astra(np.imag(input_vol), self._vol_id_imag)
 
         cfg = astra.astra_dict(type)
         cfg["VolumeDataId"] = self._vol_id_real
@@ -236,28 +209,26 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
 
         _ob_views_real = np.moveaxis(_proj_data_real, 0, 1)
         _ob_views_imag = np.moveaxis(_proj_data_imag, 0, 1)
+
+        output_array = []
         for i, (k,v) in enumerate(self._obj.views.items()):
             real_part = _ob_views_real[i] 
             imag_part = _ob_views_imag[i]
-
             _obj = real_part + 1j * imag_part
+            output_array.append(_obj)
 
             ## PLOTTING
-            # if i==18:
-            #     self.plot_complex_array(_obj, title='View after tomo_update, before exp ')
-
-            if not self._obj_is_rindex:
-                _obj = np.exp(1j * _obj) 
-            v.data[:] = _obj  
-
-            ## PLOTTING
-            # if i==18:
-            #     view_i = _obj
-            #     self.plot_complex_array(_obj, title='View after tomo_update, after rxp')
+            # if plot_one_view and i==26:
+            #     self.plot_complex_array(_obj, title='proj 26 computed by forward')
+        
+        return output_array
 
 
-    def backward(self, type="BP3D_CUDA", iter=10):
-        print('Computing backward projection')
+    def backward(self, input_proj, type="BP3D_CUDA", iter=10):
+
+        self._update_data_at_id_astra(np.real(input_proj), self._proj_id_real)
+        self._update_data_at_id_astra(np.imag(input_proj), self._proj_id_imag)
+
         cfg = astra.astra_dict(type)
         cfg["ReconstructionDataId"] = self._vol_id_real
         cfg["ProjectionDataId"] = self._proj_id_real
@@ -273,129 +244,7 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
 
         vol_real = astra.data3d.get(self._vol_id_real)
         vol_imag = astra.data3d.get(self._vol_id_imag)
-        self._vol = vol_real + 1j * vol_imag
+        volume_update = vol_real + 1j * vol_imag
 
-        self.plot_vol(title='Vol after backward')
+        return volume_update
 
-        return self._vol
-
-
-
-class AstraTomoWrapperProjectionBased(AstraTomoWrapper):
-    """
-    Wrapper for the Astra projectors, method ProjectionBased.
-    """
-
-    def _create_proj_geometry(self):
-        self._ssh = np.array([s.shape for s in self._obj.storages.values()]).max(axis=0)
-        self._vec = np.zeros((len(self._obj.storages),12))
-        for i, (storageID, storage) in enumerate(self._obj.storages.items()): 
-
-            alpha = self._angles[storageID]
-            y = 0  
-            x = 0 
-
-            # ray direction
-            self._vec[i,0] = np.sin(alpha)
-            self._vec[i,1] = -np.cos(alpha)
-            self._vec[i,2] = 0
-
-            # center of detector
-            self._vec[i,3] = x * np.cos(alpha)
-            self._vec[i,4] = x * np.sin(alpha)
-            self._vec[i,5] = y 
-            
-            # vector from detector pixel (0,0) to (0,1)
-            self._vec[i,6] = np.cos(alpha)
-            self._vec[i,7] = np.sin(alpha)
-            self._vec[i,8] = 0
-            
-            # vector from detector pixel (0,0) to (1,0)
-            self._vec[i,9] = 0
-            self._vec[i,10] = 0
-            self._vec[i,11] = 1
-
-        self._proj_geom = astra.create_proj_geom('parallel3d_vec',  self._ssh[1], self._ssh[2], self._vec)
-        return self._proj_geom
-
-    def do_conversion_and_set_proj_array(self, _obj_is_rindex=False):
-        print('Taking log of proj array')
-        self._proj_array = np.array([s.data for s in self._obj.storages.values()])
-        
-        if not _obj_is_rindex:
-            self._proj_array = np.angle(self._proj_array) - 1j * np.log(np.abs(self._proj_array))
-        
-        self._proj_array = np.squeeze(self._proj_array)
-        self._proj_array = np.moveaxis(self._proj_array, 1, 0)
-
-    def apply_mask_to_proj_array(self):
-
-        if self._mask_threshold != 0:
-            for i, s in enumerate(self._obj.storages.values()):
-                cover = s.get_view_coverage().real > self._mask_threshold 
-                real_part = self._proj_array[:,i,:].real  * cover
-                imag_part = self._proj_array[:,i,:].imag * cover
-
-                self._proj_array[:,i,:] = (real_part + 1j * imag_part)
-
-        ## PLOTTING
-        # scan_i = self._proj_array[:, 18, :]
-        # self.plot_complex_array(scan_i, title='Scan after masking (before tomo)')
-
-    def forward(self, type = "FP3D_CUDA", iter=10):
-        print('Computing forward projection')
-        cfg = astra.astra_dict(type)
-        cfg["VolumeDataId"] = self._vol_id_real
-        cfg["ProjectionDataId"] = self._proj_id_real
-        alg_id_real = astra.algorithm.create(cfg)
-
-        cfg = astra.astra_dict(type)
-        cfg["VolumeDataId"] = self._vol_id_imag
-        cfg["ProjectionDataId"] = self._proj_id_imag
-        alg_id_imag = astra.algorithm.create(cfg)
-
-        astra.algorithm.run(alg_id_real, iter)
-        astra.algorithm.run(alg_id_imag, iter)
-
-        _proj_data_real = astra.data3d.get(self._proj_id_real)
-        _proj_data_imag = astra.data3d.get(self._proj_id_imag)
-
-        _ob_views_real = np.moveaxis(_proj_data_real, 0, 1)
-        _ob_views_imag = np.moveaxis(_proj_data_imag, 0, 1)
-        for i, (k,v) in enumerate(self._obj.storages.items()):
-            _obj = _ob_views_real[i] + 1j*_ob_views_imag[i]
-
-            ## PLOTTING
-            # if i==18:
-            #     self.plot_complex_array(_obj, title='Scan after tomo_update, before exp ')
-
-            if not self._obj_is_rindex:
-                _obj = np.exp(1j * _obj) 
-            v.data[:] = _obj 
-
-            ## PLOTTING
-            # if i==18:
-            #     self.plot_complex_array(_obj, title='Scan after tomo_update, after exp ')
-        
-    def backward(self, type="BP3D_CUDA", iter=10):
-        print('Computing backward projection')
-        cfg = astra.astra_dict(type)
-        cfg["ReconstructionDataId"] = self._vol_id_real
-        cfg["ProjectionDataId"] = self._proj_id_real
-        alg_id_real = astra.algorithm.create(cfg)
-
-        cfg = astra.astra_dict(type)
-        cfg["ReconstructionDataId"] = self._vol_id_imag
-        cfg["ProjectionDataId"] = self._proj_id_imag
-        alg_id_imag = astra.algorithm.create(cfg)
-
-        astra.algorithm.run(alg_id_real, iter)
-        astra.algorithm.run(alg_id_imag, iter)
-
-        vol_real = astra.data3d.get(self._vol_id_real)
-        vol_imag = astra.data3d.get(self._vol_id_imag)
-        self._vol = vol_real + 1j * vol_imag
-
-        self.plot_vol()
-
-        return self._vol
