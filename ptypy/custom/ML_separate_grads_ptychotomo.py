@@ -1033,7 +1033,7 @@ class Regul_del2(object):
     def __init__(self, amplitude, axes=[-3, -2, -1]):
         # Regul.__init__(self, axes)
         self.axes = axes
-        self.amplitude = amplitude/10
+        self.amplitude = amplitude
 
         self.delxy = None
         self.g = None
