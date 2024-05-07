@@ -269,8 +269,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
             
             new_rho_grad, new_pr_grad = self.rho_grad_new, self.pr_grad_new
 
-            # SCALING
-            # new_rho_grad /= (10**5)
+            # SCALING: needed for the regularizer to work on probe coeffs
+            n_pixels = np.prod(np.shape(self.rho))
+            scaling_factor = 0.57 * n_pixels         
+            new_rho_grad /= scaling_factor
 
             print('rho_grad: %.2e' % np.linalg.norm(self.rho_grad))
             print('new_rho_grad: %.2e ' % np.linalg.norm(new_rho_grad))
@@ -469,10 +471,10 @@ class BaseModel(object):
 
         self.projector = self.engine.projector
 
-        # if self.p.reg_del2:
-        #     self.regularizer = Regul_del2(self.p.reg_del2_amplitude)
-        # else:
-        #     self.regularizer = None
+        if self.p.reg_del2:
+            self.regularizer = Regul_del2(self.p.reg_del2_amplitude)
+        else:
+            self.regularizer = None
 
         self.LL = 0.
 
@@ -483,18 +485,18 @@ class BaseModel(object):
                                for s in self.di.storages.values())
         self.tot_power = self.Irenorm * sum(s.tot_power
                                             for s in self.di.storages.values())
-        # # Prepare regularizer
-        # if self.regularizer is not None:
-        #     obj_Npix = self.ob.size
-        #     expected_obj_var = obj_Npix / self.tot_power  # Poisson
-        #     reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
-        #     logger.debug(
-        #         'Rescaling regularization amplitude using '
-        #         'the Poisson distribution assumption.')
-        #     logger.debug('Factor: %8.5g' % reg_rescale)
+        # Prepare regularizer
+        if self.regularizer is not None:
+            obj_Npix = np.prod(np.shape(self.rho))    #self.ob.size 
+            expected_obj_var = obj_Npix / self.tot_power  # Poisson
+            reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
+            logger.debug(
+                'Rescaling regularization amplitude using '
+                'the Poisson distribution assumption.')
+            logger.debug('Factor: %8.5g' % reg_rescale)
 
-        #     # TODO remove usage of .p. access
-        #     self.regularizer.amplitude = self.p.reg_del2_amplitude * reg_rescale
+            # TODO remove usage of .p. access
+            self.regularizer.amplitude = self.p.reg_del2_amplitude * reg_rescale
 
     def __del__(self):
         """
@@ -696,11 +698,14 @@ class GaussianModel(BaseModel):
         parallel.allreduce(LL)
 
         # Object regularizer
-        # if self.regularizer:
-        #     for name, s in self.ob.storages.items():
-        #         self.rho_grad.storages[name].data += self.regularizer.grad(
-        #             s.data)
-        #         LL += self.regularizer.LL
+        if self.regularizer:
+            # OLD
+            # for name, s in self.ob.storages.items():
+            #     self.rho_grad.storages[name].data += self.regularizer.grad(
+            #         s.data)
+            self.rho_grad += self.regularizer.grad(self.rho)
+            LL += self.regularizer.LL
+
         self.LL = LL / self.tot_measpts
 
         return error_dct
@@ -778,10 +783,12 @@ class GaussianModel(BaseModel):
         parallel.allreduce(B)
 
         # Object regularizer
-        # if self.regularizer:
-        #     for name, s in self.ob.storages.items():
-        #         B += Brenorm * self.regularizer.poly_line_coeffs(
-        #             ob_h.storages[name].data, s.data)
+        if self.regularizer:
+            # OLD
+            # for name, s in self.ob.storages.items():
+            #     B += Brenorm * self.regularizer.poly_line_coeffs(
+            #         ob_h.storages[name].data, s.data)
+            B += Brenorm * self.regularizer.poly_line_coeffs(rho_h, self.rho)
 
         if np.isinf(B).any() or np.isnan(B).any():
             logger.warning(
@@ -855,10 +862,12 @@ class GaussianModel(BaseModel):
         parallel.allreduce(B)
 
         # Object regularizer
-        # if self.regularizer:
-        #     for name, s in self.ob.storages.items():
-        #         B += Brenorm * self.regularizer.poly_line_coeffs(
-        #             ob_h.storages[name].data, s.data)
+        if self.regularizer:
+            # OLD
+            # for name, s in self.ob.storages.items():
+            #     B += Brenorm * self.regularizer.poly_line_coeffs(
+            #         ob_h.storages[name].data, s.data)
+            B += Brenorm * self.regularizer.poly_line_coeffs(rho_h, self.rho)
 
         if np.isinf(B).any() or np.isnan(B).any():
             logger.warning(
@@ -925,10 +934,12 @@ class GaussianModel(BaseModel):
         parallel.allreduce(B)
 
         # Object regularizer
-        # if self.regularizer:
-        #     for name, s in self.ob.storages.items():
-        #         B += Brenorm * self.regularizer.poly_line_coeffs(
-        #             ob_h.storages[name].data, s.data)
+        if self.regularizer:
+            # OLD
+            # for name, s in self.ob.storages.items():
+            #     B += Brenorm * self.regularizer.poly_line_coeffs(
+            #         ob_h.storages[name].data, s.data)
+            B += Brenorm * self.regularizer.poly_line_coeffs(rho_h, self.rho)
 
         if np.isinf(B).any() or np.isnan(B).any():
             logger.warning(
@@ -997,10 +1008,12 @@ class GaussianModel(BaseModel):
         parallel.allreduce(B)
 
         # Object regularizer
-        # if self.regularizer:
-        #     for name, s in self.ob.storages.items():
-        #         B += Brenorm * self.regularizer.poly_line_coeffs(
-        #             ob_h.storages[name].data, s.data)
+        if self.regularizer:
+            # OLD
+            # for name, s in self.ob.storages.items():
+            #     B += Brenorm * self.regularizer.poly_line_coeffs(
+            #         ob_h.storages[name].data, s.data)
+            B += Brenorm * self.regularizer.poly_line_coeffs(rho_h, self.rho)
 
         if np.isinf(B).any() or np.isnan(B).any():
             logger.warning(
@@ -1011,72 +1024,88 @@ class GaussianModel(BaseModel):
         self.B = B
         return B
 
-# class Regul_del2(object):
-#     """\
-#     Squared gradient regularizer (Gaussian prior).
+class Regul_del2(object):
+    """\
+    Squared gradient regularizer (Gaussian prior).
 
-#     This class applies to any numpy array.
-#     """
-#     def __init__(self, amplitude, axes=[-2, -1]):
-#         # Regul.__init__(self, axes)
-#         self.axes = axes
-#         self.amplitude = amplitude
-#         self.delxy = None
-#         self.g = None
-#         self.LL = None
+    This class applies to any numpy array.
+    """
+    def __init__(self, amplitude, axes=[-3, -2, -1]):
+        # Regul.__init__(self, axes)
+        self.axes = axes
+        self.amplitude = amplitude/10
 
-#     def grad(self, x):
-#         """
-#         Compute and return the regularizer gradient given the array x.
-#         """
-#         ax0, ax1 = self.axes
-#         del_xf = u.delxf(x, axis=ax0)
-#         del_yf = u.delxf(x, axis=ax1)
-#         del_xb = u.delxb(x, axis=ax0)
-#         del_yb = u.delxb(x, axis=ax1)
+        self.delxy = None
+        self.g = None
+        self.LL = None
 
-#         self.delxy = [del_xf, del_yf, del_xb, del_yb]
-#         self.g = 2. * self.amplitude*(del_xb + del_yb - del_xf - del_yf)
+    def grad(self, x):
+        """
+        Compute and return the regularizer gradient given the array x.
+        """
+        ax0, ax1, ax2 = self.axes
+        del_xf = u.delxf(x, axis=ax0)
+        del_yf = u.delxf(x, axis=ax1)
+        del_zf = u.delxf(x, axis=ax2)
 
-#         self.LL = self.amplitude * (u.norm2(del_xf)
-#                                + u.norm2(del_yf)
-#                                + u.norm2(del_xb)
-#                                + u.norm2(del_yb))
+        del_xb = u.delxb(x, axis=ax0)
+        del_yb = u.delxb(x, axis=ax1)
+        del_zb = u.delxb(x, axis=ax2)
 
-#         return self.g
+        self.delxy = [del_xf, del_yf, del_zf, del_xb, del_yb, del_zb]
+        self.g = 2. * self.amplitude*(del_xb + del_yb + del_zb - del_xf - del_yf - del_zf)
 
-#     def poly_line_coeffs(self, h, x=None):
-#         ax0, ax1 = self.axes
-#         if x is None:
-#             del_xf, del_yf, del_xb, del_yb = self.delxy
-#         else:
-#             del_xf = u.delxf(x, axis=ax0)
-#             del_yf = u.delxf(x, axis=ax1)
-#             del_xb = u.delxb(x, axis=ax0)
-#             del_yb = u.delxb(x, axis=ax1)
+        self.LL = self.amplitude * (u.norm2(del_xf)
+                               + u.norm2(del_yf)
+                               + u.norm2(del_zf)
+                               + u.norm2(del_xb)
+                               + u.norm2(del_yb)
+                               + u.norm2(del_zb))
 
-#         hdel_xf = u.delxf(h, axis=ax0)
-#         hdel_yf = u.delxf(h, axis=ax1)
-#         hdel_xb = u.delxb(h, axis=ax0)
-#         hdel_yb = u.delxb(h, axis=ax1)
+        return self.g
 
-#         c0 = self.amplitude * (u.norm2(del_xf)
-#                                + u.norm2(del_yf)
-#                                + u.norm2(del_xb)
-#                                + u.norm2(del_yb))
+    def poly_line_coeffs(self, h, x=None):
+        ax0, ax1, ax2 = self.axes
+        if x is None:
+            del_xf, del_yf, del_zf, del_xb, del_yb, del_zb = self.delxy
+        else:
+            del_xf = u.delxf(x, axis=ax0)
+            del_yf = u.delxf(x, axis=ax1)
+            del_zf = u.delxf(x, axis=ax2)
+            del_xb = u.delxb(x, axis=ax0)
+            del_yb = u.delxb(x, axis=ax1)
+            del_zb = u.delxb(x, axis=ax2)
 
-#         c1 = 2 * self.amplitude * np.real(np.vdot(del_xf, hdel_xf)
-#                                           + np.vdot(del_yf, hdel_yf)
-#                                           + np.vdot(del_xb, hdel_xb)
-#                                           + np.vdot(del_yb, hdel_yb))
+        hdel_xf = u.delxf(h, axis=ax0)
+        hdel_yf = u.delxf(h, axis=ax1)
+        hdel_zf = u.delxf(h, axis=ax2)
+        hdel_xb = u.delxb(h, axis=ax0)
+        hdel_yb = u.delxb(h, axis=ax1)
+        hdel_zb = u.delxb(h, axis=ax2)
 
-#         c2 = self.amplitude * (u.norm2(hdel_xf)
-#                                + u.norm2(hdel_yf)
-#                                + u.norm2(hdel_xb)
-#                                + u.norm2(hdel_yb))
+        c0 = self.amplitude * (u.norm2(del_xf)
+                               + u.norm2(del_yf)
+                               + u.norm2(del_zf)
+                               + u.norm2(del_xb)
+                               + u.norm2(del_yb)
+                               + u.norm2(del_zb))
 
-#         self.coeff = np.array([c0, c1, c2])
-#         return self.coeff
+        c1 = 2 * self.amplitude * np.real(np.vdot(del_xf, hdel_xf)
+                                          + np.vdot(del_yf, hdel_yf)
+                                          + np.vdot(del_zf, hdel_zf)
+                                          + np.vdot(del_xb, hdel_xb)
+                                          + np.vdot(del_yb, hdel_yb)
+                                          + np.vdot(del_zb, hdel_zb))
+
+        c2 = self.amplitude * (u.norm2(hdel_xf)
+                               + u.norm2(hdel_yf)
+                               + u.norm2(hdel_zf)
+                               + u.norm2(hdel_xb)
+                               + u.norm2(hdel_yb)
+                               + u.norm2(hdel_zb))
+
+        self.coeff = np.array([c0, c1, c2])
+        return self.coeff
 
 
 # def prepare_smoothing_preconditioner(amplitude):
