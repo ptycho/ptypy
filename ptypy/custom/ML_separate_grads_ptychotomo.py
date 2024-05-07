@@ -533,14 +533,14 @@ class BaseModel(object):
         """
         raise NotImplementedError
 
-    def poly_line_all_coeffs_rho(self, ob_h, pr_h):
+    def poly_line_all_coeffs_rho(self, rho_h, pr_h):
         """
         Compute all the coefficients of the polynomial for line minimization
         in direction h
         """
         raise NotImplementedError
 
-    def poly_line_all_coeffs_pr(self, ob_h, pr_h):
+    def poly_line_all_coeffs_pr(self, rho_h, pr_h):
         """
         Compute all the coefficients of the polynomial for line minimization
         in direction h
