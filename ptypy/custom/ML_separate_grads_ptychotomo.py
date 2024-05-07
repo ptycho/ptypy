@@ -148,6 +148,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.ML_model = None
         # self.smooth_gradient = None
 
+        self.omega = None
+
         self.pshape = list(self.ptycho.obj.S.values())[0].data.shape[-1]
 
         n_angles = len(self.ptycho.obj.S)
@@ -178,6 +180,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.rho_grad = np.zeros(3*(self.pshape,), dtype=np.complex64)       # self.ob.copy(self.ob.ID + '_grad', fill=0.)
         self.rho_grad_new = np.zeros(3*(self.pshape,), dtype=np.complex64)   # self.ob.copy(self.ob.ID + '_grad_new', fill=0.)
         self.rho_h = np.zeros(3*(self.pshape,), dtype=np.complex64)          # self.ob.copy(self.ob.ID + '_h', fill=0.)
+
+        # This is needed in poly_line_coeffs_rho
+        self.omega = self.ob.copy(self.ob.ID + '_omega', fill=0.)
 
         # Volume  
         rho_real = np.load('real_vol_35it.npy')
@@ -452,6 +457,7 @@ class BaseModel(object):
         self.rho = self.engine.rho
         self.rho_grad = self.engine.rho_grad_new
         self.pr_grad = self.engine.pr_grad_new
+        self.omega = self.engine.omega
 
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
@@ -717,6 +723,7 @@ class GaussianModel(BaseModel):
         #     self.projector.plot_complex_array(rho_h[26, :, :], title='rho_h passed to poly_line_rho')
         
         omega = self.projector.forward(rho_h)
+        self.omega << omega
 
         i = 0
         # Outer loop: through diffraction patterns
@@ -797,7 +804,6 @@ class GaussianModel(BaseModel):
         
         omega = self.projector.forward(rho_h)
 
-        i = 0
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
             if not diff_view.active:
@@ -818,8 +824,7 @@ class GaussianModel(BaseModel):
                 psi = pod.probe * np.exp(1j * pod.object)   # exit_wave
                 f = pod.fw(psi)  
 
-                # Need to change this so omega can be accessed properly
-                omega_i = omega[i]
+                omega_i = omega[pod.ob_view] 
                 a = pod.fw(psi*omega_i)
                 b = pod.fw(psi*(omega_i**2))
 
@@ -847,8 +852,6 @@ class GaussianModel(BaseModel):
             B[3] += np.dot(w.flat, (2*A1*A2).flat) * Brenorm
             B[4] += np.dot(w.flat, (A2**2).flat) * Brenorm
             
-            i+=1
-
         parallel.allreduce(B)
 
         # Object regularizer
