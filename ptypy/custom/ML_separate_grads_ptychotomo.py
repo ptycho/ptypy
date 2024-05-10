@@ -780,7 +780,7 @@ class GaussianModel(BaseModel):
                 f = pod.fw(psi)  
 
                 # Need to change this so omega can be accessed properly
-                omega_i = omega[i]
+                omega_i = 1j * omega[i]
                 a = pod.fw(psi*omega_i)
                 b = pod.fw(psi*(omega_i**2))
 
