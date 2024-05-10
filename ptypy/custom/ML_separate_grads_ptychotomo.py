@@ -306,7 +306,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 iter=0
 
             #if iter > 50:
-            plot_complex_array(self.rho_grad[:, :, 26], title='self.rho_grad, start of it {}'.format(iter))
+            # plot_complex_array(self.rho_grad[:, :, 26], title='self.rho_grad, start of it {}'.format(iter))
             # plot_complex_array(new_rho_grad[:, :, 26], title='new_rho_grad, start of it {}'.format(iter))
 
             # PLOTTING
@@ -419,8 +419,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
             except:
                 iter = 0
 
-            if iter%50 == 0:
-                self.projector.plot_vol(self.rho)
+            if iter%20 == 0:
+                self.projector.plot_vol_only_recons(self.rho, iter=iter, title= 'NO REG')
 
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
@@ -512,13 +512,16 @@ class BaseModel(object):
                                             for s in self.di.storages.values())
         # Prepare regularizer
         if self.regularizer is not None:
-            obj_Npix = np.prod(np.shape(self.rho))    #self.ob.size 
-            expected_obj_var = obj_Npix / self.tot_power  # Poisson
-            reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
-            logger.debug(
-                'Rescaling regularization amplitude using '
-                'the Poisson distribution assumption.')
-            logger.debug('Factor: %8.5g' % reg_rescale)
+            # obj_Npix = np.prod(np.shape(self.rho))    #self.ob.size 
+            # expected_obj_var = obj_Npix / self.tot_power  # Poisson
+            # reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
+            # logger.debug(
+            #     'Rescaling regularization amplitude using '
+            #     'the Poisson distribution assumption.')
+            # logger.debug('Factor: %8.5g' % reg_rescale)
+
+            # Needed for now
+            reg_rescale = 10**8
 
             # TODO remove usage of .p. access
             self.regularizer.amplitude = self.p.reg_del2_amplitude * reg_rescale
@@ -656,17 +659,10 @@ class GaussianModel(BaseModel):
                 psi = pod.probe * np.exp(1j * pod.object)   # CHANGING from pod.object 
                 product_xi_psi_conj = -1j* xi * psi.conj() 
                 products_xi_psi_conj.append(product_xi_psi_conj)
-                # if i==26:
-                #     plot_complex_array(xi, 'xi')
-                # if i==26:
-                #     plot_complex_array(psi, 'psi')
-                i +=1
 
         self.rho_grad = 2 * self.projector.backward(np.moveaxis(np.array(products_xi_psi_conj), 1, 0))
         self.engine.rho_grad_new = self.rho_grad
-        # print(np.linalg.norm(self.engine.rho_grad_new))
-        # MPI reduction of gradients
-        # self.ob_grad.allreduce()
+
         return 
 
     def new_grad_pr(self):
