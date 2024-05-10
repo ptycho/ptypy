@@ -31,6 +31,7 @@ def sample_volume(N):
 def refractive_index_map(Nx):
     beta = np.log(sample_volume(Nx)+20)-np.log(20)
     delta = 0.05 * sample_volume(Nx)
+    # beta = np.zeros_like(delta)
     return delta + 1j * beta
 
 

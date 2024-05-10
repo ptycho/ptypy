@@ -24,9 +24,30 @@ from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull,
 from ..utils.tomo import AstraTomoWrapperViewBased
 from scipy.ndimage.filters import gaussian_filter
 
+import matplotlib.pyplot as plt
+from matplotlib import cm, colors
+import ptypy.utils.tomo as tu
 
 __all__ = ['MLPtychoTomo']
 
+
+def plot_complex_array(X, title=''):
+    norm = colors.Normalize(-5, 5)
+    cmap = cm.get_cmap("Spectral")
+
+    fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(6,4), dpi=100)
+    max_lim = max(np.max(X.real), np.max(X.imag))
+    min_lim = min(np.min(X.real), np.min(X.imag))
+
+    im0 = axes[0].imshow(X.real, vmax=max_lim, vmin=min_lim)
+    axes[0].set_title(f"Real part")
+
+    im1 = axes[1].imshow(X.imag, vmax=max_lim, vmin=min_lim)
+    axes[1].set_title(f"Imag part")
+
+    fig.suptitle(title)
+    fig.colorbar(im1, ax=axes.ravel().tolist())
+    plt.show() 
 
 @register()
 class MLPtychoTomo(PositionCorrectionEngine):
@@ -279,12 +300,16 @@ class MLPtychoTomo(PositionCorrectionEngine):
             print('pr_grad: %.2e ' % np.sqrt(Cnorm2(self.pr_grad)))
             print('new_pr_grad: %.2e ' % np.sqrt(Cnorm2(new_pr_grad)))
 
-            # PLOTTING
-            # try:
-            #     iter = self.ptycho.runtime.iter_info[-1]['iteration']
-            # except:
-            #     iter=0
+            try:
+                iter = self.ptycho.runtime.iter_info[-1]['iteration']
+            except:
+                iter=0
 
+            #if iter > 50:
+            plot_complex_array(self.rho_grad[:, :, 26], title='self.rho_grad, start of it {}'.format(iter))
+            # plot_complex_array(new_rho_grad[:, :, 26], title='new_rho_grad, start of it {}'.format(iter))
+
+            # PLOTTING
             # if iter%10 == 0:
             #     self.projector.plot_complex_array(new_rho_grad[26, :, :], title='new_rho_grad computed by new_grad')
 
@@ -595,7 +620,7 @@ class GaussianModel(BaseModel):
         self.engine.update_views()
 
         products_xi_psi_conj = []
-
+        i=0
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
             if not diff_view.active:
@@ -629,12 +654,15 @@ class GaussianModel(BaseModel):
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
                 psi = pod.probe * np.exp(1j * pod.object)   # CHANGING from pod.object 
-                product_xi_psi_conj = xi * psi.conj() 
+                product_xi_psi_conj = -1j* xi * psi.conj() 
                 products_xi_psi_conj.append(product_xi_psi_conj)
+                # if i==26:
+                #     plot_complex_array(xi, 'xi')
+                # if i==26:
+                #     plot_complex_array(psi, 'psi')
+                i +=1
 
         self.rho_grad = 2 * self.projector.backward(np.moveaxis(np.array(products_xi_psi_conj), 1, 0))
-        # print(self.rho_grad)
-        # self.engine.rho_grad = self.rho_grad
         self.engine.rho_grad_new = self.rho_grad
         # print(np.linalg.norm(self.engine.rho_grad_new))
         # MPI reduction of gradients
