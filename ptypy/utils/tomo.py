@@ -143,7 +143,41 @@ class AstraTomoWrapper:
         fig.colorbar(im1, ax=axes.ravel().tolist())
         plt.show()
    
+    def plot_vol_only_recons(self, vol, iter, title=''):
+        pshape = vol.shape[0]
+        rmap = tu.refractive_index_map(pshape)
+        # X = rmap.reshape(pshape, pshape, pshape)
+        R = np.real(vol)
+        I = np.imag(vol)
 
+        # pos_limit = max([np.max(X.real), np.max(R)])  #0.24 #
+        # neg_limit = min([np.min(X.real), np.min(R)])  #-0.2 #
+
+        pos_limit = 0.34  #max([np.max(R), np.max(I)])  #0.52 #
+        neg_limit = -0.21 #min([np.min(R), np.min(I)])  #-0.25 #
+        fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(6,4), dpi=100)
+        for i in range(3):
+            for j in range(2):
+                ax = axes[j,i]
+                ax.set_xticks([])
+                ax.set_yticks([])
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+        axes[0,0].set_title("slice(Z)")
+        axes[0,1].set_title("slice(Y)")
+        axes[0,2].set_title("slice(X)")
+        axes[0,0].set_ylabel("Real")
+        axes[0,0].imshow((R)[pshape//2], vmin=neg_limit, vmax=pos_limit)
+        axes[0,1].imshow((R)[:,pshape//2], vmin=neg_limit, vmax=pos_limit)
+        axes[0,2].imshow((R)[:,:,pshape//2], vmin=neg_limit, vmax=pos_limit)
+        axes[1,0].set_ylabel("Imag")
+        axes[1,0].imshow((I)[pshape//2], vmin=neg_limit, vmax=pos_limit)
+        axes[1,1].imshow((I)[:,pshape//2], vmin=neg_limit, vmax=pos_limit)
+        im1 = axes[1,2].imshow((I)[:,:,pshape//2], vmin=neg_limit, vmax=pos_limit)
+
+        fig.suptitle('Recons, iter {}, '.format(iter)+ title)
+        fig.colorbar(im1, ax=axes.ravel().tolist())
+        plt.show()
 
 class AstraTomoWrapperViewBased(AstraTomoWrapper):
     """
