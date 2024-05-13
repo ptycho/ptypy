@@ -855,7 +855,7 @@ class GaussianModel(BaseModel):
                 psi = pod.probe * np.exp(1j * pod.object)   # exit_wave
                 f = pod.fw(psi)  
 
-                omega_i = omega[pod.ob_view] 
+                omega_i = 1j*omega[pod.ob_view] 
                 a = pod.fw(psi*omega_i)
                 b = pod.fw(psi*(omega_i**2))
 
