@@ -153,8 +153,8 @@ class AstraTomoWrapper:
         # pos_limit = max([np.max(X.real), np.max(R)])  #0.24 #
         # neg_limit = min([np.min(X.real), np.min(R)])  #-0.2 #
 
-        pos_limit = 0.34  #max([np.max(R), np.max(I)])  #0.52 #
-        neg_limit = -0.21 #min([np.min(R), np.min(I)])  #-0.25 #
+        pos_limit = max([np.max(R), np.max(I)])  #0.52 #
+        neg_limit = min([np.min(R), np.min(I)])  #-0.25 #
         fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(6,4), dpi=100)
         for i in range(3):
             for j in range(2):

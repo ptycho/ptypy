@@ -203,14 +203,15 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.rho_h = np.zeros(3*(self.pshape,), dtype=np.complex64)          # self.ob.copy(self.ob.ID + '_h', fill=0.)
 
         # This is needed in poly_line_coeffs_rho
-        self.omega = self.ob.copy(self.ob.ID + '_omega', fill=0.)
+        self.omega = self.ex  
 
         # Volume  
         rho_real = np.load('real_vol_35it.npy')
         rho_imag = np.load('imag_vol_35it.npy')
-        rho_real_br = gaussian_filter(rho_real, sigma=3.5)
-        rho_imag_br = gaussian_filter(rho_imag, sigma=3.5)
-        self.rho = rho_real_br + 1j * rho_imag_br 
+        rho_real_br = gaussian_filter(rho_real, sigma=2.5)
+        rho_imag_br = gaussian_filter(rho_imag, sigma=2.5)
+        # self.rho = np.zeros_like(rho_real) + 1j * np.zeros_like(rho_imag)
+        self.rho = rho_real_br + 1j * rho_imag_br
 
         # This 
         stacked_views = np.array([v.data for v in self.ptycho.obj.views.values()])
@@ -306,7 +307,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 iter=0
 
             #if iter > 50:
-            # plot_complex_array(self.rho_grad[:, :, 26], title='self.rho_grad, start of it {}'.format(iter))
             # plot_complex_array(new_rho_grad[:, :, 26], title='new_rho_grad, start of it {}'.format(iter))
 
             # PLOTTING
@@ -367,6 +367,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             #     for name, s in self.ob_h.storages.items():
             #         s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
             # else:
+            # plot_complex_array(self.rho_grad[:, 26, :], title='self.rho_grad, end of it {}'.format(iter))
             self.rho_h -= self.rho_grad
 
             self.pr_h *= bt_pr / self.tmin_pr
@@ -419,8 +420,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
             except:
                 iter = 0
 
-            if iter%20 == 0:
-                self.projector.plot_vol_only_recons(self.rho, iter=iter, title= 'NO REG')
+            if iter%50 == 0:
+                self.projector.plot_vol(self.rho, title= 'NO REG')
 
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
@@ -485,6 +486,7 @@ class BaseModel(object):
         self.rho_grad = self.engine.rho_grad_new
         self.pr_grad = self.engine.pr_grad_new
         self.omega = self.engine.omega
+        self.ex = self.engine.ex
 
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
@@ -750,11 +752,14 @@ class GaussianModel(BaseModel):
         #     iter=0
         # if iter%10 == 0:
         #     self.projector.plot_complex_array(rho_h[26, :, :], title='rho_h passed to poly_line_rho')
-        
-        omega = self.projector.forward(rho_h)
-        self.omega << omega
 
-        i = 0
+        omega = np.array(self.projector.forward(rho_h))
+        
+        # Store omega so that we can use it later
+        for i, (k,ov) in enumerate(self.omega.views.items()):
+            print(i, ov.shape)
+            ov.data[:] = 1j * omega[i]
+
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
             if not diff_view.active:
@@ -775,8 +780,8 @@ class GaussianModel(BaseModel):
                 psi = pod.probe * np.exp(1j * pod.object)   # exit_wave
                 f = pod.fw(psi)  
 
-                # Need to change this so omega can be accessed properly
-                omega_i = 1j * omega[i]
+                omega_i = self.omega[pod.ex_view]
+               
                 a = pod.fw(psi*omega_i)
                 b = pod.fw(psi*(omega_i**2))
 
@@ -800,9 +805,7 @@ class GaussianModel(BaseModel):
 
             B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
             B[1] += np.dot(w.flat, (2*A0*A1).flat) * Brenorm
-            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
-
-            i+=1
+            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm            
 
         parallel.allreduce(B)
 
@@ -832,8 +835,13 @@ class GaussianModel(BaseModel):
 
         B = np.zeros((5,), dtype=np.longdouble)
         Brenorm = 1. / self.LL[0]**2
+
+        omega = np.array(self.projector.forward(rho_h))
         
-        omega = self.projector.forward(rho_h)
+        # Store omega so that we can use it later
+        for i, (k,ov) in enumerate(self.omega.views.items()):
+            print(i, ov.shape)
+            ov.data[:] = 1j * omega[i]
 
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
@@ -855,7 +863,7 @@ class GaussianModel(BaseModel):
                 psi = pod.probe * np.exp(1j * pod.object)   # exit_wave
                 f = pod.fw(psi)  
 
-                omega_i = 1j*omega[pod.ob_view] 
+                omega_i = self.omega[pod.ex_view]
                 a = pod.fw(psi*omega_i)
                 b = pod.fw(psi*(omega_i**2))
 
