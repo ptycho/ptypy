@@ -21,7 +21,8 @@ p.data_type = "single"
 
 p.run = None
 p.io = u.Param()
-p.io.home = "/".join([tmpdir, "ptypy_letizia"])
+#p.io.home = "/".join([tmpdir, "ptypy_letizia"])
+p.io.home = "/".join([tmpdir, "ptypy"])
 p.io.autosave = u.Param(active=False)
 p.io.autoplot = u.Param(active=False)
 p.io.autoplot.layout='minimal'
@@ -121,7 +122,33 @@ p.engines.engine00.probe_center_tol = 1
 u.verbose.set_level("info")
 
 if __name__ == "__main__":
-    P = Ptycho(p,level=5)
+
+    # THis is a hack for using a shared probe across all angles (storages)
+    P = Ptycho(p,level=3)
+    storage_list = list(P.probe.storages.values())
+    first_storage = storage_list[0]
+    # Transfer views
+    for s in storage_list[1:]:
+        for v in s.views:
+            v.storage = first_storage
+            v.storageID = first_storage.ID
+
+    # Update probe
+    P.probe.reformat()
+
+    # Unforunately we need to delete the storage here due to DM being unable  
+    # to ignore unused storages. This is due to the /=nrm division in the 
+    # probe update  
+    for s in storage_list[1:]:
+        P.probe.storages.pop(s.ID)
+
+    # Finish level 4
+    P.print_stats()
+    P.init_engine()
+    P.run()
+    P.finalize()
+
+    # P = Ptycho(p,level=5)
 
     # # Tomography
     # angles_dict = {}
