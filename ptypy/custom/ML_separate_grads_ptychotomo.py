@@ -622,7 +622,12 @@ class GaussianModel(BaseModel):
 
         # Moved this here from the end of engine_iterate
         self.projected_rho = self.projector.forward(self.rho)
-        self.engine.update_views()
+
+        i = 0
+        for dname, diff_view in self.di.views.items():
+            for name, pod in diff_view.pods.items():
+                pod.object = self.projected_rho[i]
+                i+=1
 
         products_xi_psi_conj = []
         i=0
