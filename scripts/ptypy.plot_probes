@@ -1,0 +1,656 @@
+#!/usr/bin/env python3
+
+import sys
+import argparse
+from ptypy.utils.parameters import Param
+from ptypy.utils.array_utils import crop_pad, clean_path
+from ptypy.utils.plot_utils import plt # pyplot import with all the specialized settings
+from ptypy.utils.plot_utils import PtyAxis, imsave, pause, rmphaseramp
+import numpy as np
+import time
+
+import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter
+
+Storage_DEFAULT = Param(
+    # maybe we would want this container specific
+    clims=[None, [-np.pi, np.pi]],
+    cmaps=['gray', 'hsv'],
+    crop=[0.3, 0.3],  # fraction of array to crop for display
+    rm_pr=True,  # remove_phase_ramp = True
+    shape=None,  # if None the shape is determining
+    auto_display=['a', 'p'],  # quantities to display
+    layers=None,  # (int or list or None)
+    local_error=False,  # plot a local error map (ignored in probe)
+    use_colorbar = True,
+    mask = 0.3, # Fraction (radius) of data to use for clims (if None) or phase_ramp removal
+)
+
+DEFAULT = Param()
+DEFAULT.figsize = (16, 10)
+DEFAULT.dpi = 100
+DEFAULT.ob = Storage_DEFAULT.copy()
+DEFAULT.pr = Storage_DEFAULT.copy()
+DEFAULT.pr.auto_display = ['c']
+DEFAULT.simplified_aspect_ratios = False
+DEFAULT.gridspecpars = (0.1, 0.12, 0.07, 0.95, 0.05, 0.93)
+DEFAULT.plot_error = [True, True, True]  # decide which error to plot
+DEFAULT.interactive = True
+DEFAULT.home = '/tmp/ptypy/'
+DEFAULT.movie = False
+
+
+TEMPLATES = Param({'default':DEFAULT})
+bnw = DEFAULT.copy(depth=4)
+bnw.ob.cmaps=['gray','bone']
+bnw.pr.cmaps=['gray','bone']
+bnw.pr.clims=[None, None]
+bnw.ob.clims=[None, None]
+bnw.pr.auto_display=['a','p']
+TEMPLATES['black_and_white'] = bnw
+
+weak = DEFAULT.copy(depth=4)
+weak.ob.cmaps=['gray','bone']
+weak.ob.clims=[None, None]
+TEMPLATES['weak'] = weak
+
+minimal = bnw.copy(depth=4)
+minimal.ob.cmaps=['gray','jet']
+minimal.ob.layers=[0]
+minimal.pr.cmaps=['gray','jet']
+minimal.pr.layers=[0]
+minimal.simplified_aspect_ratios = True
+TEMPLATES['minimal'] = minimal
+
+nearfield = DEFAULT.copy(depth=4)
+nearfield.pr.clims=[None, [-np.pi, np.pi]]
+nearfield.pr.cmaps=['gray', 'hsv']
+nearfield.pr.crop=[0.0, 0.0]  # fraction of array to crop for display
+nearfield.pr.rm_pr=False  #
+nearfield.ob.clims=[None, None]
+nearfield.ob.cmaps=['gray', 'jet']
+nearfield.ob.crop=[0.0, 0.0]  # fraction of array to crop for display
+nearfield.ob.rm_pr=False #
+TEMPLATES['nearfield'] = nearfield
+
+class MPLplotter(object):
+    """
+    Plotting Client for Ptypy, using matplotlib.
+    """
+    DEFAULT = DEFAULT
+
+    def __init__(self, pars=None, probes = None, objects = None, runtime= None, in_thread=False):
+        """
+        Create a client and attempt to connect to a running reconstruction server.
+        """
+        self.log_level = 5 if in_thread else 3
+        # Initialize data containers
+        print(type(probes))
+        self.pr = probes
+        self.ob = objects
+        if runtime is None:
+            self.runtime = Param()
+            self.runtime.iter_info = []
+        else:
+            self.runtime = runtime
+        self._set_autolayout(pars)
+        self.pr_plot=Param()
+        # self.ob_plot=Param()
+
+    def _set_autolayout(self,pars):
+        self.p = self.DEFAULT.copy(depth=4)
+        plt.interactive(self.p.interactive)
+        if pars is not None:
+            if str(pars)==pars:
+                try:
+                    pars = TEMPLATES[pars]
+                except KeyError:
+                    log(self.log_level,'Plotting template "\\%s" not found, using default settings' % str(pars))
+
+            if hasattr(pars,'items'):
+                self.p.update(pars,in_place_depth=4)
+
+    def update_plot_layout(self):
+        """
+        Generate the plot layout.
+        """
+        def simplify_aspect_ratios(sh):
+            ratio = sh[1] / float(sh[0])
+            rp = 1 - int(ratio < 2./3.) + int(ratio >= 3./2.)
+            if rp == 0:
+                sh = (4, 2)
+            elif rp == 2:
+                sh = (2, 4)
+            else:
+                sh = (3, 3)
+            return sh
+        self.num_shape_list = []
+        num_shape_list = self.num_shape_list
+        # for key in sorted(self.ob.keys()):
+        #     cont = self.ob[key]
+        #     plot = self.p.ob.copy()
+        #     # determine the shape
+        #     sh = cont.data.shape[-2:]
+        #     if self.p.simplified_aspect_ratios:
+        #         sh = simplify_aspect_ratios(sh)
+        #     if plot.use_colorbar:
+        #         sh=(sh[0],int(sh[1]*1.15))
+
+        #     layers = plot.layers
+        #     if layers is None:
+        #         layers = cont.data.shape[0]
+        #     if np.isscalar(layers):
+        #         layers = list(range(layers))
+        #     plot.layers = layers
+        #     plot.axes_index = len(num_shape_list)
+        #     num_shape = [len(layers)*len(plot.auto_display)+int(plot.local_error), sh]
+        #     num_shape_list.append(num_shape)
+            # self.ob_plot[key]=plot
+
+        # # per default we will use the a frame similar to the last object frame for plotting
+        # if np.array(self.p.plot_error).any():
+        #     self.error_axes_index = len(num_shape_list)-1
+        #     self.error_frame = num_shape_list[-1][0]
+        #     num_shape_list[-1][0] += 1  # add a frame
+
+        for key in sorted(self.pr.keys()):
+            cont = self.pr[key]
+            print(type(cont))
+            # attach a plotting dict from above
+            # this will need tweaking
+            plot = self.p.pr.copy()
+            # determine the shape
+            sh = cont.data.shape[-2:]
+            if self.p.simplified_aspect_ratios:
+                sh = simplify_aspect_ratios(sh)
+            if plot.use_colorbar:
+                sh=(sh[0],int(sh[1]*1.2))
+
+            layers = plot.layers
+            if layers is None:
+                layers = cont.data.shape[0]
+            if np.isscalar(layers):
+                layers = list(range(layers))
+            plot.layers = layers
+            plot.axes_index = len(num_shape_list)
+            num_shape = [len(layers)*len(plot.auto_display), sh]
+            num_shape_list.append(num_shape)
+            self.pr_plot[key]=plot
+
+        axes_list, plot_fig, gs = self.create_plot_from_tile_list(1, num_shape_list, self.p.figsize, self.p.dpi)
+        sy, sx = gs.get_geometry()
+        w, h, l, r, b, t = self.p.gridspecpars
+        gs.update(wspace=w*sy, hspace=h*sx, left=l, right=r, bottom=b, top=t)
+        self.draw()
+        for axes in axes_list:
+            for pl in axes:
+                plt.setp(pl.get_xticklabels(), fontsize=8)
+                plt.setp(pl.get_yticklabels(), fontsize=8)
+        self.plot_fig = plot_fig
+        self.axes_list = axes_list
+        self.gs = gs
+
+    @staticmethod
+    def create_plot_from_tile_list(fignum=1, num_shape_list=[(4, (2, 2))], figsize=(8, 8),dpi=100):
+        def fill_with_tiles(size, sh, num, figratio=16./9.):
+            coords_tl = []
+            while num > 0:
+                Horizontal = True
+                N_h = size[1]//sh[1]
+                N_v = size[0]//sh[0]
+                # looking for tight fit
+                if num <= N_v and np.abs(N_h-num) >= np.abs(N_v-num):
+                    Horizontal = False
+                elif num <= N_h and np.abs(N_h-num) <= np.abs(N_v-num):
+                    Horizontal = True
+                elif size[0] == 0 or size[1]/float(size[0]+0.00001) > figratio:
+                    Horizontal = True
+                else:
+                    Horizontal = False
+
+                if Horizontal:
+                    N = N_h
+                    a = size[1] % sh[1]
+                    coords = [(size[0], int(ii*sh[1])+a) for ii in range(N)]
+                    size[0] += sh[0]
+                else:
+                    N = N_v
+                    a = size[0] % sh[0]
+                    coords = [(int(ii*sh[0])+a, size[1]) for ii in range(N)]
+                    size[1] += sh[1]
+
+                num -= N
+                coords_tl += coords
+                coords_tl.sort()
+
+            return coords_tl, size 
+
+
+        allcoords = []
+        fig_aspect_ratio = figsize[0]/float(figsize[1])
+        size = [0, 0]
+        # determine frame thickness
+        aa = np.array([sh[0]*sh[1] for N, sh in num_shape_list])
+        N, bigsh = num_shape_list[np.argmax(aa)]
+        frame = int(0.2*min(bigsh))
+        M,last_sh = num_shape_list[0]
+        M=0
+        for ii,(N, sh) in enumerate(num_shape_list):
+            if not np.allclose(np.asarray(sh),np.asarray(last_sh)) or ii==(len(num_shape_list)-1):
+                nsh = np.array(last_sh)+frame
+                coords, size = fill_with_tiles(size, nsh, M+N, fig_aspect_ratio)
+                M=0
+                last_sh = sh
+                allcoords+=coords
+            else:
+                M+=N
+                continue
+
+        coords_list =[]
+        M=0
+        for ii,(N,sh) in enumerate(num_shape_list):
+            coords_list.append(allcoords[M:M+N])
+            M+=N
+
+        from matplotlib import gridspec
+        gs = gridspec.GridSpec(size[0], size[1])
+        fig = plt.figure(fignum, dpi=dpi)
+        fig.clf()
+
+        mag = min(figsize[0]/float(size[1]), figsize[1]/float(size[0]))
+        figsize = (size[1]*mag, size[0]*mag)
+        fig.set_size_inches(figsize, forward=True)
+        space = 0.1*size[0]
+        gs.update(wspace=0.1*size[0], hspace=0.12*size[0], left=0.07, right=0.95, bottom=0.05, top=0.93) #this is still a stupid hardwired parameter
+        axes_list=[]
+        for (N, sh), coords in zip(num_shape_list, coords_list):
+            axes_list.append([fig.add_subplot(gs[co[0]+frame//2:co[0]+frame//2+sh[0], co[1]+frame//2:co[1]+frame//2+sh[1]]) for co in coords])
+
+        return axes_list, fig, gs
+
+    def draw(self):
+        if self.p.interactive:
+            plt.draw()
+            time.sleep(0.1)
+        else:
+            plt.show()
+
+    def plot_error(self):
+        if np.array(self.p.plot_error).any():
+            try:
+                axis = self.axes_list[self.error_axes_index][self.error_frame]
+                # get runtime info
+                error = np.array([info['error'] for info in self.runtime.iter_info])
+                err_fmag = error[:, 0]
+                err_phot = error[:, 1]
+                err_exit = error[:, 2]
+                axis.clear()
+                fmag = err_fmag/np.max(err_fmag) if np.max(err_fmag) > 0 else err_fmag
+                axis.plot(fmag, label='err_fmag %2.2f%% of %.2e' % (fmag[-1]*100, np.max(err_fmag)))
+                phot = err_phot/np.max(err_phot) if np.max(err_phot) > 0 else err_phot
+                axis.plot(phot, label='err_phot %2.2f%% of %.2e' % (phot[-1]*100, np.max(err_phot)))
+                ex = err_exit/np.max(err_exit) if np.max(err_exit) > 0 else err_exit
+                axis.plot(ex, label='err_exit %2.2f%% of %.2e' % (ex[-1]*100, np.max(err_exit)))
+                axis.legend(loc=1, fontsize=10) #('err_fmag %.2e' % np.max(err_fmag),'err_phot %.2e' % np.max(err_phot),'err_exit %.2e' % np.max(err_exit)),
+                plt.setp(axis.get_xticklabels(), fontsize=10)
+                plt.setp(axis.get_yticklabels(), fontsize=10)
+            except:
+                pass
+
+    def plot_storage(self, storage, plot_pars, title="", typ='obj'):
+        # get plotting paramters
+        pp = plot_pars
+        axes = self.axes_list[pp.axes_index]
+        weight = pp.get('weight')
+        # plotting mask for ramp removal
+        sh = storage.data.shape[-2:]
+        if np.isscalar(pp.mask):
+            x, y = np.indices(sh)-np.reshape(np.array(sh)//2, (len(sh),)+len(sh)*(1,))
+            mask = (np.sqrt(x**2+y**2) < pp.mask*min(sh)/2.)
+
+        # cropping
+        crop = np.array(sh)*np.array(pp.crop)//2
+        data = storage.data
+        #crop = -crop.astype(int)
+        #data = crop_pad(storage.data, crop, axes=[-2, -1])
+        #plot_mask = crop_pad(mask, crop, axes=[-2, -1])
+
+        pty_axes = pp.get('pty_axes',[])
+        for layer in pp.layers:
+            for ind,channel in enumerate(pp.auto_display):
+                ii = layer*len(pp.auto_display)+ind
+                if ii >= len(axes):
+                    break
+                try:
+                    ptya = pty_axes[ii]
+                except IndexError:
+                    cmap = pp.cmaps[ind % len(pp.cmaps)] #if ind[1]=='p' else pp.cmaps[0]
+                    ptya = PtyAxis(axes[ii], data = data[layer], channel=channel,cmap = cmap)
+                    ptya.set_mask(mask, False)
+                    if pp.clims is not None and pp.clims[ind] is not None:
+                        ptya.set_clims(pp.clims[ind][0],pp.clims[ind][1], False)
+                    if pp.use_colorbar:
+                        ptya.add_colorbar()
+                    ptya._resize_cid = self.plot_fig.canvas.mpl_connect('resize_event', ptya._after_resize_event)
+                    pty_axes.append(ptya)
+                # get the layer
+                ptya.set_mask(mask, False)
+                ptya.set_data(data[layer])
+                ptya.ax.set_ylim(crop[0],sh[0]-crop[0])
+                ptya.ax.set_xlim(crop[1],sh[1]-crop[1])
+                #ptya._update_colorbar()
+                if channel == 'c':
+                    if typ == 'obj':
+                        mm = np.mean(np.abs(data[layer]*mask)**2)
+                        info = 'T=%.2f' % mm
+                    else:
+                        mm = np.sum(np.abs(data[layer])**2)
+                        info = 'P=%1.1e' % mm
+                    ttl = '%s#%d (C)\n%s' % (title, layer, info)
+                elif channel == 'a':
+                    ttl = '%s#%d (a)' % (title, layer)
+                else:
+                    ttl = '%s#%d (p)' % (title, layer)
+                ptya.ax.set_title(ttl, size=12)
+
+        pp.pty_axes = pty_axes
+
+    def save(self, pattern, count=0):
+        try:
+            r = self.runtime.copy(depth=1)
+            r.update(r.iter_info[-1])
+            plot_file = clean_path(pattern % r)
+        except BaseException:
+            log(self.log_level,'Could not auto generate image dump file from runtime.')
+            plot_file = 'ptypy_%05d.png' % count
+
+        log(self.log_level,'Dumping plot to %s' % plot_file)
+        self.plot_fig.savefig(plot_file,dpi=300)
+        folder,fname = os.path.split(plot_file)
+        mode ='w' if count==1 else 'a'
+        self._framefile = folder+os.path.sep+'frames.txt'
+        with open(self._framefile,mode) as f:
+            f.write(plot_file+'\n')
+            f.close()
+
+    def plot_all(self):
+        for key, storage in self.pr.items():
+            #print key
+            print(type(storage.data))
+            pp = self.pr_plot[key]
+            self.plot_storage(storage,pp, str(key), 'pr')
+        # for key, storage in self.ob.items():
+        #     #print key
+        #     pp = self.ob_plot[key]
+        #     self.plot_storage(storage,pp, str(key), 'obj')
+        self.plot_error()
+        self.draw()
+
+    def create_animation(self):
+        all_probes=[]
+        for key, storage in self.pr.items():
+            all_probes.append(np.squeeze(np.real(storage.data)))
+    
+        import matplotlib.pyplot as orig_plt
+        import matplotlib.animation as animation
+
+        a = np.array(all_probes)
+
+        a = [[[0,0,1],[0,0,0],[0,0,0]],
+            [[0,1,0],[0,0,0],[0,0,0]],
+            [[1,0,0],[0,0,0],[0,0,0]],
+            [[0,0,0],[0,0,1],[0,0,0]],
+            [[0,0,0],[0,1,0],[0,0,0]],
+            [[0,0,0],[1,0,0],[0,0,0]],
+            [[0,0,0],[0,0,0],[0,0,1]],
+            [[0,0,0],[0,0,0],[0,1,0]],
+            [[0,0,0],[0,0,0],[1,0,0]]]
+        a = np.array(a)
+
+        fig, ax = plt.subplots(figsize=(4, 4))
+
+        frame = 0
+        im = plt.imshow(a[frame], origin='lower')
+        plt.colorbar(shrink=0.5)
+
+        def update(*args):
+            global frame
+
+            im.set_array(a[frame])
+
+            frame += 1
+            frame %= len(a)
+
+            return im,
+
+        ani = animation.FuncAnimation(fig, update, interval=50)
+        plt.show()
+        ani.save("movie.mp4")
+
+
+    def compute_st_dev(self):
+
+        # THIS IS FOR THE REAL PART
+        all_probes=[]
+        for key, storage in self.pr.items():
+            all_probes.append(np.squeeze(np.real(storage.data)))
+        
+        # stacking probes
+        all_probes=np.array(all_probes)
+        
+        # get list of 32x32 numpy arrays containing 19 values 
+        # (value of one pixel in each probe)
+        all_st_devs = []
+        for i in range(all_probes.shape[1]):
+            for k in range(all_probes.shape[2]):
+                x_values = all_probes[:, i, k]
+                all_st_devs.append(np.std(x_values))
+
+        print(all_st_devs)
+
+        # put together all values (so 32x32 values of st dev)
+        # and plot to see how many values we have of a certain st dev 
+        # we have across 32x32 pixels probe
+        plt.hist(np.array(all_st_devs), bins=40, density=True, alpha=0.6, color='b')
+        plt.xlabel('st dev value')
+        plt.ylabel('perc. amount of pixels corresp to st dev')
+        plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
+        plt.savefig("all_st_devs.png", dpi=150)
+
+    def compute_st_dev_imag(self):
+
+        # THIS IS FOR THE IMAG PART
+        all_probes=[]
+        for key, storage in self.pr.items():
+            all_probes.append(np.squeeze(np.imag(storage.data)))
+        
+        all_probes=np.array(all_probes)
+        
+        all_st_devs = []
+        for i in range(all_probes.shape[1]):
+            for k in range(all_probes.shape[2]):
+                x_values = all_probes[:, i, k]
+                all_st_devs.append(np.std(x_values))
+
+        print(all_st_devs)
+
+        plt.hist(np.array(all_st_devs), bins=40, density=True, alpha=0.6, color='b')
+        plt.xlabel('st dev value')
+        plt.ylabel('perc. amount of pixels corresp to st dev')
+        plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
+        plt.savefig("all_st_devs_imag.png", dpi=150)
+    
+    def plot_diff_between_two_probes(self, key_probe_1, key_probe_2):
+
+        probe0 = np.squeeze(self.pr[key_probe_1].data)
+        probe10 = np.squeeze(self.pr[key_probe_2].data)
+        diff = probe10- probe0
+        # diff_wrt_1 = [i-probe0 for i in all_probes_real]
+
+        neg_limit = min([np.min(diff.real), np.min(diff.imag)])
+        pos_limit = max([np.max(diff.real), np.max(diff.imag)])
+
+        fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(6,4), dpi=100)
+        for i in range(2):
+            ax = axes[i]
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+        axes[0].set_title("Real")
+        axes[1].set_title("Imag")
+        axes[0].imshow((diff.real), vmin=neg_limit, vmax=pos_limit)
+        im1 = axes[1].imshow((diff.imag), vmin=neg_limit, vmax=pos_limit)
+        fig.colorbar(im1, ax=axes.ravel().tolist())
+        plt.show()
+        fig.suptitle('Diff')
+        plt.savefig("Diff {} - {}.png".format(key_probe_1, key_probe_2))
+
+
+        neg_limit = min([np.min(probe0.real), np.min(probe0.imag),
+                         np.min(probe10.real), np.min(probe10.imag)])
+        pos_limit = max([np.max(probe0.real), np.max(probe0.imag),
+                         np.max(probe10.real), np.max(probe10.imag)])
+
+        fig, axes = plt.subplots(ncols=2, nrows=2, figsize=(6,4), dpi=100)
+        for i in range(2):
+            for j in range(2):
+                ax = axes[j,i]
+                ax.set_xticks([])
+                ax.set_yticks([])
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+        axes[0,0].set_title("Probe ".format(key_probe_1))
+        axes[0,1].set_title("Probe ".format(key_probe_2))
+        axes[0,0].set_ylabel("Real")
+        axes[1,0].set_ylabel("Imag")
+        axes[0,0].imshow((probe0.real), vmin=neg_limit, vmax=pos_limit)
+        axes[0,1].imshow((probe10.real), vmin=neg_limit, vmax=pos_limit)
+
+        axes[1,0].imshow((probe0.imag ), vmin=neg_limit, vmax=pos_limit)
+        im1 = axes[1,1].imshow((probe10.imag ), vmin=neg_limit, vmax=pos_limit)
+      
+        # fig.suptitle(' )
+        fig.colorbar(im1, ax=axes.ravel().tolist())
+        plt.show()
+        plt.savefig("Probe {} and {}.png".format(key_probe_1, key_probe_2), dpi=150)
+
+
+    def compute_all_diffs(self):
+        all_probes=[]
+        for key, storage in self.pr.items():
+            all_probes.append((key, np.squeeze(storage.data)))
+
+        from itertools import combinations
+
+        pairs_to_subtract = combinations(all_probes, 2)
+        all_diffs = {}
+        max_pos_diffs = []
+        max_neg_diffs = []
+
+        for pair in pairs_to_subtract:
+
+            probe1 = pair[0][1]
+            probe2 = pair[1][1]
+
+            diff = probe2-probe1
+            label = pair[1][0]+' - '+pair[0][0]
+            diff = probe2-probe1
+
+            neg_limit = min([np.min(diff.real), np.min(diff.imag)])
+            pos_limit = max([np.max(diff.real), np.max(diff.imag)])
+            max_neg_diffs.append(neg_limit)
+            max_pos_diffs.append(pos_limit)
+
+            if pos_limit > 600 or neg_limit < -600:
+                self.plot_diff_between_two_probes(pair[1][0], pair[0][0])
+
+
+            # fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(6,4), dpi=100)
+            # for i in range(2):
+            #     ax = axes[i]
+            #     ax.set_xticks([])
+            #     ax.set_yticks([])
+            #     ax.set_xticklabels([])
+            #     ax.set_yticklabels([])
+            # axes[0].set_title("Real")
+            # axes[1].set_title("Imag")
+            # axes[0].imshow((diff.real), vmin=neg_limit, vmax=pos_limit)
+            # im1 = axes[1].imshow((diff.imag), vmin=neg_limit, vmax=pos_limit)
+            # fig.colorbar(im1, ax=axes.ravel().tolist())
+            # # plt.show()
+            # fig.suptitle('Diff')
+            # plt.savefig("diff {}.png".format(label), dpi=150)
+
+        max_pos_diffs.sort()
+        max_neg_diffs.sort()
+        print('Max pos diffs')
+        print(max_pos_diffs)
+        print('')
+        print('Max neg diffs')
+        print(max_neg_diffs)
+            
+parser = argparse.ArgumentParser(description='Create a plot from reconstruction save or autosave.')
+parser.add_argument('ptyrfile', type=str, help='path to *.ptyr compatible file')
+parser.add_argument('-l', dest='layout', type=str, default='default',
+                   help="""
+                        layout of the plotter, use
+                         - `default` for default
+                         - `weak` for weakly scattering samples
+                         - `black_and_white` for a less colourful appearance
+                         - `nearfield` for full frame (useful for extended probe)
+                        """)
+parser.add_argument('-t', dest='imfile', type=str, 
+                   help='image dump path, if specified the plot is saved instead \
+                   (in a format that depends on the extension -\
+                    typically .png, .jpg, .pdf or .svg)')
+args = parser.parse_args()
+
+from ptypy import io
+from ptypy import utils as u
+
+filename = args.ptyrfile
+template = args.layout
+save = args.imfile
+
+pars = u.Param()
+pars.interactive=True if save is None else False
+
+header = io.h5read(filename,'header')['header']
+if str(header['kind']) == 'fullflat':
+    raise NotImplementedError('Loading specific data from flattened dump not yet supported')
+else: 
+    content = list(io.h5read(filename,'content').values())[0]#['content']
+    runtime = content['runtime']
+    probes = u.Param()
+    probes.update(content['probe'], Convert = True)
+    objects = u.Param()
+    objects.update(content['obj'], Convert = True)
+
+Plotter = MPLplotter(pars=pars, probes = probes, objects=objects, runtime= runtime)
+Plotter._set_autolayout(template)
+Plotter.update_plot_layout()
+Plotter.plot_all()
+Plotter.draw()
+Plotter.plot_all()
+Plotter.draw()
+# Plotter.plot_diff()
+# Plotter.compute_st_dev()
+# Plotter.compute_all_diffs()
+
+def handle_close(evt):
+    sys.exit()
+Plotter.plot_fig.canvas.mpl_connect('close_event', handle_close)
+
+def handle_resize(evt):
+   Plotter.plot_all()
+Plotter.plot_fig.canvas.mpl_connect('resize_event', handle_resize)
+
+if save is not None:
+    Plotter.plot_fig.savefig(save,dpi = 300)
+else:
+    while Plotter:
+        #Plotter.plot_all()
+        Plotter.draw()
+        u.pause(0.1)
+ 
