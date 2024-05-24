@@ -22,7 +22,7 @@ p.data_type = "single"
 p.run = None
 p.io = u.Param()
 p.io.home = "/".join([tmpdir, "ptypy_letizia"])
-p.io.autosave = u.Param(active=False)
+p.io.autosave = u.Param(active=True)
 p.io.autoplot = u.Param(active=False)
 p.io.autoplot.layout='minimal'
 
