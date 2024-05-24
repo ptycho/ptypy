@@ -762,7 +762,6 @@ class GaussianModel(BaseModel):
         
         # Store omega so that we can use it later
         for i, (k,ov) in enumerate(self.omega.views.items()):
-            print(i, ov.shape)
             ov.data[:] = 1j * omega[i]
 
         # Outer loop: through diffraction patterns
