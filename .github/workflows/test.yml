@@ -54,10 +54,10 @@ jobs:
         conda install conda=${{ matrix.python-version.conda }} python=${{ matrix.python-version.python }}
         conda --version
     - name: Upgrade to latest conda version
-        if: ${{ matrix.python-version.conda = 'latest' }}
-        run: |
-          conda update conda
-          conda --version
+      if: ${{ matrix.python-version.conda == 'latest' }}
+      run: |
+        conda update conda
+        conda --version
     - name: Install dependencies
       run: |
         # replace python version in core dependencies
