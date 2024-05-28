@@ -1693,9 +1693,9 @@ class ModelManager(object):
 
         # Reformatting
         ilog_message('Reformatting probe/obj/exit)')
-        self.ptycho.probe.reformat(True, update=False)
-        self.ptycho.obj.reformat(True, update=False)
-        self.ptycho.exit.reformat(True, update=False)
+        self.ptycho.probe.reformat(True, update=True)
+        self.ptycho.obj.reformat(True, update=True)
+        self.ptycho.exit.reformat(True, update=True)
 
         # Initialize probe/object/exit
         ilog_message('%Initializing probe/obj/exit)')
