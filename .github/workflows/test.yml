@@ -24,44 +24,33 @@ jobs:
       max-parallel: 10
       fail-fast: false
       matrix:
-        python-version: # There is a bug in conda 24.1.2 for Python < 3.12 so we pin the version to 23.11.0
-          - python: "3.8"
-            conda: "23.11.0"
-          - python: "3.9"
-            conda: "23.11.0"
-          - python: "3.10"
-            conda: "23.11.0"
-          - python: "3.11"
-            conda: "23.11.0"
-          - python: "3.12"
-            conda: "latest"        
-    name: Testing with Python ${{ matrix.python-version.python }} 
+        python-version:
+          - "3.8"
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
+    name: Testing with Python ${{ matrix.python-version }} 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version.python }}
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
-        python-version:  ${{ matrix.python-version.python }}
+        python-version:  ${{ matrix.python-version }}
     - name: Add conda to system path
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         echo $CONDA/bin >> $GITHUB_PATH
         conda --version
-    - name: Change conda version if necessary
-      if: ${{ matrix.python-version.conda != 'latest' }}
-      run: |
-        conda install conda=${{ matrix.python-version.conda }} python=${{ matrix.python-version.python }}
-        conda --version
-    - name: Upgrade to latest conda version
-      if: ${{ matrix.python-version.conda == 'latest' }}
+    - name: Make sure conda is updated
       run: |
         conda update conda
         conda --version
     - name: Install dependencies
       run: |
         # replace python version in core dependencies
-        sed -i 's/python/python=${{ matrix.python-version.python }}/' dependencies_core.yml
+        sed -i 's/python/python=${{ matrix.python-version }}/' dependencies_core.yml
         conda env update --file dependencies_core.yml --name base
         conda list	
     - name: Prepare ptypy
