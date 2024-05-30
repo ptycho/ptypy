@@ -13,6 +13,59 @@ from ptypy.core.data import PtyScan
 from ptypy.experiment import register
 from ptypy.utils.verbose import log
 
+# Instructions:
+
+####
+# Install requirements...
+####
+
+# - Download ptypy
+"""
+git clone https://github.com/swelborn/ptypy.git
+"""
+
+# - Install ptypy requirements (_full.yml to be safe)
+"""
+mamba env create -f dependencies_full.yml
+conda activate ptypy_full
+"""
+
+# - Copy this into a requirements.txt file.
+
+"""
+pydantic
+matplotlib==3.7
+"""
+
+# - pip install it
+"""
+pip install -r requirements.txt
+"""
+
+# - install cosmicstreams
+"""
+git clone https://github.com/silvioachilles/cosmicstreams.git
+pip install -e cosmicstreams/
+"""
+
+####
+# Run...
+####
+
+"""
+❯ python
+Python 3.11.9 | packaged by conda-forge | (main, Apr 19 2024, 18:36:13) [GCC 12.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> from ptypy.experiment.cosmicstream import CosmicStreamLoader
+>>> loader = CosmicStreamLoader()
+>>> loader.initialize()
+Listening on localhost:37013 for topic: b'start'
+Listening on localhost:37013 for topic: b'frame'
+Listening on localhost:37013 for topic: b'stop'
+Listening on localhost:37013 for topic: b'abort'
+Waiting for metadata...
+"""
+
 
 class Server(BaseModel):
     ip: str
