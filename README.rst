@@ -1,28 +1,7 @@
-Phase Focus Limited of Sheffield, UK, has an international portfolio
-of patents and pending applications which relate to ptychography.
-A current list is available `here <http://www.phasefocus.com/patents/>`__.
-
-Phase Focus grants royalty free licences of its patent rights for
-non-commercial academic research use, for reconstruction of simulated
-data and for reconstruction of data obtained at synchrotrons at X-ray
-wavelengths. These licenses can be applied for online by
-clicking on `this link <http://www.phasefocus.com/licence/>`__.
-
-Phase Focus asserts that the software we have made available for
-download may be capable of being used in circumstances which may
-fall within the claims of one or more of the Phase Focus patents.
-Phase Focus advises that you apply for a licence from it before
-downloading any software from this website.
-
-----
-
 PtyPy - Ptychography Reconstruction for Python
 ==============================================
 
 |ptypysite|
-
-.. image:: https://github.com/ptycho/ptypy/actions/workflows/test.yml/badge.svg?branch=master
-    :target: https://github.com/ptycho/ptypy/actions/workflows/test.yml
 
 Welcome Ptychonaut!
 -------------------
@@ -83,34 +62,11 @@ Installation
 
 Installation should be as simple as ::
 
-   $ pip install .
+   $ pip install ptypy
 
 or, as a user, ::
 
-   $ pip install . --user
-
-
-Dependencies
-------------
-
-Ptypy depends on standard python packages:
- * numpy
- * scipy
- * h5py
- * matplotlib & pillow (optional - required for plotting)
- * mpi4py (optional - required for parallel computing)
- * pyzmq (optional - required for the plotting client)
- 
-GPU support
------------
-
-We support an accelerated version of |ptypy| for CUDA-capable GPUs based on our own kernels and the
-`CuPy <https://cupy.dev/>`_ package. We recommend to install the dependencies for this version like so.
-::
-
-    $ conda env create -f accelerate/cuda_cupy/dependencies.yml
-    $ conda activate ptypy_cupy
-    (ptypy_cupy)$ pip install .
+   $ pip install ptypy --user
 
  
 Quicklinks
@@ -138,7 +94,6 @@ Support
 -------
 
 If you are having issues, please let us know.
-
 
 .. |ptypy| replace:: PtyPy
 

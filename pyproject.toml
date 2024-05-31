@@ -3,8 +3,13 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "PtyPy"
+name = "PtyPyTest"
 authors = [
+  { name="Pierre Thibault", email="pthibault@units.it" },
+  { name="Bjoern Enders", email="benders@lbl.gov"},
+  { name="Benedikt Daurer", email="benedikt.daurer@diamond.ac.uk" },
+]
+maintainers = [
   { name="Bjoern Enders", email="benders@lbl.gov"},
   { name="Pierre Thibault", email="pthibault@units.it" },
   { name="Benedikt Daurer", email="benedikt.daurer@diamond.ac.uk" },
@@ -31,7 +36,8 @@ dependencies = [
 
 [project.optional-dependencies]
 full = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw"]
-
+cupy-cuda11x = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "cupy-cuda11x"]
+cupy-cuda12x = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "cupy-cuda12x"]
 
 #[project.scripts]
 #"ptypy.plot" = 'scripts/ptypy.plot'
