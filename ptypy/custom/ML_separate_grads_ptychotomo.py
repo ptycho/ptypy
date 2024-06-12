@@ -13,6 +13,8 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
+import os
+import h5py
 
 from .. import utils as u
 from ..utils.verbose import logger
@@ -23,6 +25,8 @@ from ..engines.base import BaseEngine, PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull
 from ..utils.tomo import AstraTomoWrapperViewBased
 from scipy.ndimage.filters import gaussian_filter
+from ..engines.utils import Cnorm2, Cdot, reduce_dimension
+from ..utils.parallel import allreduce
 
 import matplotlib.pyplot as plt
 from matplotlib import cm, colors
@@ -173,12 +177,22 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         self.pshape = list(self.ptycho.obj.S.values())[0].data.shape[-1]
 
-        n_angles = len(self.ptycho.obj.S)
-        angles = np.linspace(0, np.pi, n_angles, endpoint=True)
+        # For simulated data
+        # n_angles = len(self.ptycho.obj.S)
+        # angles = np.linspace(0, np.pi, n_angles, endpoint=True)
+
+        # For real data
+        angles = np.load('angles_rad.npy') 
 
         self.angles_dict = {}
         for i,k in enumerate(self.ptycho.obj.S):
             self.angles_dict[k] = angles[i]
+
+        # ONLY FOR THE REAL DATA
+        self.shifts_per_angle = {}
+        self.shifts = np.load('xyshifts5.npy')
+        for i,k in enumerate(self.ptycho.obj.S):
+            self.shifts_per_angle[k]  =  self.shifts[:,i]  # dx, dy
 
         self.ptycho.citations.add_article(
             title='Maximum-likelihood refinement for coherent diffractive imaging',
@@ -205,16 +219,19 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # This is needed in poly_line_coeffs_rho
         self.omega = self.ex  
 
-        # Volume  
-        rho_real = np.load('real_vol_35it.npy')
-        rho_imag = np.load('imag_vol_35it.npy')
-        rho_real_br = gaussian_filter(rho_real, sigma=2.5)
-        rho_imag_br = gaussian_filter(rho_imag, sigma=2.5)
+        # Initialise volume  
+        rho_real = np.load('recon_phase4.npy') #('real_vol_35it.npy')  #
+        rho_imag = np.load('recon_ampl4.npy') #('imag_vol_35it.npy')  #
+        # rho_real_br = gaussian_filter(rho_real, sigma=2.5)
+        # rho_imag_br = gaussian_filter(rho_imag, sigma=2.5)
+        
+        # starting from volume of zeros
         # self.rho = np.zeros_like(rho_real) + 1j * np.zeros_like(rho_imag)
-        self.rho = rho_real_br + 1j * rho_imag_br
+        
+        # starting from conv volume
+        self.rho = rho_real + 1j * rho_imag
 
-        # This 
-        stacked_views = np.array([v.data for v in self.ptycho.obj.views.values()])
+        stacked_views = np.array([v.data for v in self.ptycho.obj.views.values() if v.pod.active])
         self.projected_rho = np.zeros_like((stacked_views), dtype=np.complex64)
 
         # Probe gradient and minimization direction
@@ -233,6 +250,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             obj=self.ptycho.obj, 
             vol=self.rho, 
             angles=self.angles_dict, 
+            shifts=self.shifts_per_angle,  #THIS IS ONLY FOR REAL DATA
             obj_is_refractive_index=False, 
             mask_threshold=35
             )
@@ -270,7 +288,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         Updates the views so that the projected rho (non-exponentiated)  
         can be retrieved from pod.object .
         """
-        for i, (k,v) in enumerate(self.ptycho.obj.views.items()):
+        for i, (k,v) in enumerate([(i,v) for i,v in self.ptycho.obj.views.items() if v.pod.active]):
             v.data[:] = self.projected_rho[i]
 
 
@@ -290,11 +308,13 @@ class MLPtychoTomo(PositionCorrectionEngine):
             error_dct = self.ML_model.new_grad_pr()
             
             new_rho_grad, new_pr_grad = self.rho_grad_new, self.pr_grad_new
+            allreduce(new_rho_grad)
 
             # SCALING: needed for the regularizer to work on probe coeffs
-            n_pixels = np.prod(np.shape(self.rho))
-            scaling_factor = 0.57 * n_pixels         
-            new_rho_grad /= scaling_factor
+            # Maybe not needed on real data
+            # n_pixels = np.prod(np.shape(self.rho))
+            # scaling_factor = 0.57 * n_pixels         
+            # new_rho_grad /= scaling_factor
 
             print('rho_grad: %.2e' % np.linalg.norm(self.rho_grad))
             print('new_rho_grad: %.2e ' % np.linalg.norm(new_rho_grad))
@@ -306,12 +326,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
             except:
                 iter=0
 
-            #if iter > 50:
-            # plot_complex_array(new_rho_grad[:, :, 26], title='new_rho_grad, start of it {}'.format(iter))
-
-            # PLOTTING
-            # if iter%10 == 0:
-            #     self.projector.plot_complex_array(new_rho_grad[26, :, :], title='new_rho_grad computed by new_grad')
 
             tg += time.time() - t1
 
@@ -367,7 +381,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             #     for name, s in self.ob_h.storages.items():
             #         s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
             # else:
-            # plot_complex_array(self.rho_grad[:, 26, :], title='self.rho_grad, end of it {}'.format(iter))
+
             self.rho_h -= self.rho_grad
 
             self.pr_h *= bt_pr / self.tmin_pr
@@ -420,8 +434,19 @@ class MLPtychoTomo(PositionCorrectionEngine):
             except:
                 iter = 0
 
-            if iter%50 == 0:
-                self.projector.plot_vol(self.rho, title= 'NO REG')
+            if iter==50:
+                self.projector.plot_vol(self.rho, title= '50iters')
+
+            # if iter==200:
+            #     self.projector.plot_vol(self.rho, title= '200iters')
+                
+            # SAVING VOL WHEN RUNNING ON WILSON
+            # if iter<=1 and not os.path.exists("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_phase.cmap"):
+            #     with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_phase.cmap", "w") as f:
+            #         f["data"] = np.real(self.rho)#[100:-100,100:-100,100:-100]
+            #     with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_ampl.cmap", "w") as f:
+            #         f["data"] = np.imag(self.rho)#[#100:-100,100:-100,100:-100]
+
 
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
@@ -437,6 +462,53 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
+
+        # FIRST OPR METHOD ###################
+        PERFORM_OPR = False
+        
+        if PERFORM_OPR:
+            pr_input = np.array([np.squeeze(s.data) for name, s in self.pr.storages.items()])
+            new_pr, modes, coeffs = reduce_dimension(pr_input, 12)
+
+            for i, (name, s) in enumerate(self.pr.storages.items()):
+                s.data[:] = new_pr[i]       
+       
+
+        # SECOND OPR METHOD ###################
+#         pr_input = [np.squeeze(s.data) for name, s in self.pr.storages.items()]
+        
+#         all_m_centers = []
+        
+#         for pr in pr_input:
+#             all_m_centers.append(mass_center(np.abs(pr)))
+            
+#         # average_x = np.mean(np.array([coords[0] for coords in all_m_centers]))
+#         # average_y = np.mean(np.array([coords[1] for coords in all_m_centers]))
+#         mean_center = [16, 16]
+        
+#         shifts_to_apply = [coords-mean_center for coords in all_m_centers]
+
+#         shifted_probes = []
+#         for n, pr in enumerate(pr_input):
+#             shifted_probes.append(shift(pr, -1*(shifts_to_apply[n])))
+
+#         reduced_pr, modes, coeffs = reduce_dimension(np.array(shifted_probes), 48)
+        
+#         newest_pr = []
+#         for n, pr in enumerate(reduced_pr):
+#             newest_pr.append(shift(pr, (shifts_to_apply[n])))
+
+#         for i, (name, s) in enumerate(self.pr.storages.items()):
+#             s.data[:] = newest_pr[i]
+            
+#         if not os.path.isfile('pr_input.png') and iter==200:
+#             print('shifts', shifts_to_apply[2])
+#             print('mean_center', mean_center)
+#             print('original_center', all_m_centers[2])
+#             plot_complex_array(pr_input[2], 'pr_input.png')
+#             plot_complex_array(shifted_probes[2], 'shifted_probes.png')
+#             plot_complex_array(newest_pr[2], 'newest_pr.png')
+
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
 
     def _post_iterate_update(self):
@@ -626,11 +698,12 @@ class GaussianModel(BaseModel):
         i = 0
         for dname, diff_view in self.di.views.items():
             for name, pod in diff_view.pods.items():
-                pod.object = self.projected_rho[i]
-                i+=1
+                if pod.active:
+                    pod.object = self.projected_rho[i]
+                    i+=1
 
         products_xi_psi_conj = []
-        i=0
+
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
             if not diff_view.active:
@@ -666,7 +739,7 @@ class GaussianModel(BaseModel):
                 psi = pod.probe * np.exp(1j * pod.object)   # CHANGING from pod.object 
                 product_xi_psi_conj = -1j* xi * psi.conj() 
                 products_xi_psi_conj.append(product_xi_psi_conj)
-
+                
         self.rho_grad = 2 * self.projector.backward(np.moveaxis(np.array(products_xi_psi_conj), 1, 0))
         self.engine.rho_grad_new = self.rho_grad
 
@@ -751,17 +824,10 @@ class GaussianModel(BaseModel):
         B = np.zeros((3,), dtype=np.longdouble)
         Brenorm = 1. / self.LL[0]**2
 
-        # try:
-        #     iter = self.engine.ptycho.runtime.iter_info[-1]['iteration']
-        # except:
-        #     iter=0
-        # if iter%10 == 0:
-        #     self.projector.plot_complex_array(rho_h[26, :, :], title='rho_h passed to poly_line_rho')
-
         omega = np.array(self.projector.forward(rho_h))
         
         # Store omega so that we can use it later
-        for i, (k,ov) in enumerate(self.omega.views.items()):
+        for i, (k,ov) in enumerate([(i,v) for i,v in self.omega.views.items() if v.pod.active]):
             ov.data[:] = 1j * omega[i]
 
         # Outer loop: through diffraction patterns
@@ -844,7 +910,6 @@ class GaussianModel(BaseModel):
         
         # Store omega so that we can use it later
         for i, (k,ov) in enumerate(self.omega.views.items()):
-            print(i, ov.shape)
             ov.data[:] = 1j * omega[i]
 
         # Outer loop: through diffraction patterns
