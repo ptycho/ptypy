@@ -6,6 +6,8 @@ from ptypy import utils as u
 import ptypy.simulations as sim
 import ptypy.utils.tomo as tu
 from ptypy.custom import ML_separate_grads_ptychotomo, ML_separate_grads
+from itertools import combinations
+import random
 
 import astra
 import matplotlib.pyplot as plt
@@ -13,6 +15,29 @@ import pathlib
 import numpy as np
 import tempfile
 tmpdir = tempfile.gettempdir()
+
+from scipy.ndimage import gaussian_filter
+
+
+def plot_complex_array(X, title=''):
+    norm = colors.Normalize(-5, 5)
+    cmap = cm.get_cmap("Spectral")
+
+    fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(6,4), dpi=100)
+    max_lim = max(np.max(X.real), np.max(X.imag))
+    min_lim = min(np.min(X.real), np.min(X.imag))
+
+    im0 = axes[0].imshow(X.real, vmax=max_lim, vmin=min_lim)
+    axes[0].set_title(f"Real part")
+
+    im1 = axes[1].imshow(X.imag, vmax=max_lim, vmin=min_lim)
+    axes[1].set_title(f"Imag part")
+
+    fig.suptitle(title)
+    fig.colorbar(im1, ax=axes.ravel().tolist())
+    plt.show() 
+    plt.savefig(title+'.png')
+
 
 ### PTYCHO PARAMETERS
 p = u.Param()
@@ -78,7 +103,7 @@ sim.detector = u.Param(dtype=np.uint32,full_well=2**32-1,psf=None)
 
 # Scan model
 scan = u.Param()
-scan.name = 'BlockFull'
+scan.name = 'BlockFull' #'Full'
 
 scan.coherence = u.Param()
 scan.coherence.num_probe_modes=1
@@ -100,12 +125,37 @@ scan.data = u.Param()
 scan.data.name = 'SimScan'
 #scan.data.update(sim)
 
+
+all_shifts = [
+    (-1, 0), (-1, 1), (0, 1), (0, -1), (1, -1), (1, 0), (1, 1)
+]
+
+# all_shifts = [
+#     (-1, 0), (-3, 1), (0, 1), (0, -3), (1, -1), (3, 0), (1, 3)
+# ]
+
+apply_shift = False
+
+if apply_shift:
+    # cancel everyhing and restart file
+    with open("shifts.txt", "w") as myfile:
+        myfile.write('  ') 
+
 # Iterate over nr. of tomographic angles
 print('##########################')
 p.scans = u.Param()
 for i in range(nangles):
     simi = sim.copy(depth=99)
-    simi.sample.model = np.exp(1j * proj[i])
+    proj_new = proj[i]
+
+    if apply_shift: 
+        selected_shift = random.choice(all_shifts)
+        with open("shifts.txt", "a") as myfile:
+            myfile.write('probe '+ str(i) + ':    (' +str(selected_shift[0]) +  ', ' + str(selected_shift[1]) + ') \n')
+        shifted_proj_1 = np.roll(proj_new, selected_shift[0], axis=0)   # up or down (neg = up, pos = down)      
+        proj_new = np.roll(shifted_proj_1, selected_shift[1], axis=1)   # right or left (neg = left, pos = right)   
+
+    simi.sample.model = np.exp(1j * proj_new)
     scani = scan.copy(depth=99)
     scani.data.update(simi)
     setattr(p.scans, f"scan{i}", scani)
@@ -114,10 +164,11 @@ for i in range(nangles):
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'MLPtychoTomo'  
-p.engines.engine00.numiter = 400
+p.engines.engine00.numiter = 51 #202 #8002
 p.engines.engine00.probe_update_start = 0
-#p.engines.engine00.poly_line_coeffs = 'all'
-
+# p.engines.engine00.subspace_dim = 10
+# p.engines.engine00.subspace_start = 0
+# p.engines.engine00.poly_line_coeffs = 'all'
 # p.engines.engine00.fourier_relax_factor = 0.05
 # p.engines.engine00.probe_center_tol = 1
 
@@ -125,71 +176,37 @@ u.verbose.set_level("info")
 
 if __name__ == "__main__":
     P = Ptycho(p,level=5)
-
-    # # Tomography
-    # angles_dict = {}
-    # for i,k in enumerate(P.obj.S):
-    #     angles_dict[k] = angles[i]
-
-    # vol = np.zeros((pshape, pshape, pshape), dtype=np.complex64)
-    # T = tu.AstraTomoWrapperViewBased(P.obj, vol, angles_dict, obj_is_refractive_index=False, mask_threshold=35)
-    # T.backward(type="SIRT3D_CUDA", iter=100)
-
-    # # Plotting
-    pshape = P._vol.shape[0]
-    rmap = tu.refractive_index_map(pshape)
-    X = rmap.reshape(pshape, pshape, pshape)
-    R = np.real(P._vol)
-    I = np.imag(P._vol)
     
-    pos_limit = max([np.max(X.real), np.max(R)])
-    neg_limit = min([np.min(X.real), np.min(R)])
+    ## Modifying probes  #############################
+#     P = Ptycho(p,level=3)
 
-    fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(6,4), dpi=100)
-    for i in range(3):
-        for j in range(2):
-            ax = axes[j,i]
-            ax.set_xticks([])
-            ax.set_yticks([])
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-    axes[0,0].set_title("slice(Z)")
-    axes[0,1].set_title("slice(Y)")
-    axes[0,2].set_title("slice(X)")
-    axes[0,0].set_ylabel("Original")
-    axes[0,0].imshow((X.real)[pshape//2], vmin=neg_limit, vmax=pos_limit)
-    axes[0,1].imshow((X.real)[:,pshape//2], vmin=neg_limit, vmax=pos_limit)
-    axes[0,2].imshow((X.real)[:,:,pshape//2], vmin=neg_limit, vmax=pos_limit)
-    axes[1,0].set_ylabel("Recons")
-    axes[1,0].imshow((R)[pshape//2], vmin=neg_limit, vmax=pos_limit)
-    axes[1,1].imshow((R)[:,pshape//2], vmin=neg_limit, vmax=pos_limit)
-    im1 = axes[1,2].imshow((R)[:,:,pshape//2], vmin=neg_limit, vmax=pos_limit)
-    fig.suptitle('Real part, final vol')
-    fig.colorbar(im1, ax=axes.ravel().tolist())
-    plt.show()
+#     storage_list = list(P.probe.storages.values())
 
-    pos_limit = max([np.max(X.imag), np.max(I)])
-    neg_limit = min([np.min(X.imag), np.min(I)])
-    fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(6,4), dpi=100)
-    for i in range(3):
-        for j in range(2):
-            ax = axes[j,i]
-            ax.set_xticks([])
-            ax.set_yticks([])
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-    axes[0,0].set_title("slice(Z)")
-    axes[0,1].set_title("slice(Y)")
-    axes[0,2].set_title("slice(X)")
-    axes[0,0].set_ylabel("Original")
-    axes[0,0].imshow((X.imag)[pshape//2], vmin=neg_limit, vmax=pos_limit)
-    axes[0,1].imshow((X.imag)[:,pshape//2], vmin=neg_limit, vmax=pos_limit)
-    axes[0,2].imshow((X.imag)[:,:,pshape//2], vmin=neg_limit, vmax=pos_limit)
-    axes[1,0].set_ylabel("Recons")
-    axes[1,0].imshow((I)[pshape//2], vmin=neg_limit, vmax=pos_limit)
-    axes[1,1].imshow((I)[:,pshape//2], vmin=neg_limit, vmax=pos_limit)
-    im1 = axes[1,2].imshow((I)[:,:,pshape//2], vmin=neg_limit, vmax=pos_limit)
+#     # shift storages and Transfer views
+#     i = 0
+#     for storage in storage_list:
+#         # storage.center = (20,20)       # changed from (16, 16)
+#         storage.data[:] = gaussian_filter(storage.data, sigma=0.8)
+#         plot_complex_array(storage.data, title='storage{}'.format(i))
 
-    fig.suptitle('Imag part, final vol')
-    fig.colorbar(im1, ax=axes.ravel().tolist())
-    plt.show()
+#         for v in storage.views:
+#             v.storage = storage
+#             v.storageID = storage.ID
+
+#         i += 1
+
+#     # # Update probe
+#     P.probe.reformat()
+
+#     # # # Unforunately we need to delete the storage here due to DM being unable  
+#     # # # to ignore unused storages. This is due to the /=nrm division in the 
+#     # # # probe update  
+#     # # for s in storage_list[1:]:
+#     # #     P.probe.storages.pop(s.ID)
+
+#     # Finish level 4
+#     P.print_stats()
+#     P.init_engine()
+#     P.run()
+#     P.finalize()
+    # ##############################

@@ -15,7 +15,9 @@ import matplotlib.pyplot as plt
 from matplotlib import cm, colors
 import ptypy.utils.tomo as tu
 from scipy.ndimage import gaussian_filter
+import os
 
+import csv
 
 # For creating example
 def sample_volume(N):
@@ -41,18 +43,17 @@ class AstraTomoWrapper:
     Base class for wrappers for the Astra projectors.
     """    
 
-    def __init__(self, obj, vol, angles, obj_is_refractive_index=False, mask_threshold=0):
+    def __init__(self, obj, vol, angles, shifts, obj_is_refractive_index=False, mask_threshold=0):
         self._obj = obj
         self._vol = vol
         self._angles = angles
+        self._shifts_per_angle = shifts
         self._obj_is_rindex = obj_is_refractive_index
         self._mask_threshold = mask_threshold
-        self._create_proj_geometry()
         self._create_vol_geom_and_ids()
-        self._create_proj_array_and_ids()
 
     def _create_proj_array_and_ids(self):
-        n_views = len(self._obj.views.values())
+        n_views = len([v for v in self._obj.views.values() if v.pod.active])
         view_shape = list(self._obj.views.values())[0].shape
         proj_array_shape = (n_views, view_shape[0], view_shape[1])
         empty_proj_array = np.zeros(proj_array_shape, dtype=np.complex64)
@@ -113,9 +114,10 @@ class AstraTomoWrapper:
         axes[1,0].imshow((R)[pshape//2], vmin=neg_limit, vmax=pos_limit)
         axes[1,1].imshow((R)[:,pshape//2], vmin=neg_limit, vmax=pos_limit)
         im1 = axes[1,2].imshow((R)[:,:,pshape//2], vmin=neg_limit, vmax=pos_limit)
-        fig.suptitle('Real part, '+ title)
+        fig.suptitle('Real part')
         fig.colorbar(im1, ax=axes.ravel().tolist())
         plt.show()
+        plt.savefig('real_vol_'+title+'.png')
 
         pos_limit = max([np.max(X.imag), np.max(I)])
         neg_limit = min([np.min(X.imag), np.min(I)])
@@ -139,9 +141,11 @@ class AstraTomoWrapper:
         axes[1,1].imshow((I)[:,pshape//2], vmin=neg_limit, vmax=pos_limit)
         im1 = axes[1,2].imshow((I)[:,:,pshape//2], vmin=neg_limit, vmax=pos_limit)
 
-        fig.suptitle('Imag part, '+ title)
+        fig.suptitle('Imag part')
         fig.colorbar(im1, ax=axes.ravel().tolist())
         plt.show()
+        plt.savefig('imag_vol_'+title+'.png')
+   
    
     def plot_vol_only_recons(self, vol, iter, title=''):
         pshape = vol.shape[0]
@@ -185,13 +189,33 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
     """
 
     def _create_proj_geometry(self):
-        self._fsh = np.array([v.shape for v in self._obj.views.values()]).max(axis=0)
-        self._vec = np.zeros((len(self._obj.views),12))
-        for i,(k,v) in enumerate(self._obj.views.items()):
+        self._fsh = np.array([v.shape for v in self._obj.views.values() if v.pod.active]).max(axis=0)
+        self._vec = np.zeros((len([v for v in self._obj.views.values() if v.pod.active]),12))
+
+        vals_to_save = []
+        i=0
+        for i,(k,v) in enumerate([(i,v) for i,v in self._obj.views.items() if v.pod.active]):
 
             alpha = self._angles[v.storageID]
-            y = v.dcoord[0] - v.storage.center[0]
-            x = v.dcoord[1] - v.storage.center[1]
+
+            if i==0:
+                ref_id = v.storageID
+            
+            if v.storageID == ref_id:
+                vals_to_save.append({
+                    's_id': v.storageID,
+                    'v.storage.center[0]':v.storage.center[0],
+                    'v.storage.center[1]':v.storage.center[1],
+                    # 'corrected_shift_dx': corrected_shift_dx,
+                    # 'corrected_shift_dy':corrected_shift_dy
+                })
+            
+            # ONLY FOR REAL DATA
+            shift_dx, shift_dy = self._shifts_per_angle[v.storageID]
+            corrected_shift_dx, corrected_shift_dy = shift_dx+10, shift_dy+10 
+            
+            y = v.dcoord[0] - v.storage.center[0] + corrected_shift_dy
+            x = v.dcoord[1] - v.storage.center[1] + corrected_shift_dx
 
             # ray direction
             self._vec[i,0] = np.sin(alpha)
@@ -212,6 +236,15 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
             self._vec[i,9] = 0
             self._vec[i,10] = 0
             self._vec[i,11] = 1
+            i+=1
+
+        if not os.path.exists("/dls/science/users/iat69393/ptycho-tomo-project/coords_NEW2.csv"):
+            keys = vals_to_save[0].keys()
+            
+            with open('coords_NEW2.csv', 'w', newline='') as output_file:
+                dict_writer = csv.DictWriter(output_file, keys)
+                dict_writer.writeheader()
+                dict_writer.writerows(vals_to_save)
 
         self._proj_geom = astra.create_proj_geom('parallel3d_vec',  self._fsh[0], self._fsh[1], self._vec)
         return self._proj_geom
@@ -220,8 +253,14 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
     def _update_data_at_id_astra(self, matrix, id):
         astra.data3d.store(id, matrix)
 
+    def _delete_data_at_id_astra(self, id):
+        astra.data3d.delete(id)
+
 
     def forward(self, input_vol, type = "FP3D_CUDA", iter=10, plot_one_view=False):
+
+        self._create_proj_geometry()
+        self._create_proj_array_and_ids()
 
         self._update_data_at_id_astra(np.real(input_vol), self._vol_id_real)
         self._update_data_at_id_astra(np.imag(input_vol), self._vol_id_imag)
@@ -246,21 +285,24 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
         _ob_views_imag = np.moveaxis(_proj_data_imag, 0, 1)
 
         output_array = []
-        for i, (k,v) in enumerate(self._obj.views.items()):
+        for i, (k,v) in enumerate([(i,v) for i,v in self._obj.views.items() if v.pod.active]):
+          
             real_part = _ob_views_real[i] 
             imag_part = _ob_views_imag[i]
             _obj = real_part + 1j * imag_part
             output_array.append(_obj)
-
-            ## PLOTTING
-            # if plot_one_view and i==26:
-            #     self.plot_complex_array(_obj, title='proj 26 computed by forward')
         
+        # Delete these as we don't need them any more
+        self._delete_data_at_id_astra(self._proj_id_real)
+        self._delete_data_at_id_astra(self._proj_id_imag)
         return output_array
 
 
     def backward(self, input_proj, type="BP3D_CUDA", iter=10):
 
+        self._create_proj_geometry()
+        self._create_proj_array_and_ids()
+        
         self._update_data_at_id_astra(np.real(input_proj), self._proj_id_real)
         self._update_data_at_id_astra(np.imag(input_proj), self._proj_id_imag)
 
@@ -280,6 +322,9 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
         vol_real = astra.data3d.get(self._vol_id_real)
         vol_imag = astra.data3d.get(self._vol_id_imag)
         volume_update = vol_real + 1j * vol_imag
-
+        
+        # Delete these as we don't need them any more
+        self._delete_data_at_id_astra(self._proj_id_real)
+        self._delete_data_at_id_astra(self._proj_id_imag)
         return volume_update
 

@@ -6,8 +6,10 @@ from ptypy.utils.parameters import Param
 from ptypy.utils.array_utils import crop_pad, clean_path
 from ptypy.utils.plot_utils import plt # pyplot import with all the specialized settings
 from ptypy.utils.plot_utils import PtyAxis, imsave, pause, rmphaseramp
+from ptypy.utils.scripts import mass_center
 import numpy as np
 import time
+import skimage
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
@@ -126,32 +128,6 @@ class MPLplotter(object):
             return sh
         self.num_shape_list = []
         num_shape_list = self.num_shape_list
-        # for key in sorted(self.ob.keys()):
-        #     cont = self.ob[key]
-        #     plot = self.p.ob.copy()
-        #     # determine the shape
-        #     sh = cont.data.shape[-2:]
-        #     if self.p.simplified_aspect_ratios:
-        #         sh = simplify_aspect_ratios(sh)
-        #     if plot.use_colorbar:
-        #         sh=(sh[0],int(sh[1]*1.15))
-
-        #     layers = plot.layers
-        #     if layers is None:
-        #         layers = cont.data.shape[0]
-        #     if np.isscalar(layers):
-        #         layers = list(range(layers))
-        #     plot.layers = layers
-        #     plot.axes_index = len(num_shape_list)
-        #     num_shape = [len(layers)*len(plot.auto_display)+int(plot.local_error), sh]
-        #     num_shape_list.append(num_shape)
-            # self.ob_plot[key]=plot
-
-        # # per default we will use the a frame similar to the last object frame for plotting
-        # if np.array(self.p.plot_error).any():
-        #     self.error_axes_index = len(num_shape_list)-1
-        #     self.error_frame = num_shape_list[-1][0]
-        #     num_shape_list[-1][0] += 1  # add a frame
 
         for key in sorted(self.pr.keys()):
             cont = self.pr[key]
@@ -386,54 +362,12 @@ class MPLplotter(object):
         self.plot_error()
         self.draw()
 
-    def create_animation(self):
-        all_probes=[]
-        for key, storage in self.pr.items():
-            all_probes.append(np.squeeze(np.real(storage.data)))
-    
-        import matplotlib.pyplot as orig_plt
-        import matplotlib.animation as animation
-
-        a = np.array(all_probes)
-
-        a = [[[0,0,1],[0,0,0],[0,0,0]],
-            [[0,1,0],[0,0,0],[0,0,0]],
-            [[1,0,0],[0,0,0],[0,0,0]],
-            [[0,0,0],[0,0,1],[0,0,0]],
-            [[0,0,0],[0,1,0],[0,0,0]],
-            [[0,0,0],[1,0,0],[0,0,0]],
-            [[0,0,0],[0,0,0],[0,0,1]],
-            [[0,0,0],[0,0,0],[0,1,0]],
-            [[0,0,0],[0,0,0],[1,0,0]]]
-        a = np.array(a)
-
-        fig, ax = plt.subplots(figsize=(4, 4))
-
-        frame = 0
-        im = plt.imshow(a[frame], origin='lower')
-        plt.colorbar(shrink=0.5)
-
-        def update(*args):
-            global frame
-
-            im.set_array(a[frame])
-
-            frame += 1
-            frame %= len(a)
-
-            return im,
-
-        ani = animation.FuncAnimation(fig, update, interval=50)
-        plt.show()
-        ani.save("movie.mp4")
-
 
     def compute_st_dev(self):
 
-        # THIS IS FOR THE REAL PART
         all_probes=[]
         for key, storage in self.pr.items():
-            all_probes.append(np.squeeze(np.real(storage.data)))
+            all_probes.append(np.squeeze(np.abs(storage.data)))
         
         # stacking probes
         all_probes=np.array(all_probes)
@@ -446,8 +380,6 @@ class MPLplotter(object):
                 x_values = all_probes[:, i, k]
                 all_st_devs.append(np.std(x_values))
 
-        print(all_st_devs)
-
         # put together all values (so 32x32 values of st dev)
         # and plot to see how many values we have of a certain st dev 
         # we have across 32x32 pixels probe
@@ -457,38 +389,34 @@ class MPLplotter(object):
         plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
         plt.savefig("all_st_devs.png", dpi=150)
 
-    def compute_st_dev_imag(self):
-
-        # THIS IS FOR THE IMAG PART
-        all_probes=[]
-        for key, storage in self.pr.items():
-            all_probes.append(np.squeeze(np.imag(storage.data)))
-        
-        all_probes=np.array(all_probes)
-        
-        all_st_devs = []
-        for i in range(all_probes.shape[1]):
-            for k in range(all_probes.shape[2]):
-                x_values = all_probes[:, i, k]
-                all_st_devs.append(np.std(x_values))
-
-        print(all_st_devs)
-
-        plt.hist(np.array(all_st_devs), bins=40, density=True, alpha=0.6, color='b')
-        plt.xlabel('st dev value')
-        plt.ylabel('perc. amount of pixels corresp to st dev')
-        plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
-        plt.savefig("all_st_devs_imag.png", dpi=150)
+ 
     
     def plot_diff_between_two_probes(self, key_probe_1, key_probe_2):
 
-        probe0 = np.squeeze(self.pr[key_probe_1].data)
-        probe10 = np.squeeze(self.pr[key_probe_2].data)
-        diff = probe10- probe0
-        # diff_wrt_1 = [i-probe0 for i in all_probes_real]
+        probe0 = np.squeeze(np.abs(self.pr[key_probe_1].data))
+        probe10 = np.squeeze(np.abs(self.pr[key_probe_2].data))
+        diff = probe10 - probe0
 
-        neg_limit = min([np.min(diff.real), np.min(diff.imag)])
-        pos_limit = max([np.max(diff.real), np.max(diff.imag)])
+        neg_limit = min([np.min(diff)])
+        pos_limit = max([np.max(diff)])
+
+        fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(6,4), dpi=100)
+   
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+
+        im = ax.imshow(diff, vmin=neg_limit, vmax=pos_limit)
+
+        fig.colorbar(im, ax=ax.tolist())
+        plt.show()
+        fig.suptitle('Diff')
+        plt.savefig("Diff {} - {}.png".format(key_probe_1, key_probe_2))
+
+
+        neg_limit = min([np.min(probe0), np.min(probe10)])
+        pos_limit = max([np.max(probe0), np.max(probe10)])
 
         fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(6,4), dpi=100)
         for i in range(2):
@@ -497,98 +425,138 @@ class MPLplotter(object):
             ax.set_yticks([])
             ax.set_xticklabels([])
             ax.set_yticklabels([])
-        axes[0].set_title("Real")
-        axes[1].set_title("Imag")
-        axes[0].imshow((diff.real), vmin=neg_limit, vmax=pos_limit)
-        im1 = axes[1].imshow((diff.imag), vmin=neg_limit, vmax=pos_limit)
-        fig.colorbar(im1, ax=axes.ravel().tolist())
-        plt.show()
-        fig.suptitle('Diff')
-        plt.savefig("Diff {} - {}.png".format(key_probe_1, key_probe_2))
 
+        axes[0].set_title("Probe ".format(key_probe_1))
+        axes[1].set_title("Probe ".format(key_probe_2))
+ 
+        axes[0].imshow(probe0, vmin=neg_limit, vmax=pos_limit)
+        im = axes[1].imshow(probe10, vmin=neg_limit, vmax=pos_limit)
 
-        neg_limit = min([np.min(probe0.real), np.min(probe0.imag),
-                         np.min(probe10.real), np.min(probe10.imag)])
-        pos_limit = max([np.max(probe0.real), np.max(probe0.imag),
-                         np.max(probe10.real), np.max(probe10.imag)])
-
-        fig, axes = plt.subplots(ncols=2, nrows=2, figsize=(6,4), dpi=100)
-        for i in range(2):
-            for j in range(2):
-                ax = axes[j,i]
-                ax.set_xticks([])
-                ax.set_yticks([])
-                ax.set_xticklabels([])
-                ax.set_yticklabels([])
-        axes[0,0].set_title("Probe ".format(key_probe_1))
-        axes[0,1].set_title("Probe ".format(key_probe_2))
-        axes[0,0].set_ylabel("Real")
-        axes[1,0].set_ylabel("Imag")
-        axes[0,0].imshow((probe0.real), vmin=neg_limit, vmax=pos_limit)
-        axes[0,1].imshow((probe10.real), vmin=neg_limit, vmax=pos_limit)
-
-        axes[1,0].imshow((probe0.imag ), vmin=neg_limit, vmax=pos_limit)
-        im1 = axes[1,1].imshow((probe10.imag ), vmin=neg_limit, vmax=pos_limit)
-      
-        # fig.suptitle(' )
-        fig.colorbar(im1, ax=axes.ravel().tolist())
+        fig.colorbar(im, ax=axes.ravel().tolist())
         plt.show()
         plt.savefig("Probe {} and {}.png".format(key_probe_1, key_probe_2), dpi=150)
 
 
-    def compute_all_diffs(self):
-        all_probes=[]
-        for key, storage in self.pr.items():
-            all_probes.append((key, np.squeeze(storage.data)))
+    def plot_diff_wrt_g_truth(self, key_probe_1):
 
-        from itertools import combinations
+        # probe0 = np.squeeze(self.pr['Sscan0G00'].data)
+        # probe0 = np.save('g_truth.npy', probe0)
 
-        pairs_to_subtract = combinations(all_probes, 2)
-        all_diffs = {}
-        max_pos_diffs = []
-        max_neg_diffs = []
+        g_truth = np.abs(np.load('g_truth.npy'))
+        probe10 = np.squeeze(np.abs(self.pr[key_probe_1].data))
+        diff = probe10 - g_truth
+        
+        neg_limit = np.min(diff)
+        pos_limit = np.max(diff)
 
-        for pair in pairs_to_subtract:
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(6,4), dpi=100)
 
-            probe1 = pair[0][1]
-            probe2 = pair[1][1]
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.set_title("Diff")
+        im1 = ax.imshow((diff), vmin=neg_limit, vmax=pos_limit)
+        fig.colorbar(im1, ax=ax)
+        plt.show()
+        fig.suptitle("Diff {} - g_truth.png".format(key_probe_1))
+        plt.savefig("Diff {} - g_truth.png".format(key_probe_1))
 
-            diff = probe2-probe1
-            label = pair[1][0]+' - '+pair[0][0]
-            diff = probe2-probe1
+        neg_limit = min([np.min(g_truth), np.min(probe10)])
+        pos_limit = max([np.max(g_truth), np.max(probe10)])
 
-            neg_limit = min([np.min(diff.real), np.min(diff.imag)])
-            pos_limit = max([np.max(diff.real), np.max(diff.imag)])
-            max_neg_diffs.append(neg_limit)
-            max_pos_diffs.append(pos_limit)
+        fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(6,4), dpi=100)
+        for j in range(2):
+            ax = axes[j]
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+        axes[0].set_title("Probe {}".format(key_probe_1))
+        axes[1].set_title("g_truth ")
+        axes[0].imshow((probe10), vmin=neg_limit, vmax=pos_limit)
+        im1 = axes[1].imshow((g_truth), vmin=neg_limit, vmax=pos_limit)      
 
-            if pos_limit > 600 or neg_limit < -600:
-                self.plot_diff_between_two_probes(pair[1][0], pair[0][0])
+        fig.colorbar(im1, ax=axes.ravel().tolist())
+        plt.show()
+        plt.savefig("Probe {} and g_truth.png".format(key_probe_1), dpi=150)
 
 
-            # fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(6,4), dpi=100)
-            # for i in range(2):
-            #     ax = axes[i]
-            #     ax.set_xticks([])
-            #     ax.set_yticks([])
-            #     ax.set_xticklabels([])
-            #     ax.set_yticklabels([])
-            # axes[0].set_title("Real")
-            # axes[1].set_title("Imag")
-            # axes[0].imshow((diff.real), vmin=neg_limit, vmax=pos_limit)
-            # im1 = axes[1].imshow((diff.imag), vmin=neg_limit, vmax=pos_limit)
-            # fig.colorbar(im1, ax=axes.ravel().tolist())
-            # # plt.show()
-            # fig.suptitle('Diff')
-            # plt.savefig("diff {}.png".format(label), dpi=150)
+    def compute_corr_wrt_g_truth(self, key_probe_1):
+        reference_image = np.abs(np.load('g_truth.npy'))
+        moved_image = np.squeeze(np.abs(self.pr[key_probe_1].data))
 
-        max_pos_diffs.sort()
-        max_neg_diffs.sort()
-        print('Max pos diffs')
-        print(max_pos_diffs)
-        print('')
-        print('Max neg diffs')
-        print(max_neg_diffs)
+        ref_img_center = [16, 16]  
+        moved_image_center = mass_center(moved_image)
+        shift = moved_image_center - ref_img_center
+
+        # h = np.shape(reference_image)[0]
+        # w = np.shape(reference_image)[1] 
+        # radius = 0.12*min([h, w])/2
+        # mask = self.create_circular_mask(h=h, w=w, radius=radius)
+        
+        # shift = skimage.registration.phase_cross_correlation(
+        #     reference_image=reference_image, 
+        #     moving_image=moved_image, 
+        #     reference_mask=mask, 
+        #     moving_mask=mask,
+        #     )
+
+        print(key_probe_1, '    ', shift)
+        print('  ')
+
+        with open("obtained_shifts.txt", "a") as myfile:
+            myfile.write('probe '+ key_probe_1 + ':    (' +str(shift[0]) + ', ' + str(shift[1]) + ') \n')
+        return shift
+
+
+    def create_circular_mask(self, h, w, center=None, radius=None):
+
+        if center is None: # use the middle of the image
+            center = (int(w/2), int(h/2))
+        if radius is None: # use the smallest distance between the center and image walls
+            radius = min(center[0], center[1], w-center[0], h-center[1])
+
+        Y, X = np.ogrid[:h, :w]
+        dist_from_center = np.sqrt((X - center[0])**2 + (Y-center[1])**2)
+
+        mask = dist_from_center <= radius
+        return mask
+
+
+    def plot_shifts_for_all_probes(self):
+
+        with open("obtained_shifts.txt", "w") as myfile:
+            myfile.write(' ')
+        shifts_x = []
+        shifts_y = []
+
+        ids = ['Sscan0G00', 'Sscan1G00', 'Sscan2G00', 'Sscan3G00', 'Sscan4G00', 'Sscan5G00', 'Sscan6G00', 'Sscan7G00', 'Sscan8G00', 'Sscan9G00',
+               'Sscan10G00', 'Sscan11G00', 'Sscan12G00', 'Sscan13G00', 'Sscan14G00', 'Sscan15G00', 'Sscan16G00', 'Sscan17G00', 'Sscan18G00']
+        
+        for probe_id in ids : #self.pr.keys():
+            shifts_x_y =  self.compute_corr_wrt_g_truth(probe_id)
+            shifts_x.append(shifts_x_y[0])
+            shifts_y.append(shifts_x_y[1])
+
+        x_data = np.arange(len(ids))
+        fig, ax = plt.subplots( nrows=1, ncols=1 )  # create figure & 1 axis
+        ax.fig = plt.plot(x_data, shifts_x)
+        plt.xlabel('probes', fontsize=10)
+        plt.ylabel('x shift', fontsize=10)
+        ax.set_xticks(list(x_data))
+        plt.title('x shifts')
+        plt.savefig("shifts_x.png", dpi=150)
+
+        fig, ax = plt.subplots( nrows=1, ncols=1 )  # create figure & 1 axis
+        ax.fig = plt.plot(x_data, shifts_y)
+        plt.xlabel('probes', fontsize=10)
+        plt.ylabel('y shift', fontsize=10)
+        ax.set_xticks(list(x_data))
+        plt.title('y shifts')
+        plt.savefig("shifts_y.png", dpi=150)
+        
+
             
 parser = argparse.ArgumentParser(description='Create a plot from reconstruction save or autosave.')
 parser.add_argument('ptyrfile', type=str, help='path to *.ptyr compatible file')
@@ -628,15 +596,18 @@ else:
     objects.update(content['obj'], Convert = True)
 
 Plotter = MPLplotter(pars=pars, probes = probes, objects=objects, runtime= runtime)
-Plotter._set_autolayout(template)
-Plotter.update_plot_layout()
-Plotter.plot_all()
-Plotter.draw()
-Plotter.plot_all()
-Plotter.draw()
-# Plotter.plot_diff()
-# Plotter.compute_st_dev()
-# Plotter.compute_all_diffs()
+# Plotter._set_autolayout(template)
+# Plotter.update_plot_layout()
+# Plotter.plot_all()
+# Plotter.draw()
+# Plotter.plot_all()
+# Plotter.draw()
+
+ids = ['Sscan0G00', 'Sscan1G00', 'Sscan2G00', 'Sscan3G00', 'Sscan4G00', 'Sscan5G00', 'Sscan6G00', 'Sscan7G00', 'Sscan8G00', 'Sscan9G00',
+        'Sscan10G00', 'Sscan11G00', 'Sscan12G00', 'Sscan13G00', 'Sscan14G00', 'Sscan15G00', 'Sscan16G00', 'Sscan17G00', 'Sscan18G00']
+for id_i in ids:        
+    Plotter.plot_diff_wrt_g_truth(id_i)
+Plotter.plot_shifts_for_all_probes()
 
 def handle_close(evt):
     sys.exit()
