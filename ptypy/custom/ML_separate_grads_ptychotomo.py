@@ -434,19 +434,26 @@ class MLPtychoTomo(PositionCorrectionEngine):
             except:
                 iter = 0
 
-            if iter==50:
-                self.projector.plot_vol(self.rho, title= '50iters')
+            # if iter==50:
+            #     self.projector.plot_vol(self.rho, title= '50iters')
 
             # if iter==200:
             #     self.projector.plot_vol(self.rho, title= '200iters')
                 
             # SAVING VOL WHEN RUNNING ON WILSON
-            # if iter<=1 and not os.path.exists("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_phase.cmap"):
-            #     with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_phase.cmap", "w") as f:
-            #         f["data"] = np.real(self.rho)#[100:-100,100:-100,100:-100]
-            #     with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_ampl.cmap", "w") as f:
-            #         f["data"] = np.imag(self.rho)#[#100:-100,100:-100,100:-100]
-
+            if iter==200 and not os.path.exists("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_phase_HARDC_it{}.cmap".format(iter)):
+                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_phase_HARDC_it{}.cmap".format(iter), "w") as f:
+                    f["data"] = np.real(self.rho)
+                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_ampl_HARDC_it{}.cmap".format(iter), "w") as f:
+                    f["data"] = np.imag(self.rho)
+                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_phase_HARDC_it{}.cmap".format(iter), "w") as f:
+                    f["data"] = np.real(self.rho)[100:-100,100:-100,100:-100]
+                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it{}.cmap".format(iter), "w") as f:
+                    f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
+                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it{}.cmap".format(iter), "w") as f:
+                    f["data"] = -np.real(self.rho)[100:-100,100:-100,100:-100]                
+                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/NEG_recon_vol_phase_HARDC_it{}.cmap".format(iter), "w") as f:
+                    f["data"] = -np.real(self.rho)
 
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
