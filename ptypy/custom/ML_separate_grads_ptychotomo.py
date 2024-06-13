@@ -28,9 +28,6 @@ from scipy.ndimage.filters import gaussian_filter
 from ..engines.utils import Cnorm2, Cdot, reduce_dimension
 from ..utils.parallel import allreduce
 
-import matplotlib.pyplot as plt
-from matplotlib import cm, colors
-import ptypy.utils.tomo as tu
 
 __all__ = ['MLPtychoTomo']
 
