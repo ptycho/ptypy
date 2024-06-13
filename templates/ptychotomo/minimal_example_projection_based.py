@@ -19,26 +19,6 @@ tmpdir = tempfile.gettempdir()
 from scipy.ndimage import gaussian_filter
 
 
-def plot_complex_array(X, title=''):
-    norm = colors.Normalize(-5, 5)
-    cmap = cm.get_cmap("Spectral")
-
-    fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(6,4), dpi=100)
-    max_lim = max(np.max(X.real), np.max(X.imag))
-    min_lim = min(np.min(X.real), np.min(X.imag))
-
-    im0 = axes[0].imshow(X.real, vmax=max_lim, vmin=min_lim)
-    axes[0].set_title(f"Real part")
-
-    im1 = axes[1].imshow(X.imag, vmax=max_lim, vmin=min_lim)
-    axes[1].set_title(f"Imag part")
-
-    fig.suptitle(title)
-    fig.colorbar(im1, ax=axes.ravel().tolist())
-    plt.show() 
-    plt.savefig(title+'.png')
-
-
 ### PTYCHO PARAMETERS
 p = u.Param()
 p.verbose_level = "info"
@@ -125,21 +105,16 @@ scan.data = u.Param()
 scan.data.name = 'SimScan'
 #scan.data.update(sim)
 
-
 all_shifts = [
     (-1, 0), (-1, 1), (0, 1), (0, -1), (1, -1), (1, 0), (1, 1)
 ]
 
-# all_shifts = [
-#     (-1, 0), (-3, 1), (0, 1), (0, -3), (1, -1), (3, 0), (1, 3)
-# ]
-
-apply_shift = False
-
-if apply_shift:
-    # cancel everyhing and restart file
+shift_probes = False
+if shift_probes:
+    # For saving shifts to file
+    # Make sure file is empty
     with open("shifts.txt", "w") as myfile:
-        myfile.write('  ') 
+        myfile.write('\n') 
 
 # Iterate over nr. of tomographic angles
 print('##########################')
@@ -148,8 +123,10 @@ for i in range(nangles):
     simi = sim.copy(depth=99)
     proj_new = proj[i]
 
-    if apply_shift: 
+    if shift_probes: 
         selected_shift = random.choice(all_shifts)
+
+        # Save the shifts applied to file
         with open("shifts.txt", "a") as myfile:
             myfile.write('probe '+ str(i) + ':    (' +str(selected_shift[0]) +  ', ' + str(selected_shift[1]) + ') \n')
         shifted_proj_1 = np.roll(proj_new, selected_shift[0], axis=0)   # up or down (neg = up, pos = down)      
@@ -164,7 +141,7 @@ for i in range(nangles):
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'MLPtychoTomo'  
-p.engines.engine00.numiter = 51 #202 #8002
+p.engines.engine00.numiter = 51 
 p.engines.engine00.probe_update_start = 0
 # p.engines.engine00.subspace_dim = 10
 # p.engines.engine00.subspace_start = 0
@@ -187,7 +164,6 @@ if __name__ == "__main__":
 #     for storage in storage_list:
 #         # storage.center = (20,20)       # changed from (16, 16)
 #         storage.data[:] = gaussian_filter(storage.data, sigma=0.8)
-#         plot_complex_array(storage.data, title='storage{}'.format(i))
 
 #         for v in storage.views:
 #             v.storage = storage
@@ -198,11 +174,11 @@ if __name__ == "__main__":
 #     # # Update probe
 #     P.probe.reformat()
 
-#     # # # Unforunately we need to delete the storage here due to DM being unable  
-#     # # # to ignore unused storages. This is due to the /=nrm division in the 
-#     # # # probe update  
-#     # # for s in storage_list[1:]:
-#     # #     P.probe.storages.pop(s.ID)
+#     # # Unforunately we need to delete the storage here due to DM being unable  
+#     # # to ignore unused storages. This is due to the /=nrm division in the 
+#     # # probe update  
+#     # for s in storage_list[1:]:
+#     #     P.probe.storages.pop(s.ID)
 
 #     # Finish level 4
 #     P.print_stats()

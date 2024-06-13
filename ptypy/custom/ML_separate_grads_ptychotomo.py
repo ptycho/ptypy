@@ -35,24 +35,6 @@ import ptypy.utils.tomo as tu
 __all__ = ['MLPtychoTomo']
 
 
-def plot_complex_array(X, title=''):
-    norm = colors.Normalize(-5, 5)
-    cmap = cm.get_cmap("Spectral")
-
-    fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(6,4), dpi=100)
-    max_lim = max(np.max(X.real), np.max(X.imag))
-    min_lim = min(np.min(X.real), np.min(X.imag))
-
-    im0 = axes[0].imshow(X.real, vmax=max_lim, vmin=min_lim)
-    axes[0].set_title(f"Real part")
-
-    im1 = axes[1].imshow(X.imag, vmax=max_lim, vmin=min_lim)
-    axes[1].set_title(f"Imag part")
-
-    fig.suptitle(title)
-    fig.colorbar(im1, ax=axes.ravel().tolist())
-    plt.show() 
-
 @register()
 class MLPtychoTomo(PositionCorrectionEngine):
     """
@@ -176,6 +158,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.omega = None
 
         self.pshape = list(self.ptycho.obj.S.values())[0].data.shape[-1]
+        print('self.pshape:   ', self.pshape)
 
         # For simulated data
         # n_angles = len(self.ptycho.obj.S)
@@ -434,26 +417,15 @@ class MLPtychoTomo(PositionCorrectionEngine):
             except:
                 iter = 0
 
-            # if iter==50:
-            #     self.projector.plot_vol(self.rho, title= '50iters')
-
             # if iter==200:
             #     self.projector.plot_vol(self.rho, title= '200iters')
                 
-            # SAVING VOL WHEN RUNNING ON WILSON
+            # Saving volumes when running on Wilson
             if iter==200 and not os.path.exists("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_phase_HARDC_it{}.cmap".format(iter)):
-                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_phase_HARDC_it{}.cmap".format(iter), "w") as f:
-                    f["data"] = np.real(self.rho)
-                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_ampl_HARDC_it{}.cmap".format(iter), "w") as f:
-                    f["data"] = np.imag(self.rho)
-                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_phase_HARDC_it{}.cmap".format(iter), "w") as f:
-                    f["data"] = np.real(self.rho)[100:-100,100:-100,100:-100]
                 with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it{}.cmap".format(iter), "w") as f:
                     f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
                 with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it{}.cmap".format(iter), "w") as f:
                     f["data"] = -np.real(self.rho)[100:-100,100:-100,100:-100]                
-                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/NEG_recon_vol_phase_HARDC_it{}.cmap".format(iter), "w") as f:
-                    f["data"] = -np.real(self.rho)
 
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
@@ -509,12 +481,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
 #             s.data[:] = newest_pr[i]
             
 #         if not os.path.isfile('pr_input.png') and iter==200:
-#             print('shifts', shifts_to_apply[2])
-#             print('mean_center', mean_center)
-#             print('original_center', all_m_centers[2])
-#             plot_complex_array(pr_input[2], 'pr_input.png')
-#             plot_complex_array(shifted_probes[2], 'shifted_probes.png')
-#             plot_complex_array(newest_pr[2], 'newest_pr.png')
+#             self.projector.plot_complex_array(pr_input[2], 'pr_input.png')
+#             self.projector.plot_complex_array(shifted_probes[2], 'shifted_probes.png')
+#             self.projector.plot_complex_array(newest_pr[2], 'newest_pr.png')
 
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
 
