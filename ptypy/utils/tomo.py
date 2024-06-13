@@ -33,7 +33,6 @@ def sample_volume(N):
 def refractive_index_map(Nx):
     beta = np.log(sample_volume(Nx)+20)-np.log(20)
     delta = 0.05 * sample_volume(Nx)
-    # beta = np.zeros_like(delta)
     return delta + 1j * beta
 
 
@@ -69,16 +68,18 @@ class AstraTomoWrapper:
         self._vol_id_real = astra.data3d.create("-vol", self._vol_geom, self._vol.real)
         self._vol_id_imag = astra.data3d.create("-vol", self._vol_geom, self._vol.imag)
 
-    def plot_complex_array(self, X, title=''):
+    def plot_complex_array(X, title=''):
         norm = colors.Normalize(-5, 5)
         cmap = cm.get_cmap("Spectral")
 
         fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(6,4), dpi=100)
-        limit = 1.9
-        im0 = axes[0].imshow(X.real, vmax=limit, vmin=-limit)
+        max_lim = max(np.max(X.real), np.max(X.imag))
+        min_lim = min(np.min(X.real), np.min(X.imag))
+
+        im0 = axes[0].imshow(X.real, vmax=max_lim, vmin=min_lim)
         axes[0].set_title(f"Real part")
 
-        im1 = axes[1].imshow(X.imag, vmax=limit, vmin=-limit)
+        im1 = axes[1].imshow(X.imag, vmax=max_lim, vmin=min_lim)
         axes[1].set_title(f"Imag part")
 
         fig.suptitle(title)
@@ -150,15 +151,11 @@ class AstraTomoWrapper:
     def plot_vol_only_recons(self, vol, iter, title=''):
         pshape = vol.shape[0]
         rmap = tu.refractive_index_map(pshape)
-        # X = rmap.reshape(pshape, pshape, pshape)
+
         R = np.real(vol)
         I = np.imag(vol)
-
-        # pos_limit = max([np.max(X.real), np.max(R)])  #0.24 #
-        # neg_limit = min([np.min(X.real), np.min(R)])  #-0.2 #
-
-        pos_limit = max([np.max(R), np.max(I)])  #0.52 #
-        neg_limit = min([np.min(R), np.min(I)])  #-0.25 #
+        pos_limit = max([np.max(R), np.max(I)])  
+        neg_limit = min([np.min(R), np.min(I)])  
         fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(6,4), dpi=100)
         for i in range(3):
             for j in range(2):
@@ -198,22 +195,22 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
 
             alpha = self._angles[v.storageID]
 
+            # # Save the geometry values for a certain angle
             # if i==0:
             #     ref_id = v.storageID
-            
             # if v.storageID == ref_id:
             #     vals_to_save.append({
             #         's_id': v.storageID,
             #         'v.storage.center[0]':v.storage.center[0],
             #         'v.storage.center[1]':v.storage.center[1],
-            #         # 'corrected_shift_dx': corrected_shift_dx,
-            #         # 'corrected_shift_dy':corrected_shift_dy
             #     })
             
             # ONLY FOR REAL DATA
             shift_dx, shift_dy = self._shifts_per_angle[v.storageID]
             corrected_shift_dx, corrected_shift_dy = shift_dx+10, shift_dy+10 
             
+            # Hardcoding v.storage.center with 220,220 - needed for real data
+            # The shifts are also only needed for working on real data
             y = v.dcoord[0] - 220 + corrected_shift_dy   # v.storage.center[0]
             x = v.dcoord[1] - 220 + corrected_shift_dx   # v.storage.center[1]
 
@@ -238,6 +235,7 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
             self._vec[i,11] = 1
         #     i+=1
 
+        # # Write geometry values to file
         # if not os.path.exists("/dls/science/users/iat69393/ptycho-tomo-project/coords_NEW2.csv"):
         #     keys = vals_to_save[0].keys()
             
@@ -259,6 +257,8 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
 
     def forward(self, input_vol, type = "FP3D_CUDA", iter=10, plot_one_view=False):
 
+        # This is done here because it depends on the pods that are 
+        # active (mpi) at the time this function is called
         self._create_proj_geometry()
         self._create_proj_array_and_ids()
 
@@ -286,7 +286,6 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
 
         output_array = []
         for i, (k,v) in enumerate([(i,v) for i,v in self._obj.views.items() if v.pod.active]):
-          
             real_part = _ob_views_real[i] 
             imag_part = _ob_views_imag[i]
             _obj = real_part + 1j * imag_part
@@ -300,6 +299,8 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
 
     def backward(self, input_proj, type="BP3D_CUDA", iter=10):
 
+        # This is done here because it depends on the pods that are 
+        # active (mpi) at the time this function is called
         self._create_proj_geometry()
         self._create_proj_array_and_ids()
         
