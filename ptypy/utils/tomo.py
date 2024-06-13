@@ -192,30 +192,30 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
         self._fsh = np.array([v.shape for v in self._obj.views.values() if v.pod.active]).max(axis=0)
         self._vec = np.zeros((len([v for v in self._obj.views.values() if v.pod.active]),12))
 
-        vals_to_save = []
-        i=0
+        # vals_to_save = []
+        # i=0
         for i,(k,v) in enumerate([(i,v) for i,v in self._obj.views.items() if v.pod.active]):
 
             alpha = self._angles[v.storageID]
 
-            if i==0:
-                ref_id = v.storageID
+            # if i==0:
+            #     ref_id = v.storageID
             
-            if v.storageID == ref_id:
-                vals_to_save.append({
-                    's_id': v.storageID,
-                    'v.storage.center[0]':v.storage.center[0],
-                    'v.storage.center[1]':v.storage.center[1],
-                    # 'corrected_shift_dx': corrected_shift_dx,
-                    # 'corrected_shift_dy':corrected_shift_dy
-                })
+            # if v.storageID == ref_id:
+            #     vals_to_save.append({
+            #         's_id': v.storageID,
+            #         'v.storage.center[0]':v.storage.center[0],
+            #         'v.storage.center[1]':v.storage.center[1],
+            #         # 'corrected_shift_dx': corrected_shift_dx,
+            #         # 'corrected_shift_dy':corrected_shift_dy
+            #     })
             
             # ONLY FOR REAL DATA
             shift_dx, shift_dy = self._shifts_per_angle[v.storageID]
             corrected_shift_dx, corrected_shift_dy = shift_dx+10, shift_dy+10 
             
-            y = v.dcoord[0] - v.storage.center[0] + corrected_shift_dy
-            x = v.dcoord[1] - v.storage.center[1] + corrected_shift_dx
+            y = v.dcoord[0] - 220 + corrected_shift_dy   # v.storage.center[0]
+            x = v.dcoord[1] - 220 + corrected_shift_dx   # v.storage.center[1]
 
             # ray direction
             self._vec[i,0] = np.sin(alpha)
@@ -236,15 +236,15 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
             self._vec[i,9] = 0
             self._vec[i,10] = 0
             self._vec[i,11] = 1
-            i+=1
+        #     i+=1
 
-        if not os.path.exists("/dls/science/users/iat69393/ptycho-tomo-project/coords_NEW2.csv"):
-            keys = vals_to_save[0].keys()
+        # if not os.path.exists("/dls/science/users/iat69393/ptycho-tomo-project/coords_NEW2.csv"):
+        #     keys = vals_to_save[0].keys()
             
-            with open('coords_NEW2.csv', 'w', newline='') as output_file:
-                dict_writer = csv.DictWriter(output_file, keys)
-                dict_writer.writeheader()
-                dict_writer.writerows(vals_to_save)
+        #     with open('coords_NEW2.csv', 'w', newline='') as output_file:
+        #         dict_writer = csv.DictWriter(output_file, keys)
+        #         dict_writer.writeheader()
+        #         dict_writer.writerows(vals_to_save)
 
         self._proj_geom = astra.create_proj_geom('parallel3d_vec',  self._fsh[0], self._fsh[1], self._vec)
         return self._proj_geom
