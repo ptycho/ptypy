@@ -7,6 +7,9 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: see LICENSE for details.
 """
+import os
+import csv
+
 import numpy as np
 import scipy.sparse as sparse
 import scipy.ndimage as ndimage
@@ -14,10 +17,7 @@ import astra
 import matplotlib.pyplot as plt
 from matplotlib import cm, colors
 import ptypy.utils.tomo as tu
-from scipy.ndimage import gaussian_filter
-import os
 
-import csv
 
 # For creating example
 def sample_volume(N):

@@ -6,17 +6,12 @@ from ptypy import utils as u
 import ptypy.simulations as sim
 import ptypy.utils.tomo as tu
 from ptypy.custom import ML_separate_grads_ptychotomo, ML_separate_grads
-from itertools import combinations
 import random
 
 import astra
-import matplotlib.pyplot as plt
-import pathlib
 import numpy as np
 import tempfile
 tmpdir = tempfile.gettempdir()
-
-from scipy.ndimage import gaussian_filter
 
 
 ### PTYCHO PARAMETERS
