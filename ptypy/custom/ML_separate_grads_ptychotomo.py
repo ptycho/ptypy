@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Maximum Likelihood reconstruction engine.
+Maximum Likelihood Tomographic Ptychography reconstruction engine.
 
 TODO.
 
-  * Implement other regularizers
+  * Implement other ML models (Poisson/Euclid)
 
 This file is part of the PTYPY package.
 
-    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :copyright: Copyright 2024 by the PTYPY team, see AUTHORS.
     :license: see LICENSE for details.
 """
 import numpy as np
@@ -126,6 +126,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
     default = quadratic
     type = str
     help = How many coefficients to be used in the the linesearch
+    choices = ['quadratic','all']
     doc = choose between the 'quadratic' approximation (default) or 'all'
 
     """
@@ -146,10 +147,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # Projected volume
         self.projected_rho = None
 
-        # Object gradient
+        # Volume gradient
         self.rho_grad = None
 
-        # Object minimization direction
+        # Volume minimization direction
         self.rho_h = None
 
         # Probe gradient
@@ -159,19 +160,20 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.pr_h = None
 
         # Working variables
-        # Object gradient
+        # Volume gradient
         self.rho_grad_new = None
 
         # Probe gradient
         self.pr_grad_new = None
 
+        # Tomography projector
         self.projector = None
 
         # Other
         self.tmin_rho = None
         self.tmin_pr = None
         self.ML_model = None
-        # self.smooth_gradient = None
+        self.smooth_gradient = None
 
         self.omega = None
 
@@ -195,6 +197,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         for i,k in enumerate(self.ptycho.obj.S):
             self.shifts_per_angle[k]  =  self.shifts[:,i]  # dx, dy
 
+        # FIXME: update with paper
         self.ptycho.citations.add_article(
             title='Maximum-likelihood refinement for coherent diffractive imaging',
             author='Thibault P. and Guizar-Sicairos M.',
@@ -243,10 +246,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.tmin_rho = 1.
         self.tmin_pr = 1.
 
-        # Other options
-        # self.smooth_gradient = prepare_smoothing_preconditioner(
-        #     self.p.smooth_gradient)
+        # Initialise smoothing preconditioner for volume
+        self.smooth_gradient = prepare_smoothing_preconditioner(
+            self.p.smooth_gradient)
 
+        # Initialise ASTRA projector for volume
         self.projector = AstraTomoWrapperViewBased (
             obj=self.ptycho.obj,
             vol=self.rho,
@@ -256,9 +260,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
             mask_threshold=35
             )
 
+        # Initialise projected volume and update views
         self.projected_rho = self.projector.forward(self.rho)
         self.update_views()
 
+        # Initialise ML noise model
         self._initialize_model()
 
     def _initialize_model(self):
@@ -287,7 +293,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         """
         Updates the views so that the projected rho (non-exponentiated)
-        can be retrieved from pod.object .
+        can be retrieved from pod.object.
         """
         for i, (k,v) in enumerate([(i,v) for i,v in self.ptycho.obj.views.items() if v.pod.active]):
             v.data[:] = self.projected_rho[i]
@@ -297,20 +303,28 @@ class MLPtychoTomo(PositionCorrectionEngine):
         """
         Compute `num` iterations.
         """
-        ########################
-        # Compute new gradient
-        ########################
         tg = 0.
         tc = 0.
         ta = time.time()
         for it in range(num):
+
+            ########################
+            # Compute new gradients
+            # vol: new_rho_grad
+            # pr: new_pr_grad
+            ########################
             t1 = time.time()
-            self.ML_model.new_grad_rho()
-            error_dct = self.ML_model.new_grad_pr()
+
+            self.ML_model.new_grad_rho() # volume gradient
+            # FIXME: volume regularizer should be in new_grad_rho (but we need reg.LL for error)
+            error_dct = self.ML_model.new_grad_pr() # probe gradient, volume regularizer, LL
 
             new_rho_grad, new_pr_grad = self.rho_grad_new, self.pr_grad_new
-            allreduce(new_rho_grad)
+            # FIXME: allreduce should go in new_grad_rho once reg.LL fixed
+            allreduce(new_rho_grad) # MPI reduction of volume gradient
 
+            # FIXME: add proper volume gradient rescaling
+            # FIXME: this helps with underflow of bt and tmin for rho
             # SCALING: needed for the regularizer to work on probe coeffs
             # Maybe not needed on real data
             # n_pixels = np.prod(np.shape(self.rho))
@@ -322,12 +336,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
             print('pr_grad: %.2e ' % np.sqrt(Cnorm2(self.pr_grad)))
             print('new_pr_grad: %.2e ' % np.sqrt(Cnorm2(new_pr_grad)))
 
-            try:
-                iter = self.ptycho.runtime.iter_info[-1]['iteration']
-            except:
-                iter=0
-
-
             tg += time.time() - t1
 
             if self.p.probe_update_start <= self.curiter:
@@ -337,28 +345,31 @@ class MLPtychoTomo(PositionCorrectionEngine):
                     #support = self.probe_support.get(name)
                     #if support is not None:
                     #    s.data *= support
+            # FIXME: this hack doesn't work here as we step in probe and volume separately
+            # FIXME: really it's the probe step that should be zeroed out not the gradient
             else:
                 new_pr_grad.fill(0.)
 
-            # Smoothing preconditioner
-            # if self.smooth_gradient:
-            #     self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
-            #     for name, s in new_ob_grad.storages.items():
-            #         s.data[:] = self.smooth_gradient(s.data)
+            # Smoothing preconditioner for the volume
+            if self.smooth_gradient:
+                self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
+                new_rho_grad = self.smooth_gradient(new_rho_grad)
 
             ############################
-            # Compute next conjugate
+            # Compute Polak-Ribiere beta
+            # bt_rho = bt_num_rho/bt_denom_rho
+            # bt_pr = bt_num_pr/bt_denom_pr
             ############################
             if self.curiter == 0:
                 bt_rho = 0.
                 bt_pr = 0.
-
             else:
                 # For the volume
                 bt_num_rho = u.norm2(new_rho_grad) - np.real(np.vdot(new_rho_grad.flat, self.rho_grad.flat))
                 bt_denom_rho = u.norm2(self.rho_grad)
                 print('bt_num_rho, bt_denom_rho: (%.2e, %.2e) ' % (bt_num_rho, bt_denom_rho))
 
+                # FIXME: this shouldn't be needed if we scale correctly
                 if bt_denom_rho == 0:
                     bt_rho = 0
                 else:
@@ -369,39 +380,49 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 bt_denom_pr = Cnorm2(self.pr_grad)
                 bt_pr = max(0, bt_num_pr/bt_denom_pr)
 
-            self.rho_grad = new_rho_grad.copy()
+            self.rho_grad = new_rho_grad.copy() # not a container
             self.pr_grad << new_pr_grad
 
-            dt = self.ptycho.FType
-            # 3. Next conjugate
+            ############################
+            # Compute next conjugates
+            # rho_h -= bt_rho * rho_grad
+            # pr_h -= bt_pr * pr_grad
+            # NB: in the below need to do h/tmin
+            # as did h*tmin when taking conjugates
+            # (don't you just love containers?)
+            ############################
             print('bt_rho, self.tmin_rho: (%.2e,%.2e)' % (bt_rho, self.tmin_rho))
             self.rho_h *= bt_rho / self.tmin_rho
 
-            # Smoothing preconditioner
-            # if self.smooth_gradient:
-            #     for name, s in self.ob_h.storages.items():
-            #         s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
-            # else:
-
-            self.rho_h -= self.rho_grad
+            # Smoothing preconditioner for the volume
+            if self.smooth_gradient:
+                self.rho_h -= self.smooth_gradient(self.rho_grad)
+            else:
+                self.rho_h -= self.rho_grad
 
             self.pr_h *= bt_pr / self.tmin_pr
             self.pr_h -= self.pr_grad
 
+            ########################
+            # Compute step-sizes
+            # vol: tmin_rho
+            # pr: tmin_pr
+            ########################
+            dt = self.ptycho.FType
             t2 = time.time()
 
             if self.p.poly_line_coeffs == "quadratic":
-                B_rho = self.ML_model.poly_line_coeffs_rho(self.rho_h, self.pr_h)
-                B_pr = self.ML_model.poly_line_coeffs_pr(self.rho_h, self.pr_h)
+                B_rho = self.ML_model.poly_line_coeffs_rho(self.rho_h)
+                B_pr = self.ML_model.poly_line_coeffs_pr(self.pr_h)
 
                 print('B_rho, B_pr', B_rho, B_pr)
 
-                # same as above but quicker when poly quadratic
+                # same as below but quicker when poly quadratic
                 self.tmin_rho = dt(-0.5 * B_rho[1] / B_rho[2])
                 self.tmin_pr = dt(-0.5 * B_pr[1] / B_pr[2])
 
-            else:
-                B_rho = self.ML_model.poly_line_all_coeffs_rho(self.rho_h, self.pr_h)
+            elif self.p.poly_line_coeffs == "all":
+                B_rho = self.ML_model.poly_line_all_coeffs_rho(self.rho_h)
                 diffB_rho = np.arange(1,len(B_rho))*B_rho[1:] # coefficients of poly derivative
                 roots = np.roots(np.flip(diffB_rho.astype(np.double))) # roots only supports double
                 real_roots = np.real(roots[np.isreal(roots)]) # not interested in complex roots
@@ -411,7 +432,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
                     evalp = lambda root: np.polyval(np.flip(B_rho),root)
                     self.tmin_rho = dt(min(real_roots, key=evalp)) # root with smallest poly objective
 
-                B_pr = self.ML_model.poly_line_all_coeffs_pr(self.rho_h, self.pr_h)
+                B_pr = self.ML_model.poly_line_all_coeffs_pr(self.pr_h)
                 diffB_pr = np.arange(1,len(B_pr))*B_pr[1:] # coefficients of poly derivative
                 roots = np.roots(np.flip(diffB_pr.astype(np.double))) # roots only supports double
                 real_roots = np.real(roots[np.isreal(roots)]) # not interested in complex roots
@@ -421,15 +442,26 @@ class MLPtychoTomo(PositionCorrectionEngine):
                     evalp = lambda root: np.polyval(np.flip(B_pr),root)
                     self.tmin_pr = dt(min(real_roots, key=evalp)) # root with smallest poly objective
 
+            else:
+                raise NotImplementedError("poly_line_coeffs should be 'quadratic' or 'all'")
+
             tc += time.time() - t2
 
             print('self.tmin_pr, self.tmin_rho: (%.2e,%.2e)' % (self.tmin_pr, self.tmin_rho))
+
+            ########################
+            # Take conjugate steps
+            # rho += tmin_rho * rho_h
+            # pr += tmin_pr * pr_h
+            ########################
 
             self.rho_h *= self.tmin_rho
             self.pr_h *= self.tmin_pr
 
             self.rho += self.rho_h
+            self.pr += self.pr_h
 
+            # FIXME: move saving volumes to run script
             try:
                 iter = self.ptycho.runtime.iter_info[-1]['iteration']
             except:
@@ -444,9 +476,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
                     f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
                 with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it{}.cmap".format(iter), "w") as f:
                     f["data"] = -np.real(self.rho)[100:-100,100:-100,100:-100]
-
-            self.pr += self.pr_h
-            # Newton-Raphson loop would end here
+            # FIXME: end move saving volumes to run script
 
             # Position correction
             self.position_update()
@@ -459,6 +489,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
+
+        ########################
+        # OPR Section
+        ########################
 
         # Orthogonal Probe Relaxation (OPR)
         if self.p.OPR_enable:
@@ -484,7 +518,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
                 # average_x = np.mean(np.array([coords[0] for coords in all_m_centers]))
                 # average_y = np.mean(np.array([coords[1] for coords in all_m_centers]))
-                mean_center = [16, 16] # FIXME: hardcoded probe mean centre
+                # FIXME: hardcoded probe mean centre
+                mean_center = [16, 16]
 
                 shifts_to_apply = [coords-mean_center for coords in all_m_centers]
 
@@ -501,11 +536,16 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 for i, (name, s) in enumerate(self.pr.storages.items()):
                     s.data[:] = newest_pr[i]
 
-                # FIXME: eventually remove hardcoded plotting
+                # FIXME: eventually remove hardcoded OPR plotting
+                try:
+                    iter = self.ptycho.runtime.iter_info[-1]['iteration']
+                except:
+                    iter=0
                 if not os.path.isfile('pr_input.png') and iter==200:
                     self.projector.plot_complex_array(pr_input[2], 'pr_input.png')
                     self.projector.plot_complex_array(shifted_probes[2], 'shifted_probes.png')
                     self.projector.plot_complex_array(newest_pr[2], 'newest_pr.png')
+                # FIXME: end eventually remove hardcoded OPR plotting
 
             else:
                 raise RuntimeError("Unsupported OPR_method: '%s'" % self.p.OPR_method)
@@ -614,41 +654,46 @@ class BaseModel(object):
             except:
                 pass
 
-    def new_grad(self):
+    def new_grad_rho(self):
         """
-        Compute a new gradient direction according to the noise model.
+        Compute a new volume gradient direction according to the noise model.
+        """
+        raise NotImplementedError
+
+    def new_grad_pr(self):
+        """
+        Compute a new probe gradient direction according to the noise model.
 
         Note: The negative log-likelihood and local errors should also be computed
         here.
         """
         raise NotImplementedError
 
-    def poly_line_coeffs_rho(self, rho_h, pr_h):
+    def poly_line_coeffs_rho(self, rho_h):
         """
         Compute the coefficients of the polynomial for line minimization
-        in direction h for the object
+        in direction h for the volume
         """
         raise NotImplementedError
 
-    def poly_line_coeffs_pr(self, rho_h, pr_h):
+    def poly_line_coeffs_pr(self, pr_h):
         """
         Compute the coefficients of the polynomial for line minimization
-        in direction h
         in direction h for the probe
         """
         raise NotImplementedError
 
-    def poly_line_all_coeffs_rho(self, rho_h, pr_h):
+    def poly_line_all_coeffs_rho(self, rho_h):
         """
         Compute all the coefficients of the polynomial for line minimization
-        in direction h
+        in direction h for the volume
         """
         raise NotImplementedError
 
-    def poly_line_all_coeffs_pr(self, rho_h, pr_h):
+    def poly_line_all_coeffs_pr(self, pr_h):
         """
         Compute all the coefficients of the polynomial for line minimization
-        in direction h
+        in direction h for the probe
         """
         raise NotImplementedError
 
@@ -686,14 +731,11 @@ class GaussianModel(BaseModel):
 
     def new_grad_rho(self):
         """
-        Compute a new gradient direction according to a Gaussian noise model.
-
-        Note: The negative log-likelihood and local errors are also computed
-        here.
+        Compute a new volume gradient direction according to a Gaussian noise model.
         """
         self.rho_grad.fill(0.)
 
-        # Moved this here from the end of engine_iterate
+        # Forward project volume
         self.projected_rho = self.projector.forward(self.rho)
 
         i = 0
@@ -737,21 +779,20 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
-                psi = pod.probe * np.exp(1j * pod.object)   # CHANGING from pod.object
+                psi = pod.probe * np.exp(1j * pod.object)
                 product_xi_psi_conj = -1j* xi * psi.conj()
                 products_xi_psi_conj.append(product_xi_psi_conj)
 
+        # Back project volume
         self.rho_grad = 2 * self.projector.backward(np.moveaxis(np.array(products_xi_psi_conj), 1, 0))
-        self.engine.rho_grad_new = self.rho_grad
 
         return
 
     def new_grad_pr(self):
         """
-        Compute a new gradient direction according to a Gaussian noise model.
+        Compute a new gradient direction for the probe according to a Gaussian noise model.
 
-        Note: The negative log-likelihood and local errors are also computed
-        here.
+        Note: The negative log-likelihood and local errors are also computed here.
         """
         self.pr_grad.fill(0.)
 
@@ -802,12 +843,15 @@ class GaussianModel(BaseModel):
         self.pr_grad.allreduce()
         parallel.allreduce(LL)
 
-        # Object regularizer
+        # Volume regularizer
+        # FIXME: this really should be in new_grad_rho (but we need LL here)
         if self.regularizer:
-            # OLD
+            # OLD using containers
             # for name, s in self.ob.storages.items():
             #     self.rho_grad.storages[name].data += self.regularizer.grad(
             #         s.data)
+
+            # apply volume regularizer and compute log-likelihood
             self.rho_grad += self.regularizer.grad(self.rho)
             LL += self.regularizer.LL
 
@@ -815,19 +859,19 @@ class GaussianModel(BaseModel):
 
         return error_dct
 
-    # NEEDS Updating, while poly_line_pr stays same
-    def poly_line_coeffs_rho(self, rho_h, pr_h):
+    def poly_line_coeffs_rho(self, rho_h):
         """
         Compute the coefficients of the polynomial for line minimization
-        in direction h for the object
+        in direction h for the volume
         """
 
         B = np.zeros((3,), dtype=np.longdouble)
         Brenorm = 1. / self.LL[0]**2
 
+        # Forward project volume minimization direction
         omega = np.array(self.projector.forward(rho_h))
 
-        # Store omega so that we can use it later
+        # Store omega (so that we can use it later) and multiply it by the required 1j
         for i, (k,ov) in enumerate([(i,v) for i,v in self.omega.views.items() if v.pod.active]):
             ov.data[:] = 1j * omega[i]
 
@@ -880,9 +924,9 @@ class GaussianModel(BaseModel):
 
         parallel.allreduce(B)
 
-        # Object regularizer
+        # Volume regularizer
         if self.regularizer:
-            # OLD
+            # OLD using containers
             # for name, s in self.ob.storages.items():
             #     B += Brenorm * self.regularizer.poly_line_coeffs(
             #         ob_h.storages[name].data, s.data)
@@ -898,18 +942,19 @@ class GaussianModel(BaseModel):
 
         return B
 
-    def poly_line_all_coeffs_rho(self, rho_h, pr_h):
+    def poly_line_all_coeffs_rho(self, rho_h):
         """
         Compute the coefficients of the polynomial for line minimization
-        in direction h for the object
+        in direction h for the volume
         """
 
         B = np.zeros((5,), dtype=np.longdouble)
         Brenorm = 1. / self.LL[0]**2
 
+        # Forward project volume minimization direction
         omega = np.array(self.projector.forward(rho_h))
 
-        # Store omega so that we can use it later
+        # Store omega (so that we can use it later) and multiply it by the required 1j
         for i, (k,ov) in enumerate(self.omega.views.items()):
             ov.data[:] = 1j * omega[i]
 
@@ -965,7 +1010,7 @@ class GaussianModel(BaseModel):
 
         # Object regularizer
         if self.regularizer:
-            # OLD
+            # OLD using containers
             # for name, s in self.ob.storages.items():
             #     B += Brenorm * self.regularizer.poly_line_coeffs(
             #         ob_h.storages[name].data, s.data)
@@ -981,7 +1026,7 @@ class GaussianModel(BaseModel):
 
         return B
 
-    def poly_line_coeffs_pr(self, rho_h, pr_h):
+    def poly_line_coeffs_pr(self, pr_h):
         """
         Compute the coefficients of the polynomial for line minimization
         in direction h for the probe
@@ -1035,14 +1080,6 @@ class GaussianModel(BaseModel):
 
         parallel.allreduce(B)
 
-        # Object regularizer
-        if self.regularizer:
-            # OLD
-            # for name, s in self.ob.storages.items():
-            #     B += Brenorm * self.regularizer.poly_line_coeffs(
-            #         ob_h.storages[name].data, s.data)
-            B += Brenorm * self.regularizer.poly_line_coeffs(rho_h, self.rho)
-
         if np.isinf(B).any() or np.isnan(B).any():
             logger.warning(
                 'Warning! inf or nan found! Trying to continue...')
@@ -1050,10 +1087,10 @@ class GaussianModel(BaseModel):
             B[np.isnan(B)] = 0.
 
         self.B = B
+
         return B
 
-
-    def poly_line_all_coeffs_pr(self, rho_h, pr_h):
+    def poly_line_all_coeffs_pr(self, pr_h):
         """
         Compute the coefficients of the polynomial for line minimization
         in direction h for the probe
@@ -1109,14 +1146,6 @@ class GaussianModel(BaseModel):
 
         parallel.allreduce(B)
 
-        # Object regularizer
-        if self.regularizer:
-            # OLD
-            # for name, s in self.ob.storages.items():
-            #     B += Brenorm * self.regularizer.poly_line_coeffs(
-            #         ob_h.storages[name].data, s.data)
-            B += Brenorm * self.regularizer.poly_line_coeffs(rho_h, self.rho)
-
         if np.isinf(B).any() or np.isnan(B).any():
             logger.warning(
                 'Warning! inf or nan found! Trying to continue...')
@@ -1124,13 +1153,14 @@ class GaussianModel(BaseModel):
             B[np.isnan(B)] = 0.
 
         self.B = B
+
         return B
 
 class Regul_del2(object):
     """\
-    Squared gradient regularizer (Gaussian prior).
+    Squared volume gradient regularizer (Gaussian prior).
 
-    This class applies to any numpy array.
+    This class applies to any 3D numpy array.
     """
     def __init__(self, amplitude, axes=[-3, -2, -1]):
         # Regul.__init__(self, axes)
@@ -1210,42 +1240,42 @@ class Regul_del2(object):
         return self.coeff
 
 
-# def prepare_smoothing_preconditioner(amplitude):
-#     """
-#     Factory forforfor smoothing preconditioner.
-#     """
-#     if amplitude == 0.:
-#         return None
+def prepare_smoothing_preconditioner(amplitude):
+    """
+    Factory for 3D volume smoothing preconditioner.
+    """
+    if amplitude == 0.:
+        return None
 
-#     class GaussFilt(object):
-#         def __init__(self, sigma):
-#             self.sigma = sigma
+    class GaussFilt(object):
+        def __init__(self, sigma):
+            self.sigma = sigma
 
-#         def __call__(self, x):
-#             return u.c_gf(x, [0, self.sigma, self.sigma])
+        def __call__(self, x):
+            return u.c_gf(x, self.sigma) # blur all 3 dimensions of volume
 
-#     # from scipy.signal import correlate2d
-#     # class HannFilt:
-#     #    def __call__(self, x):
-#     #        y = np.empty_like(x)
-#     #        sh = x.shape
-#     #        xf = x.reshape((-1,) + sh[-2:])
-#     #        yf = y.reshape((-1,) + sh[-2:])
-#     #        for i in range(len(xf)):
-#     #            yf[i] = correlate2d(xf[i],
-#     #                                np.array([[.0625, .125, .0625],
-#     #                                          [.125, .25, .125],
-#     #                                          [.0625, .125, .0625]]),
-#     #                                mode='same')
-#     #        return y
+    # from scipy.signal import correlate2d
+    # class HannFilt:
+    #    def __call__(self, x):
+    #        y = np.empty_like(x)
+    #        sh = x.shape
+    #        xf = x.reshape((-1,) + sh[-2:])
+    #        yf = y.reshape((-1,) + sh[-2:])
+    #        for i in range(len(xf)):
+    #            yf[i] = correlate2d(xf[i],
+    #                                np.array([[.0625, .125, .0625],
+    #                                          [.125, .25, .125],
+    #                                          [.0625, .125, .0625]]),
+    #                                mode='same')
+    #        return y
 
-#     if amplitude > 0.:
-#         logger.debug(
-#             'Using a smooth gradient filter (Gaussian blur - only for ML)')
-#         return GaussFilt(amplitude)
+    if amplitude > 0.:
+        logger.debug(
+            'Using a smooth gradient filter (Gaussian blur - only for ML)')
+        return GaussFilt(amplitude)
 
-#     elif amplitude < 0.:
-#         raise RuntimeError('Hann filter not implemented (negative smoothing amplitude not supported)')
-#         # logger.debug(
-#         #    'Using a smooth gradient filter (Hann window - only for ML)')
-#         # return HannFilt()
+    elif amplitude < 0.:
+        raise RuntimeError('Hann filter not implemented (negative smoothing amplitude not supported)')
+        # logger.debug(
+        #    'Using a smooth gradient filter (Hann window - only for ML)')
+        # return HannFilt()
