@@ -25,6 +25,7 @@ from ..engines.base import BaseEngine, PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull
 from ..utils.tomo import AstraTomoWrapperViewBased
 from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage import shift
 from ..engines.utils import Cnorm2, Cdot, reduce_dimension
 from ..utils.parallel import allreduce
 
@@ -94,6 +95,26 @@ class MLPtychoTomo(PositionCorrectionEngine):
     help = Whether to use the object/probe scaling preconditioner
     doc = This parameter can give faster convergence for weakly scattering samples.
 
+    [OPR_enable]
+    default = False
+    type = bool
+    help = Whether to enable orthogonal probe modes
+    doc = This parameter enables orthogonal probe modes
+
+    [OPR_modes]
+    default = 12
+    type = int
+    lowlim = 2
+    help = Number of orthogonal probe modes to use
+    doc = This parameter sets the number of orthogonal probe modes to use
+
+    [OPR_method]
+    default = `second`
+    type = str
+    help = Type of OPR method to use
+    choices = ['first','second']
+    doc = One of ‘first’ or ‘second’.
+
     [probe_update_start]
     default = 0
     type = int
@@ -162,7 +183,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # angles = np.linspace(0, np.pi, n_angles, endpoint=True)
 
         # For real data
-        angles = np.load('angles_rad.npy') 
+        angles = np.load('angles_rad.npy')
 
         self.angles_dict = {}
         for i,k in enumerate(self.ptycho.obj.S):
@@ -197,17 +218,17 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.rho_h = np.zeros(3*(self.pshape,), dtype=np.complex64)          # self.ob.copy(self.ob.ID + '_h', fill=0.)
 
         # This is needed in poly_line_coeffs_rho
-        self.omega = self.ex  
+        self.omega = self.ex
 
-        # Initialise volume  
+        # Initialise volume
         rho_real = np.load('recon_phase4.npy') #('real_vol_35it.npy')  #
         rho_imag = np.load('recon_ampl4.npy') #('imag_vol_35it.npy')  #
         # rho_real_br = gaussian_filter(rho_real, sigma=2.5)
         # rho_imag_br = gaussian_filter(rho_imag, sigma=2.5)
-        
+
         # starting from volume of zeros
         # self.rho = np.zeros_like(rho_real) + 1j * np.zeros_like(rho_imag)
-        
+
         # starting from conv volume
         self.rho = rho_real + 1j * rho_imag
 
@@ -226,17 +247,17 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # self.smooth_gradient = prepare_smoothing_preconditioner(
         #     self.p.smooth_gradient)
 
-        self.projector = AstraTomoWrapperViewBased (    
-            obj=self.ptycho.obj, 
-            vol=self.rho, 
-            angles=self.angles_dict, 
+        self.projector = AstraTomoWrapperViewBased (
+            obj=self.ptycho.obj,
+            vol=self.rho,
+            angles=self.angles_dict,
             shifts=self.shifts_per_angle,  #THIS IS ONLY FOR REAL DATA
-            obj_is_refractive_index=False, 
+            obj_is_refractive_index=False,
             mask_threshold=35
             )
 
         self.projected_rho = self.projector.forward(self.rho)
-        self.update_views()  
+        self.update_views()
 
         self._initialize_model()
 
@@ -265,7 +286,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
     def update_views(self):
 
         """
-        Updates the views so that the projected rho (non-exponentiated)  
+        Updates the views so that the projected rho (non-exponentiated)
         can be retrieved from pod.object .
         """
         for i, (k,v) in enumerate([(i,v) for i,v in self.ptycho.obj.views.items() if v.pod.active]):
@@ -286,14 +307,14 @@ class MLPtychoTomo(PositionCorrectionEngine):
             t1 = time.time()
             self.ML_model.new_grad_rho()
             error_dct = self.ML_model.new_grad_pr()
-            
+
             new_rho_grad, new_pr_grad = self.rho_grad_new, self.pr_grad_new
             allreduce(new_rho_grad)
 
             # SCALING: needed for the regularizer to work on probe coeffs
             # Maybe not needed on real data
             # n_pixels = np.prod(np.shape(self.rho))
-            # scaling_factor = 0.57 * n_pixels         
+            # scaling_factor = 0.57 * n_pixels
             # new_rho_grad /= scaling_factor
 
             print('rho_grad: %.2e' % np.linalg.norm(self.rho_grad))
@@ -334,10 +355,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
             else:
                 # For the volume
-                bt_num_rho = u.norm2(new_rho_grad) - np.real(np.vdot(new_rho_grad.flat, self.rho_grad.flat)) 
+                bt_num_rho = u.norm2(new_rho_grad) - np.real(np.vdot(new_rho_grad.flat, self.rho_grad.flat))
                 bt_denom_rho = u.norm2(self.rho_grad)
                 print('bt_num_rho, bt_denom_rho: (%.2e, %.2e) ' % (bt_num_rho, bt_denom_rho))
-                
+
                 if bt_denom_rho == 0:
                     bt_rho = 0
                 else:
@@ -346,7 +367,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 # For the probe
                 bt_num_pr = Cnorm2(new_pr_grad) - np.real(Cdot(new_pr_grad, self.pr_grad))
                 bt_denom_pr = Cnorm2(self.pr_grad)
-                bt_pr = max(0, bt_num_pr/bt_denom_pr)               
+                bt_pr = max(0, bt_num_pr/bt_denom_pr)
 
             self.rho_grad = new_rho_grad.copy()
             self.pr_grad << new_pr_grad
@@ -372,9 +393,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
             if self.p.poly_line_coeffs == "quadratic":
                 B_rho = self.ML_model.poly_line_coeffs_rho(self.rho_h, self.pr_h)
                 B_pr = self.ML_model.poly_line_coeffs_pr(self.rho_h, self.pr_h)
-                
+
                 print('B_rho, B_pr', B_rho, B_pr)
- 
+
                 # same as above but quicker when poly quadratic
                 self.tmin_rho = dt(-0.5 * B_rho[1] / B_rho[2])
                 self.tmin_pr = dt(-0.5 * B_pr[1] / B_pr[2])
@@ -401,7 +422,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
                     self.tmin_pr = dt(min(real_roots, key=evalp)) # root with smallest poly objective
 
             tc += time.time() - t2
-                
+
             print('self.tmin_pr, self.tmin_rho: (%.2e,%.2e)' % (self.tmin_pr, self.tmin_rho))
 
             self.rho_h *= self.tmin_rho
@@ -416,13 +437,13 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
             # if iter==200:
             #     self.projector.plot_vol(self.rho, title= '200iters')
-                
+
             # Saving volumes when running on Wilson
             if iter==200 and not os.path.exists("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_phase_HARDC_it{}.cmap".format(iter)):
                 with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it{}.cmap".format(iter), "w") as f:
                     f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
                 with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it{}.cmap".format(iter), "w") as f:
-                    f["data"] = -np.real(self.rho)[100:-100,100:-100,100:-100]                
+                    f["data"] = -np.real(self.rho)[100:-100,100:-100,100:-100]
 
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
@@ -439,48 +460,55 @@ class MLPtychoTomo(PositionCorrectionEngine):
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
 
-        # FIRST OPR METHOD ###################
-        PERFORM_OPR = False
-        
-        if PERFORM_OPR:
-            pr_input = np.array([np.squeeze(s.data) for name, s in self.pr.storages.items()])
-            new_pr, modes, coeffs = reduce_dimension(pr_input, 12)
+        # Orthogonal Probe Relaxation (OPR)
+        if self.p.OPR_enable:
 
-            for i, (name, s) in enumerate(self.pr.storages.items()):
-                s.data[:] = new_pr[i]       
-       
+            # FIRST OPR METHOD ###################
+            if self.p.OPR_method.lower() == "first":
 
-        # SECOND OPR METHOD ###################
-#         pr_input = [np.squeeze(s.data) for name, s in self.pr.storages.items()]
-        
-#         all_m_centers = []
-        
-#         for pr in pr_input:
-#             all_m_centers.append(mass_center(np.abs(pr)))
-            
-#         # average_x = np.mean(np.array([coords[0] for coords in all_m_centers]))
-#         # average_y = np.mean(np.array([coords[1] for coords in all_m_centers]))
-#         mean_center = [16, 16]
-        
-#         shifts_to_apply = [coords-mean_center for coords in all_m_centers]
+                pr_input = np.array([np.squeeze(s.data) for name, s in self.pr.storages.items()])
+                new_pr, modes, coeffs = reduce_dimension(pr_input, self.p.OPR_modes)
 
-#         shifted_probes = []
-#         for n, pr in enumerate(pr_input):
-#             shifted_probes.append(shift(pr, -1*(shifts_to_apply[n])))
+                for i, (name, s) in enumerate(self.pr.storages.items()):
+                    s.data[:] = new_pr[i]
 
-#         reduced_pr, modes, coeffs = reduce_dimension(np.array(shifted_probes), 48)
-        
-#         newest_pr = []
-#         for n, pr in enumerate(reduced_pr):
-#             newest_pr.append(shift(pr, (shifts_to_apply[n])))
+            # SECOND OPR METHOD ###################
+            elif self.p.OPR_method.lower() == "second":
 
-#         for i, (name, s) in enumerate(self.pr.storages.items()):
-#             s.data[:] = newest_pr[i]
-            
-#         if not os.path.isfile('pr_input.png') and iter==200:
-#             self.projector.plot_complex_array(pr_input[2], 'pr_input.png')
-#             self.projector.plot_complex_array(shifted_probes[2], 'shifted_probes.png')
-#             self.projector.plot_complex_array(newest_pr[2], 'newest_pr.png')
+                pr_input = [np.squeeze(s.data) for name, s in self.pr.storages.items()]
+
+                all_m_centers = []
+
+                for pr in pr_input:
+                    all_m_centers.append(u.mass_center(np.abs(pr)))
+
+                # average_x = np.mean(np.array([coords[0] for coords in all_m_centers]))
+                # average_y = np.mean(np.array([coords[1] for coords in all_m_centers]))
+                mean_center = [16, 16] # FIXME: hardcoded probe mean centre
+
+                shifts_to_apply = [coords-mean_center for coords in all_m_centers]
+
+                shifted_probes = []
+                for n, pr in enumerate(pr_input):
+                    shifted_probes.append(shift(pr, -1*(shifts_to_apply[n])), mode='nearest')
+
+                reduced_pr, modes, coeffs = reduce_dimension(np.array(shifted_probes), self.p.OPR_modes)
+
+                newest_pr = []
+                for n, pr in enumerate(reduced_pr):
+                    newest_pr.append(shift(pr, (shifts_to_apply[n])))
+
+                for i, (name, s) in enumerate(self.pr.storages.items()):
+                    s.data[:] = newest_pr[i]
+
+                # FIXME: eventually remove hardcoded plotting
+                if not os.path.isfile('pr_input.png') and iter==200:
+                    self.projector.plot_complex_array(pr_input[2], 'pr_input.png')
+                    self.projector.plot_complex_array(shifted_probes[2], 'shifted_probes.png')
+                    self.projector.plot_complex_array(newest_pr[2], 'newest_pr.png')
+
+            else:
+                raise RuntimeError("Unsupported OPR_method: '%s'" % self.p.OPR_method)
 
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
 
@@ -559,7 +587,7 @@ class BaseModel(object):
                                             for s in self.di.storages.values())
         # Prepare regularizer
         if self.regularizer is not None:
-            # obj_Npix = np.prod(np.shape(self.rho))    #self.ob.size 
+            # obj_Npix = np.prod(np.shape(self.rho))    #self.ob.size
             # expected_obj_var = obj_Npix / self.tot_power  # Poisson
             # reg_rescale = self.tot_measpts / (8. * obj_Npix * expected_obj_var)
             # logger.debug(
@@ -709,14 +737,14 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
-                psi = pod.probe * np.exp(1j * pod.object)   # CHANGING from pod.object 
-                product_xi_psi_conj = -1j* xi * psi.conj() 
+                psi = pod.probe * np.exp(1j * pod.object)   # CHANGING from pod.object
+                product_xi_psi_conj = -1j* xi * psi.conj()
                 products_xi_psi_conj.append(product_xi_psi_conj)
-                
+
         self.rho_grad = 2 * self.projector.backward(np.moveaxis(np.array(products_xi_psi_conj), 1, 0))
         self.engine.rho_grad_new = self.rho_grad
 
-        return 
+        return
 
     def new_grad_pr(self):
         """
@@ -798,7 +826,7 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         omega = np.array(self.projector.forward(rho_h))
-        
+
         # Store omega so that we can use it later
         for i, (k,ov) in enumerate([(i,v) for i,v in self.omega.views.items() if v.pod.active]):
             ov.data[:] = 1j * omega[i]
@@ -821,17 +849,17 @@ class GaussianModel(BaseModel):
                     continue
 
                 psi = pod.probe * np.exp(1j * pod.object)   # exit_wave
-                f = pod.fw(psi)  
+                f = pod.fw(psi)
 
                 omega_i = self.omega[pod.ex_view]
-               
+
                 a = pod.fw(psi*omega_i)
                 b = pod.fw(psi*(omega_i**2))
 
                 if A0 is None:
                     A0 = u.abs2(f).astype(np.longdouble)
                     A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
-                    A2 = np.real(f * b.conj()).astype(np.longdouble) + u.abs2(a).astype(np.longdouble)       
+                    A2 = np.real(f * b.conj()).astype(np.longdouble) + u.abs2(a).astype(np.longdouble)
                 else:
                     A0 += u.abs2(f)
                     A1 += 2 * np.real(f * a.conj())
@@ -848,7 +876,7 @@ class GaussianModel(BaseModel):
 
             B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
             B[1] += np.dot(w.flat, (2*A0*A1).flat) * Brenorm
-            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm            
+            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
 
         parallel.allreduce(B)
 
@@ -880,7 +908,7 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         omega = np.array(self.projector.forward(rho_h))
-        
+
         # Store omega so that we can use it later
         for i, (k,ov) in enumerate(self.omega.views.items()):
             ov.data[:] = 1j * omega[i]
@@ -903,7 +931,7 @@ class GaussianModel(BaseModel):
                     continue
 
                 psi = pod.probe * np.exp(1j * pod.object)   # exit_wave
-                f = pod.fw(psi)  
+                f = pod.fw(psi)
 
                 omega_i = self.omega[pod.ex_view]
                 a = pod.fw(psi*omega_i)
@@ -912,7 +940,7 @@ class GaussianModel(BaseModel):
                 if A0 is None:
                     A0 = u.abs2(f).astype(np.longdouble)
                     A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
-                    A2 = np.real(f * b.conj()).astype(np.longdouble) + u.abs2(a).astype(np.longdouble)       
+                    A2 = np.real(f * b.conj()).astype(np.longdouble) + u.abs2(a).astype(np.longdouble)
                 else:
                     A0 += u.abs2(f)
                     A1 += 2 * np.real(f * a.conj())
@@ -932,7 +960,7 @@ class GaussianModel(BaseModel):
             B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
             B[3] += np.dot(w.flat, (2*A1*A2).flat) * Brenorm
             B[4] += np.dot(w.flat, (A2**2).flat) * Brenorm
-            
+
         parallel.allreduce(B)
 
         # Object regularizer
@@ -974,7 +1002,7 @@ class GaussianModel(BaseModel):
             A0 = None
             A1 = None
             A2 = None
-            
+
             for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
@@ -985,7 +1013,7 @@ class GaussianModel(BaseModel):
                 if A0 is None:
 
                     A0 = u.abs2(f).astype(np.longdouble)
-                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble) 
+                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
                     A2 = u.abs2(a).astype(np.longdouble)
                 else:
                     A0 += u.abs2(f)
@@ -1046,7 +1074,7 @@ class GaussianModel(BaseModel):
             A0 = None
             A1 = None
             A2 = None
-            
+
             for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
@@ -1057,7 +1085,7 @@ class GaussianModel(BaseModel):
                 if A0 is None:
 
                     A0 = u.abs2(f).astype(np.longdouble)
-                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble) 
+                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
                     A2 = u.abs2(a).astype(np.longdouble)
                 else:
                     A0 += u.abs2(f)
