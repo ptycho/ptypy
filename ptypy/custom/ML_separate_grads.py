@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Maximum Likelihood reconstruction engine.
+Maximum Likelihood separate gradients reconstruction engine.
 
 TODO.
 
-  * Implement other regularizers
+  * Implement other ML models (Poisson/Euclid)
 
 This file is part of the PTYPY package.
 
-    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :copyright: Copyright 2024 by the PTYPY team, see AUTHORS.
     :license: see LICENSE for details.
 """
 import numpy as np
@@ -99,6 +99,7 @@ class MLSeparateGrads(PositionCorrectionEngine):
     default = quadratic
     type = str
     help = How many coefficients to be used in the the linesearch
+    choices = ['quadratic','all']
     doc = choose between the 'quadratic' approximation (default) or 'all'
 
     """
@@ -203,13 +204,16 @@ class MLSeparateGrads(PositionCorrectionEngine):
         """
         Compute `num` iterations.
         """
-        ########################
-        # Compute new gradient
-        ########################
         tg = 0.
         tc = 0.
         ta = time.time()
         for it in range(num):
+
+            ########################
+            # Compute new gradients
+            # ob: new_ob_grad
+            # pr: new_pr_grad
+            ########################
             t1 = time.time()
             error_dct = self.ML_model.new_grad()
             new_ob_grad, new_pr_grad = self.ob_grad_new, self.pr_grad_new
@@ -222,6 +226,8 @@ class MLSeparateGrads(PositionCorrectionEngine):
                     #support = self.probe_support.get(name)
                     #if support is not None:
                     #    s.data *= support
+            # FIXME: this hack doesn't work here as we step in probe and object separately
+            # FIXME: really it's the probe step that should be zeroed out not the gradient
             else:
                 new_pr_grad.fill(0.)
 
@@ -232,7 +238,9 @@ class MLSeparateGrads(PositionCorrectionEngine):
                     s.data[:] = self.smooth_gradient(s.data)
 
             ############################
-            # Compute next conjugate
+            # Compute Polak-Ribiere betas
+            # bt_ob = bt_num_ob/bt_denom_ob
+            # bt_pr = bt_num_pr/bt_denom_pr
             ############################
             if self.curiter == 0:
                 bt_ob = 0.
@@ -246,13 +254,19 @@ class MLSeparateGrads(PositionCorrectionEngine):
                 # For the probe
                 bt_num_pr = Cnorm2(new_pr_grad) - np.real(Cdot(new_pr_grad, self.pr_grad))
                 bt_denom_pr = Cnorm2(self.pr_grad)
-                bt_pr = max(0, bt_num_pr/bt_denom_pr)               
+                bt_pr = max(0, bt_num_pr/bt_denom_pr)
 
             self.ob_grad << new_ob_grad
             self.pr_grad << new_pr_grad
 
-            dt = self.ptycho.FType
-            # 3. Next conjugate
+            ############################
+            # Compute next conjugates
+            # ob_h -= bt_ob * ob_grad
+            # pr_h -= bt_pr * pr_grad
+            # NB: in the below need to do h/tmin
+            # as did h*tmin when taking conjugates
+            # (don't you just love containers?)
+            ############################
             self.ob_h *= bt_ob / self.tmin_ob
 
             # Smoothing preconditioner
@@ -265,26 +279,36 @@ class MLSeparateGrads(PositionCorrectionEngine):
             self.pr_h *= bt_pr / self.tmin_pr
             self.pr_h -= self.pr_grad
 
+            ########################
+            # Compute step-sizes
+            # ob: tmin_ob
+            # pr: tmin_pr
+            ########################
+            dt = self.ptycho.FType
             t2 = time.time()
 
             if self.p.poly_line_coeffs == "quadratic":
-                B_ob = self.ML_model.poly_line_coeffs_ob(self.ob_h, self.pr_h)
-                B_pr = self.ML_model.poly_line_coeffs_pr(self.ob_h, self.pr_h)
- 
+                B_ob = self.ML_model.poly_line_coeffs_ob(self.ob_h)
+                B_pr = self.ML_model.poly_line_coeffs_pr(self.pr_h)
+
                 # same as above but quicker when poly quadratic
                 self.tmin_ob = dt(-0.5 * B_ob[1] / B_ob[2])
                 self.tmin_pr = dt(-0.5 * B_pr[1] / B_pr[2])
 
             else:
                 raise NotImplementedError("poly_line_coeffs should be 'quadratic' or 'all'")
-                
+
             tc += time.time() - t2
-                
+
+            ########################
+            # Take conjugate steps
+            # ob += tmin_ob * ob_h
+            # pr += tmin_pr * pr_h
+            ########################
             self.ob_h *= self.tmin_ob
             self.pr_h *= self.tmin_pr
             self.ob += self.ob_h
             self.pr += self.pr_h
-            # Newton-Raphson loop would end here
 
             # Position correction
             self.position_update()
@@ -396,21 +420,20 @@ class BaseModel(object):
 
     def new_grad(self):
         """
-        Compute a new gradient direction according to the noise model.
+        Compute new object and probe gradient directions according to the noise model.
 
-        Note: The negative log-likelihood and local errors should also be computed
-        here.
+        Note: The negative log-likelihood and local errors should also be computed here.
         """
         raise NotImplementedError
 
-    def poly_line_coeffs_ob(self, ob_h, pr_h):
+    def poly_line_coeffs_ob(self, ob_h):
         """
         Compute the coefficients of the polynomial for line minimization
         in direction h for the object
         """
         raise NotImplementedError
 
-    def poly_line_coeffs_pr(self, ob_h, pr_h):
+    def poly_line_coeffs_pr(self, pr_h):
         """
         Compute the coefficients of the polynomial for line minimization
         in direction h for the probe
@@ -518,7 +541,7 @@ class GaussianModel(BaseModel):
 
         return error_dct
 
-    def poly_line_coeffs_ob(self, ob_h, pr_h):
+    def poly_line_coeffs_ob(self, ob_h):
         """
         Compute the coefficients of the polynomial for line minimization
         in direction h for the object
@@ -543,17 +566,17 @@ class GaussianModel(BaseModel):
             for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
-                f = pod.fw(pod.probe * pod.object)  
+                f = pod.fw(pod.probe * pod.object)
                 a = pod.fw(pod.probe * ob_h[pod.ob_view])
 
                 if A0 is None:
                     A0 = u.abs2(f).astype(np.longdouble)
                     A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
-                    A2 = u.abs2(a).astype(np.longdouble)       
+                    A2 = u.abs2(a).astype(np.longdouble)
                 else:
                     A0 += u.abs2(f)
                     A1 += 2 * np.real(f * a.conj())
-                    A2 += u.abs2(a)   
+                    A2 += u.abs2(a)
 
             if self.p.floating_intensities:
                 A0 *= self.float_intens_coeff[dname]
@@ -586,7 +609,7 @@ class GaussianModel(BaseModel):
 
         return B
 
-    def poly_line_coeffs_pr(self, ob_h, pr_h):
+    def poly_line_coeffs_pr(self, pr_h):
         """
         Compute the coefficients of the polynomial for line minimization
         in direction h for the probe
@@ -607,18 +630,18 @@ class GaussianModel(BaseModel):
             A0 = None
             A1 = None
             A2 = None
-            
+
             for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
 
                 f = pod.fw(pod.probe * pod.object)
-                a = pod.fw(pr_h[pod.pr_view] * pod.object) 
+                a = pod.fw(pr_h[pod.pr_view] * pod.object)
 
                 if A0 is None:
 
                     A0 = u.abs2(f).astype(np.longdouble)
-                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble) 
+                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
                     A2 = u.abs2(a).astype(np.longdouble)
                 else:
                     A0 += u.abs2(f)
@@ -639,12 +662,6 @@ class GaussianModel(BaseModel):
             B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
 
         parallel.allreduce(B)
-
-        # Object regularizer
-        if self.regularizer:
-            for name, s in self.ob.storages.items():
-                B += Brenorm * self.regularizer.poly_line_coeffs(
-                    ob_h.storages[name].data, s.data)
 
         if np.isinf(B).any() or np.isnan(B).any():
             logger.warning(
