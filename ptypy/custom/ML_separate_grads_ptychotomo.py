@@ -95,7 +95,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
     help = Whether to use the object/probe scaling preconditioner
     doc = This parameter can give faster convergence for weakly scattering samples.
 
-    [OPR_enable]
+    [OPR]
     default = False
     type = bool
     help = Whether to enable orthogonal probe modes
@@ -495,7 +495,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         ########################
 
         # Orthogonal Probe Relaxation (OPR)
-        if self.p.OPR_enable:
+        if self.p.OPR:
 
             # FIRST OPR METHOD ###################
             if self.p.OPR_method.lower() == "first":
@@ -785,6 +785,8 @@ class GaussianModel(BaseModel):
 
         # Back project volume
         self.rho_grad = 2 * self.projector.backward(np.moveaxis(np.array(products_xi_psi_conj), 1, 0))
+
+        print('DEBUG rho_grad: %.2e ' % np.linalg.norm(self.rho_grad))
 
         return
 
