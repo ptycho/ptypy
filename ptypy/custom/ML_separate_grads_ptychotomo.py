@@ -785,8 +785,10 @@ class GaussianModel(BaseModel):
 
         # Back project volume
         self.rho_grad = 2 * self.projector.backward(np.moveaxis(np.array(products_xi_psi_conj), 1, 0))
-
-        print('DEBUG rho_grad: %.2e ' % np.linalg.norm(self.rho_grad))
+        # FIXME: it is bizarre that this is actually needed
+        # FIXME: is it because we are not using containers?
+        self.engine.rho_grad_new = self.rho_grad
+        #print('DEBUG rho_grad: %.2e ' % np.linalg.norm(self.rho_grad))
 
         return
 
