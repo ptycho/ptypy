@@ -224,8 +224,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.omega = self.ex
 
         # Initialise volume
-        rho_real = np.load('recon_phase4.npy') #('real_vol_35it.npy')  #
-        rho_imag = np.load('recon_ampl4.npy') #('imag_vol_35it.npy')  #
+        rho_real = np.load('starting_vol_for_ML/recon_phase4.npy') #('real_vol_35it.npy')  #
+        rho_imag = np.load('starting_vol_for_ML/recon_ampl4.npy') #('imag_vol_35it.npy')  #
         # rho_real_br = gaussian_filter(rho_real, sigma=2.5)
         # rho_imag_br = gaussian_filter(rho_imag, sigma=2.5)
 
