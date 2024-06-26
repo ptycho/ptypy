@@ -356,7 +356,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 new_rho_grad = self.smooth_gradient(new_rho_grad)
 
             ############################
-            # Compute Polak-Ribiere beta
+            # Compute Polak-Ribiere betas
             # bt_rho = bt_num_rho/bt_denom_rho
             # bt_pr = bt_num_pr/bt_denom_pr
             ############################
