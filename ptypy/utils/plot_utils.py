@@ -345,7 +345,7 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
     uses a matplotlib colormap with name 'gray'
     """
     if str(cmap) == cmap:
-        cmap = mpl.cm.get_cmap(cmap)
+        cmap = mpl.colormaps.get_cmap(cmap)
 
     if a.dtype.kind == 'c':
         i = complex2rgb(a, vmin=vmin, vmax=vmax)
@@ -379,7 +379,7 @@ def imload(filename):
 # Removing it due to DeprecationWarning in Matplotlib
 # DeprecationWarning: Passing raw data via parameters data and lut to register_cmap() is deprecated since 3.3 and will become an error two minor releases later. Instead use: register_cmap(cmap=LinearSegmentedColormap(name, data, lut))
 # Franz map
-# mpl.cm.register_cmap(name='franzmap', data={'red':   ((0.000,   0,    0),
+# mpl.colormaps.register_cmap(name='franzmap', data={'red':   ((0.000,   0,    0),
 #                                                       (0.350,   0,    0),
 #                                                       (0.660,   1,    1),
 #                                                       (0.890,   1,    1),
@@ -416,7 +416,7 @@ franzmap_cm = {'red':   ((0.000,   0,    0),
                                                       (0.650,   0,    0),
                                                       (1.000,   0,    0))}
                                                       
-mpl.cm.register_cmap(cmap=LinearSegmentedColormap(name='franzmap', segmentdata=franzmap_cm, N=256))
+mpl.colormaps.register(cmap=LinearSegmentedColormap(name='franzmap', segmentdata=franzmap_cm, N=256))
 
 def franzmap():
     """\
@@ -679,10 +679,10 @@ class PtyAxis(object):
 
     def set_cmap(self, cmap, update=True):
         try:
-            self.cmap = mpl.cm.get_cmap(cmap)
+            self.cmap = mpl.colormaps.get_cmap(cmap)
         except:
             logger.debug("Colormap `%s` not found. Using `gray`" % str(cmap))
-            self.cmap = mpl.cm.get_cmap('gray')
+            self.cmap = mpl.colormaps.get_cmap('gray')
         if update:
             self._update()
             self._update_colorscale()
