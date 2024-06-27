@@ -5,7 +5,7 @@ from ptypy.core import Ptycho
 from ptypy import utils as u
 import ptypy.simulations as sim
 import ptypy.utils.tomo as tu
-from ptypy.custom import ML_separate_grads_ptychotomo, ML_separate_grads
+from ptypy.custom import ML_separate_grads_ptychotomo
 import random
 
 import astra
@@ -21,7 +21,7 @@ p.data_type = "single"
 
 p.run = None
 p.io = u.Param()
-p.io.home = "/".join([tmpdir, "ptypy_letizia"])
+p.io.home = "/".join([tmpdir, "ptypy_jari"])
 p.io.autosave = u.Param(active=True)
 p.io.autoplot = u.Param(active=False)
 p.io.autoplot.layout='minimal'
@@ -108,7 +108,7 @@ shift_probes = False
 if shift_probes:
     # For saving shifts to file
     # Make sure file is empty
-    with open("shifts.txt", "w") as myfile:
+    with open("probe_shifts.txt", "w") as myfile:
         myfile.write('\n') 
 
 # Iterate over nr. of tomographic angles
@@ -118,37 +118,49 @@ for i in range(nangles):
     simi = sim.copy(depth=99)
     proj_new = proj[i]
 
-    if shift_probes: 
+    if shift_probes:
         selected_shift = random.choice(all_shifts)
 
         # Save the shifts applied to file
-        with open("shifts.txt", "a") as myfile:
+        with open("probe_shifts.txt", "a") as myfile:
             myfile.write('probe '+ str(i) + ':    (' +str(selected_shift[0]) +  ', ' + str(selected_shift[1]) + ') \n')
-        shifted_proj_1 = np.roll(proj_new, selected_shift[0], axis=0)   # up or down (neg = up, pos = down)      
-        proj_new = np.roll(shifted_proj_1, selected_shift[1], axis=1)   # right or left (neg = left, pos = right)   
+        shifted_proj_1 = np.roll(proj_new, selected_shift[0], axis=0)   # up or down (neg = up, pos = down)
+        proj_new = np.roll(shifted_proj_1, selected_shift[1], axis=1)   # right or left (neg = left, pos = right)
 
     simi.sample.model = np.exp(1j * proj_new)
     scani = scan.copy(depth=99)
     scani.data.update(simi)
     setattr(p.scans, f"scan{i}", scani)
 
+# Write out angles
+np.save("simulated_angles.npy", angles, allow_pickle=False)
+
 # Reconstruction parameters
 p.engines = u.Param()
-p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'MLPtychoTomo'  
-p.engines.engine00.numiter = 51 
-p.engines.engine00.probe_update_start = 0
-# p.engines.engine00.subspace_dim = 10
-# p.engines.engine00.subspace_start = 0
-# p.engines.engine00.poly_line_coeffs = 'all'
-# p.engines.engine00.fourier_relax_factor = 0.05
-# p.engines.engine00.probe_center_tol = 1
+p.engines.engine = u.Param()
+p.engines.engine.name = 'MLPtychoTomo'
+p.engines.engine.angles = 'simulated_angles.npy'
+p.engines.engine.init_vol_real = 'starting_vol_for_ML_simulated/real_vol_35it.npy'
+p.engines.engine.init_vol_imag = 'starting_vol_for_ML_simulated/imag_vol_35it.npy'
+p.engines.engine.numiter = 10
+p.engines.engine.numiter_contiguous = 10
+p.engines.engine.probe_support = None
+p.engines.engine.probe_fourier_support = None
+#p.engines.engine.reg_del2 = False
+#p.engines.engine.reg_del2_amplitude = 0.01
+#p.engines.engine.smooth_gradient = 0.0
+#p.engines.engine.smooth_gradient_decay = 0.0
+#p.engines.engine.OPR = False
+#p.engines.engine.OPR_modes = 12
+#p.engines.engine.OPR_method = "second"
+#p.engines.engine.probe_update_start = 0 # is the default
+#p.engines.engine.poly_line_coeffs = "quadratic"
 
 u.verbose.set_level("info")
 
 if __name__ == "__main__":
     P = Ptycho(p,level=5)
-    
+
     ## Modifying probes  #############################
 #     P = Ptycho(p,level=3)
 
@@ -169,9 +181,9 @@ if __name__ == "__main__":
 #     # # Update probe
 #     P.probe.reformat()
 
-#     # # Unforunately we need to delete the storage here due to DM being unable  
-#     # # to ignore unused storages. This is due to the /=nrm division in the 
-#     # # probe update  
+#     # # Unforunately we need to delete the storage here due to DM being unable
+#     # # to ignore unused storages. This is due to the /=nrm division in the
+#     # # probe update
 #     # for s in storage_list[1:]:
 #     #     P.probe.storages.pop(s.ID)
 
