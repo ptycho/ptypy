@@ -54,6 +54,18 @@ class MLPtychoTomo(PositionCorrectionEngine):
     choices = ['gaussian','poisson','euclid']
     doc = One of ‘gaussian’, poisson’ or ‘euclid’.
 
+    [init_vol_real]
+    default = None
+    type = str
+    help = Initial volume (real part)
+    doc = Path to real part of the starting volume for the reconstruction.
+
+    [init_vol_imag]
+    default = None
+    type = str
+    help = Initial volume (imaginary part)
+    doc = Path to imaginary part of the starting volume for the reconstruction.
+
     [floating_intensities]
     default = False
     type = bool
@@ -215,7 +227,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         """
         super(MLPtychoTomo, self).engine_initialize()
 
-        # Object gradient and minimization direction
+        # Volume gradient and minimization direction
         self.rho_grad = np.zeros(3*(self.pshape,), dtype=np.complex64)       # self.ob.copy(self.ob.ID + '_grad', fill=0.)
         self.rho_grad_new = np.zeros(3*(self.pshape,), dtype=np.complex64)   # self.ob.copy(self.ob.ID + '_grad_new', fill=0.)
         self.rho_h = np.zeros(3*(self.pshape,), dtype=np.complex64)          # self.ob.copy(self.ob.ID + '_h', fill=0.)
@@ -224,12 +236,14 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.omega = self.ex
 
         # Initialise volume
-        rho_real = np.load('starting_vol_for_ML/recon_phase4.npy') #('real_vol_35it.npy')  #
-        rho_imag = np.load('starting_vol_for_ML/recon_ampl4.npy') #('imag_vol_35it.npy')  #
+        rho_real = np.load(self.p.init_vol_real)
+        rho_imag = np.load(self.p.init_vol_imag)
+        # FIXME: add option for gaussian filter for initial volume
         # rho_real_br = gaussian_filter(rho_real, sigma=2.5)
         # rho_imag_br = gaussian_filter(rho_imag, sigma=2.5)
 
         # starting from volume of zeros
+        # FIXME: add option to start from zero volume
         # self.rho = np.zeros_like(rho_real) + 1j * np.zeros_like(rho_imag)
 
         # starting from conv volume
@@ -855,8 +869,13 @@ class GaussianModel(BaseModel):
             #     self.rho_grad.storages[name].data += self.regularizer.grad(
             #         s.data)
 
-            # apply volume regularizer and compute log-likelihood
+            # add volume regularizer
             self.rho_grad += self.regularizer.grad(self.rho)
+            # FIXME: check if the below handoff is also needed here
+            #self.engine.rho_grad_new = self.rho_grad
+            print('DEBUG rho_grad: %.2e ' % np.linalg.norm(self.rho_grad))
+
+            # add regularizer log-likelihood
             LL += self.regularizer.LL
 
         self.LL = LL / self.tot_measpts
