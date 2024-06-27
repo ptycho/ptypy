@@ -4,7 +4,7 @@ Numerical util functions.
 
 This file is part of the PTYPY package.
 
-    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :copyright: Copyright 2024 by the PTYPY team, see AUTHORS.
     :license: see LICENSE for details.
 """
 import os
@@ -42,7 +42,7 @@ class AstraTomoWrapper:
     Base class for wrappers for the Astra projectors.
     """    
 
-    def __init__(self, obj, vol, angles, shifts, obj_is_refractive_index=False, mask_threshold=0):
+    def __init__(self, obj, vol, angles, shifts=None, obj_is_refractive_index=False, mask_threshold=0):
         self._obj = obj
         self._vol = vol
         self._angles = angles
@@ -205,14 +205,20 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
             #         'v.storage.center[1]':v.storage.center[1],
             #     })
             
-            # ONLY FOR REAL DATA
-            shift_dx, shift_dy = self._shifts_per_angle[v.storageID]
-            corrected_shift_dx, corrected_shift_dy = shift_dx+10, shift_dy+10 
+            # Apply shifts if they are provided
+            if self._shifts_per_angle is not None:
+                shift_dx, shift_dy = self._shifts_per_angle[v.storageID]
+                corrected_shift_dx, corrected_shift_dy = shift_dx+10, shift_dy+10
             
-            # Hardcoding v.storage.center with 220,220 - needed for real data
-            # The shifts are also only needed for working on real data
-            y = v.dcoord[0] - 220 + corrected_shift_dy   # v.storage.center[0]
-            x = v.dcoord[1] - 220 + corrected_shift_dx   # v.storage.center[1]
+                # Hardcoding v.storage.center with 220,220 - needed for real data
+                # FIXME: storage centre shouldn't be harcoded here
+                # The shifts are also only needed for working on real data
+                y = v.dcoord[0] - 220 + corrected_shift_dy   # v.storage.center[0]
+                x = v.dcoord[1] - 220 + corrected_shift_dx   # v.storage.center[1]
+
+            else: # no shift is applied
+                y = v.dcoord[0] - v.storage.center[0]
+                x = v.dcoord[1] - v.storage.center[1]
 
             # ray direction
             self._vec[i,0] = np.sin(alpha)
