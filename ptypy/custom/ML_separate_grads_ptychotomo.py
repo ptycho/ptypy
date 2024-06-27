@@ -54,6 +54,18 @@ class MLPtychoTomo(PositionCorrectionEngine):
     choices = ['gaussian','poisson','euclid']
     doc = One of ‘gaussian’, poisson’ or ‘euclid’.
 
+    [angles]
+    default = None
+    type = str
+    help = Tomography angles
+    doc = Path to the tomography angles.
+
+    [shifts]
+    default = None
+    type = str
+    help = Tomography angle shifts
+    doc = Path to the tomography angle shifts (if provided).
+
     [init_vol_real]
     default = None
     type = str
@@ -192,22 +204,19 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.pshape = list(self.ptycho.obj.S.values())[0].data.shape[-1]
         print('self.pshape:   ', self.pshape)
 
-        # For simulated data
-        # n_angles = len(self.ptycho.obj.S)
-        # angles = np.linspace(0, np.pi, n_angles, endpoint=True)
-
-        # For real data
-        angles = np.load('angles_rad.npy')
-
+        # Load tomography angles and create angles dictionary
+        # FIXME: there should be a more efficient way to do this
+        angles = np.load(self.p.angles)
         self.angles_dict = {}
         for i,k in enumerate(self.ptycho.obj.S):
             self.angles_dict[k] = angles[i]
 
-        # ONLY FOR THE REAL DATA
-        self.shifts_per_angle = {}
-        self.shifts = np.load('xyshifts5.npy')
-        for i,k in enumerate(self.ptycho.obj.S):
-            self.shifts_per_angle[k]  =  self.shifts[:,i]  # dx, dy
+        # Load angle shifts if provided and create dictionary
+        if self.p.shifts is not None:
+            self.shifts_per_angle = {}
+            self.shifts = np.load(self.p.shifts)
+            for i,k in enumerate(self.ptycho.obj.S):
+                self.shifts_per_angle[k]  =  self.shifts[:,i]  # dx, dy
 
         # FIXME: update with paper
         self.ptycho.citations.add_article(
