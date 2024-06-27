@@ -212,6 +212,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             self.angles_dict[k] = angles[i]
 
         # Load angle shifts if provided and create dictionary
+        self.shifts_per_angle = None
         if self.p.shifts is not None:
             self.shifts_per_angle = {}
             self.shifts = np.load(self.p.shifts)
@@ -278,7 +279,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             obj=self.ptycho.obj,
             vol=self.rho,
             angles=self.angles_dict,
-            shifts=self.shifts_per_angle,  #THIS IS ONLY FOR REAL DATA
+            shifts=self.shifts_per_angle,
             obj_is_refractive_index=False,
             mask_threshold=35
             )
