@@ -879,13 +879,8 @@ class GaussianModel(BaseModel):
             #     self.rho_grad.storages[name].data += self.regularizer.grad(
             #         s.data)
 
-            # add volume regularizer
+            # add volume regularizer gradient and regularizer log-likelihood
             self.rho_grad += self.regularizer.grad(self.rho)
-            # FIXME: check if the below handoff is also needed here
-            #self.engine.rho_grad_new = self.rho_grad
-            print('DEBUG rho_grad: %.2e ' % np.linalg.norm(self.rho_grad))
-
-            # add regularizer log-likelihood
             LL += self.regularizer.LL
 
         self.LL = LL / self.tot_measpts
