@@ -120,6 +120,12 @@ class MLPtychoTomo(PositionCorrectionEngine):
     lowlim = 0.0
     help = Amplitude of the Gaussian prior if used
 
+    [weight_gradient]
+    default = False
+    type = bool
+    help = Coverage gradient weights
+    doc = Weight the gradient based on the view coverage.
+
     [smooth_gradient]
     default = 0.0
     type = float
@@ -212,6 +218,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # Tomography projector
         self.projector = None
 
+        # View coverage
+        self.coverage = None
+
         # Other
         self.tmin_rho = None
         self.tmin_pr = None
@@ -220,6 +229,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         self.omega = None
 
+        # Get volume size
         self.pshape = list(self.ptycho.obj.S.values())[0].data.shape[-1]
         print('self.pshape:   ', self.pshape)
 
@@ -275,6 +285,14 @@ class MLPtychoTomo(PositionCorrectionEngine):
             rho_real = gaussian_filter(rho_real, sigma=p.init_vol_blur_sigma)
             rho_imag = gaussian_filter(rho_imag, sigma=p.init_vol_blur_sigma)
         self.rho = rho_real + 1j * rho_imag
+
+        # Initialise coverage
+        if self.p.weight_gradient:
+             self.coverage = list(self.ptycho.obj.S.values())[0].get_view_coverage()
+             self.coverage = np.squeeze(np.real(self.coverage)) # extract
+             self.coverage = self.coverage/np.max(self.coverage) # normalise
+             self.coverage = gaussian_filter(self.coverage, sigma=2.5) # smooth
+             #np.save('coverage', self.coverage, allow_pickle=False)
 
         # Initialise stacked views
         stacked_views = np.array([v.data for v in self.ptycho.obj.views.values() if v.pod.active])
@@ -643,6 +661,7 @@ class BaseModel(object):
         self.pr_grad = self.engine.pr_grad_new
         self.omega = self.engine.omega
         self.ex = self.engine.ex
+        self.coverage = self.engine.coverage
 
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
@@ -824,6 +843,10 @@ class GaussianModel(BaseModel):
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
                 psi = pod.probe * np.exp(1j * pod.object)
                 product_xi_psi_conj = -1j* xi * psi.conj()
+                if self.p.weight_gradient:
+                    #print(pod.ob_view.slice)
+                    #print(self.coverage[pod.ob_view.slice[1:]])
+                    product_xi_psi_conj *= self.coverage[pod.ob_view.slice[1:]]
                 products_xi_psi_conj.append(product_xi_psi_conj)
 
         # Back project volume
