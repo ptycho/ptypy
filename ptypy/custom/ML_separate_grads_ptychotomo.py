@@ -66,6 +66,12 @@ class MLPtychoTomo(PositionCorrectionEngine):
     help = Tomography angle shifts
     doc = Path to the tomography angle shifts (if provided).
 
+    [init_vol_zero]
+    default = True
+    type = bool
+    help = Zero initial volume
+    doc = Start with a zero initial volume for the reconstruction.
+
     [init_vol_real]
     default = None
     type = str
@@ -77,6 +83,19 @@ class MLPtychoTomo(PositionCorrectionEngine):
     type = str
     help = Initial volume (imaginary part)
     doc = Path to imaginary part of the starting volume for the reconstruction.
+
+    [init_vol_blur]
+    default = False
+    type = bool
+    help = Blur initial volume
+    doc = Apply Gaussian blur to initial volume for the reconstruction.
+
+    [init_vol_blur_sigma]
+    default = 2.5
+    type = float
+    lowlim = 0.0
+    help = StdDev for initial volume blur
+    doc = Standard deviation for the initial volume Gaussian blur.
 
     [floating_intensities]
     default = False
@@ -237,7 +256,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         """
         super(MLPtychoTomo, self).engine_initialize()
 
-        # Volume gradient and minimization direction
+        # Initialise volume gradient and minimization direction              # OLD using containers
         self.rho_grad = np.zeros(3*(self.pshape,), dtype=np.complex64)       # self.ob.copy(self.ob.ID + '_grad', fill=0.)
         self.rho_grad_new = np.zeros(3*(self.pshape,), dtype=np.complex64)   # self.ob.copy(self.ob.ID + '_grad_new', fill=0.)
         self.rho_h = np.zeros(3*(self.pshape,), dtype=np.complex64)          # self.ob.copy(self.ob.ID + '_h', fill=0.)
@@ -246,27 +265,27 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.omega = self.ex
 
         # Initialise volume
-        rho_real = np.load(self.p.init_vol_real)
-        rho_imag = np.load(self.p.init_vol_imag)
-        # FIXME: add option for gaussian filter for initial volume
-        # rho_real_br = gaussian_filter(rho_real, sigma=2.5)
-        # rho_imag_br = gaussian_filter(rho_imag, sigma=2.5)
-
-        # starting from volume of zeros
-        # FIXME: add option to start from zero volume
-        # self.rho = np.zeros_like(rho_real) + 1j * np.zeros_like(rho_imag)
-
-        # starting from conv volume
+        if self.p.init_vol_zero: # starting from zero volume
+            rho_real = np.zeros(3*(self.pshape,), dtype=np.complex64)
+            rho_imag = np.zeros(3*(self.pshape,), dtype=np.complex64)
+        else: # starting from given volume
+            rho_real = np.load(self.p.init_vol_real)
+            rho_imag = np.load(self.p.init_vol_imag)
+        if self.p.init_vol_blur: # gaussian blur initial volume
+            rho_real = gaussian_filter(rho_real, sigma=p.init_vol_blur_sigma)
+            rho_imag = gaussian_filter(rho_imag, sigma=p.init_vol_blur_sigma)
         self.rho = rho_real + 1j * rho_imag
 
+        # Initialise stacked views
         stacked_views = np.array([v.data for v in self.ptycho.obj.views.values() if v.pod.active])
         self.projected_rho = np.zeros_like((stacked_views), dtype=np.complex64)
 
-        # Probe gradient and minimization direction
+        # Initialise probe gradient and minimization direction
         self.pr_grad = self.pr.copy(self.pr.ID + '_grad', fill=0.)
         self.pr_grad_new = self.pr.copy(self.pr.ID + '_grad_new', fill=0.)
         self.pr_h = self.pr.copy(self.pr.ID + '_h', fill=0.)
 
+        # Initialise step sizes
         self.tmin_rho = 1.
         self.tmin_pr = 1.
 
