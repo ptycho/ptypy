@@ -295,8 +295,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
             rho_real = np.load(self.p.init_vol_real)
             rho_imag = np.load(self.p.init_vol_imag)
         if self.p.init_vol_blur: # gaussian blur initial volume
-            rho_real = gaussian_filter(rho_real, sigma=p.init_vol_blur_sigma)
-            rho_imag = gaussian_filter(rho_imag, sigma=p.init_vol_blur_sigma)
+            rho_real = gaussian_filter(rho_real, sigma=self.p.init_vol_blur_sigma)
+            rho_imag = gaussian_filter(rho_imag, sigma=self.p.init_vol_blur_sigma)
         self.rho = rho_real + 1j * rho_imag
 
         # Initialise coverage
