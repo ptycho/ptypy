@@ -97,6 +97,19 @@ class MLPtychoTomo(PositionCorrectionEngine):
     help = StdDev for initial volume blur
     doc = Standard deviation for the initial volume Gaussian blur.
 
+    [rescale_vol_gradient]
+    default = True
+    type = bool
+    help = Rescale volume gradient
+    doc = Rescale the volume gradient to prevent underflow.
+
+    [rescale_vol_gradient_factor]
+    default = 0.57
+    type = float
+    lowlim = 0.0
+    help = Rescale factor for volume gradient
+    doc = Rescale factor for the volume gradient (between 0 and 1).
+
     [floating_intensities]
     default = False
     type = bool
@@ -384,13 +397,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # FIXME: allreduce should go in new_grad_rho once reg.LL fixed
             allreduce(new_rho_grad) # MPI reduction of volume gradient
 
-            # FIXME: add proper volume gradient rescaling
-            # FIXME: this helps with underflow of bt and tmin for rho
-            # SCALING: needed for the regularizer to work on probe coeffs
-            # Maybe not needed on real data
-            # n_pixels = np.prod(np.shape(self.rho))
-            # scaling_factor = 0.57 * n_pixels
-            # new_rho_grad /= scaling_factor
+            # SCALING: needed to prevent underflow of bt and tmin for rho
+            if self.p.rescale_vol_gradient:
+                n_pixels = np.prod(np.shape(self.rho))
+                scaling_factor = self.p.rescale_vol_gradient_factor * n_pixels
+                new_rho_grad /= scaling_factor
 
             print('rho_grad: %.2e' % np.linalg.norm(self.rho_grad))
             print('new_rho_grad: %.2e ' % np.linalg.norm(new_rho_grad))
