@@ -535,14 +535,14 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
             # FIXME: move saving volumes to run script
             # Saving volumes when running Toy Problem (saves to png)
-            if self.curiter == 199: # curiter starts at zero
-                self.projector.plot_vol(self.rho, title= '200iters')
+            #if self.curiter == 199: # curiter starts at zero
+            #    self.projector.plot_vol(self.rho, title= '200iters')
             # Saving volumes when running Real Data (saves to cmap)
-            #if self.curiter==199 and not os.path.exists("/dls/science/users/iat69393/ptycho-tomo-project/recon_vol_phase_HARDC_it{}.cmap".format(iter)):
-            #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it{}.cmap".format(iter), "w") as f:
-            #        f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
-            #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it{}.cmap".format(iter), "w") as f:
-            #        f["data"] = -np.real(self.rho)[100:-100,100:-100,100:-100]
+            if self.curiter == 199: # curiter starts at zero
+                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it{}.cmap".format(self.curiter+1), "w") as f:
+                    f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
+                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it{}.cmap".format(self.curiter+1), "w") as f:
+                    f["data"] = -np.real(self.rho)[100:-100,100:-100,100:-100]
             # FIXME: end move saving volumes to run script
 
             # Position correction
