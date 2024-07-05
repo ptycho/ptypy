@@ -703,8 +703,8 @@ class BaseModel(object):
             #     'the Poisson distribution assumption.')
             # logger.debug('Factor: %8.5g' % reg_rescale)
 
-            # Needed for now
-            reg_rescale = 10**8
+            # Use amplitude directly for now
+            reg_rescale = 1
 
             # TODO remove usage of .p. access
             self.regularizer.amplitude = self.p.reg_del2_amplitude * reg_rescale
