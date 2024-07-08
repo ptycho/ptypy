@@ -203,6 +203,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         # Instance attributes
 
+        # FIXME: remove debug printing
+        self.DEBUG = False
+
         # Volume
         self.rho = None
 
@@ -244,7 +247,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         # Get volume size
         self.pshape = list(self.ptycho.obj.S.values())[0].data.shape[-1]
-        print('self.pshape:   ', self.pshape)
+        if self.DEBUG:
+            print('self.pshape:   ', self.pshape)
 
         # Load tomography angles and create angles dictionary
         # FIXME: there should be a more efficient way to do this
@@ -299,14 +303,22 @@ class MLPtychoTomo(PositionCorrectionEngine):
             rho_imag = gaussian_filter(rho_imag, sigma=self.p.init_vol_blur_sigma)
         self.rho = rho_real + 1j * rho_imag
 
-        # Initialise coverage
+        # Initialise coverage mask
         if self.p.weight_gradient:
              self.coverage = list(self.ptycho.obj.S.values())[0].get_view_coverage()
              self.coverage = np.squeeze(np.real(self.coverage)) # extract
-             self.coverage[self.coverage <= 25] = 0 # threshold zero
-             self.coverage[self.coverage > 25] = 1  # threshold one
-             self.coverage = gaussian_filter(self.coverage, sigma=1) # smooth
-             np.save('coverage', self.coverage)
+             # FIXME: parameterise coverage mask
+             # Simulated data
+             #views_threshold = 25
+             #filter_sigma = 1
+             # Real data
+             views_threshold = 50
+             filter_sigma = 2.5
+             # FIXME: end parametrise coverage
+             self.coverage[self.coverage <= views_threshold] = 0 # threshold zero
+             self.coverage[self.coverage > views_threshold] = 1  # threshold one
+             self.coverage = gaussian_filter(self.coverage, sigma=filter_sigma) # smooth
+             np.save('coverage_mask', self.coverage)
 
         # Initialise stacked views
         stacked_views = np.array([v.data for v in self.ptycho.obj.views.values() if v.pod.active])
@@ -404,10 +416,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 scaling_factor = self.p.rescale_vol_gradient_factor * n_pixels
                 new_rho_grad /= scaling_factor
 
-            print('rho_grad: %.2e' % np.linalg.norm(self.rho_grad))
-            print('new_rho_grad: %.2e ' % np.linalg.norm(new_rho_grad))
-            print('pr_grad: %.2e ' % np.sqrt(Cnorm2(self.pr_grad)))
-            print('new_pr_grad: %.2e ' % np.sqrt(Cnorm2(new_pr_grad)))
+            if self.DEBUG:
+                print('rho_grad: %.2e' % np.linalg.norm(self.rho_grad))
+                print('new_rho_grad: %.2e ' % np.linalg.norm(new_rho_grad))
+                print('pr_grad: %.2e ' % np.sqrt(Cnorm2(self.pr_grad)))
+                print('new_pr_grad: %.2e ' % np.sqrt(Cnorm2(new_pr_grad)))
 
             tg += time.time() - t1
 
@@ -440,7 +453,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 # For the volume
                 bt_num_rho = u.norm2(new_rho_grad) - np.real(np.vdot(new_rho_grad.flat, self.rho_grad.flat))
                 bt_denom_rho = u.norm2(self.rho_grad)
-                print('bt_num_rho, bt_denom_rho: (%.2e, %.2e) ' % (bt_num_rho, bt_denom_rho))
+                if self.DEBUG:
+                    print('bt_num_rho, bt_denom_rho: (%.2e, %.2e) ' % (bt_num_rho, bt_denom_rho))
 
                 # FIXME: this shouldn't be needed if we scale correctly
                 if bt_denom_rho == 0:
@@ -464,7 +478,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # as did h*tmin when taking conjugates
             # (don't you just love containers?)
             ############################
-            print('bt_rho, self.tmin_rho: (%.2e,%.2e)' % (bt_rho, self.tmin_rho))
+            if self.DEBUG:
+                print('bt_rho, self.tmin_rho: (%.2e,%.2e)' % (bt_rho, self.tmin_rho))
             self.rho_h *= bt_rho / self.tmin_rho
 
             # Smoothing preconditioner for the volume
@@ -488,7 +503,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 B_rho = self.ML_model.poly_line_coeffs_rho(self.rho_h)
                 B_pr = self.ML_model.poly_line_coeffs_pr(self.pr_h)
 
-                print('B_rho, B_pr', B_rho, B_pr)
+                if self.DEBUG:
+                    print('B_rho, B_pr', B_rho, B_pr)
 
                 # same as below but quicker when poly quadratic
                 self.tmin_rho = dt(-0.5 * B_rho[1] / B_rho[2])
@@ -520,7 +536,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
             tc += time.time() - t2
 
-            print('self.tmin_pr, self.tmin_rho: (%.2e,%.2e)' % (self.tmin_pr, self.tmin_rho))
+            if self.DEBUG:
+                print('self.tmin_pr, self.tmin_rho: (%.2e,%.2e)' % (self.tmin_pr, self.tmin_rho))
 
             ########################
             # Take conjugate steps
@@ -536,14 +553,14 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
             # FIXME: move saving volumes to run script
             # Saving volumes when running Toy Problem (saves to png)
-            if u.parallel.master and self.curiter == 199: # curiter starts at zero
-                self.projector.plot_vol(self.rho, title= '200iters')
-            # Saving volumes when running Real Data (saves to cmap)
             #if u.parallel.master and self.curiter == 199: # curiter starts at zero
-            #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it{}.cmap".format(self.curiter+1), "w") as f:
-            #        f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
-            #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it{}.cmap".format(self.curiter+1), "w") as f:
-            #        f["data"] = -np.real(self.rho)[100:-100,100:-100,100:-100]
+            #    self.projector.plot_vol(self.rho, title= '200iters')
+            # Saving volumes when running Real Data (saves to cmap)
+            if u.parallel.master and self.curiter == 199: # curiter starts at zero
+                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it{}.cmap".format(self.curiter+1), "w") as f:
+                    f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
+                with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it{}.cmap".format(self.curiter+1), "w") as f:
+                    f["data"] = -np.real(self.rho)[100:-100,100:-100,100:-100]
             # FIXME: end move saving volumes to run script
 
             # Position correction
@@ -850,7 +867,7 @@ class GaussianModel(BaseModel):
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
                 psi = pod.probe * np.exp(1j * pod.object)
                 product_xi_psi_conj = -1j* xi * psi.conj()
-                if self.p.weight_gradient:
+                if self.p.weight_gradient: # apply coverage mask
                     #print(pod.ob_view.slice)
                     #print(self.coverage[pod.ob_view.slice[1:]])
                     product_xi_psi_conj *= self.coverage[pod.ob_view.slice[1:]]
