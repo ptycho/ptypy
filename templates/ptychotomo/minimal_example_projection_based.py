@@ -109,7 +109,7 @@ if shift_probes:
     # For saving shifts to file
     # Make sure file is empty
     with open("probe_shifts.txt", "w") as myfile:
-        myfile.write('\n') 
+        myfile.write('\n')
 
 # Iterate over nr. of tomographic angles
 print('##########################')
@@ -133,7 +133,7 @@ for i in range(nangles):
     setattr(p.scans, f"scan{i}", scani)
 
 # Write out angles
-np.save("simulated_angles.npy", angles, allow_pickle=False)
+np.save("simulated_angles.npy", angles)
 
 # Reconstruction parameters
 p.engines = u.Param()
