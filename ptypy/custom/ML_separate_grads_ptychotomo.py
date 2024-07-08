@@ -303,9 +303,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
         if self.p.weight_gradient:
              self.coverage = list(self.ptycho.obj.S.values())[0].get_view_coverage()
              self.coverage = np.squeeze(np.real(self.coverage)) # extract
-             self.coverage = self.coverage/np.max(self.coverage) # normalise
-             self.coverage = gaussian_filter(self.coverage, sigma=2.5) # smooth
-             #np.save('coverage', self.coverage, allow_pickle=False)
+             self.coverage[self.coverage <= 25] = 0 # threshold zero
+             self.coverage[self.coverage > 25] = 1  # threshold one
+             self.coverage = gaussian_filter(self.coverage, sigma=1) # smooth
+             np.save('coverage', self.coverage)
 
         # Initialise stacked views
         stacked_views = np.array([v.data for v in self.ptycho.obj.views.values() if v.pod.active])
