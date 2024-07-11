@@ -164,9 +164,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
     doc = This parameter enables orthogonal probe modes
 
     [OPR_modes]
-    default = 12
+    default = 1
     type = int
-    lowlim = 2
+    lowlim = 1
     help = Number of orthogonal probe modes to use
     doc = This parameter sets the number of orthogonal probe modes to use
 
@@ -318,7 +318,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
              self.coverage[self.coverage <= views_threshold] = 0 # threshold zero
              self.coverage[self.coverage > views_threshold] = 1  # threshold one
              self.coverage = gaussian_filter(self.coverage, sigma=filter_sigma) # smooth
-             np.save('coverage_mask', self.coverage)
+             #np.save('coverage_mask', self.coverage)
 
         # Initialise stacked views
         stacked_views = np.array([v.data for v in self.ptycho.obj.views.values() if v.pod.active])
@@ -553,10 +553,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
             # FIXME: move saving volumes to run script
             # Saving volumes when running Toy Problem (saves to png)
-            #if u.parallel.master and self.curiter == 199: # curiter starts at zero
+            #if parallel.master and self.curiter == 199: # curiter starts at zero
             #    self.projector.plot_vol(self.rho, title= '200iters')
             # Saving volumes when running Real Data (saves to cmap)
-            if u.parallel.master and self.curiter == 199: # curiter starts at zero
+            if parallel.master and self.curiter == 199: # curiter starts at zero
                 with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it{}.cmap".format(self.curiter+1), "w") as f:
                     f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
                 with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it{}.cmap".format(self.curiter+1), "w") as f:
@@ -574,74 +574,82 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
+        return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
 
-        ########################
-        # OPR Section
-        ########################
+    ########################
+    # OPR Section
+    ########################
+    def _post_iterate_update(self):
+        """
+        Orthogonal Probe Relaxation (OPR) update.
+        """
 
-        # Orthogonal Probe Relaxation (OPR)
         if self.p.OPR:
 
-            # FIRST OPR METHOD ###################
+            # FIRST OPR METHOD (probes not shifted) ###################
             if self.p.OPR_method.lower() == "first":
 
-                pr_input = np.array([np.squeeze(s.data) for name, s in self.pr.storages.items()])
-                new_pr, modes, coeffs = reduce_dimension(pr_input, self.p.OPR_modes)
+                for name, s in self.pr.storages.items():
 
-                for i, (name, s) in enumerate(self.pr.storages.items()):
-                    s.data[:] = new_pr[i]
+                    # Apply low dimensional approximation to probes
+                    pr_input = np.array([s[l] for l in s.layermap])
+                    new_pr, modes, coeffs = reduce_dimension(pr_input, self.p.OPR_modes, s.layermap)
 
-            # SECOND OPR METHOD ###################
+                    # Rescale new probes to match old probes (needed so that probes do not explode)
+                    ipr_min, ipr_max = pr_input.min(), pr_input.max()
+                    npr_min, npr_max = new_pr.min(), new_pr.max()
+                    new_pr = ((new_pr - npr_min) / (npr_max - npr_min)) * (ipr_max - ipr_min) + ipr_min
+
+                    #if parallel.master and name == 'Sscan0G00':
+                    #    np.save('pr_input', pr_input)
+                    #    np.save('new_pr', new_pr)
+
+                    # Update probes
+                    for k, l in enumerate(s.layermap):
+                        s[l] = new_pr[k]
+
+            # SECOND OPR METHOD (probes are shifted) ###################
             elif self.p.OPR_method.lower() == "second":
 
-                pr_input = [np.squeeze(s.data) for name, s in self.pr.storages.items()]
+                # Compute average probe mass center
+                centers = {}
+                for name, s in self.pr.storages.items():
+                    pr_input = np.array([s[l] for l in s.layermap])
+                    centers[name] = u.mass_center(np.abs(pr_input))
+                all_centers = np.array([coords for coords in centers.values()])
+                mean_center = np.mean(all_centers, axis=0)
 
-                all_m_centers = []
+                # Shift probes and apply OPR
+                for name, s in self.pr.storages.items():
 
-                for pr in pr_input:
-                    all_m_centers.append(u.mass_center(np.abs(pr)))
+                    # Shift input probes
+                    pr_input = np.array([s[l] for l in s.layermap])
+                    shift_to_apply = centers[name] - mean_center
+                    pr_input = shift(pr_input, -shift_to_apply, mode='nearest')
 
-                # average_x = np.mean(np.array([coords[0] for coords in all_m_centers]))
-                # average_y = np.mean(np.array([coords[1] for coords in all_m_centers]))
-                # FIXME: hardcoded probe mean centre
-                mean_center = [16, 16]
+                    # Apply low dimensional approximation to probes
+                    new_pr, modes, coeffs = reduce_dimension(pr_input, self.p.OPR_modes, s.layermap)
 
-                shifts_to_apply = [coords-mean_center for coords in all_m_centers]
+                    # Rescale new probes to match old probes (needed so that probes do not explode)
+                    ipr_min, ipr_max = pr_input.min(), pr_input.max()
+                    npr_min, npr_max = new_pr.min(), new_pr.max()
+                    new_pr = ((new_pr - npr_min) / (npr_max - npr_min)) * (ipr_max - ipr_min) + ipr_min
 
-                shifted_probes = []
-                for n, pr in enumerate(pr_input):
-                    shifted_probes.append(shift(pr, -1*(shifts_to_apply[n])), mode='nearest')
+                    #if parallel.master and name == 'Sscan0G00':
+                    #    print('mean_center:',end=None)
+                    #    print(mean_center)
+                    #    np.save('pr_input_shifted', pr_input)
+                    #    np.save('new_pr_shifted', new_pr)
 
-                reduced_pr, modes, coeffs = reduce_dimension(np.array(shifted_probes), self.p.OPR_modes)
+                    # Unshift new probes
+                    new_pr = shift(new_pr, shift_to_apply, mode='nearest')
 
-                newest_pr = []
-                for n, pr in enumerate(reduced_pr):
-                    newest_pr.append(shift(pr, (shifts_to_apply[n])))
-
-                for i, (name, s) in enumerate(self.pr.storages.items()):
-                    s.data[:] = newest_pr[i]
-
-                # FIXME: eventually remove hardcoded OPR plotting
-                try:
-                    iter = self.ptycho.runtime.iter_info[-1]['iteration']
-                except:
-                    iter=0
-                if not os.path.isfile('pr_input.png') and iter==200:
-                    self.projector.plot_complex_array(pr_input[2], 'pr_input.png')
-                    self.projector.plot_complex_array(shifted_probes[2], 'shifted_probes.png')
-                    self.projector.plot_complex_array(newest_pr[2], 'newest_pr.png')
-                # FIXME: end eventually remove hardcoded OPR plotting
+                    # Update probes
+                    for k, l in enumerate(s.layermap):
+                        s[l] = new_pr[k]
 
             else:
                 raise RuntimeError("Unsupported OPR_method: '%s'" % self.p.OPR_method)
-
-        return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
-
-    def _post_iterate_update(self):
-        """
-        Enables modification at the end of each ML iteration.
-        """
-        pass
 
     def engine_finalize(self):
         """
@@ -831,6 +839,7 @@ class GaussianModel(BaseModel):
                     pod.object = self.projected_rho[i]
                     i+=1
 
+        # FIXME: this should be a container not a list
         products_xi_psi_conj = []
 
         # Outer loop: through diffraction patterns
