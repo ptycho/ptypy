@@ -33,7 +33,7 @@ jobs:
         conda-env:
           - "core"
           - "full"
-    name: Testing with Python ${{ matrix.python-version }} 
+    name: Python ${{ matrix.python-version }} and ${{ matrix.conda-env }} dependencies
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -50,7 +50,7 @@ jobs:
       run: |
         conda update conda
         conda --version
-    - name: Install dependencies
+    - name: Install ${{ matrix.conda-env }} dependencies
       run: |
         # replace python version in dependencies
         sed -i 's/python/python=${{ matrix.python-version }}/' dependencies_${{ matrix.conda-env }}.yml
