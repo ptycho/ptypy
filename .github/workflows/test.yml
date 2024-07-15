@@ -30,6 +30,9 @@ jobs:
           - "3.10"
           - "3.11"
           - "3.12"
+        conda-env:
+          - "core"
+          - "full"
     name: Testing with Python ${{ matrix.python-version }} 
     steps:
     - name: Checkout
@@ -49,9 +52,9 @@ jobs:
         conda --version
     - name: Install dependencies
       run: |
-        # replace python version in core dependencies
-        sed -i 's/python/python=${{ matrix.python-version }}/' dependencies_core.yml
-        conda env update --file dependencies_core.yml --name base
+        # replace python version in dependencies
+        sed -i 's/python/python=${{ matrix.python-version }}/' dependencies_${{ matrix.conda-env }}.yml
+        conda env update --file dependencies_${{ matrix.conda-env }}.yml --name base
         conda list	
     - name: Prepare ptypy
       run: |
