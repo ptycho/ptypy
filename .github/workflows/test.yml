@@ -55,7 +55,7 @@ jobs:
         # replace python version in dependencies
         sed -i 's/python/python=${{ matrix.python-version }}/' dependencies_${{ matrix.conda-env }}.yml
         conda env update --file dependencies_${{ matrix.conda-env }}.yml --name base
-        conda install --solver=classic flake8
+        conda install --solver=classic flake8 pytest pytest-cov
         conda list	
     - name: Prepare ptypy
       run: |
@@ -69,8 +69,6 @@ jobs:
         # flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        conda install pytest
-        conda install pytest-cov
         # pytest ptypy/test -v --doctest-modules --junitxml=junit/test-results.xml --cov=ptypy --cov-report=xml --cov-report=html --cov-config=.coveragerc
         pytest -v
 #    - name: cobertura-report
