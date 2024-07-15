@@ -55,7 +55,7 @@ jobs:
         # replace python version in dependencies
         sed -i 's/python/python=${{ matrix.python-version }}/' dependencies_${{ matrix.conda-env }}.yml
         conda env update --file dependencies_${{ matrix.conda-env }}.yml --name base
-        conda install flake8
+        conda install --solver=classic flake8
         conda list	
     - name: Prepare ptypy
       run: |
