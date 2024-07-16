@@ -238,6 +238,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.coverage = None
 
         # Other
+        self.nangles = None
         self.tmin_rho = None
         self.tmin_pr = None
         self.ML_model = None
@@ -253,6 +254,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # Load tomography angles and create angles dictionary
         # FIXME: there should be a more efficient way to do this
         angles = np.load(self.p.angles)
+        self.nangles = len(angles)
         self.angles_dict = {}
         for i,k in enumerate(self.ptycho.obj.S):
             self.angles_dict[k] = angles[i]
@@ -584,69 +586,72 @@ class MLPtychoTomo(PositionCorrectionEngine):
         Orthogonal Probe Relaxation (OPR) update.
         """
 
+        # FIXME: this should be updated to use MPI
         if self.p.OPR:
 
             # FIRST OPR METHOD (probes not shifted) ###################
             if self.p.OPR_method.lower() == "first":
 
-                for name, s in self.pr.storages.items():
+                # Assemble probes
+                probe_size = list(self.pr.S.values())[0].shape[1:]
+                pr_input = np.zeros((self.nangles,*probe_size))
+                for i, (name, s) in enumerate(self.pr.storages.items()):
+                    pr_input[i,:] = s.data
 
-                    # Apply low dimensional approximation to probes
-                    pr_input = np.array([s[l] for l in s.layermap])
-                    new_pr, modes, coeffs = reduce_dimension(pr_input, self.p.OPR_modes, s.layermap)
+                # Apply low dimensional approximation to probes
+                new_pr, modes, coeffs = reduce_dimension(pr_input, self.p.OPR_modes)
+
+                # Update probes
+                for i, (name, s) in enumerate(self.pr.storages.items()):
 
                     # Rescale new probes to match old probes (needed so that probes do not explode)
-                    ipr_min, ipr_max = pr_input.min(), pr_input.max()
-                    npr_min, npr_max = new_pr.min(), new_pr.max()
-                    new_pr = ((new_pr - npr_min) / (npr_max - npr_min)) * (ipr_max - ipr_min) + ipr_min
+                    ipr_min, ipr_max = pr_input[i].min(), pr_input[i].max()
+                    npr_min, npr_max = new_pr[i].min(), new_pr[i].max()
+                    new_pr[i] = ((new_pr[i] - npr_min) / (npr_max - npr_min)) * (ipr_max - ipr_min) + ipr_min
 
-                    #if parallel.master and name == 'Sscan0G00':
-                    #    np.save('pr_input', pr_input)
-                    #    np.save('new_pr', new_pr)
+                    s.data[:] = new_pr[i,:]
 
-                    # Update probes
-                    for k, l in enumerate(s.layermap):
-                        s[l] = new_pr[k]
+                #if parallel.master:
+                #    np.save('pr_input', pr_input)
+                #    np.save('new_pr', new_pr)
 
             # SECOND OPR METHOD (probes are shifted) ###################
             elif self.p.OPR_method.lower() == "second":
 
-                # Compute average probe mass center
-                centers = {}
-                for name, s in self.pr.storages.items():
-                    pr_input = np.array([s[l] for l in s.layermap])
-                    centers[name] = u.mass_center(np.abs(pr_input))
-                all_centers = np.array([coords for coords in centers.values()])
-                mean_center = np.mean(all_centers, axis=0)
+                # Compute average probe mass center and assemble probes
+                centers = np.zeros((self.nangles,2))
+                probe_size = list(self.pr.S.values())[0].shape[1:]
+                pr_input = np.zeros((self.nangles,*probe_size))
+                for i, (name, s) in enumerate(self.pr.storages.items()):
+                    centers[i,:] = u.mass_center(np.abs(s.data))[1:]
+                    pr_input[i,:] = s.data
+                mean_center = np.mean(centers, axis=0)
 
-                # Shift probes and apply OPR
-                for name, s in self.pr.storages.items():
+                # Shift probes
+                for i, (name, s) in enumerate(self.pr.storages.items()):
+                    pr_input[i,:] = shift(pr_input[i], mean_center-centers[i], mode='nearest')
 
-                    # Shift input probes
-                    pr_input = np.array([s[l] for l in s.layermap])
-                    shift_to_apply = centers[name] - mean_center
-                    pr_input = shift(pr_input, -shift_to_apply, mode='nearest')
+                # Apply low dimensional approximation to probes
+                new_pr, modes, coeffs = reduce_dimension(pr_input, self.p.OPR_modes)
 
-                    # Apply low dimensional approximation to probes
-                    new_pr, modes, coeffs = reduce_dimension(pr_input, self.p.OPR_modes, s.layermap)
+                # Unshift probes and update
+                for i, (name, s) in enumerate(self.pr.storages.items()):
 
                     # Rescale new probes to match old probes (needed so that probes do not explode)
-                    ipr_min, ipr_max = pr_input.min(), pr_input.max()
-                    npr_min, npr_max = new_pr.min(), new_pr.max()
-                    new_pr = ((new_pr - npr_min) / (npr_max - npr_min)) * (ipr_max - ipr_min) + ipr_min
-
-                    #if parallel.master and name == 'Sscan0G00':
-                    #    print('mean_center:',end=None)
-                    #    print(mean_center)
-                    #    np.save('pr_input_shifted', pr_input)
-                    #    np.save('new_pr_shifted', new_pr)
+                    ipr_min, ipr_max = pr_input[i].min(), pr_input[i].max()
+                    npr_min, npr_max = new_pr[i].min(), new_pr[i].max()
+                    new_pr[i] = ((new_pr[i] - npr_min) / (npr_max - npr_min)) * (ipr_max - ipr_min) + ipr_min
 
                     # Unshift new probes
-                    new_pr = shift(new_pr, shift_to_apply, mode='nearest')
+                    new_pr[i,:] = shift(new_pr[i], centers[i]-mean_center, mode='nearest')
 
-                    # Update probes
-                    for k, l in enumerate(s.layermap):
-                        s[l] = new_pr[k]
+                    s.data[:] = new_pr[i,:]
+
+                #if parallel.master:
+                #    print('mean_center:',end=None)
+                #    print(mean_center)
+                #    np.save('pr_input', pr_input)
+                #    np.save('new_pr', new_pr)
 
             else:
                 raise RuntimeError("Unsupported OPR_method: '%s'" % self.p.OPR_method)
