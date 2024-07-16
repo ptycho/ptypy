@@ -54,6 +54,9 @@ jobs:
       run: |
         # replace python version in dependencies
         sed -i 's/python/python=${{ matrix.python-version }}/' dependencies_${{ matrix.conda-env }}.yml
+        if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} == '3.12' ]; then
+          sed -i '/- pyfftw/d' dependencies_${{ matrix.conda-env }}.yml
+        fi
         conda env update --file dependencies_${{ matrix.conda-env }}.yml --name base
         conda install --solver=classic flake8 pytest pytest-cov
         conda list	
