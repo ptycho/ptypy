@@ -57,7 +57,10 @@ jobs:
         if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} == '3.12' ]; then
           sed -i '/- pyfftw/d' dependencies_${{ matrix.conda-env }}.yml
         fi
-        if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} <= '3.9' ]; then
+        if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} == '3.8' ]; then
+          sed -i '/- mpi4py/d' dependencies_${{ matrix.conda-env }}.yml
+        fi
+        if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} == '3.9' ]; then
           sed -i '/- mpi4py/d' dependencies_${{ matrix.conda-env }}.yml
         fi
         conda env update --file dependencies_${{ matrix.conda-env }}.yml --name base
