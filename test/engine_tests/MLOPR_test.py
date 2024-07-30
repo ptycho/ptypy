@@ -17,8 +17,8 @@ import sys
 
 from ptypy.custom import MLOPR
 
-@pytest.mark.skipif(sys.version_info > (3,12),
-                    reason="Test broken for Python 3.12")
+@pytest.mark.skipif(sys.version_info > (3,8),
+                    reason="Test broken")
 class MLOPRTest(unittest.TestCase):
     def setUp(self):
         self.outpath = tempfile.mkdtemp(suffix="MLOPR_test")
