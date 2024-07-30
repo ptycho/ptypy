@@ -29,17 +29,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-full = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw"]
+full = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "pyyaml"]
 cupy-cuda11x = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "cupy-cuda11x"]
 cupy-cuda12x = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "cupy-cuda12x"] 
 
-#[project.scripts]
-#"ptypy.plot" = 'scripts/ptypy.plot'
-#"ptypy.inspect" = 'scripts/ptypy.inspect'
-#"ptypy.plotclient" = 'scripts/ptypy.plotclient'
-#"ptypy.new" = 'scripts/ptypy.new'
-#"ptypy.csv2cp" = 'scripts/ptypy.csv2cp'
-#"ptypy.run" ='scripts/ptypy.run'
+[project.scripts]
+"ptypy.plot" = "ptypy.cli.plotter:ptypy_plot"
+"ptypy.inspect" = "ptypy.cli.inspect:ptypy_inspect"
+"ptypy.plotclient" = "ptypy.cli.plotclient:ptypy_plotclient"
+"ptypy.new" = "ptypy.cli.new_param_tree:ptypy_new"
+"ptypy.csv2cp" = "ptypy.cli.default_params:ptypy_csv2cp"
+"ptypy.run" = "ptypy.cli.run_script:ptypy_run"
+"ptypy.cli" = "ptypy.cli.command_line_interface:ptypy_run"
 
 [project.urls]
 "Homepage" = "https://github.com/ptycho/ptypy"
