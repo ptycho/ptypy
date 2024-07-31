@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from ptypy import utils as u
+from ptypy import defaults_tree
 import textwrap
 import argparse
 
@@ -18,7 +18,7 @@ def parse():
     return pars
 
 def convert_and_print(pars):
-    root = u.validator.pdroot
+    root = defaults_tree
     if pars.path:
         for node in pars.path.split('.'):
             root = root.children[node]
@@ -38,16 +38,16 @@ def print_param(entry, parent=None, depth=50):
             entry_name = '%s.%s' % (parent, entry.name)
         write('[%s]' % entry_name)
         write('default = %s' % entry.default)
-        write('help = ' + wrapdoc(entry.shortdoc))
-        write('doc = ' + wrapdoc(entry.longdoc))
+        write('help = ' + wrapdoc(entry.help))
+        write('doc = ' + wrapdoc(entry.doc))
         write('type = ' + ', '.join(entry.type))
         write('userlevel = %s' % entry.userlevel)
         if entry.choices: 
             write('choices = ' + ', '.join([str(x) for x in entry.choices]))
-        if entry.lowlim: 
-            write('lowlim = %s' % entry.lowlim)
-        if entry.uplim: 
-            write('uplim = %s' % entry.uplim)
+        if entry.limits: 
+            write('lowlim = %s' % entry.limits[0])
+        if entry.limits: 
+            write('uplim = %s' % entry.limits[1])
         write('')
     else:
         entry_name = ''
