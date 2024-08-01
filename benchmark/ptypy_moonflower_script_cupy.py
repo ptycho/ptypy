@@ -3,12 +3,14 @@ This script is a test for ptychographic reconstruction in the absence
 of actual data. It uses the test Scan class
 `ptypy.core.data.MoonFlowerScan` to provide "data".
 """
+import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
 
 import tempfile
 import argparse
 
+ptypy.load_gpu_engines("cupy")
 tmpdir = tempfile.gettempdir()
 
 def run_benchmark():
@@ -23,6 +25,7 @@ def parse():
     parser.add_argument("-n", "--frames", type=int, help="Nr. of data frames")
     parser.add_argument("-s", "--shape", type=int, help="1D shape of each data frame")
     parser.add_argument("-i", "--iterations", type=int, help="Nr. of iterations")
+    parser.add_argument("-f", "--fftlib", type=str, default="cupy")
     args = parser.parse_args()
     return args
 
@@ -69,8 +72,9 @@ def get_params(args):
     # attach a reconstrucion engine
     p.engines = u.Param()
     p.engines.engine00 = u.Param()
-    p.engines.engine00.name = 'DM'
+    p.engines.engine00.name = 'DM_cupy'
     p.engines.engine00.numiter = args.iterations
+    p.engines.engine00.fft_lib = args.fftlib
 
     return p
 
