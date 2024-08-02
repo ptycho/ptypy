@@ -1,0 +1,8 @@
+/.*
+build
+doc
+tutorial
+extra
+archive
+*.md
+Dockerfile
