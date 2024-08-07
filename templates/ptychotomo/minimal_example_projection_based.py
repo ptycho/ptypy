@@ -106,6 +106,8 @@ all_shifts = [
 
 shift_probes = False
 if shift_probes:
+    # Repeatable random shifts
+    random.seed(0)
     # For saving shifts to file
     # Make sure file is empty
     with open("probe_shifts.txt", "w") as myfile:
