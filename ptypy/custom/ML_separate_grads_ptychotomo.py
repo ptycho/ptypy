@@ -610,6 +610,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
                     # Update probes
                     s.data[:] = new_pr[i,:]
 
+                # FIXME: move saving probes to run script
+                if parallel.master and self.curiter == 199: # curiter starts at zero
+                    np.save('opr_probes', new_pr)
+
                 #if parallel.master:
                 #    np.save('pr_input', pr_input)
                 #    np.save('new_pr', new_pr)
@@ -644,6 +648,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
                     # Update probes
                     s.data[:] = new_pr[i,:]
+
+                # FIXME: move saving probes to run script
+                if parallel.master and self.curiter == 199: # curiter starts at zero
+                    np.save('opr_probes', new_pr)
 
                 #if parallel.master:
                 #    print('mean_center:',end=None)
