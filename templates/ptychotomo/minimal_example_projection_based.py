@@ -110,8 +110,9 @@ if shift_probes:
     random.seed(0)
     # For saving shifts to file
     # Make sure file is empty
-    with open("probe_shifts.txt", "w") as myfile:
-        myfile.write('\n')
+    if u.parallel.master:
+        with open("probe_shifts.txt", "w") as myfile:
+            myfile.write('\n')
 
 # Iterate over nr. of tomographic angles
 print('##########################')
@@ -124,8 +125,9 @@ for i in range(nangles):
         selected_shift = random.choice(all_shifts)
 
         # Save the shifts applied to file
-        with open("probe_shifts.txt", "a") as myfile:
-            myfile.write('probe '+ str(i) + ':    (' +str(selected_shift[0]) +  ', ' + str(selected_shift[1]) + ') \n')
+        if u.parallel.master:
+            with open("probe_shifts.txt", "a") as myfile:
+                myfile.write('probe '+ str(i) + ':    (' +str(selected_shift[0]) +  ', ' + str(selected_shift[1]) + ') \n')
         shifted_proj_1 = np.roll(proj_new, selected_shift[0], axis=0)   # up or down (neg = up, pos = down)
         proj_new = np.roll(shifted_proj_1, selected_shift[1], axis=1)   # right or left (neg = left, pos = right)
 
