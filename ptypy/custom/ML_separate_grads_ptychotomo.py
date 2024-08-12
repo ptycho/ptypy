@@ -15,6 +15,7 @@ import numpy as np
 import time
 import os
 import h5py
+import subprocess
 
 from .. import utils as u
 from ..utils.verbose import logger
@@ -554,14 +555,15 @@ class MLPtychoTomo(PositionCorrectionEngine):
             self.pr += self.pr_h
 
             # FIXME: move saving volumes to run script
-            # Saving volumes when running Toy Problem (saves to png)
             if parallel.master and self.curiter == 199: # curiter starts at zero
-                self.projector.plot_vol(self.rho, title= '200iters')
+            # Get SLURM Job ID
+                sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
+            # Saving volumes when running Toy Problem (saves to png)
+                self.projector.plot_vol(self.rho, title= '200iters_'+sid)
             # Saving volumes when running Real Data (saves to cmap)
-            #if parallel.master and self.curiter == 199: # curiter starts at zero
-            #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it{}.cmap".format(self.curiter+1), "w") as f:
+            #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it200_"+sid+".cmap", "w") as f:
             #        f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
-            #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it{}.cmap".format(self.curiter+1), "w") as f:
+            #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it200_"+sid+".cmap", "w") as f:
             #        f["data"] = -np.real(self.rho)[100:-100,100:-100,100:-100]
             # FIXME: end move saving volumes to run script
 
@@ -612,7 +614,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
                 # FIXME: move saving probes to run script
                 if parallel.master and self.curiter == 199: # curiter starts at zero
-                    np.save('opr_probes', new_pr)
+                    sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
+                    np.save('opr_probes_'+sid, new_pr)
 
                 #if parallel.master:
                 #    np.save('pr_input', pr_input)
@@ -651,7 +654,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
                 # FIXME: move saving probes to run script
                 if parallel.master and self.curiter == 199: # curiter starts at zero
-                    np.save('opr_probes', new_pr)
+                    sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
+                    np.save('opr_probes_'+sid, new_pr)
 
                 #if parallel.master:
                 #    print('mean_center:',end=None)
