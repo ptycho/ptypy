@@ -1,0 +1,10 @@
+numpy
+matplotlib==3.7.3
+h5py
+pyzmq
+mpi4py
+pillow
+pyfftw
+pyyaml
+scipy
+cupy
