@@ -398,15 +398,16 @@ class _StochasticEngineSerial(_StochasticEngine):
 
         self._reset_benchmarks()
 
-        if self.do_position_refinement:
+        if self.do_position_refinement and self.p.position_refinement.record:
             for label, d in self.di.storages.items():
                 prep = self.diff_info[d.ID]
                 res = self.kernels[prep.label].resolution
                 for i,view in enumerate(d.views):
                     for j,(pname, pod) in enumerate(view.pods.items()):
-                        delta = (prep.original_addr[i][j][1][1:] - prep.addr[i][j][1][1:]) * res
+                        delta = (prep.addr[i][j][1][1:] - prep.original_addr[i][j][1][1:]) * res
                         pod.ob_view.coord += delta
                         pod.ob_view.storage.update_views(pod.ob_view)
+            self.ptycho.record_positions = True
 
 
 @register()
