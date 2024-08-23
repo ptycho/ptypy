@@ -23,7 +23,6 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-#  "python >= 3.7",
   "numpy",
   "scipy",
   "h5py",
@@ -31,7 +30,8 @@ dependencies = [
 
 [project.optional-dependencies]
 full = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw"]
-
+cupy-cuda11x = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "cupy-cuda11x"]
+cupy-cuda12x = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "cupy-cuda12x"] 
 
 #[project.scripts]
 #"ptypy.plot" = 'scripts/ptypy.plot'

@@ -128,7 +128,7 @@ def _h5write(filename, mode, *args, **kwargs):
             try:
                 # Try conversion to a numpy array
                 la = np.array(l)
-                if la.dtype.type is np.string_:
+                if la.dtype.type is np.bytes_:
                     arrayOK = False
                 else:
                     dset = _store_numpy(group, la, name)
@@ -207,7 +207,7 @@ def _h5write(filename, mode, *args, **kwargs):
 
     def _store_pickle(group, a, name):
         apic = pickle.dumps(a)
-        group[name] = np.string_(apic)
+        group[name] = np.bytes_(apic)
         group[name].attrs['type'] = 'pickle'
         return group[name]
 
@@ -220,7 +220,7 @@ def _h5write(filename, mode, *args, **kwargs):
     # @sdebug
     def _store_numpy_record_array(group, a, name):
         dumped_array = a.dumps()
-        group[name] =np.string_(dumped_array)
+        group[name] =np.bytes_(dumped_array)
         group[name].attrs['type'] = 'record_array'
         return group[name]
 
