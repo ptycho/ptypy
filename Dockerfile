@@ -47,8 +47,7 @@ RUN mamba install cuda-version=${CUDAVERSION} && \
 
 # Pull from platform specific image and install ptypy 
 FROM ${PLATFORM} as build
-COPY pyproject.toml setup.py ./
-COPY ./scripts ./scripts
+COPY pyproject.toml ./
 COPY ./templates ./templates
 COPY ./benchmark ./benchmark
 COPY ./cufft ./cufft
@@ -71,4 +70,4 @@ RUN pip install ./cufft
 FROM ${PLATFORM}-post as runtime
 
 # Run PtyPy run script as entrypoint
-ENTRYPOINT ["ptypy.run"]
+ENTRYPOINT ["ptypy.cli"]
