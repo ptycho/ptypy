@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# This script (ptypy.csv2cp) seems to be disfunctional
+# and needs further checking
+
 from ptypy import defaults_tree
 import textwrap
 import argparse
