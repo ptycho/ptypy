@@ -13,7 +13,6 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
-import os
 import h5py
 import subprocess
 
@@ -478,7 +477,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # rho_h -= bt_rho * rho_grad
             # pr_h -= bt_pr * pr_grad
             # NB: in the below need to do h/tmin
-            # as did h*tmin when taking conjugates
+            # as did h*tmin when taking steps
             # (don't you just love containers?)
             ############################
             if self.DEBUG:
@@ -1126,7 +1125,7 @@ class GaussianModel(BaseModel):
 
         parallel.allreduce(B)
 
-        # Object regularizer
+        # Volume regularizer
         if self.regularizer:
             # OLD using containers
             # for name, s in self.ob.storages.items():
