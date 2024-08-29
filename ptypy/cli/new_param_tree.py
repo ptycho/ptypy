@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# This script (ptypy.new) seems to be disfunctional
+# and needs further checking
+
 import sys
 import argparse
 from ptypy import defaults_tree
