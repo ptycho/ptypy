@@ -155,6 +155,11 @@ class LiveScan(PtyScan):
     help = Which y motor to use
     doc =
 
+    [positions_multiplier]
+    default = 1.0
+    type = float
+    help = Multiplicative factor that converts motor positions to metres.
+
     [xMotorFlipped]
     default = False
     type = bool
@@ -304,7 +309,8 @@ class LiveScan(PtyScan):
                 self.mask_data = u.crop_pad_symmetric_2d(self.mask_data, (self.info.crop_at_RS, self.info.crop_at_RS), center=self.p.center)[0]
             if self.info.rebin_at_RS is not None:
                 self.mask_data = u.rebin_2d(self.mask_data, self.info.rebin_at_RS)[0]
-            logger_info('############## Loading mask! mask.shape = %s, np.sum(mask) = %s' % (str(self.mask_data.shape), str(np.sum(self.mask_data))))  ### DEBUG
+            logger.info('############## Loading mask! mask.shape = %s, np.sum(mask) = %s' % (str(self.mask_data.shape), str(np.sum(self.mask_data))))  ### DEBUG
+            logger.info('############## Loading mask! mask.shape = %s, nr. of dead pixels = %s' % (str(self.mask_data.shape), str(self.mask_data.shape[0]*self.mask_data.shape[1] - np.sum(self.mask_data))))  ### DEBUG
 
 
 
@@ -523,17 +529,13 @@ class LiveScan(PtyScan):
             w = imgs[1]
             self.mask_data = imgs[2]
             imgs = imgs[0]
-            print(f'w.shape = {w.shape}, imgs.shape = {imgs.shape}, mask.shape = {self.mask_data.shape}')  ### DEBUG
         elif self.info.rebin_at_RS:
             # Then imgs contain both diff and weights.
             print(f'len(imgs) = {len(imgs)}')### DEBUG
             w = imgs[1]
             imgs = imgs[0]
-            print(f'w.shape = {w.shape}, imgs.shape = {imgs.shape}')### DEBUG
-            print(f'w.shape = {w.shape}, imgs.shape = {imgs.shape}, mask.shape = {self.mask_data.shape}, bgdata.shape = {self.data_background.shape}')  ### DEBUG
 
-
-        imgs = imgs.astype(np.float32)
+        imgs = imgs.astype(np.float64)
         # repackage data and return
         for k, i in enumerate(indices):
             try:
@@ -541,8 +543,7 @@ class LiveScan(PtyScan):
                     imgs[k] = imgs[k] - self.data_background
                 raw[i] = imgs[k]
                 raw[i][raw[i] <= 0] = 0  ##  Take care of overexposed pixels.
-
-                logger_info('### i = %s, raw[i].shape = %s' % (str(i), str(raw[i].shape))) ### DEBUG
+                logger.info('### i = %s, raw[i].shape = %s' % (str(i), str(raw[i].shape))) ### DEBUG
 
                 xMotorKeys = self.info.xMotor.split('/')
                 yMotorKeys = self.info.yMotor.split('/')
@@ -557,8 +558,10 @@ class LiveScan(PtyScan):
                 if self.info.yMotorFlipped:
                     y *= -1
 
-                pos[i] = np.array((y, x)) * 1e-9 #### CHECK IF THIS SHOULD BE MINUS!
+                pos[i] = np.array((y, x)) * self.info.positions_multiplier #### CHECK IF THIS SHOULD BE MINUS!
                 pos[i] = pos[i].reshape(len(pos[i]))
+
+                logger.info('### pos[i].shape = %s' % (str(pos[i].shape)))  ### DEBUG
                 if self.info.rebin_at_RS:
                     weight[i] = w[k]
                 else:
@@ -567,10 +570,10 @@ class LiveScan(PtyScan):
                     weight[i][np.where(raw[i] < 0)] = 0
                 if self.info.maskfile:
                     weight[i] = weight[i] * self.mask_data
-                logger_info('### weight[i].shape = %s' % str(weight[i].shape)) ### DEBUG
             except Exception as err:
                 logger.info('### load exception')  ### DEBUG
                 print('Error: ', err)
+                raise err
                 break
 
 
@@ -591,11 +594,17 @@ class LiveScan(PtyScan):
 
         Will not be called on if I provide a weight in return load! => I can probably remove this
         """
+        self.mask_data = None
         if self.info.maskfile:
             with h5py.File(self.info.maskfile, 'r') as hf:
-                mask = np.array(hf.get('mask'))
-            logger_info('############## Inside load_weight(), mask.shape = %s, np.sum(mask) = %s' % (str(mask.shape), str(np.sum(mask))))  ### DEBUG
-            return mask
+                self.mask_data = np.array(hf.get('mask'))
+            if self.info.crop_at_RS is not None:
+                self.mask_data = u.crop_pad_symmetric_2d(self.mask_data, (self.info.crop_at_RS, self.info.crop_at_RS), center=self.p.center)[0]
+            if self.info.rebin_at_RS is not None:
+                self.mask_data = u.rebin_2d(self.mask_data, self.info.rebin_at_RS)[0]
+            logger.info('############## Inside load_weight(), mask_data.shape = %s, np.sum(mask_data) = %s' % (str(self.mask_data.shape), str(np.sum(self.mask_data))))  ### DEBUG
+            logger.info('##############... Loading mask! mask_data.shape = %s, nr. of dead pixels = %s' % (str(self.mask_data.shape), str(self.mask_data.shape[0] * self.mask_data.shape[1] - np.sum(self.mask_data))))  ### DEBUG
+        return self.mask_data
 
     def _finalize(self):
         """
