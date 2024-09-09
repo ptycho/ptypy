@@ -252,7 +252,7 @@ class SoftiMAX_Nov2021(PtyScan):
         y = yFlipper * y[np.newaxis,:,np.newaxis].T * 1e-6
         x = x-np.min(x)  
         y = y-np.min(y)
-        positions = np.vstack((y, x)).T 
+        positions = np.vstack((y, x)).T
         return positions[0]
 
     def load(self, indices):
@@ -334,6 +334,12 @@ class SoftimaxContrast(PtyScan):
     help = Scan number or list of scan numbers
     doc =
 
+    [data_key]
+    default = entry/data/data/
+    type = str
+    help = Key to the intensities and background entry in the hdf5 file
+    doc =
+
     [xMotor]
     default = samx
     type = str
@@ -408,13 +414,36 @@ class SoftimaxContrast(PtyScan):
             logger.warning("note: y motor is specified as flipped")
 
         x, y = [], []
+        xentry = {
+                'abs_x':   'entry/measurement/abs_x',
+                'INENC1':  'entry/measurement/panda0/INENC1.VAL_Value',
+                'burst_x': 'entry/measurement/panda0/burst_x',
+                }[self.info.xMotor]
+        yentry = {
+                'abs_y':   'entry/measurement/abs_y',
+                'INENC2':  'entry/measurement/panda0/INENC2.VAL_Value',
+                'burst_y': 'entry/measurement/panda0/burst_y',
+                }[self.info.yMotor]
+
         with h5py.File(fullfilename, 'r') as hf:
-            x = xFlipper * np.array(hf['entry/measurement/%s' % (self.info.xMotor)])
-            y = yFlipper * np.array(hf['entry/measurement/%s' % (self.info.yMotor)])
+            #           x = xFlipper * np.array(hf['entry/measurement/%s' % (self.info.xMotor)])
+            #           y = yFlipper * np.array(hf['entry/measurement/%s' % (self.info.yMotor)])
+            x = xFlipper * np.array(hf[xentry])
+            y = yFlipper * np.array(hf[yentry])
 
         # make lists to two arrays
-        x = np.array(x)*1e-6
-        y = np.array(y)*1e-6 
+        #        x = np.array(x)*1e-6
+        #        y = np.array(y)*1e-6
+        x = {
+                'abs_x':   np.array(x) * 1e-6,
+                'INENC1':  np.array(x) * -1e-9,
+                'burst_x': np.array(x) * -1e-9,
+                }[self.info.xMotor]
+        y = {
+                'abs_y':   np.array(y) * 1e-6,
+                'INENC2':  np.array(y) * 1e-9,
+                'burst_y': np.array(y) * -1e-9,
+                }[self.info.yMotor]
         
         chi_rad_x = 0
         chi_rad_y = 0
@@ -430,9 +459,17 @@ class SoftimaxContrast(PtyScan):
             logger.info("x and y motor positions were skewed by %.4f degree to each other" % (self.info.xyAxisSkewOffset))
         x, y = np.cos(chi_rad_x)*x-np.sin(chi_rad_y)*y, np.sin(chi_rad_x)*x+np.cos(chi_rad_y)*y
 
-        x = x-np.min(x)  
-        y = y-np.min(y)  
-        positions = np.vstack((y, x))     
+        ## x = x-np.min(x)
+        ## y = y-np.min(y)
+        positions = np.vstack((y, x))
+
+        # set the photon energy
+        if self.info.energy == None:
+            with h5py.File(fullfilename, 'r') as fp:
+                self.meta.energy = fp['entry/snapshot/beamline_energy'][:] * 1e-3
+        else:
+            self.meta.energy = self.info.energy
+
         return positions.T
 
     def load(self, indices):
@@ -445,13 +482,13 @@ class SoftimaxContrast(PtyScan):
 
         fullfilename_background = os.path.join(self.info.path, 'scan_'+str(self.info.scanNumber_background).zfill(6)+'_andor.h5')
         with h5py.File(fullfilename_background, 'r') as fp:
-            data_background = fp['entry/data/data/']
+            data_background = fp[self.info.data_key]
             data_background = np.mean(data_background, axis=0)
 
         fullfilename_data       = os.path.join(self.info.path, 'scan_'+str(self.info.scanNumber_data).zfill(6)+'_andor.h5')
         with h5py.File(fullfilename_data, 'r') as fp:
             for ind in indices:
-                raw[ind] = fp['entry/data/data/'][ind]-data_background
+                raw[ind] = fp[self.info.data_key][ind]-data_background
                 raw[ind][raw[ind]<=0] = 0
 
         return raw, positions, weights
