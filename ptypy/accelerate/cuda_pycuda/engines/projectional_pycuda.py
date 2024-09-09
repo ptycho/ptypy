@@ -69,9 +69,9 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
         Prepare for reconstruction.
         """
         # Context, Multi GPU communicator and Stream (needs to be in this order)
-        self.context, self.queue = get_context(new_context=True, new_queue=False)
+        self.context, self.queue = get_context(new_queue=False)
         self.multigpu = get_multi_gpu_communicator()
-        self.context, self.queue = get_context(new_context=False, new_queue=True)
+        self.context, self.queue = get_context(new_queue=True)
 
         # Gaussian Smoothing Kernel
         self.GSK = GaussianSmoothingKernel(queue=self.queue)
@@ -120,6 +120,10 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
             # create buffer arrays
             ash = (fpc * nmodes,) + tuple(geo.shape)
             aux = np.zeros(ash, dtype=np.complex64)
+            mem = cuda.mem_get_info()[0]
+            if not int(mem) // aux.nbytes:
+                log(1,"Cannot fit memory into device, if possible reduce frames per block or nr. of modes. Exiting...")
+                raise SystemExit("ptypy has been exited.")
             kern.aux = gpuarray.to_gpu(aux)
 
             # setup kernels, one for each SCAN.
@@ -204,7 +208,11 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
         queue = self.queue
 
         for it in range(num):
-            error = {}
+
+            reduced_error = np.zeros((3,))
+            reduced_error_count = 0
+            local_error = {}
+
             for dID in self.di.S.keys():
 
                 # find probe, object and exit ID in dependence of dID
@@ -286,9 +294,19 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
             err_phot = prep.err_phot_gpu.get()
             err_exit = prep.err_exit_gpu.get()
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
-            error.update(zip(prep.view_IDs, errs))
+            if self.p.record_local_error:
+                local_error.update(zip(prep.view_IDs, errs))
+            else:
+                reduced_error += errs.sum(axis=0)
+                reduced_error_count += errs.shape[0]
 
-        self.error = error
+        if self.p.record_local_error:
+            error = local_error
+        else:
+            # Gather errors across all MPI ranks
+            error = parallel.allreduce(reduced_error)
+            count = parallel.allreduce(reduced_error_count)
+            error /= count
         return error
 
     def position_update(self):
@@ -554,9 +572,6 @@ class _ProjectionEngine_pycuda(projectional_serial._ProjectionEngine_serial):
         # this kills the pagelock memory (otherwise we get segfaults in h5py)
         for name, s in self.pr.S.items():
             s.data = np.copy(s.data)
-
-        self.context.pop()
-        self.context.detach()
 
         # we don't need the  "benchmarking" in DM_serial
         super().engine_finalize(benchmark=False)

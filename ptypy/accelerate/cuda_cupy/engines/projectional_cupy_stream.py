@@ -14,13 +14,11 @@ This file is part of the PTYPY package.
 """
 
 import numpy as np
-import time
 import cupy as cp
 import cupyx
 
-from ptypy import utils as u
 from ptypy.accelerate.cuda_cupy import log_device_memory_stats
-from ptypy.utils.verbose import log, logger
+from ptypy.utils.verbose import log
 from ptypy.utils import parallel
 from ptypy.engines import register
 from ptypy.engines.projectional import DMMixin, RAARMixin
@@ -78,8 +76,9 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
         nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)
         nma = min(fit, MAX_BLOCKS)
         log_device_memory_stats(4)
-        log(4, 'cupy max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(
-            nex, nma))
+        log(4, 'Free memory available: {:.2f} GB'.format(float(mem)/(1024**3)))
+        log(4, 'Memory to be allocated per block: {:.2f} GB'.format(float(blk)/(1024**3)))
+        log(4, 'cupy max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
         # reset memory or create new
         self.ex_data = GpuDataManager(ex_mem, 0, nex, True)
         self.ma_data = GpuDataManager(ma_mem, 0, nma, False)
@@ -102,8 +101,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
         for name, s in self.pr_nrm.S.items():
             s.gpu, s.data = mppa(s.data)
 
-        use_tiles = (not self.p.probe_update_cuda_atomics) or (
-            not self.p.object_update_cuda_atomics)
+        use_tiles = (not self.p.probe_update_cuda_atomics) or (not self.p.object_update_cuda_atomics)
 
         # Extra object buffer for smoothing kernel
         if self.p.obj_smooth_std is not None:
@@ -143,8 +141,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
             prep.mag = cupyx.empty_pinned(mag.shape, mag.dtype, order="C")
             prep.mag[:] = mag
 
-            log(4, 'Free memory on device: %.2f GB' %
-                (float(cp.cuda.runtime.memGetInfo()[0])/1e9))
+            log(4, 'Free memory on device: {:.2f} GB'.format(float(cp.cuda.runtime.memGetInfo()[0])/(1024**3)))
             self.ex_data.add_data_block()
             self.ma_data.add_data_block()
             self.mag_data.add_data_block()
@@ -161,15 +158,16 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
 
         for it in range(num):
 
-            error = {}
+            reduced_error = np.zeros((3,))
+            reduced_error_count = 0
+            local_error = {}
 
             for inner in range(self.p.overlap_max_iterations):
 
                 change = 0
 
                 do_update_probe = (self.curiter >= self.p.probe_update_start)
-                do_update_object = (self.p.update_object_first or (
-                    inner > 0) or not do_update_probe)
+                do_update_object = (self.p.update_object_first or (inner > 0) or not do_update_probe)
                 do_update_fourier = (inner == 0)
 
                 # initialize probe and object buffer to receive an update
@@ -185,8 +183,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
                                           self.p.obj_smooth_std]
                             # We need a third copy, because we still need ob.gpu for the fourier update
                             obb.gpu[:] = ob.gpu[:]
-                            self.GSK.convolution(
-                                obb.gpu, smooth_mfs, tmp=obb.tmp)
+                            self.GSK.convolution(obb.gpu, smooth_mfs, tmp=obb.tmp)
                             obb.gpu *= np.complex64(cfact)
                         else:
                             # obb.gpu[:] = ob.gpu * np.complex64(cfact)
@@ -225,8 +222,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
                     pr = self.pr.S[pID].gpu
 
                     # Schedule ex to device
-                    ev_ex, ex, data_ex = self.ex_data.to_gpu(
-                        prep.ex, dID, self.qu_htod)
+                    ev_ex, ex, data_ex = self.ex_data.to_gpu(prep.ex, dID, self.qu_htod)
 
                     # Fourier update.
                     if do_update_fourier:
@@ -234,10 +230,8 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
                         log(4, '----- Fourier update -----', True)
 
                         # Schedule ma & mag to device
-                        ev_ma, ma, data_ma = self.ma_data.to_gpu(
-                            prep.ma, dID, self.qu_htod)
-                        ev_mag, mag, data_mag = self.mag_data.to_gpu(
-                            prep.mag, dID, self.qu_htod)
+                        ev_ma, ma, data_ma = self.ma_data.to_gpu(prep.ma, dID, self.qu_htod)
+                        ev_mag, mag, data_mag = self.mag_data.to_gpu(prep.mag, dID, self.qu_htod)
 
                         # compute log-likelihood
                         if self.p.compute_log_likelihood:
@@ -250,8 +244,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
                         # synchronize h2d stream with compute stream
                         self.queue.wait_event(ev_ex)
                         #AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                        AWK.make_aux(aux, addr, ob, pr, ex,
-                                     c_po=self._c, c_e=1-self._c)
+                        AWK.make_aux(aux, addr, ob, pr, ex, c_po=self._c, c_e=1-self._c)
 
                         # FFT
                         PROP.fw(aux, aux)
@@ -261,8 +254,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
                         self.queue.wait_event(ev_mag)
                         FUK.fourier_error(aux, addr, mag, ma, ma_sum)
                         FUK.error_reduce(addr, err_fourier)
-                        FUK.fmag_all_update(
-                            aux, addr, mag, ma, err_fourier, pbound)
+                        FUK.fmag_all_update(aux, addr, mag, ma, err_fourier, pbound)
 
                         data_mag.record_done(self.queue, 'compute')
                         data_ma.record_done(self.queue, 'compute')
@@ -270,21 +262,18 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
                         PROP.bw(aux, aux)
                         # apply changes
                         #AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
-                        AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._b,
-                                      c_po=self._a, c_e=-(self._a + self._b))
+                        AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._b, c_po=self._a, c_e=-(self._a + self._b))
                         FUK.exit_error(aux, addr)
                         FUK.error_reduce(addr, err_exit)
 
-                    prestr = '%d Iteration (Overlap) #%02d:  ' % (
-                        parallel.rank, inner)
+                    prestr = '%d Iteration (Overlap) #%02d:  ' % (parallel.rank, inner)
 
                     # Update object
                     if do_update_object:
                         log(4, prestr + '----- object update -----', True)
                         addrt = addr if atomics_object else addr2
                         self.queue.wait_event(ev_ex)
-                        POK.ob_update(addrt, obb, obn, pr, ex,
-                                      atomics=atomics_object)
+                        POK.ob_update(addrt, obb, obn, pr, ex, atomics=atomics_object)
 
                     data_ex.record_done(self.queue, 'compute')
                     if iblock + len(self.ex_data) < len(self.dID_list):
@@ -327,10 +316,8 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
             parallel.barrier()
 
             if self.do_position_refinement and (self.curiter):
-                do_update_pos = (self.p.position_refinement.stop >
-                                 self.curiter >= self.p.position_refinement.start)
-                do_update_pos &= (self.curiter %
-                                  self.p.position_refinement.interval) == 0
+                do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
+                do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
 
                 # Update positions
                 if do_update_pos:
@@ -387,22 +374,17 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
 
                         log(4, 'Position refinement trial: iteration %s' %
                             (self.curiter))
-                        PCK.mangler.setup_shifts(
-                            self.curiter, nframes=addr.shape[0])
+                        PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
                         for i in range(PCK.mangler.nshifts):
-                            PCK.mangler.get_address(
-                                i, addr, mangled_addr, max_oby, max_obx)
+                            PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
                             PCK.build_aux(aux, mangled_addr, ob, pr)
                             PROP.fw(aux, aux)
                             if self.p.position_refinement.metric == "fourier":
-                                PCK.fourier_error(
-                                    aux, mangled_addr, mag, ma, ma_sum)
+                                PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
                                 PCK.error_reduce(mangled_addr, err_fourier)
                             if self.p.position_refinement.metric == "photon":
-                                PCK.log_likelihood(
-                                    aux, mangled_addr, mag, ma, err_fourier)
-                            PCK.update_addr_and_error_state(
-                                addr, error_state, mangled_addr, err_fourier)
+                                PCK.log_likelihood( aux, mangled_addr, mag, ma, err_fourier)
+                            PCK.update_addr_and_error_state(addr, error_state, mangled_addr, err_fourier)
 
                         data_mag.record_done(self.queue, 'compute')
                         data_ma.record_done(self.queue, 'compute')
@@ -412,12 +394,9 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
                                                kind=3, # d2d
                                                stream=self.queue.ptr)
                         if use_tiles:
-                            s1 = prep.addr_gpu.shape[0] * \
-                                prep.addr_gpu.shape[1]
-                            s2 = prep.addr_gpu.shape[2] * \
-                                prep.addr_gpu.shape[3]
-                            TK.transpose(prep.addr_gpu.reshape(
-                                s1, s2), prep.addr2_gpu.reshape(s2, s1))
+                            s1 = prep.addr_gpu.shape[0] * prep.addr_gpu.shape[1]
+                            s2 = prep.addr_gpu.shape[2] * prep.addr_gpu.shape[3]
+                            TK.transpose(prep.addr_gpu.reshape(s1, s2), prep.addr2_gpu.reshape(s2, s1))
 
             self.curiter += 1
             self.queue.synchronize()
@@ -426,21 +405,26 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
             cp.asnumpy(s.gpu, stream=self.queue, out=s.data)
         for name, s in self.pr.S.items():
             cp.asnumpy(s.gpu, stream=self.queue, out=s.data)
-
-        self.queue.synchronize()
         
-        # costly but needed to sync back with
-        # for name, s in self.ex.S.items():
-        #     s.data[:] = s.gpu.get()
+        # Gather errors from device
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
             err_phot = prep.err_phot_gpu.get()
             err_exit = prep.err_exit_gpu.get()
-            errs = np.ascontiguousarray(
-                np.vstack([err_fourier, err_phot, err_exit]).T)
-            error.update(zip(prep.view_IDs, errs))
+            errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
+            if self.p.record_local_error:
+                local_error.update(zip(prep.view_IDs, errs))
+            else:
+                reduced_error += errs.sum(axis=0)
+                reduced_error_count += errs.shape[0]
 
-        self.error = error
+        if self.p.record_local_error:
+            error = local_error
+        else:
+            # Gather errors across all MPI ranks
+            error = parallel.allreduce(reduced_error)
+            count = parallel.allreduce(reduced_error_count)
+            error /= count
         return error
 
     # probe update

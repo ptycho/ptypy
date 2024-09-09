@@ -64,14 +64,13 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
         fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
         if not fit:
             log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
-            self.context.pop()
-            self.context.detach()
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
         nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)
         nma = min(fit, MAX_BLOCKS)
-        log(4, 'Free memory on device: %.2f GB' % (float(mem)/1e9))
+        log(4, 'Free memory available: {:.2f} GB'.format(float(mem)/(1024**3)))
+        log(4, 'Memory to be allocated per block: {:.2f} GB'.format(float(blk)/(1024**3)))
         log(4, 'PyCUDA max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
         # reset memory or create new
         self.ex_data = GpuDataManager(ex_mem, 0, nex, True)
@@ -134,11 +133,11 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
             prep.mag = cuda.pagelocked_empty(mag.shape, mag.dtype, order="C", mem_flags=4)
             prep.mag[:] = mag
 
-            log(4, 'Free memory on device: %.2f GB' % (float(cuda.mem_get_info()[0])/1e9))
+            log(4, 'Free memory on device: {:.2f} GB'.format(float(cuda.mem_get_info()[0])/(1024**3)))
             self.ex_data.add_data_block()
             self.ma_data.add_data_block()
             self.mag_data.add_data_block()
-        
+
     def engine_iterate(self, num=1):
         """
         Compute one iteration.
@@ -148,10 +147,12 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
         atomics_probe = self.p.probe_update_cuda_atomics
         atomics_object = self.p.object_update_cuda_atomics
         use_tiles = (not atomics_object) or (not atomics_probe)
-        
+
         for it in range(num):
 
-            error = {}
+            reduced_error = np.zeros((3,))
+            reduced_error_count = 0
+            local_error = {}
 
             for inner in range(self.p.overlap_max_iterations):
 
@@ -311,7 +312,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
                 # Update positions
                 if do_update_pos:
                     """
-                    Iterates through all positions and refines them by a given algorithm. 
+                    Iterates through all positions and refines them by a given algorithm.
                     """
                     log(4, "----------- START POS REF -------------")
                     for dID in self.di.S.keys():
@@ -347,7 +348,7 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
                         # wait for data to arrive
                         self.queue.wait_for_event(ev_mag)
 
-                        # We need to re-calculate the current error 
+                        # We need to re-calculate the current error
                         if self.p.position_refinement.metric == "fourier":
                             PCK.fourier_error(aux, addr, mag, ma, ma_sum)
                             PCK.error_reduce(addr, err_fourier)
@@ -388,17 +389,25 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
         for name, s in self.pr.S.items():
             s.data[:] = s.gpu.get()
 
-        # costly but needed to sync back with
-        # for name, s in self.ex.S.items():
-        #     s.data[:] = s.gpu.get()
+        # Gather errors
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
             err_phot = prep.err_phot_gpu.get()
             err_exit = prep.err_exit_gpu.get()
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
-            error.update(zip(prep.view_IDs, errs))
+            if self.p.record_local_error:
+                local_error.update(zip(prep.view_IDs, errs))
+            else:
+                reduced_error += errs.sum(axis=0)
+                reduced_error_count += errs.shape[0]
 
-        self.error = error
+        if self.p.record_local_error:
+            error = local_error
+        else:
+            # Gather errors across all MPI ranks
+            error = parallel.allreduce(reduced_error)
+            count = parallel.allreduce(reduced_error_count)
+            error /= count
         return error
 
     ## probe update

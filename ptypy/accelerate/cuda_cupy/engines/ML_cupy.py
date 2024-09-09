@@ -23,7 +23,7 @@ from ptypy.utils import parallel
 from .. import get_context, log_device_memory_stats
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
-from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, TransposeKernel
+from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, FFTGaussianSmoothingKernel, TransposeKernel
 from ..mem_utils import GpuDataManager
 
 #from ..mem_utils import GpuDataManager
@@ -79,8 +79,12 @@ class ML_cupy(ML_serial):
         self.qu_htod = cp.cuda.Stream()
         self.qu_dtoh = cp.cuda.Stream()
 
-        self.GSK = GaussianSmoothingKernel(queue=self.queue)
-        self.GSK.tmp = None
+        if self.p.smooth_gradient_method == "convolution":
+            self.GSK = GaussianSmoothingKernel(queue=self.queue)
+            self.GSK.tmp = None
+
+        if self.p.smooth_gradient_method == "fft":
+            self.FGSK = FFTGaussianSmoothingKernel(queue=self.queue)
 
         # Real/Fourier Support Kernel
         self.RSK = {}
@@ -165,6 +169,8 @@ class ML_cupy(ML_serial):
         # TODO grow blocks dynamically
         nma = min(fit, MAX_BLOCKS)
         log_device_memory_stats(4)
+        log(4, 'Free memory available: {:.2f} GB'.format(float(mem)/(1024**3)))
+        log(4, 'Memory to be allocated per block: {:.2f} GB'.format(float(blk)/(1024**3)))
         log(4, 'CuPy max blocks fitting on GPU: ma_arrays={}'.format(nma))
         # reset memory or create new
         self.w_data = GpuDataManager(ma_mem, 0, nma, False)
@@ -258,9 +264,18 @@ class ML_cupy(ML_serial):
                     dev=dev, container=container, sync_copy=sync_copy)
 
     def _get_smooth_gradient(self, data, sigma):
-        if self.GSK.tmp is None:
-            self.GSK.tmp = cp.empty(data.shape, dtype=np.complex64)
-        self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
+        if self.p.smooth_gradient_method == "convolution":
+            if self.GSK.tmp is None:
+                self.GSK.tmp = cp.empty(data.shape, dtype=np.complex64)
+            try:
+                self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
+            except MemoryError:
+                raise RuntimeError("Convolution kernel too large for direct convolution on GPU",
+                                   "Please reduce parameter smooth_gradient or set smooth_gradient_method='fft'.")
+        elif self.p.smooth_gradient_method == "fft":
+            self.FGSK.filter(data, sigma)
+        else:
+            raise NotImplementedError("smooth_gradient_method should be ```convolution``` or ```fft```.")
         return data
 
     def _replace_ob_grad(self):

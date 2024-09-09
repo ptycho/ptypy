@@ -21,8 +21,8 @@ PtyPy - Ptychography Reconstruction for Python
 
 |ptypysite|
 
-.. image:: https://github.com/ptycho/ptypy/workflows/ptypy%20tests/badge.svg?branch=master
-    :target: https://github.com/ptycho/ptypy/actions
+.. image:: https://github.com/ptycho/ptypy/actions/workflows/test.yml/badge.svg?branch=master
+    :target: https://github.com/ptycho/ptypy/actions/workflows/test.yml
 
 Welcome Ptychonaut!
 -------------------
@@ -62,7 +62,8 @@ Features
   
     $ mpiexec -n [nodes] python <your_ptypy_script>.py
 
-* **GPU acceleration** based on custom kernels, pycuda, and reikna.
+* **GPU acceleration** based on custom kernels, CuPy or PyCUDA/reikna.
+  See examples in ``templates/accelerate``, ``templates/engines/cupy`` and ``templates/engines/pycuda``.
 
 * A **client-server** approach for visualization and control based on 
   `ZeroMQ <http://www.zeromq.org>`_ .
@@ -100,6 +101,17 @@ Ptypy depends on standard python packages:
  * mpi4py (optional - required for parallel computing)
  * pyzmq (optional - required for the plotting client)
  
+GPU support
+-----------
+
+We support an accelerated version of |ptypy| for CUDA-capable GPUs based on our own kernels and the
+`CuPy <https://cupy.dev/>`_ package. We recommend to install the dependencies for this version like so.
+::
+
+    $ conda env create -f accelerate/cuda_cupy/dependencies.yml
+    $ conda activate ptypy_cupy
+    (ptypy_cupy)$ pip install .
+
  
 Quicklinks
 ----------

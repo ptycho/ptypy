@@ -68,7 +68,7 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         """
         Prepare for reconstruction.
         """
-        self.context, self.queue = get_context(new_context=True, new_queue=True)
+        self.context, self.queue = get_context(new_queue=True)
 
         # initialise kernels for centring probe if required
         if self.p.probe_center_tol is not None:
@@ -160,15 +160,15 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
         if not fit:
             log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
-            self.context.pop()
-            self.context.detach()
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
         nex = min(fit * EX_MA_BLOCKS_RATIO, MAX_BLOCKS)
         nma = min(fit, MAX_BLOCKS)
 
-        log(3, 'PyCUDA max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
+        log(4, 'Free memory available: {:.2f} GB'.format(float(mem)/(1024**3)))
+        log(4, 'Memory to be allocated per block: {:.2f} GB'.format(float(blk)/(1024**3)))
+        log(4, 'PyCUDA max blocks fitting on GPU: exit arrays={}, ma_arrays={}'.format(nex, nma))
         # reset memory or create new
         self.ex_data = GpuDataManager(ex_mem, 0, nex, True)
         self.ma_data = GpuDataManager(ma_mem, 0, nma, False)
@@ -222,8 +222,12 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         Compute one iteration.
         """
         self.dID_list = list(self.di.S.keys())
-        error = {}
+
         for it in range(num):
+
+            reduced_error = np.zeros((3,))
+            reduced_error_count = 0
+            local_error = {}
 
             for iblock, dID in enumerate(self.dID_list):
 
@@ -357,12 +361,23 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
             err_phot = prep.err_phot_gpu.get()
             err_exit = prep.err_exit_gpu.get()
             errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
-            error.update(zip(prep.view_IDs, errs))
+            if self.p.record_local_error:
+                local_error.update(zip(prep.view_IDs, errs))
+            else:
+                reduced_error += errs.sum(axis=0)
+                reduced_error_count += errs.shape[0]
+
+        if self.p.record_local_error:
+            error = local_error
+        else:
+            # Gather errors across all MPI ranks
+            error = parallel.allreduce(reduced_error)
+            count = parallel.allreduce(reduced_error_count)
+            error /= count
 
         # wait for the async transfers
         self.qu_dtoh.synchronize()
 
-        self.error = error
         return error
 
     def position_update_local(self, prep, i):
@@ -484,7 +499,6 @@ class _StochasticEnginePycuda(_StochasticEngineSerial):
         for name, s in self.ob.S.items():
             s.data = np.copy(s.data)
 
-        self.context.detach()
         super().engine_finalize()
 
 

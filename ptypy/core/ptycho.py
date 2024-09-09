@@ -362,6 +362,7 @@ class Ptycho(Base):
         self.mask = None
         self.model = None
         self.new_data = None
+        self.state_dict = dict()
 
         # Communication
         self.interactor = None
@@ -1126,7 +1127,49 @@ class Ptycho(Base):
                            cmap='gray')
             fignum += 1
 
-    
+
+    def copy_state(self, name="baseline", overwrite=False):
+        """
+        Store a copy of the current state of object/probe and exit
+
+        Warning: This feature is under development and syntax might change!
+        """
+        if name in self.state_dict:
+            logger.warning("A state with name {:s} exists already".format(name))
+            if overwrite:
+                logger.warning("Overwrite {:s} state".format(name))                
+                del self.state_dict[name]
+            else:
+                return
+        self.state_dict[name] = {}
+        self.state_dict[name]["ob"] = self.obj.copy()
+        self.state_dict[name]["pr"] = self.probe.copy()
+        self.state_dict[name]["ex"] = self.exit.copy()
+        self.state_dict[name]["runtime"] = self.runtime.copy(depth=99)
+        logger.info("Saved a copy of object and probe as the {:s} state".format(name))
+            
+    def restore_state(self, name="baseline", reformat_exit=True):
+        """
+        Restore object/probe based on a previously saved copy
+        The exit buffer can be reformatted or loaded from the state
+
+        Warning: This feature is under development and syntax might change!
+        """
+        if name in self.state_dict:
+            for ID,S in self.probe.storages.items():
+                S.data[:] = self.state_dict[name]["pr"].storages[ID].data
+            for ID,S in self.obj.storages.items():
+                S.data[:] = self.state_dict[name]["ob"].storages[ID].data
+            for ID,S in self.exit.storages.items():
+                S.data[:] = self.state_dict[name]["ex"].storages[ID].data   
+        self.runtime = self.state_dict[name]["runtime"].copy(depth=99)
+        
+        # Reformat/Recalculate exit waves
+        if reformat_exit:
+            self.exit.reformat()
+            for scan in self.model.scans.values():
+                scan._initialize_exit(list(self.pods.values()))
+
     def _redistribute_data(self, div = 'rect', obj_storage=None):
         """
         This function redistributes data among nodes, so that each
