@@ -117,6 +117,12 @@ class Ptycho(Base):
     help = Minimum number of frames to be loaded before reconstruction can start.
     doc = For on-the-fly (live) processing, the first reconstruction engine will wait until this many frames have been loaded.
 
+    [expand_numiter_last]
+    default = False
+    type = bool
+    help = Enables swithching of engines before end of scan.
+    doc = For on-the-fly (live) processing, if not end of scan, expand total number of iterations in the last engine.
+
     [dry_run]
     default = False
     help = Dry run switch
@@ -392,6 +398,7 @@ class Ptycho(Base):
             logger.info('\n' + headerline('Ptycho init level 4', 'l'))
             self.init_engine()
         if level >= 5:
+            logger.info('\n' + headerline('Ptycho init level 5', 'l'))
             self.run()
             self.finalize()
 
@@ -704,7 +711,11 @@ class Ptycho(Base):
 
                 # If not end of scan, expand total number of iterations
                 # This is to make sure that the specified nr. of iterations is guaranteed once all data is loaded
-                if not self.model.end_of_scan:
+                # Lex quickfix for adding the iterations to the last engine instead, 'self.engine_number' should be declared somewhere though..
+                #if not self.model.end_of_scan and (self.engine_number+1 == len(self.engines)) and (engine.curiter >= engine.numiter - engine.p.numiter_contiguous):
+                if not self.model.end_of_scan and not self.p.expand_numiter_last:
+                    engine.numiter += engine.p.numiter_contiguous
+                elif not self.model.end_of_scan and (self.engine_number + 1 == len(self.engines)):# and (engine.curiter >= engine.numiter - engine.p.numiter_contiguous):
                     engine.numiter += engine.p.numiter_contiguous
 
                 # One iteration
@@ -779,7 +790,7 @@ class Ptycho(Base):
             if not self.engines: self.init_engine()
             self.runtime.allstart = time.asctime()
             self.runtime.allstop = None
-            for engine in self.engines.values():
+            for self.engine_number, engine in enumerate(self.engines.values()):
                 self.run(engine=engine)
 
     def finalize(self):
