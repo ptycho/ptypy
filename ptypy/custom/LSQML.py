@@ -124,7 +124,7 @@ class LSQML(PositionCorrectionEngine):
 
         # Create noise model
         if self.p.ML_type.lower() == "gaussian":
-            raise NotImplementedError('Gaussian noise model not yet implemented')
+            self.ML_model = GaussianModel(self)
         elif self.p.ML_type.lower() == "poisson":
             raise NotImplementedError('Poisson noise model not yet implemented')
         elif self.p.ML_type.lower() == "euclid":
@@ -400,6 +400,186 @@ class BaseModel(object):
         # MPI reduction of step
         self.ob_buf.allreduce()
         self.pr_buf.allreduce()
+
+class GaussianModel(BaseModel):
+    """
+    Gaussian noise model.
+    TODO: feed actual statistical weights instead of using the Poisson statistic heuristic.
+    """
+
+    def __init__(self, MLengine):
+        """
+        Core functions for ML computation using a Gaussian model.
+        """
+        BaseModel.__init__(self, MLengine)
+
+        # Gaussian model requires weights
+        # TODO: update this part of the code once actual weights are passed in the PODs
+        self.weights = self.engine.di.copy(self.engine.di.ID + '_weights')
+        # FIXME: This part needs to be updated once statistical weights are properly
+        # supported in the data preparation.
+        for name, di_view in self.di.views.items():
+            if not di_view.active:
+                continue
+            self.weights[di_view] = (self.Irenorm * di_view.pod.ma_view.data
+                                     / (1./self.Irenorm + di_view.data))
+
+    def __del__(self):
+        """
+        Clean up routine
+        """
+        BaseModel.__del__(self)
+        del self.engine.ptycho.containers[self.weights.ID]
+        del self.weights
+
+    def new_grad(self):
+        """
+        Compute a new gradient direction according to a Gaussian noise model.
+
+        Note: The negative log-likelihood and local errors are also computed
+        here.
+        """
+        self.ob_buf.fill(0.)
+        self.pr_buf.fill(0.)
+        self.ob_nrm.fill(0.)
+        self.pr_nrm.fill(0.)
+
+        # We need an array for MPI
+        LL = np.array([0.])
+        error_dct = {}
+
+        # Outer loop: through diffraction patterns
+        for dname, diff_view in self.di.views.items():
+            if not diff_view.active:
+                continue
+
+            # Weights and intensities for this view
+            w = self.weights[diff_view]
+            I = diff_view.data
+
+            Imodel = np.zeros_like(I)
+            f = {}
+
+            # First pod loop: compute total intensity
+            for name, pod in diff_view.pods.items():
+                if not pod.active:
+                    continue
+                f[name] = pod.fw(pod.probe * pod.object)
+                Imodel += pod.downsample(u.abs2(f[name]))
+
+            DI = np.double(Imodel) - I
+
+            # Second pod loop: gradients computation
+            LLL = np.sum((w * DI**2).astype(np.float64))
+            for name, pod in diff_view.pods.items():
+                if not pod.active:
+                    continue
+
+                 # 1. Optimization in reciprocal (fourier) space
+                # This is equivalent to applying the modulus constraint
+
+                # Compute noise model gradient (12)
+                #rec_grad = 2 * w*DI * f[name]
+
+                # Calculate reciprocal step length (16)
+                #rec_step = 0.5
+
+                # Updated exit wave (14) and (18)
+                #exit = pod.bw(f[name] - rec_step*rec_grad)
+
+                # Updated exit wave (18), (14), (16), (12)
+                #exit = pod.bw(f[name]*(1 - w*DI)) # all-in-one
+
+                # 2. Optimization in real space
+                # This is essentially a generalised overlap update
+
+                # Calculate xi (19)
+                #xi = exit - pod.probe * pod.object
+
+                # Compute real-space gradients (24)
+                #self.ob_buf[pod.ob_view] += -xi * pod.probe.conj()
+                #self.pr_buf[pod.pr_view] += -xi * pod.object.conj()
+
+                # ML gradients (equivalent to the above)
+                xi = -pod.bw(w*DI * f[name])
+                self.ob_buf[pod.ob_view] += -xi * pod.probe.conj()
+                self.pr_buf[pod.pr_view] += -xi * pod.object.conj()
+
+                # Store xi for later
+                pod.exit = xi
+
+                # Compute normalisations for object and probe
+                self.ob_nrm[pod.ob_view] += u.abs2(pod.probe)
+                self.pr_nrm[pod.pr_view] += u.abs2(pod.object)
+
+            diff_view.error = LLL
+            error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
+            LL += LLL
+
+        # MPI reduction of gradients
+        self.ob_buf.allreduce()
+        self.pr_buf.allreduce()
+        self.ob_nrm.allreduce()
+        self.pr_nrm.allreduce()
+        parallel.allreduce(LL)
+
+        self.LL = LL / self.tot_measpts
+
+        return error_dct
+
+    def poly_line_coeffs(self):
+        """
+        Compute the coefficients of the polynomial for line minimization
+        in direction h
+        """
+        ob_h = self.ob_h
+        pr_h = self.pr_h
+
+        B = np.zeros((3,), dtype=np.longdouble)
+        Brenorm = 1. / self.LL[0]**2
+
+        # Outer loop: through diffraction patterns
+        for dname, diff_view in self.di.views.items():
+            if not diff_view.active:
+                continue
+
+            # Weights and intensities for this view
+            w = self.weights[diff_view]
+            I = diff_view.data
+
+            A0 = None
+            A1 = None
+            A2 = None
+
+            for name, pod in diff_view.pods.items():
+                if not pod.active:
+                    continue
+                f = pod.fw(pod.probe * pod.object)
+                a = pod.fw(pod.probe * ob_h[pod.ob_view]
+                           + pr_h[pod.pr_view] * pod.object)
+                b = pod.fw(pr_h[pod.pr_view] * ob_h[pod.ob_view])
+
+                if A0 is None:
+                    A0 = u.abs2(f).astype(np.longdouble)
+                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
+                    A2 = (2 * np.real(f * b.conj()).astype(np.longdouble)
+                          + u.abs2(a).astype(np.longdouble))
+                else:
+                    A0 += u.abs2(f)
+                    A1 += 2 * np.real(f * a.conj())
+                    A2 += 2 * np.real(f * b.conj()) + u.abs2(a)
+
+            A0 = np.double(A0) - pod.upsample(I)
+            #A0 -= pod.upsample(I)
+            w = pod.upsample(w)
+
+            B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
+            B[1] += np.dot(w.flat, (2*A0*A1).flat) * Brenorm
+            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
+
+        parallel.allreduce(B)
+
+        return B
 
 class EuclidModel(BaseModel):
     """
