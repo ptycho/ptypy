@@ -17,9 +17,9 @@ from . import register
 from .base import PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
-__all__ = ['DM', 'RAAR']
+__all__ = ['DM_ref', 'RAAR_ref']
 
-class _ProjectionEngine(PositionCorrectionEngine):
+class _ProjectionEngine_ref(PositionCorrectionEngine):
     """
     Defaults:
 
@@ -442,7 +442,7 @@ class _ProjectionEngine(PositionCorrectionEngine):
         return np.sqrt(change / len(pr.storages))
 
 
-class DMMixin:
+class DMMixin_ref:
 
     """
     Defaults:
@@ -482,7 +482,7 @@ class DMMixin:
         self._b = 1
         self._c = 1.+alpha
 
-class RAARMixin:
+class RAARMixin_ref:
     """
     Defaults:
 
@@ -513,14 +513,14 @@ class RAARMixin:
 
 
 @register()
-class DM(_ProjectionEngine, DMMixin):
+class DM_ref(_ProjectionEngine_ref, DMMixin):
     """
     A full-fledged Difference Map engine.
 
     Defaults:
 
     [name]
-    default = DM
+    default = DM_ref
     type = str
     help =
     doc =
@@ -528,13 +528,13 @@ class DM(_ProjectionEngine, DMMixin):
     """
 
     def __init__(self, ptycho_parent, pars=None):
-        _ProjectionEngine.__init__(self, ptycho_parent, pars)
-        DMMixin.__init__(self, self.p.alpha)
+        _ProjectionEngine_ref.__init__(self, ptycho_parent, pars)
+        DMMixin_ref.__init__(self, self.p.alpha)
         ptycho_parent.citations.add_article(**self.article)
 
 
 @register()
-class RAAR(_ProjectionEngine, RAARMixin):
+class RAAR_ref(_ProjectionEngine_ref, RAARMixin):
     """
     A RAAR engine.
 
@@ -550,5 +550,5 @@ class RAAR(_ProjectionEngine, RAARMixin):
 
     def __init__(self, ptycho_parent, pars=None):
 
-        _ProjectionEngine.__init__(self, ptycho_parent, pars)
-        RAARMixin.__init__(self, self.p.beta)
+        _ProjectionEngine_ref.__init__(self, ptycho_parent, pars)
+        RAARMixin_ref.__init__(self, self.p.beta)
