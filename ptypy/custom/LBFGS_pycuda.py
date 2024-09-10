@@ -98,9 +98,18 @@ class LBFGS_pycuda(LBFGS_serial, ML_pycuda):
             raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
 
     def _get_smooth_gradient(self, data, sigma):
-        if self.GSK.tmp is None:
-            self.GSK.tmp = gpuarray.empty(data.shape, dtype=np.complex64)
-        self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
+        if self.p.smooth_gradient_method == "convolution":
+            if self.GSK.tmp is None:
+                self.GSK.tmp = gpuarray.empty(data.shape, dtype=np.complex64)
+            try:
+                self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
+            except MemoryError:
+                raise RuntimeError("Convolution kernel too large for direct convolution on GPU",
+                                   "Please reduce parameter smooth_gradient or set smooth_gradient_method='fft'.")
+        elif self.p.smooth_gradient_method == "fft":
+            self.FGSK.filter(data, sigma)
+        else:
+            raise NotImplementedError("smooth_gradient_method should be ```convolution``` or ```fft```.")
         return data
 
     def _smooth_gradient(self):
@@ -164,4 +173,3 @@ class LBFGS_pycuda(LBFGS_serial, ML_pycuda):
         Clear all GPU data, pinned memory, etc
         """
         super().engine_finalize()
-
