@@ -12,10 +12,7 @@ This file is part of the PTYPY package.
     :license: GPLv2, see LICENSE for details.
 """
 import numpy as np
-# from pycuda import gpuarray
-# import pycuda.driver as cuda
-# import pycuda.cumath
-# from pycuda.tools import DeviceMemoryPool
+import cupy as cp
 
 from ptypy.engines import register
 from ptypy.custom.LBFGS_serial import LBFGS_serial
