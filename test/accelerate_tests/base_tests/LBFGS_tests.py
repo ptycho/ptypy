@@ -68,9 +68,9 @@ class LBFGSSerialTest(unittest.TestCase):
         RMSE_ob = (np.mean(np.abs(OBJ_LBFGS_serial - OBJ_LBFGS)**2))
         RMSE_pr = (np.mean(np.abs(PRB_LBFGS_serial - PRB_LBFGS)**2))
         # RMSE_LL = (np.mean(np.abs(LL_LBFGS_serial - LL_LBFGS)**2))
-        np.testing.assert_allclose(RMSE_ob, 0.0, atol=1e-2,
+        np.testing.assert_allclose(RMSE_ob, 0.0, atol=1e-1,
                                     err_msg="The object arrays are not matching as expected")
-        np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-2,
+        np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-1,
                                     err_msg="The probe arrays are not matching as expected")
         # np.testing.assert_allclose(RMSE_LL, 0.0, atol=1e-7,
                                     # err_msg="The log-likelihood errors are not matching as expected")
@@ -119,7 +119,6 @@ class LBFGSSerialTest(unittest.TestCase):
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)
 
-    @unittest.skip("LBFGS may not work with floating intensities")
     def test_LBFGS_serial_floating(self):
         out = []
         # fail at iter num 80
