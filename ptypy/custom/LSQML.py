@@ -8,7 +8,7 @@ TODO.
 
 This file is part of the PTYPY package.
 
-    :copyright: Copyright 2022 by the PTYPY team, see AUTHORS.
+    :copyright: Copyright 2024 by the PTYPY team, see AUTHORS.
     :license: see LICENSE for details.
 """
 import numpy as np
@@ -205,19 +205,19 @@ class LSQML(PositionCorrectionEngine):
             self.ML_model.compute_step_lengths()
             ts += time.time() - t2
 
-            ################################
-            # Take weighted mean step (27) #
-            ################################
-            t3 = time.time()
-            # compute step
-            self.ML_model.new_step()
-            # scale step
-            self.ob_buf /= self.ob_nrm
-            self.pr_buf /= self.pr_nrm
-            # take step
-            self.ob += self.ob_buf
-            self.pr += self.pr_buf
-            tu += time.time() - t3
+            # ################################
+            # # Take weighted mean step (27) #
+            # ################################
+            # t3 = time.time()
+            # # compute step
+            # self.ML_model.new_step()
+            # # scale step
+            # self.ob_buf /= self.ob_nrm
+            # self.pr_buf /= self.pr_nrm
+            # # take step
+            # self.ob += self.ob_buf
+            # self.pr += self.pr_buf
+            # tu += time.time() - t3
 
             # ########################
             # # Take unweighted step #
@@ -230,17 +230,17 @@ class LSQML(PositionCorrectionEngine):
             # self.pr += self.pr_buf
             # tu += time.time() - t3
 
-            # ################
-            # # Take ML step #
-            # ################
-            # t3 = time.time()
-            # B = self.ML_model.poly_line_coeffs()
-            # tmin = self.ptycho.FType(-.5 * B[1] / B[2])
-            # self.ob_h *= tmin
-            # self.pr_h *= tmin
-            # self.ob += self.ob_h
-            # self.pr += self.pr_h
-            # tu += time.time() - t3
+            ################
+            # Take ML step #
+            ################
+            t3 = time.time()
+            B = self.ML_model.poly_line_coeffs()
+            tmin = self.ptycho.FType(-.5 * B[1] / B[2])
+            self.ob_h *= tmin
+            self.pr_h *= tmin
+            self.ob += self.ob_h
+            self.pr += self.pr_h
+            tu += time.time() - t3
 
             # Position correction
             self.position_update()
@@ -586,9 +586,9 @@ class EuclidModel(BaseModel):
             if not diff_view.active:
                 continue
 
-            # Weights and intensities for this view
+            # Weights and amplitudes for this view
             w = self.weights[diff_view]
-            I = diff_view.data
+            A = np.sqrt(diff_view.data)
 
             A0 = None
             A1 = None
@@ -612,11 +612,12 @@ class EuclidModel(BaseModel):
                     A1 += 2 * np.real(f * a.conj())
                     A2 += 2 * np.real(f * b.conj()) + u.abs2(a)
 
-            A0 = np.double(A0) - I
+            A0 += 1e-12 # cf Poisson model sqrt(1e-12) = 1e-6
+            DA = 1. - A/np.sqrt(A0)
 
-            B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
-            B[1] += np.dot(w.flat, (2 * A0 * A1).flat) * Brenorm
-            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
+            B[0] += np.dot(w.flat, ((np.sqrt(A0) - A)**2).flat) * Brenorm
+            B[1] += np.dot(w.flat, (A1*DA).flat) * Brenorm
+            B[2] += (np.dot(w.flat, (A2*DA).flat) + 0.25*np.dot(w.flat, (A1**2 * A/A0**(3/2)).flat)) * Brenorm
 
         parallel.allreduce(B)
 
