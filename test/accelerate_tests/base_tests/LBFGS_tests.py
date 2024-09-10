@@ -10,7 +10,6 @@ import unittest
 from test import utils as tu
 from ptypy import utils as u
 import ptypy
-# ptypy.load_gpu_engines("serial")
 from ptypy.custom import LBFGS, LBFGS_serial
 import tempfile
 import shutil
@@ -74,66 +73,67 @@ class LBFGSSerialTest(unittest.TestCase):
         np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-2,
                                     err_msg="The probe arrays are not matching as expected")
         # np.testing.assert_allclose(RMSE_LL, 0.0, atol=1e-7,
-        #                             err_msg="The log-likelihood errors are not matching as expected")
+                                    # err_msg="The log-likelihood errors are not matching as expected")
 
 
-    # def test_LBFGS_serial_base(self):
-        # out = []
-        # for eng in ["LBFGS", "LBFGS_serial"]:
-            # engine_params = u.Param()
-            # engine_params.name = eng
-            # engine_params.numiter = 100
-            # engine_params.floating_intensities = False
-            # engine_params.reg_del2 = False
-            # engine_params.reg_del2_amplitude = 1.
-            # engine_params.scale_precond = False
-            # out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           # scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        # self.check_engine_output(out, plotting=False, debug=False)
+    def test_LBFGS_serial_base(self):
+        out = []
+        for eng in ["LBFGS", "LBFGS_serial"]:
+            engine_params = u.Param()
+            engine_params.name = eng
+            engine_params.numiter = 100
+            engine_params.floating_intensities = False
+            engine_params.reg_del2 = False
+            engine_params.reg_del2_amplitude = 1.
+            engine_params.scale_precond = False
+            out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+        self.check_engine_output(out, plotting=False, debug=False)
 
-    # def test_LBFGS_serial_regularizer(self):
-        # out = []
-        # for eng in ["LBFGS", "LBFGS_serial"]:
-            # engine_params = u.Param()
-            # engine_params.name = eng
-            # engine_params.numiter = 90
-            # engine_params.floating_intensities = False
-            # engine_params.reg_del2 = True
-            # engine_params.reg_del2_amplitude = 1.
-            # engine_params.scale_precond = False
-            # out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           # scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        # self.check_engine_output(out, plotting=False, debug=False)
+    def test_LBFGS_serial_regularizer(self):
+        out = []
+        for eng in ["LBFGS", "LBFGS_serial"]:
+            engine_params = u.Param()
+            engine_params.name = eng
+            engine_params.numiter = 90
+            engine_params.floating_intensities = False
+            engine_params.reg_del2 = True
+            engine_params.reg_del2_amplitude = 1.
+            engine_params.scale_precond = False
+            out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+        self.check_engine_output(out, plotting=False, debug=False)
 
+    def test_LBFGS_serial_preconditioner(self):
+        out = []
+        for eng in ["LBFGS", "LBFGS_serial"]:
+            engine_params = u.Param()
+            engine_params.name = eng
+            engine_params.numiter = 100
+            engine_params.floating_intensities = False
+            engine_params.reg_del2 = False
+            engine_params.reg_del2_amplitude = 1.
+            engine_params.scale_precond = True
+            engine_params.scale_probe_object = 1e-6
+            out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+        self.check_engine_output(out, plotting=False, debug=False)
 
-    # def test_LBFGS_serial_preconditioner(self):
-        # out = []
-        # for eng in ["LBFGS", "LBFGS_serial"]:
-            # engine_params = u.Param()
-            # engine_params.name = eng
-            # engine_params.numiter = 100
-            # engine_params.floating_intensities = False
-            # engine_params.reg_del2 = False
-            # engine_params.reg_del2_amplitude = 1.
-            # engine_params.scale_precond = True
-            # engine_params.scale_probe_object = 1e-6
-            # out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           # scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        # self.check_engine_output(out, plotting=False, debug=False)
-
-    # def test_LBFGS_serial_floating(self):
-        # out = []
-        # for eng in ["LBFGS", "LBFGS_serial"]:
-            # engine_params = u.Param()
-            # engine_params.name = eng
-            # engine_params.numiter = 100
-            # engine_params.floating_intensities = True
-            # engine_params.reg_del2 = False
-            # engine_params.reg_del2_amplitude = 1.
-            # engine_params.scale_precond = False
-            # out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           # scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        # self.check_engine_output(out, plotting=False, debug=False)
+    @unittest.skip("LBFGS may not work with floating intensities")
+    def test_LBFGS_serial_floating(self):
+        out = []
+        # fail at iter num 80
+        for eng in ["LBFGS", "LBFGS_serial"]:
+            engine_params = u.Param()
+            engine_params.name = eng
+            engine_params.numiter = 100
+            engine_params.floating_intensities = True
+            engine_params.reg_del2 = False
+            engine_params.reg_del2_amplitude = 1.
+            engine_params.scale_precond = False
+            out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+        self.check_engine_output(out, plotting=False, debug=False)
 
     def test_LBFGS_serial_smoothing_regularizer(self):
         out = []
@@ -151,22 +151,22 @@ class LBFGSSerialTest(unittest.TestCase):
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)
 
-    # def test_LBFGS_serial_all(self):
-        # out = []
-        # for eng in ["LBFGS", "LBFGS_serial"]:
-            # engine_params = u.Param()
-            # engine_params.name = eng
-            # engine_params.numiter = 100
-            # engine_params.floating_intensities = False
-            # engine_params.reg_del2 = True
-            # engine_params.reg_del2_amplitude = 1.
-            # engine_params.smooth_gradient = 20
-            # engine_params.smooth_gradient_decay = 1/10.
-            # engine_params.scale_precond = True
-            # engine_params.scale_probe_object = 1e-6
-            # out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           # scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        # self.check_engine_output(out, plotting=False, debug=False)
+    def test_LBFGS_serial_all(self):
+        out = []
+        for eng in ["LBFGS", "LBFGS_serial"]:
+            engine_params = u.Param()
+            engine_params.name = eng
+            engine_params.numiter = 100
+            engine_params.floating_intensities = False
+            engine_params.reg_del2 = True
+            engine_params.reg_del2_amplitude = 1.
+            engine_params.smooth_gradient = 20
+            engine_params.smooth_gradient_decay = 1/10.
+            engine_params.scale_precond = True
+            engine_params.scale_probe_object = 1e-6
+            out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+        self.check_engine_output(out, plotting=False, debug=False)
 
 if __name__ == "__main__":
     unittest.main()
