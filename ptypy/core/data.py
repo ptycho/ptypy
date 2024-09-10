@@ -800,6 +800,7 @@ class PtyScan(object):
             if rebin <= 1:
                 pass
             elif (rebin in range(2, 32+1)
+
                   and (((sh / float(rebin)) % 1) == 0.0).all()):
                 mask = w > 0
                 d = u.rebin_2d(d, rebin)
