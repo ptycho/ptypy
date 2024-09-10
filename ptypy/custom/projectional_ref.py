@@ -12,9 +12,9 @@ import time
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
-from .utils import projection_update_generalized, log_likelihood
-from . import register
-from .base import PositionCorrectionEngine
+from .utils import projection_update_generalized_ref, log_likelihood
+from ..engines import register
+from ..engines.base import PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
 
 __all__ = ['DM_ref', 'RAAR_ref']
@@ -264,7 +264,7 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
                                                    alpha=self.p.alpha,
                                                    LL_error=self.p.compute_log_likelihood)
             """
-            err_fmag, err_exit = projection_update_generalized(di_view, self._a, self._b, self._c, pbound)
+            err_fmag, err_exit = projection_update_generalized_ref(di_view, self._a, self._b, self._c, pbound)
             if self.p.compute_log_likelihood:
                 err_phot = log_likelihood(di_view)
             else:
@@ -513,7 +513,7 @@ class RAARMixin_ref:
 
 
 @register()
-class DM_ref(_ProjectionEngine_ref, DMMixin):
+class DM_ref(_ProjectionEngine_ref, DMMixin_ref):
     """
     A full-fledged Difference Map engine.
 
@@ -534,7 +534,7 @@ class DM_ref(_ProjectionEngine_ref, DMMixin):
 
 
 @register()
-class RAAR_ref(_ProjectionEngine_ref, RAARMixin):
+class RAAR_ref(_ProjectionEngine_ref, RAARMixin_ref):
     """
     A RAAR engine.
 
