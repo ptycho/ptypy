@@ -372,8 +372,14 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
         for name, pod in self.pods.items():
             if not pod.active:
                 continue
-            pod.object += pod.probe.conj() * pod.exit * pod.object_weight
-            ob_nrm[pod.ob_view] += u.abs2(pod.probe) * pod.object_weight
+            #print('### muh')
+            #print(self.curiter, 'abs(pod.object).max()', abs(pod.object).max())
+            pod.object += (1j * np.exp(1j * pod.object) * pod.probe).conj() * pod.exit * pod.object_weight
+            
+            #pod.object.real[pod.object.real <= -10] = -10
+            pod.object.imag[pod.object.imag <= -5] = -5
+
+            ob_nrm[pod.ob_view] += u.abs2(pod.probe * np.exp(1j * pod.object)) * pod.object_weight
 
         # Distribute result with MPI
         for name, s in self.ob.storages.items():
@@ -416,8 +422,8 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
         for name, pod in self.pods.items():
             if not pod.active:
                 continue
-            pod.probe += pod.object.conj() * pod.exit * pod.probe_weight
-            pr_nrm[pod.pr_view] += u.abs2(pod.object) * pod.probe_weight
+            pod.probe += np.exp(-1j * pod.object.conj())  * pod.exit * pod.probe_weight
+            pr_nrm[pod.pr_view] += u.abs2(np.exp(1j * pod.object)) * pod.probe_weight
 
         change = 0.
 
