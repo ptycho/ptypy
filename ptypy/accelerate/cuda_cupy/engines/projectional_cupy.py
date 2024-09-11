@@ -28,6 +28,9 @@ from ..multi_gpu import get_multi_gpu_communicator
 
 __all__ = ['DM_cupy', 'RAAR_cupy']
 
+# the number of blocks to have with a safe value of frames_per_block
+NUM_BLK_SAFE_FPB = 3
+
 
 class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
 
@@ -121,7 +124,18 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             mempool = cp.get_default_memory_pool()
             mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
             if not int(mem) // aux.nbytes:
+                isGradFull = False
+                if scan.__class__.__name__ == "GradFull":
+                    isGradFull = True
+                    break
+
                 log(1,"Cannot fit memory into device, if possible reduce frames per block or nr. of modes. Exiting...")
+                if not isGradFull:
+                    per_frame = (aux.nbytes / aux.shape[0]) * nmodes
+                    safe_fpb = int(np.floor((mem / NUM_BLK_SAFE_FPB) / per_frame))
+                    log(1,f"Your current 'frames_per_block' is {fpc}.")
+                    log(1,f"With current reconstruction parameters and computing resources, you can try setting 'frames_per_block' to {safe_fpb}.")
+                    log(1,f"This would divide your reonstruction into {NUM_BLK_SAFE_FPB} blocks.")
                 raise SystemExit("ptypy has been exited.")
             kern.aux = cp.asarray(aux)
 
@@ -209,7 +223,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         queue.use()
 
         for it in range(num):
-                        
+
             reduced_error = np.zeros((3,))
             reduced_error_count = 0
             local_error = {}
