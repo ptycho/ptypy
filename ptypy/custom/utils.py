@@ -93,7 +93,7 @@ def log_likelihood(diff_view):
     I = diff_view.data
     LL = np.zeros_like(I)
     for name, pod in diff_view.pods.items():
-        LL += pod.downsample(u.abs2(pod.fw(pod.probe * pod.object)))
+        LL += pod.downsample(u.abs2(pod.fw(pod.probe * np.exp(1j * pod.object))))
     return np.sum(diff_view.pod.mask * (LL - I)**2 / (I + 1.)) / np.prod(LL.shape)
 
 
@@ -166,7 +166,7 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
     for name, pod in diff_view.pods.items():
         if not pod.active:
             continue
-        f[name] = pod.fw((1-c) * pod.exit + c * pod.probe * pod.object)
+        f[name] = pod.fw((1-c) * pod.exit + c * pod.probe * np.exp(1j * pod.object))
         af2 += pod.downsample(u.abs2(f[name]))
 
     fmag = np.sqrt(np.abs(I))
@@ -233,9 +233,9 @@ def projection_update_generalized(diff_view, a, b, c, pbound=None):
 
         if fm is not None:
             df = b * pod.bw(pod.upsample(fm) * f[name]) + \
-                 a * pod.probe * pod.object - (a + b) * pod.exit
+                 a * pod.probe * np.exp(1j * pod.object) - (a + b) * pod.exit
         else:
-            df = (a + b*c) * (pod.probe * pod.object - pod.exit)
+            df = (a + b*c) * (pod.probe * np.exp(1j * pod.object) - pod.exit)
 
         pod.exit += df
         err_exit += np.mean(u.abs2(df))
@@ -348,7 +348,7 @@ def basic_fourier_update_LEGACY(diff_view, pbound=None, alpha=1., LL_error=True)
     if LL_error is True:
         LL = np.zeros_like(diff_view.data)
         for name, pod in diff_view.pods.items():
-            LL += pod.downsample(u.abs2(pod.fw(pod.probe * pod.object)))
+            LL += pod.downsample(u.abs2(pod.fw(pod.probe * np.exp(1j * pod.object))))
         err_phot = (np.sum(fmask * (LL - I)**2 / (I + 1.))
                     / np.prod(LL.shape))
     else:
@@ -359,7 +359,7 @@ def basic_fourier_update_LEGACY(diff_view, pbound=None, alpha=1., LL_error=True)
         if not pod.active:
             continue
         f[name] = pod.fw(-alpha * pod.exit+
-                         (1 + alpha) * pod.probe * pod.object)
+                         (1 + alpha) * pod.probe * np.exp(1j * pod.object))
         af2 += pod.downsample(u.abs2(f[name]))
 
     fmag = np.sqrt(np.abs(I))
@@ -376,7 +376,7 @@ def basic_fourier_update_LEGACY(diff_view, pbound=None, alpha=1., LL_error=True)
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = pod.bw(pod.upsample(fm) * f[name]) - alpha * pod.probe * pod.object + (alpha - 1) * pod.exit
+            df = pod.bw(pod.upsample(fm) * f[name]) - alpha * pod.probe * np.exp(1j * pod.object) + (alpha - 1) * pod.exit
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     elif err_fmag > pbound:
@@ -386,7 +386,7 @@ def basic_fourier_update_LEGACY(diff_view, pbound=None, alpha=1., LL_error=True)
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = pod.bw(pod.upsample(fm) * f[name]) - alpha * pod.probe * pod.object + (alpha - 1) * pod.exit
+            df = pod.bw(pod.upsample(fm) * f[name]) - alpha * pod.probe * np.exp(1j * pod.object) + (alpha - 1) * pod.exit
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
     else:
@@ -394,7 +394,7 @@ def basic_fourier_update_LEGACY(diff_view, pbound=None, alpha=1., LL_error=True)
         for name, pod in diff_view.pods.items():
             if not pod.active:
                 continue
-            df = (pod.probe * pod.object - pod.exit)
+            df = (pod.probe * np.exp(1j * pod.object) - pod.exit)
             pod.exit += df
             err_exit += np.mean(u.abs2(df))
 
