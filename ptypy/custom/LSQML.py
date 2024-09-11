@@ -194,7 +194,7 @@ class LSQML(PositionCorrectionEngine):
             # self.ob_h *= bt
             # self.ob_h -= self.ob_grad
             # self.pr_h *= bt
-            # self.ob_h -= self.ob_grad
+            # self.pr_h -= self.pr_grad
 
             # Next ML conjugate
             self.ob_h *= bt / self.tmin
