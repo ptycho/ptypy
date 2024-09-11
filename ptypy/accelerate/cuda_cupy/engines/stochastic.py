@@ -165,8 +165,6 @@ class _StochasticEngineCupy(_StochasticEngineSerial):
         fit = int(mem - 200 * 1024 * 1024) // blk
         if not fit:
             log(1, "Cannot fit memory into device, if possible reduce frames per block. Exiting...")
-            self.context.pop()
-            self.context.detach()
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
