@@ -35,6 +35,8 @@ EX_MA_BLOCKS_RATIO = 2
 # can be used to limit the number of blocks, simulating that they don't fit
 MAX_BLOCKS = 99999
 # MAX_BLOCKS = 10  # can be used to limit the number of blocks, simulating that they don't fit
+# the number of blocks to have with a safe value of frames_per_block
+NUM_BLK_SAFE_FPB = 3
 
 
 class _StochasticEngineCupy(_StochasticEngineSerial):
@@ -165,7 +167,22 @@ class _StochasticEngineCupy(_StochasticEngineSerial):
         avail_mem = max(int(mem - 200 * 1024 * 1024), 0)
         fit =  avail_mem // blk
         if not fit:
+            # find max number of frames_per_block
+            max_fpc = 0
+            isGradFull = False
+            for scan in self.ptycho.model.scans.values():
+                if scan.__class__.__name__ == "GradFull":
+                    isGradFull = True
+                    break
+                max_fpc = max(scan.max_frames_per_block, max_fpc)
+
             log(1, "Cannot fit memory into device, if possible reduce frames per block. Exiting...")
+            if not isGradFull:
+                per_frame = blk / max_fpc
+                safe_fpb = int(np.floor((avail_mem / NUM_BLK_SAFE_FPB) / per_frame))
+                log(1,f"Your current 'frames_per_block' is {max_fpc}.")
+                log(1,f"With current reconstruction parameters and computing resources, you can try setting 'frames_per_block' to {safe_fpb}.")
+                log(1,f"This would divide your reonstruction into {NUM_BLK_SAFE_FPB} blocks.")
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
