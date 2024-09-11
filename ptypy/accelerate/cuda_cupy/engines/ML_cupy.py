@@ -34,6 +34,8 @@ __all__ = ['ML_cupy']
 # can be used to limit the number of blocks, simulating that they don't fit
 MAX_BLOCKS = 99999
 # MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
+# the number of blocks to have with a safe value of frames_per_block
+NUM_BLK_SAFE_FPB = 3
 
 
 @register()
@@ -164,7 +166,22 @@ class ML_cupy(ML_serial):
         avail_mem = max(int(mem - 200 * 1024 * 1024), 0)
         fit =  avail_mem // blk
         if not fit:
+            # find max number of frames_per_block
+            max_fpc = 0
+            isGradFull = False
+            for scan in self.ptycho.model.scans.values():
+                if scan.__class__.__name__ == "GradFull":
+                    isGradFull = True
+                    break
+                max_fpc = max(scan.max_frames_per_block, max_fpc)
+
             log(1, "Cannot fit memory into device, if possible reduce frames per block. Exiting...")
+            if not isGradFull:
+                per_frame = blk / max_fpc
+                safe_fpb = int(np.floor((avail_mem / NUM_BLK_SAFE_FPB) / per_frame))
+                log(1,f"Your current 'frames_per_block' is {max_fpc}.")
+                log(1,f"With current reconstruction parameters and computing resources, you can try setting 'frames_per_block' to {safe_fpb}.")
+                log(1,f"This would divide your reonstruction into {NUM_BLK_SAFE_FPB} blocks.")
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
@@ -319,7 +336,7 @@ class ML_cupy(ML_serial):
         return err
 
     def position_update(self):
-        """ 
+        """
         Position refinement
         """
         if not self.do_position_refinement or (not self.curiter):
@@ -747,7 +764,7 @@ class Regul_del2_cupy(object):
         self.dot = lambda x, y: self.AUK.dot(x, y).get().item()
 
         self._grad_reg_kernel = cp.ElementwiseKernel(
-            "float32 fac, complex64 py, complex64 px, complex64 my, complex64 mx", 
+            "float32 fac, complex64 py, complex64 px, complex64 my, complex64 mx",
             "complex64 out",
             "out = (px+py-my-mx) * fac",
             "grad_reg",
