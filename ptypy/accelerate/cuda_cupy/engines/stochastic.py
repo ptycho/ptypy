@@ -162,7 +162,8 @@ class _StochasticEngineCupy(_StochasticEngineSerial):
         mem = cp.cuda.runtime.memGetInfo()[0]
         blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
         # leave 200MB room for safety
-        fit = int(mem - 200 * 1024 * 1024) // blk
+        avail_mem = max(int(mem - 200 * 1024 * 1024), 0)
+        fit =  avail_mem // blk
         if not fit:
             log(1, "Cannot fit memory into device, if possible reduce frames per block. Exiting...")
             raise SystemExit("ptypy has been exited.")
