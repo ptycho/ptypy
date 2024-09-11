@@ -48,6 +48,16 @@ class LSQML(PositionCorrectionEngine):
     choices = ['gaussian','poisson','euclid']
     doc = One of ‘gaussian’, poisson’ or ‘euclid’.
 
+    [delta_p]
+    default = 0.1
+    type = float
+    help = Least squares damping constant
+
+    [delta_o]
+    default = 0.1
+    type = float
+    help = Least squares damping constant
+
     """
 
     SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
@@ -200,13 +210,13 @@ class LSQML(PositionCorrectionEngine):
             # self.pr_h << new_pr_grad
             # self.pr_h *= -1
 
-            # ##########################
-            # # Average direction (25) #
-            # ##########################
-            # self.ob_nrm += 1e-6
-            # self.ob_h /= self.ob_nrm
-            # self.pr_nrm += 1e-6
-            # self.pr_h /= self.pr_nrm
+            ##########################
+            # Average direction (25) #
+            ##########################
+            self.ob_nrm += self.p.delta_o
+            self.ob_h /= self.ob_nrm
+            self.pr_nrm += self.p.delta_p
+            self.pr_h /= self.pr_nrm
 
             # ########################
             # # Compute step lengths #
