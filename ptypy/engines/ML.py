@@ -255,6 +255,13 @@ class ML(PositionCorrectionEngine):
             else:
                 new_pr_grad.fill(0.)
 
+            # Lipschitz preconditioner
+            if self.p.lipschitz_precond:
+                self.ob_nrm += self.p.lipschitz_delta_object
+                self.pr_nrm += self.p.lipschitz_delta_probe
+                new_ob_grad /= self.ob_nrm
+                new_pr_grad /= self.pr_nrm
+
             # Smoothing preconditioner
             if self.smooth_gradient:
                 self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
@@ -301,10 +308,17 @@ class ML(PositionCorrectionEngine):
             self.pr_grad << new_pr_grad
 
             dt = self.ptycho.FType
+
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
-
-            # Smoothing preconditioner
+            # Smoothing and Lipschitz preconditioners for the object
+            # if self.smooth_gradient and self.p.lipschitz_precond:
+            #    for name, s in self.ob_h.storages.items():
+            #        s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data / self.ob_nrm.storages[name].data)
+            # elif self.p.lipschitz_precond:
+            #    for name, s in self.ob_h.storages.items():
+            #        s.data[:] -= self.ob_grad.storages[name].data / self.ob_nrm.storages[name].data
+            # elif self.smooth_gradient:
             if self.smooth_gradient:
                 for name, s in self.ob_h.storages.items():
                     s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
@@ -313,14 +327,12 @@ class ML(PositionCorrectionEngine):
 
             self.pr_h *= bt / self.tmin
             self.pr_grad *= self.scale_p_o
+            # # Lipschitz preconditioner for the probe
+            # if self.p.lipschitz_precond:
+            #     for name, s in self.pr_h.storages.items():
+            #         s.data[:] -= self.pr_grad.storages[name].data / self.pr_nrm.storages[name].data
+            # else:
             self.pr_h -= self.pr_grad
-
-            # Lipschitz preconditioner
-            if self.p.lipschitz_precond:
-                self.ob_nrm += self.p.lipschitz_delta_object
-                self.ob_h /= self.ob_nrm
-                self.pr_nrm += self.p.lipschitz_delta_probe
-                self.pr_h /= self.pr_nrm
 
             # In principle, the way things are now programmed this part
             # could be iterated over in a real Newton-Raphson style.
