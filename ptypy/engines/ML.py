@@ -259,8 +259,9 @@ class ML(PositionCorrectionEngine):
             if self.p.wavefield_precond:
                 self.ob_fln += self.p.wavefield_delta_object
                 self.pr_fln += self.p.wavefield_delta_probe
-                new_ob_grad /= self.ob_fln
-                new_pr_grad /= self.pr_fln
+                for name, s in new_ob_grad.storages.items():
+                    new_ob_grad.storages[name].data /= np.sqrt(self.ob_fln.storages[name].data)
+                    new_pr_grad.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data)
 
             # Smoothing preconditioner
             if self.smooth_gradient:
@@ -314,10 +315,10 @@ class ML(PositionCorrectionEngine):
             # Smoothing and wavefield preconditioners for the object
             if self.smooth_gradient and self.p.wavefield_precond:
                 for name, s in self.ob_h.storages.items():
-                    s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data / self.ob_fln.storages[name].data)
+                    s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data / np.sqrt(self.ob_fln.storages[name].data))
             elif self.p.wavefield_precond:
                 for name, s in self.ob_h.storages.items():
-                    s.data[:] -= self.ob_grad.storages[name].data / self.ob_fln.storages[name].data
+                    s.data[:] -= self.ob_grad.storages[name].data / np.sqrt(self.ob_fln.storages[name].data)
             elif self.smooth_gradient:
                 for name, s in self.ob_h.storages.items():
                     s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
@@ -329,7 +330,7 @@ class ML(PositionCorrectionEngine):
             # Wavefield preconditioner for the probe
             if self.p.wavefield_precond:
                 for name, s in self.pr_h.storages.items():
-                    s.data[:] -= self.pr_grad.storages[name].data / self.pr_fln.storages[name].data
+                    s.data[:] -= self.pr_grad.storages[name].data / np.sqrt(self.pr_fln.storages[name].data)
             else:
                 self.pr_h -= self.pr_grad
 
@@ -587,8 +588,8 @@ class GaussianModel(BaseModel):
 
                 # Compute fluence maps for object and probe
                 if self.p.wavefield_precond:
-                    self.ob_fln[pod.ob_view] += np.sqrt(u.abs2(pod.probe))
-                    self.pr_fln[pod.pr_view] += np.sqrt(u.abs2(pod.object))
+                    self.ob_fln[pod.ob_view] += u.abs2(pod.probe)
+                    self.pr_fln[pod.pr_view] += u.abs2(pod.object)
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
@@ -841,8 +842,8 @@ class PoissonModel(BaseModel):
 
                 # Compute fluence maps for object and probe
                 if self.p.wavefield_precond:
-                    self.ob_fln[pod.ob_view] += np.sqrt(u.abs2(pod.probe))
-                    self.pr_fln[pod.pr_view] += np.sqrt(u.abs2(pod.object))
+                    self.ob_fln[pod.ob_view] += u.abs2(pod.probe)
+                    self.pr_fln[pod.pr_view] += u.abs2(pod.object)
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
@@ -1108,8 +1109,8 @@ class EuclidModel(BaseModel):
 
                 # Compute fluence maps for object and probe
                 if self.p.wavefield_precond:
-                    self.ob_fln[pod.ob_view] += np.sqrt(u.abs2(pod.probe))
-                    self.pr_fln[pod.pr_view] += np.sqrt(u.abs2(pod.object))
+                    self.ob_fln[pod.ob_view] += u.abs2(pod.probe)
+                    self.pr_fln[pod.pr_view] += u.abs2(pod.object)
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DA.shape), 0])
