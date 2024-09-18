@@ -106,21 +106,21 @@ class ML(PositionCorrectionEngine):
     help = How many coefficients to be used in the the linesearch
     doc = choose between the 'quadratic' approximation (default) or 'all'
 
-    [lipschitz_precond]
+    [wavefield_precond]
     default = False
     type = bool
-    help = Whether to use the Lipschitz preconditioner
+    help = Whether to use the wavefield preconditioner
     doc = This parameter can give faster convergence.
 
-    [lipschitz_delta_object]
+    [wavefield_delta_object]
     default = 0.1
     type = float
-    help = Lipschitz preconditioner damping constant for the object.
+    help = Wavefield preconditioner damping constant for the object.
 
-    [lipschitz_delta_probe]
+    [wavefield_delta_probe]
     default = 0.1
     type = float
-    help = Lipschitz preconditioner damping constant for the probe.
+    help = Wavefield preconditioner damping constant for the probe.
 
     """
 
@@ -153,10 +153,10 @@ class ML(PositionCorrectionEngine):
         # Probe gradient
         self.pr_grad_new = None
 
-        # Object and probe normalisation
-        if self.p.lipschitz_precond:
-            self.ob_nrm = None
-            self.pr_nrm = None
+        # Object and probe fluence maps
+        if self.p.wavefield_precond:
+            self.ob_fln = None
+            self.pr_fln = None
 
         # Other
         self.tmin = None
@@ -192,10 +192,10 @@ class ML(PositionCorrectionEngine):
         self.pr_grad_new = self.pr.copy(self.pr.ID + '_grad_new', fill=0.)
         self.pr_h = self.pr.copy(self.pr.ID + '_h', fill=0.)
 
-        # Object and probe normalisation
-        if self.p.lipschitz_precond:
-            self.ob_nrm = self.ob.copy(self.ob.ID + '_nrm', fill=0., dtype='real')
-            self.pr_nrm = self.pr.copy(self.pr.ID + '_nrm', fill=0., dtype='real')
+        # Object and probe fluence maps
+        if self.p.wavefield_precond:
+            self.ob_fln = self.ob.copy(self.ob.ID + '_fln', fill=0., dtype='real')
+            self.pr_fln = self.pr.copy(self.pr.ID + '_fln', fill=0., dtype='real')
 
         self.tmin = 1.
 
@@ -255,12 +255,12 @@ class ML(PositionCorrectionEngine):
             else:
                 new_pr_grad.fill(0.)
 
-            # Lipschitz preconditioner
-            if self.p.lipschitz_precond:
-                self.ob_nrm += self.p.lipschitz_delta_object
-                self.pr_nrm += self.p.lipschitz_delta_probe
-                new_ob_grad /= self.ob_nrm
-                new_pr_grad /= self.pr_nrm
+            # Wavefield preconditioner
+            if self.p.wavefield_precond:
+                self.ob_fln += self.p.wavefield_delta_object
+                self.pr_fln += self.p.wavefield_delta_probe
+                new_ob_grad /= self.ob_fln
+                new_pr_grad /= self.pr_fln
 
             # Smoothing preconditioner
             if self.smooth_gradient:
@@ -311,15 +311,14 @@ class ML(PositionCorrectionEngine):
 
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
-            # Smoothing and Lipschitz preconditioners for the object
-            # if self.smooth_gradient and self.p.lipschitz_precond:
-            #    for name, s in self.ob_h.storages.items():
-            #        s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data / self.ob_nrm.storages[name].data)
-            # elif self.p.lipschitz_precond:
-            #    for name, s in self.ob_h.storages.items():
-            #        s.data[:] -= self.ob_grad.storages[name].data / self.ob_nrm.storages[name].data
-            # elif self.smooth_gradient:
-            if self.smooth_gradient:
+            # Smoothing and wavefield preconditioners for the object
+            if self.smooth_gradient and self.p.wavefield_precond:
+                for name, s in self.ob_h.storages.items():
+                    s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data / self.ob_fln.storages[name].data)
+            elif self.p.wavefield_precond:
+                for name, s in self.ob_h.storages.items():
+                    s.data[:] -= self.ob_grad.storages[name].data / self.ob_fln.storages[name].data
+            elif self.smooth_gradient:
                 for name, s in self.ob_h.storages.items():
                     s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
             else:
@@ -327,12 +326,12 @@ class ML(PositionCorrectionEngine):
 
             self.pr_h *= bt / self.tmin
             self.pr_grad *= self.scale_p_o
-            # # Lipschitz preconditioner for the probe
-            # if self.p.lipschitz_precond:
-            #     for name, s in self.pr_h.storages.items():
-            #         s.data[:] -= self.pr_grad.storages[name].data / self.pr_nrm.storages[name].data
-            # else:
-            self.pr_h -= self.pr_grad
+            # Wavefield preconditioner for the probe
+            if self.p.wavefield_precond:
+                for name, s in self.pr_h.storages.items():
+                    s.data[:] -= self.pr_grad.storages[name].data / self.pr_fln.storages[name].data
+            else:
+                self.pr_h -= self.pr_grad
 
             # In principle, the way things are now programmed this part
             # could be iterated over in a real Newton-Raphson style.
@@ -353,9 +352,9 @@ class ML(PositionCorrectionEngine):
                 self.tmin = dt(-0.5 * B[1] / B[2])
             else:
                 raise NotImplementedError("poly_line_coeffs should be 'quadratic' or 'all'")
-                
+
             tc += time.time() - t2
-                
+
             self.ob_h *= self.tmin
             self.pr_h *= self.tmin
             self.ob += self.ob_h
@@ -397,11 +396,11 @@ class ML(PositionCorrectionEngine):
         del self.pr_grad_new
         del self.ptycho.containers[self.pr_h.ID]
         del self.pr_h
-        if self.p.lipschitz_precond:
-            del self.ptycho.containers[self.ob_nrm.ID]
-            del self.ob_nrm
-            del self.ptycho.containers[self.pr_nrm.ID]
-            del self.pr_nrm
+        if self.p.wavefield_precond:
+            del self.ptycho.containers[self.ob_fln.ID]
+            del self.ob_fln
+            del self.ptycho.containers[self.pr_fln.ID]
+            del self.pr_fln
 
         # Save floating intensities into runtime
         self.ptycho.runtime["float_intens"] = parallel.gather_dict(self.ML_model.float_intens_coeff)
@@ -426,9 +425,9 @@ class BaseModel(object):
         self.ob = self.engine.ob
         self.ob_grad = self.engine.ob_grad_new
         self.pr_grad = self.engine.pr_grad_new
-        if self.p.lipschitz_precond:
-            self.ob_nrm = self.engine.ob_nrm
-            self.pr_nrm = self.engine.pr_nrm
+        if self.p.wavefield_precond:
+            self.ob_fln = self.engine.ob_fln
+            self.pr_fln = self.engine.pr_fln
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
 
@@ -542,9 +541,9 @@ class GaussianModel(BaseModel):
         """
         self.ob_grad.fill(0.)
         self.pr_grad.fill(0.)
-        if self.p.lipschitz_precond:
-            self.ob_nrm.fill(0.)
-            self.pr_nrm.fill(0.)
+        if self.p.wavefield_precond:
+            self.ob_fln.fill(0.)
+            self.pr_fln.fill(0.)
 
         # We need an array for MPI
         LL = np.array([0.])
@@ -586,10 +585,10 @@ class GaussianModel(BaseModel):
                 self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
                 self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 
-                # Compute normalisations for object and probe
-                if self.p.lipschitz_precond:
-                    self.ob_nrm[pod.ob_view] += u.abs2(pod.probe)
-                    self.pr_nrm[pod.pr_view] += u.abs2(pod.object)
+                # Compute fluence maps for object and probe
+                if self.p.wavefield_precond:
+                    self.ob_fln[pod.ob_view] += np.sqrt(u.abs2(pod.probe))
+                    self.pr_fln[pod.pr_view] += np.sqrt(u.abs2(pod.object))
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
@@ -598,9 +597,9 @@ class GaussianModel(BaseModel):
         # MPI reduction of gradients
         self.ob_grad.allreduce()
         self.pr_grad.allreduce()
-        if self.p.lipschitz_precond:
-            self.ob_nrm.allreduce()
-            self.pr_nrm.allreduce()
+        if self.p.wavefield_precond:
+            self.ob_fln.allreduce()
+            self.pr_fln.allreduce()
         parallel.allreduce(LL)
 
         # Object regularizer
@@ -796,9 +795,9 @@ class PoissonModel(BaseModel):
         """
         self.ob_grad.fill(0.)
         self.pr_grad.fill(0.)
-        if self.p.lipschitz_precond:
-            self.ob_nrm.fill(0.)
-            self.pr_nrm.fill(0.)
+        if self.p.wavefield_precond:
+            self.ob_fln.fill(0.)
+            self.pr_fln.fill(0.)
 
         # We need an array for MPI
         LL = np.array([0.])
@@ -840,10 +839,10 @@ class PoissonModel(BaseModel):
                 self.ob_grad[pod.ob_view] += 2 * xi * pod.probe.conj()
                 self.pr_grad[pod.pr_view] += 2 * xi * pod.object.conj()
 
-                # Compute normalisations for object and probe
-                if self.p.lipschitz_precond:
-                    self.ob_nrm[pod.ob_view] += u.abs2(pod.probe)
-                    self.pr_nrm[pod.pr_view] += u.abs2(pod.object)
+                # Compute fluence maps for object and probe
+                if self.p.wavefield_precond:
+                    self.ob_fln[pod.ob_view] += np.sqrt(u.abs2(pod.probe))
+                    self.pr_fln[pod.pr_view] += np.sqrt(u.abs2(pod.object))
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
@@ -852,9 +851,9 @@ class PoissonModel(BaseModel):
         # MPI reduction of gradients
         self.ob_grad.allreduce()
         self.pr_grad.allreduce()
-        if self.p.lipschitz_precond:
-            self.ob_nrm.allreduce()
-            self.pr_nrm.allreduce()
+        if self.p.wavefield_precond:
+            self.ob_fln.allreduce()
+            self.pr_fln.allreduce()
         parallel.allreduce(LL)
 
         # Object regularizer
@@ -1063,9 +1062,9 @@ class EuclidModel(BaseModel):
         """
         self.ob_grad.fill(0.)
         self.pr_grad.fill(0.)
-        if self.p.lipschitz_precond:
-            self.ob_nrm.fill(0.)
-            self.pr_nrm.fill(0.)
+        if self.p.wavefield_precond:
+            self.ob_fln.fill(0.)
+            self.pr_fln.fill(0.)
 
         # We need an array for MPI
         LL = np.array([0.])
@@ -1107,10 +1106,10 @@ class EuclidModel(BaseModel):
                 self.ob_grad[pod.ob_view] += 2. * xi * pod.probe.conj()
                 self.pr_grad[pod.pr_view] += 2. * xi * pod.object.conj()
 
-                # Compute normalisations for object and probe
-                if self.p.lipschitz_precond:
-                    self.ob_nrm[pod.ob_view] += u.abs2(pod.probe)
-                    self.pr_nrm[pod.pr_view] += u.abs2(pod.object)
+                # Compute fluence maps for object and probe
+                if self.p.wavefield_precond:
+                    self.ob_fln[pod.ob_view] += np.sqrt(u.abs2(pod.probe))
+                    self.pr_fln[pod.pr_view] += np.sqrt(u.abs2(pod.object))
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DA.shape), 0])
@@ -1119,9 +1118,9 @@ class EuclidModel(BaseModel):
         # MPI reduction of gradients
         self.ob_grad.allreduce()
         self.pr_grad.allreduce()
-        if self.p.lipschitz_precond:
-            self.ob_nrm.allreduce()
-            self.pr_nrm.allreduce()
+        if self.p.wavefield_precond:
+            self.ob_fln.allreduce()
+            self.pr_fln.allreduce()
         parallel.allreduce(LL)
 
         # Object regularizer
