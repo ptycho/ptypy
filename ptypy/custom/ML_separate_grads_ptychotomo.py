@@ -27,7 +27,6 @@ from ..utils.tomo import AstraTomoWrapperViewBased
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import shift
 from ..engines.utils import Cnorm2, Cdot, reduce_dimension
-from ..utils.parallel import allreduce
 
 
 __all__ = ['MLPtychoTomo']
@@ -404,13 +403,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
             ########################
             t1 = time.time()
 
-            self.ML_model.new_grad_rho() # volume gradient
-            # FIXME: volume regularizer should be in new_grad_rho (but we need reg.LL for error)
-            error_dct = self.ML_model.new_grad_pr() # probe gradient, volume regularizer, LL
-
+            # volume and probe gradient, volume regularizer, LL
+            error_dct = self.ML_model.new_grad()
             new_rho_grad, new_pr_grad = self.rho_grad_new, self.pr_grad_new
-            # FIXME: allreduce should go in new_grad_rho once reg.LL fixed
-            allreduce(new_rho_grad) # MPI reduction of volume gradient
 
             # SCALING: needed to prevent underflow of bt and tmin for rho
             if self.p.rescale_vol_gradient:
@@ -762,18 +757,11 @@ class BaseModel(object):
             except:
                 pass
 
-    def new_grad_rho(self):
+    def new_grad(self):
         """
-        Compute a new volume gradient direction according to the noise model.
-        """
-        raise NotImplementedError
+        Compute new volume and probe gradient directions according to the noise model.
 
-    def new_grad_pr(self):
-        """
-        Compute a new probe gradient direction according to the noise model.
-
-        Note: The negative log-likelihood and local errors should also be computed
-        here.
+        Note: The negative log-likelihood and local errors should also be computed here.
         """
         raise NotImplementedError
 
@@ -837,15 +825,23 @@ class GaussianModel(BaseModel):
         del self.weights
 
 
-    def new_grad_rho(self):
+    def new_grad(self):
         """
-        Compute a new volume gradient direction according to a Gaussian noise model.
+        Compute new volume and probe gradient directions according to a Gaussian noise model.
+
+        Note: The negative log-likelihood and local errors are also computed here.
         """
         self.rho_grad.fill(0.)
+        self.pr_grad.fill(0.)
+
+        # We need an array for MPI
+        LL = np.array([0.])
+        error_dct = {}
 
         # Forward project volume
         self.projected_rho = self.projector.forward(self.rho)
 
+        # Get refractive index per view
         i = 0
         for dname, diff_view in self.di.views.items():
             for name, pod in diff_view.pods.items():
@@ -884,84 +880,30 @@ class GaussianModel(BaseModel):
             DI = np.double(Imodel) - I
 
             # Second pod loop: gradients computation
-            for name, pod in diff_view.pods.items():
-                if not pod.active:
-                    continue
-                xi = pod.bw(pod.upsample(w*DI) * f[name])
-                psi = pod.probe * np.exp(1j * pod.object)
-                product_xi_psi_conj = -1j* xi * psi.conj()
-                if self.p.weight_gradient: # apply coverage mask
-                    #print(pod.ob_view.slice)
-                    #print(self.coverage[pod.ob_view.slice[1:]])
-                    product_xi_psi_conj *= self.coverage[pod.ob_view.slice[1:]]
-                products_xi_psi_conj.append(product_xi_psi_conj)
-
-        # Back project volume
-        self.rho_grad = 2 * self.projector.backward(np.moveaxis(np.array(products_xi_psi_conj), 1, 0))
-        # FIXME: it is bizarre that this is actually needed
-        # FIXME: is it because we are not using containers?
-        self.engine.rho_grad_new = self.rho_grad
-        #print('DEBUG rho_grad: %.2e ' % np.linalg.norm(self.rho_grad))
-
-        return
-
-    def new_grad_pr(self):
-        """
-        Compute a new gradient direction for the probe according to a Gaussian noise model.
-
-        Note: The negative log-likelihood and local errors are also computed here.
-        """
-        self.pr_grad.fill(0.)
-
-        # We need an array for MPI
-        LL = np.array([0.])
-        error_dct = {}
-
-        # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.items():
-            if not diff_view.active:
-                continue
-
-            # Weights and intensities for this view
-            w = self.weights[diff_view]
-            I = diff_view.data
-
-            Imodel = np.zeros_like(I)
-            f = {}
-
-            # First pod loop: compute total intensity
-            for name, pod in diff_view.pods.items():
-                if not pod.active:
-                    continue
-                f[name] = pod.fw(pod.probe * np.exp(1j * pod.object))
-                Imodel += pod.downsample(u.abs2(f[name]))
-
-            # Floating intensity option
-            if self.p.floating_intensities:
-                self.float_intens_coeff[dname] = ((w * Imodel * I).sum()
-                                                / (w * Imodel**2).sum())
-                Imodel *= self.float_intens_coeff[dname]
-
-            DI = np.double(Imodel) - I
-
-            # Second pod loop: gradients computation
             LLL = np.sum((w * DI**2).astype(np.float64))
             for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
                 self.pr_grad[pod.pr_view] += 2. * xi * np.exp(1j * pod.object).conj()
+                product_xi_psi_conj = -1j * xi * (pod.probe * np.exp(1j * pod.object)).conj()
+                if self.p.weight_gradient: # apply coverage mask
+                    product_xi_psi_conj *= self.coverage[pod.ob_view.slice[1:]]
+                products_xi_psi_conj.append(product_xi_psi_conj)
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
             LL += LLL
 
+        # Back project volume
+        self.rho_grad = 2 * self.projector.backward(np.moveaxis(np.array(products_xi_psi_conj), 1, 0))
+
         # MPI reduction of gradients
+        parallel.allreduce(self.rho_grad)
         self.pr_grad.allreduce()
         parallel.allreduce(LL)
 
         # Volume regularizer
-        # FIXME: this really should be in new_grad_rho (but we need LL here)
         if self.regularizer:
             # OLD using containers
             # for name, s in self.ob.storages.items():
@@ -973,6 +915,11 @@ class GaussianModel(BaseModel):
             LL += self.regularizer.LL
 
         self.LL = LL / self.tot_measpts
+
+        # FIXME: it is bizarre that this is actually needed
+        # FIXME: is it because we are not using containers?
+        self.engine.rho_grad_new = self.rho_grad
+        #print('DEBUG rho_grad: %.2e ' % np.linalg.norm(self.rho_grad))
 
         return error_dct
 
