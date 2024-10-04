@@ -190,6 +190,22 @@ class MLPtychoTomo(PositionCorrectionEngine):
     choices = ['quadratic','all']
     doc = choose between the 'quadratic' approximation (default) or 'all'
 
+    [wavefield_precond]
+    default = True
+    type = bool
+    help = Whether to use the wavefield preconditioner
+    doc = This parameter can give faster convergence.
+
+    [wavefield_delta_volume]
+    default = 0.1
+    type = float
+    help = Wavefield preconditioner damping constant for the volume.
+
+    [wavefield_delta_probe]
+    default = 0.1
+    type = float
+    help = Wavefield preconditioner damping constant for the probe.
+
     """
 
     SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
@@ -230,11 +246,16 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # Probe gradient
         self.pr_grad_new = None
 
-        # Tomography projector
+        # Tomography projectors
         self.projector = None
+        self.projector_fln = None
 
         # View coverage
         self.coverage = None
+
+        # Volume and probe fluence maps
+        self.rho_fln = None
+        self.pr_fln = None
 
         # Other
         self.nangles = None
@@ -284,10 +305,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
         """
         super(MLPtychoTomo, self).engine_initialize()
 
-        # Initialise volume gradient and minimization direction              # OLD using containers
+        # Initialise volume gradient, minimization direction and fluence map # OLD using containers
         self.rho_grad = np.zeros(3*(self.pshape,), dtype=np.complex64)       # self.ob.copy(self.ob.ID + '_grad', fill=0.)
         self.rho_grad_new = np.zeros(3*(self.pshape,), dtype=np.complex64)   # self.ob.copy(self.ob.ID + '_grad_new', fill=0.)
         self.rho_h = np.zeros(3*(self.pshape,), dtype=np.complex64)          # self.ob.copy(self.ob.ID + '_h', fill=0.)
+        self.rho_fln = np.zeros(3*(self.pshape,), dtype=np.float32)          # self.ob.copy(self.ob.ID + '_fln', fill=0., dtype='real')
 
         # This is needed in poly_line_coeffs_rho
         self.omega = self.ex
@@ -325,10 +347,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
         stacked_views = np.array([v.data for v in self.ptycho.obj.views.values() if v.pod.active])
         self.projected_rho = np.zeros_like((stacked_views), dtype=np.complex64)
 
-        # Initialise probe gradient and minimization direction
+        # Initialise probe gradient, minimization direction and fluence map
         self.pr_grad = self.pr.copy(self.pr.ID + '_grad', fill=0.)
         self.pr_grad_new = self.pr.copy(self.pr.ID + '_grad_new', fill=0.)
         self.pr_h = self.pr.copy(self.pr.ID + '_h', fill=0.)
+        self.pr_fln = self.pr.copy(self.pr.ID + '_fln', fill=0., dtype='real')
 
         # Initialise step sizes
         self.tmin_rho = 1.
@@ -345,6 +368,17 @@ class MLPtychoTomo(PositionCorrectionEngine):
             angles=self.angles_dict,
             shifts=self.shifts_per_angle,
             obj_is_refractive_index=False,
+            mask_threshold=35
+            )
+
+        # Initialise ASTRA projector for fluence
+        self.projector_fln = AstraTomoWrapperViewBased (
+            obj=self.ptycho.obj,
+            vol=self.rho,
+            angles=self.angles_dict,
+            shifts=self.shifts_per_angle,
+            obj_is_refractive_index=False,
+            obj_is_real=True,
             mask_threshold=35
             )
 
@@ -378,7 +412,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
 
     def update_views(self):
-
         """
         Updates the views so that the projected rho (non-exponentiated)
         can be retrieved from pod.object.
@@ -433,6 +466,14 @@ class MLPtychoTomo(PositionCorrectionEngine):
             else:
                 new_pr_grad.fill(0.)
 
+            # Wavefield preconditioner
+            if self.p.wavefield_precond:
+                self.rho_fln += self.p.wavefield_delta_volume
+                self.pr_fln += self.p.wavefield_delta_probe
+                new_rho_grad /= np.sqrt(self.rho_fln) # not a container
+                for name, s in new_pr_grad.storages.items():
+                    new_pr_grad.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data)
+
             # Smoothing preconditioner for the volume
             if self.smooth_gradient:
                 self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
@@ -477,16 +518,25 @@ class MLPtychoTomo(PositionCorrectionEngine):
             ############################
             if self.DEBUG:
                 print('bt_rho, self.tmin_rho: (%.2e,%.2e)' % (bt_rho, self.tmin_rho))
-            self.rho_h *= bt_rho / self.tmin_rho
 
-            # Smoothing preconditioner for the volume
-            if self.smooth_gradient:
+            self.rho_h *= bt_rho / self.tmin_rho
+            # Smoothing and wavefield preconditioners for the volume
+            if self.smooth_gradient and self.p.wavefield_precond:
+                self.rho_h -= self.smooth_gradient(self.rho_grad / np.sqrt(self.rho_fln)) # not a container
+            elif self.p.wavefield_precond:
+                self.rho_h -= self.rho_grad / np.sqrt(self.rho_fln) # not a container
+            elif self.smooth_gradient:
                 self.rho_h -= self.smooth_gradient(self.rho_grad)
             else:
                 self.rho_h -= self.rho_grad
 
             self.pr_h *= bt_pr / self.tmin_pr
-            self.pr_h -= self.pr_grad
+            # Wavefield preconditioner for the probe
+            if self.p.wavefield_precond:
+                for name, s in self.pr_h.storages.items():
+                    s.data[:] -= self.pr_grad.storages[name].data / np.sqrt(self.pr_fln.storages[name].data)
+            else:
+                self.pr_h -= self.pr_grad
 
             ########################
             # Compute step-sizes
@@ -670,12 +720,16 @@ class MLPtychoTomo(PositionCorrectionEngine):
         del self.rho_grad_new
         # del self.ptycho.containers[self.ob_h.ID]
         del self.rho_h
+        # del self.ptycho.containers[self.ob_fln.ID]
+        del self.rho_fln
         del self.ptycho.containers[self.pr_grad.ID]
         del self.pr_grad
         del self.ptycho.containers[self.pr_grad_new.ID]
         del self.pr_grad_new
         del self.ptycho.containers[self.pr_h.ID]
         del self.pr_h
+        del self.ptycho.containers[self.pr_fln.ID]
+        del self.pr_fln
 
         # Save floating intensities into runtime
         self.ptycho.runtime["float_intens"] = parallel.gather_dict(self.ML_model.float_intens_coeff)
@@ -700,6 +754,8 @@ class BaseModel(object):
         self.rho = self.engine.rho
         self.rho_grad = self.engine.rho_grad_new
         self.pr_grad = self.engine.pr_grad_new
+        self.rho_fln = self.engine.rho_fln
+        self.pr_fln = self.engine.pr_fln
         self.omega = self.engine.omega
         self.ex = self.engine.ex
         self.coverage = self.engine.coverage
@@ -713,6 +769,7 @@ class BaseModel(object):
             self.Irenorm = self.p.intensity_renormalization
 
         self.projector = self.engine.projector
+        self.projector_fln = self.engine.projector_fln
 
         if self.p.reg_del2:
             self.regularizer = Regul_del2(self.p.reg_del2_amplitude)
@@ -833,6 +890,8 @@ class GaussianModel(BaseModel):
         """
         self.rho_grad.fill(0.)
         self.pr_grad.fill(0.)
+        self.rho_fln.fill(0.)
+        self.pr_fln.fill(0.)
 
         # We need an array for MPI
         LL = np.array([0.])
@@ -849,8 +908,9 @@ class GaussianModel(BaseModel):
                     pod.object = self.projected_rho[i]
                     i+=1
 
-        # FIXME: this should be a container not a list
+        # FIXME: these should be containers not lists
         products_xi_psi_conj = []
+        volume_fluence_maps = []
 
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
@@ -885,22 +945,30 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
-                self.pr_grad[pod.pr_view] += 2. * xi * np.exp(1j * pod.object).conj()
-                product_xi_psi_conj = -1j * xi * (pod.probe * np.exp(1j * pod.object)).conj()
+                expobj = np.exp(1j * pod.object)
+                self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
+                product_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj()
                 if self.p.weight_gradient: # apply coverage mask
                     product_xi_psi_conj *= self.coverage[pod.ob_view.slice[1:]]
                 products_xi_psi_conj.append(product_xi_psi_conj)
+
+                # Compute fluence maps for probe and volume
+                self.pr_fln[pod.pr_view] += u.abs2(expobj)
+                volume_fluence_maps.append(u.abs2(pod.probe * expobj))
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
             LL += LLL
 
-        # Back project volume
+        # Back project volume and volume fluence map
         self.rho_grad = 2 * self.projector.backward(np.moveaxis(np.array(products_xi_psi_conj), 1, 0))
+        self.rho_fln = self.projector_fln.backward_real(np.moveaxis(np.array(volume_fluence_maps), 1, 0))
 
         # MPI reduction of gradients
         parallel.allreduce(self.rho_grad)
         self.pr_grad.allreduce()
+        parallel.allreduce(self.rho_fln)
+        self.pr_fln.allreduce()
         parallel.allreduce(LL)
 
         # Volume regularizer
@@ -919,6 +987,7 @@ class GaussianModel(BaseModel):
         # FIXME: it is bizarre that this is actually needed
         # FIXME: is it because we are not using containers?
         self.engine.rho_grad_new = self.rho_grad
+        self.engine.rho_fln = self.rho_fln
         #print('DEBUG rho_grad: %.2e ' % np.linalg.norm(self.rho_grad))
 
         return error_dct
