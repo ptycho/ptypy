@@ -7,11 +7,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2024 by the PTYPY team, see AUTHORS.
     :license: see LICENSE for details.
 """
-import os
-import csv
-
 import numpy as np
-import scipy.sparse as sparse
 import scipy.ndimage as ndimage
 import astra
 import matplotlib.pyplot as plt
@@ -314,48 +310,33 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
         self._create_proj_array_and_ids()
 
         self._update_data_at_id_astra(np.real(input_proj), self._proj_id_real)
-        self._update_data_at_id_astra(np.imag(input_proj), self._proj_id_imag)
+        if not self._obj_is_real:
+            self._update_data_at_id_astra(np.imag(input_proj), self._proj_id_imag)
 
         cfg = astra.astra_dict(type)
         cfg["ReconstructionDataId"] = self._vol_id_real
         cfg["ProjectionDataId"] = self._proj_id_real
         alg_id_real = astra.algorithm.create(cfg)
 
-        cfg = astra.astra_dict(type)
-        cfg["ReconstructionDataId"] = self._vol_id_imag
-        cfg["ProjectionDataId"] = self._proj_id_imag
-        alg_id_imag = astra.algorithm.create(cfg)
+        if not self._obj_is_real:
+            cfg = astra.astra_dict(type)
+            cfg["ReconstructionDataId"] = self._vol_id_imag
+            cfg["ProjectionDataId"] = self._proj_id_imag
+            alg_id_imag = astra.algorithm.create(cfg)
 
         astra.algorithm.run(alg_id_real, iter)
-        astra.algorithm.run(alg_id_imag, iter)
+        if not self._obj_is_real:
+            astra.algorithm.run(alg_id_imag, iter)
 
         vol_real = astra.data3d.get(self._vol_id_real)
-        vol_imag = astra.data3d.get(self._vol_id_imag)
-        volume_update = vol_real + 1j * vol_imag
+        if self._obj_is_real:
+            volume_update = vol_real
+        else:
+            vol_imag = astra.data3d.get(self._vol_id_imag)
+            volume_update = vol_real + 1j * vol_imag
 
         # Delete these as we don't need them any more
         self._delete_data_at_id_astra(self._proj_id_real)
-        self._delete_data_at_id_astra(self._proj_id_imag)
+        if not self._obj_is_real:
+            self._delete_data_at_id_astra(self._proj_id_imag)
         return volume_update
-
-    def backward_real(self, input_proj, type="BP3D_CUDA", iter=10):
-
-        # This is done here because it depends on the pods that are
-        # active (mpi) at the time this function is called
-        self._create_proj_geometry()
-        self._create_proj_array_and_ids()
-
-        self._update_data_at_id_astra(np.real(input_proj), self._proj_id_real)
-
-        cfg = astra.astra_dict(type)
-        cfg["ReconstructionDataId"] = self._vol_id_real
-        cfg["ProjectionDataId"] = self._proj_id_real
-        alg_id_real = astra.algorithm.create(cfg)
-
-        astra.algorithm.run(alg_id_real, iter)
-
-        vol_real = astra.data3d.get(self._vol_id_real)
-
-        # Delete these as we don't need them any more
-        self._delete_data_at_id_astra(self._proj_id_real)
-        return vol_real

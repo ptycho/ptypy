@@ -962,7 +962,7 @@ class GaussianModel(BaseModel):
 
         # Back project volume and volume fluence map
         self.rho_grad = 2 * self.projector.backward(np.moveaxis(np.array(products_xi_psi_conj), 1, 0))
-        self.rho_fln = self.projector_fln.backward_real(np.moveaxis(np.array(volume_fluence_maps), 1, 0))
+        self.rho_fln = self.projector_fln.backward(np.moveaxis(np.array(volume_fluence_maps), 1, 0))
 
         # MPI reduction of gradients
         parallel.allreduce(self.rho_grad)
