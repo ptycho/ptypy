@@ -469,6 +469,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # Wavefield preconditioner
             if self.p.wavefield_precond:
                 self.rho_fln += self.p.wavefield_delta_volume
+                self.rho_fln /= scaling_factor # SCALE same as rho gradient
                 self.pr_fln += self.p.wavefield_delta_probe
                 new_rho_grad /= np.sqrt(self.rho_fln) # not a container
                 for name, s in new_pr_grad.storages.items():
