@@ -1019,7 +1019,7 @@ class GaussianModel(BaseModel):
         omega = np.array(self.projector.forward(rho_h))
 
         # Store omega (so that we can use it later) and multiply it by the required 1j
-        for i, (k,ov) in enumerate(self.omega.views.items()):
+        for i, (k,ov) in enumerate([(i,v) for i,v in self.omega.views.items() if v.pod.active]):
             ov.data[:] = 1j * omega[i]
 
         # Outer loop: through diffraction patterns
