@@ -258,6 +258,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.pr_fln = None
 
         # Other
+        self.scaling_factor = None
         self.nangles = None
         self.tmin_rho = None
         self.tmin_pr = None
@@ -386,6 +387,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.projected_rho = self.projector.forward(self.rho)
         self.update_views()
 
+        # Initialise volume gradient and fluence scaling factor
+        if self.p.rescale_vol_gradient:
+            n_pixels = np.prod(np.shape(self.rho))
+            self.scaling_factor = self.p.rescale_vol_gradient_factor * n_pixels
+
         # Initialise ML noise model
         self._initialize_model()
 
@@ -440,12 +446,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
             error_dct = self.ML_model.new_grad()
             new_rho_grad, new_pr_grad = self.rho_grad_new, self.pr_grad_new
 
-            # SCALING: needed to prevent underflow of bt and tmin for rho
-            if self.p.rescale_vol_gradient:
-                n_pixels = np.prod(np.shape(self.rho))
-                scaling_factor = self.p.rescale_vol_gradient_factor * n_pixels
-                new_rho_grad /= scaling_factor
-
             if self.DEBUG:
                 print('rho_grad: %.2e' % np.linalg.norm(self.rho_grad))
                 print('new_rho_grad: %.2e ' % np.linalg.norm(new_rho_grad))
@@ -469,7 +469,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # Wavefield preconditioner
             if self.p.wavefield_precond:
                 self.rho_fln += self.p.wavefield_delta_volume
-                self.rho_fln /= scaling_factor # SCALE same as rho gradient
                 self.pr_fln += self.p.wavefield_delta_probe
                 new_rho_grad /= np.sqrt(self.rho_fln) # not a container
                 for name, s in new_pr_grad.storages.items():
@@ -760,6 +759,7 @@ class BaseModel(object):
         self.omega = self.engine.omega
         self.ex = self.engine.ex
         self.coverage = self.engine.coverage
+        self.scaling_factor = self.engine.scaling_factor
 
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
@@ -948,14 +948,14 @@ class GaussianModel(BaseModel):
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
                 expobj = np.exp(1j * pod.object)
                 self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
-                product_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj()
+                product_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.scaling_factor
                 if self.p.weight_gradient: # apply coverage mask
                     product_xi_psi_conj *= self.coverage[pod.ob_view.slice[1:]]
                 products_xi_psi_conj.append(product_xi_psi_conj)
 
                 # Compute fluence maps for probe and volume
                 self.pr_fln[pod.pr_view] += u.abs2(expobj)
-                volume_fluence_maps.append(u.abs2(pod.probe * expobj))
+                volume_fluence_maps.append(u.abs2(pod.probe * expobj) / self.scaling_factor)
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
