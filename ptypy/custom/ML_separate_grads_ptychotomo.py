@@ -96,19 +96,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
     help = StdDev for initial volume blur
     doc = Standard deviation for the initial volume Gaussian blur.
 
-    [rescale_vol_gradient]
-    default = True
-    type = bool
-    help = Rescale volume gradient
-    doc = Rescale the volume gradient to prevent underflow.
-
-    [rescale_vol_gradient_factor]
-    default = 0.57
-    type = float
-    lowlim = 0.0
-    help = Rescale factor for volume gradient
-    doc = Rescale factor for the volume gradient (between 0 and 1).
-
     [floating_intensities]
     default = False
     type = bool
@@ -258,7 +245,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.pr_fln = None
 
         # Other
-        self.scaling_factor = None
         self.nangles = None
         self.tmin_rho = None
         self.tmin_pr = None
@@ -386,11 +372,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # Initialise projected volume and update views
         self.projected_rho = self.projector.forward(self.rho)
         self.update_views()
-
-        # Initialise volume gradient and fluence scaling factor
-        if self.p.rescale_vol_gradient:
-            n_pixels = np.prod(np.shape(self.rho))
-            self.scaling_factor = self.p.rescale_vol_gradient_factor * n_pixels
 
         # Initialise ML noise model
         self._initialize_model()
@@ -759,7 +740,6 @@ class BaseModel(object):
         self.omega = self.engine.omega
         self.ex = self.engine.ex
         self.coverage = self.engine.coverage
-        self.scaling_factor = self.engine.scaling_factor
 
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
@@ -786,6 +766,7 @@ class BaseModel(object):
                                for s in self.di.storages.values())
         self.tot_power = self.Irenorm * sum(s.tot_power
                                             for s in self.di.storages.values())
+
         # Prepare regularizer
         if self.regularizer is not None:
             # obj_Npix = np.prod(np.shape(self.rho))    #self.ob.size
@@ -948,14 +929,14 @@ class GaussianModel(BaseModel):
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
                 expobj = np.exp(1j * pod.object)
                 self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
-                product_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.scaling_factor
+                product_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.tot_power
                 if self.p.weight_gradient: # apply coverage mask
                     product_xi_psi_conj *= self.coverage[pod.ob_view.slice[1:]]
                 products_xi_psi_conj.append(product_xi_psi_conj)
 
                 # Compute fluence maps for probe and volume
                 self.pr_fln[pod.pr_view] += u.abs2(expobj)
-                volume_fluence_maps.append(u.abs2(pod.probe * expobj) / self.scaling_factor)
+                volume_fluence_maps.append(u.abs2(pod.probe * expobj) / self.tot_power)
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
