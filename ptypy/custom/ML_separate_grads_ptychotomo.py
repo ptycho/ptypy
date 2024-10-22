@@ -96,19 +96,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
     help = StdDev for initial volume blur
     doc = Standard deviation for the initial volume Gaussian blur.
 
-    [rescale_vol_gradient]
-    default = True
-    type = bool
-    help = Rescale volume gradient
-    doc = Rescale the volume gradient to prevent underflow.
-
-    [rescale_vol_gradient_factor]
-    default = 0.57
-    type = float
-    lowlim = 0.0
-    help = Rescale factor for volume gradient
-    doc = Rescale factor for the volume gradient (between 0 and 1).
-
     [floating_intensities]
     default = False
     type = bool
@@ -406,12 +393,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # volume and probe gradient, volume regularizer, LL
             error_dct = self.ML_model.new_grad()
             new_rho_grad, new_pr_grad = self.rho_grad_new, self.pr_grad_new
-
-            # SCALING: needed to prevent underflow of bt and tmin for rho
-            if self.p.rescale_vol_gradient:
-                n_pixels = np.prod(np.shape(self.rho))
-                scaling_factor = self.p.rescale_vol_gradient_factor * n_pixels
-                new_rho_grad /= scaling_factor
 
             if self.DEBUG:
                 print('rho_grad: %.2e' % np.linalg.norm(self.rho_grad))
@@ -885,8 +866,9 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
-                self.pr_grad[pod.pr_view] += 2. * xi * np.exp(1j * pod.object).conj()
-                product_xi_psi_conj = -1j * xi * (pod.probe * np.exp(1j * pod.object)).conj()
+                expobj = np.exp(1j * pod.object)
+                self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
+                product_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.tot_power
                 if self.p.weight_gradient: # apply coverage mask
                     product_xi_psi_conj *= self.coverage[pod.ob_view.slice[1:]]
                 products_xi_psi_conj.append(product_xi_psi_conj)
