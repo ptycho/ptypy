@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 size = 64
 nangles = 180
 angles = np.linspace(0, np.pi, nangles, endpoint=True)
-downsample = 1
+downsample = 2
 
 # Create simulated volume
 rmap = tu.refractive_index_map(size)
@@ -105,4 +105,26 @@ for i in range(3):
     axes[1,i].imshow(recons.sum(axis=i))
 axes[0,0].set_ylabel("Original")
 axes[1,0].set_ylabel("Recons")
+
+Nx = size
+Nx_d = int(size / downsample)
+fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(6,4), dpi=100)
+for i in range(3):
+    for j in range(2):
+        ax = axes[j,i]
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+axes[0,0].set_title("slice(Z)")
+axes[0,1].set_title("slice(Y)")
+axes[0,2].set_title("slice(X)")
+axes[0,0].set_ylabel("Original")
+axes[0,0].imshow(rmap.real[Nx//2])
+axes[0,1].imshow(rmap.real[:,Nx//2])
+axes[0,2].imshow(rmap.real[:,:,Nx//2])
+axes[1,0].set_ylabel("Recons")
+axes[1,0].imshow(recons[Nx_d//2])
+axes[1,1].imshow(recons[:,Nx_d//2])
+axes[1,2].imshow(recons[:,:,Nx_d//2])
 plt.show()
