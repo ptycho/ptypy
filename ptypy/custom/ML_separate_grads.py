@@ -35,7 +35,7 @@ class MLSeparateGrads(PositionCorrectionEngine):
     Defaults:
 
     [name]
-    default = ML
+    default = MLSeparateGrads
     type = str
     help =
     doc =
@@ -287,14 +287,33 @@ class MLSeparateGrads(PositionCorrectionEngine):
             dt = self.ptycho.FType
             t2 = time.time()
 
-            if self.p.poly_line_coeffs == "quadratic":
+            if self.p.poly_line_coeffs == "all":
+                B_ob = self.ML_model.poly_line_all_coeffs_ob(self.ob_h)
+                diffB_ob = np.arange(1,len(B_ob))*B_ob[1:] # coefficients of poly derivative
+                roots_ob = np.roots(np.flip(diffB_ob.astype(np.double))) # roots only supports double
+                real_roots_ob = np.real(roots_ob[np.isreal(roots_ob)]) # not interested in complex roots
+                if real_roots_ob.size == 1: # single real root
+                    self.tmin_ob = dt(real_roots_ob[0])
+                else: # find real root with smallest poly objective
+                    evalp_ob = lambda root: np.polyval(np.flip(B_ob),root)
+                    self.tmin_ob = dt(min(real_roots_ob, key=evalp_ob)) # root with smallest poly objective
+
+                B_pr = self.ML_model.poly_line_all_coeffs_pr(self.pr_h)
+                diffB_pr = np.arange(1,len(B_pr))*B_pr[1:] # coefficients of poly derivative
+                roots_pr = np.roots(np.flip(diffB_pr.astype(np.double))) # roots only supports double
+                real_roots_pr = np.real(roots_pr[np.isreal(roots_pr)]) # not interested in complex roots
+                if real_roots_pr.size == 1: # single real root
+                    self.tmin_pr = dt(real_roots_pr[0])
+                else: # find real root with smallest poly objective
+                    evalp_pr = lambda root: np.polyval(np.flip(B_pr),root)
+                    self.tmin_pr = dt(min(real_roots_pr, key=evalp_pr)) # root with smallest poly objective
+            elif self.p.poly_line_coeffs == "quadratic":
                 B_ob = self.ML_model.poly_line_coeffs_ob(self.ob_h)
                 B_pr = self.ML_model.poly_line_coeffs_pr(self.pr_h)
 
                 # same as above but quicker when poly quadratic
                 self.tmin_ob = dt(-0.5 * B_ob[1] / B_ob[2])
                 self.tmin_pr = dt(-0.5 * B_pr[1] / B_pr[2])
-
             else:
                 raise NotImplementedError("poly_line_coeffs should be 'quadratic' or 'all'")
 
@@ -436,6 +455,20 @@ class BaseModel(object):
     def poly_line_coeffs_pr(self, pr_h):
         """
         Compute the coefficients of the polynomial for line minimization
+        in direction h for the probe
+        """
+        raise NotImplementedError
+
+    def poly_line_all_coeffs_ob(self, ob_h):
+        """
+        Compute all the coefficients of the polynomial for line minimization
+        in direction h for the object
+        """
+        raise NotImplementedError
+
+    def poly_line_all_coeffs_pr(self, pr_h):
+        """
+        Compute all the coefficients of the polynomial for line minimization
         in direction h for the probe
         """
         raise NotImplementedError
@@ -639,7 +672,6 @@ class GaussianModel(BaseModel):
                 a = pod.fw(pr_h[pod.pr_view] * pod.object)
 
                 if A0 is None:
-
                     A0 = u.abs2(f).astype(np.longdouble)
                     A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
                     A2 = u.abs2(a).astype(np.longdouble)
@@ -671,6 +703,140 @@ class GaussianModel(BaseModel):
 
         self.B = B
         return B
+
+    def poly_line_all_coeffs_ob(self, ob_h):
+            """
+            Compute all the coefficients of the polynomial for line minimization
+            in direction h
+            """
+
+            B = np.zeros((5,), dtype=np.longdouble)
+            Brenorm = 1. / self.LL[0]**2
+
+            # Outer loop: through diffraction patterns
+            for dname, diff_view in self.di.views.items():
+                if not diff_view.active:
+                    continue
+
+                # Weights and intensities for this view
+                w = self.weights[diff_view]
+                I = diff_view.data
+
+                A0 = None
+                A1 = None
+                A2 = None
+
+                for name, pod in diff_view.pods.items():
+                    if not pod.active:
+                        continue
+                    f = pod.fw(pod.probe * pod.object)
+                    a = pod.fw(pod.probe * ob_h[pod.ob_view])
+
+                    if A0 is None:
+                        A0 = u.abs2(f).astype(np.longdouble)
+                        A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
+                        A2 = u.abs2(a).astype(np.longdouble)
+                    else:
+                        A0 += u.abs2(f)
+                        A1 += 2 * np.real(f * a.conj())
+                        A2 += u.abs2(a)
+
+                if self.p.floating_intensities:
+                    A0 *= self.float_intens_coeff[dname]
+                    A1 *= self.float_intens_coeff[dname]
+                    A2 *= self.float_intens_coeff[dname]
+
+                A0 = np.double(A0) - pod.upsample(I)
+                #A0 -= pod.upsample(I)
+                w = pod.upsample(w)
+
+                B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
+                B[1] += np.dot(w.flat, (2*A0*A1).flat) * Brenorm
+                B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
+                B[3] += np.dot(w.flat, (2*A1*A2).flat) * Brenorm
+                B[4] += np.dot(w.flat, (A2**2).flat) * Brenorm
+
+            parallel.allreduce(B)
+
+            # Object regularizer
+            if self.regularizer:
+                for name, s in self.ob.storages.items():
+                    B[:3] += Brenorm * self.regularizer.poly_line_coeffs(
+                        ob_h.storages[name].data, s.data)
+
+            if np.isinf(B).any() or np.isnan(B).any():
+                logger.warning(
+                    'Warning! inf or nan found! Trying to continue...')
+                B[np.isinf(B)] = 0.
+                B[np.isnan(B)] = 0.
+
+            self.B = B
+
+            return B
+
+    def poly_line_all_coeffs_pr(self, pr_h):
+            """
+            Compute all the coefficients of the polynomial for line minimization
+            in direction h
+            """
+
+            B = np.zeros((5,), dtype=np.longdouble)
+            Brenorm = 1. / self.LL[0]**2
+
+            # Outer loop: through diffraction patterns
+            for dname, diff_view in self.di.views.items():
+                if not diff_view.active:
+                    continue
+
+                # Weights and intensities for this view
+                w = self.weights[diff_view]
+                I = diff_view.data
+
+                A0 = None
+                A1 = None
+                A2 = None
+
+                for name, pod in diff_view.pods.items():
+                    if not pod.active:
+                        continue
+                    f = pod.fw(pod.probe * pod.object)
+                    a = pod.fw(pr_h[pod.pr_view] * pod.object)
+
+                    if A0 is None:
+                        A0 = u.abs2(f).astype(np.longdouble)
+                        A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
+                        A2 = u.abs2(a).astype(np.longdouble)
+                    else:
+                        A0 += u.abs2(f)
+                        A1 += 2 * np.real(f * a.conj())
+                        A2 += u.abs2(a)
+
+                if self.p.floating_intensities:
+                    A0 *= self.float_intens_coeff[dname]
+                    A1 *= self.float_intens_coeff[dname]
+                    A2 *= self.float_intens_coeff[dname]
+
+                A0 = np.double(A0) - pod.upsample(I)
+                #A0 -= pod.upsample(I)
+                w = pod.upsample(w)
+
+                B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
+                B[1] += np.dot(w.flat, (2*A0*A1).flat) * Brenorm
+                B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
+                B[3] += np.dot(w.flat, (2*A1*A2).flat) * Brenorm
+                B[4] += np.dot(w.flat, (A2**2).flat) * Brenorm
+
+            parallel.allreduce(B)
+
+            if np.isinf(B).any() or np.isnan(B).any():
+                logger.warning(
+                    'Warning! inf or nan found! Trying to continue...')
+                B[np.isinf(B)] = 0.
+                B[np.isnan(B)] = 0.
+
+            self.B = B
+
+            return B
 
 
 class Regul_del2(object):
