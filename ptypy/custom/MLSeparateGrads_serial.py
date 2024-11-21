@@ -174,15 +174,9 @@ class MLSeparateGrads_serial(MLSeparateGrads):
 
     def _replace_pr_grad(self):
         new_pr_grad = self.pr_grad_new
-        # probe support
-        if self.p.probe_update_start <= self.curiter:
-            # Apply probe support if needed
-            for name, s in new_pr_grad.storages.items():
-                self.support_constraint(s)
-        # FIXME: this hack doesn't work here as we step in probe and object separately
-        # FIXME: really it's the probe step that should be zeroed out not the gradient
-        else:
-            new_pr_grad.fill(0.)
+        # Apply probe support if needed
+        for name, s in new_pr_grad.storages.items():
+            self.support_constraint(s)
 
         norm = Cnorm2(new_pr_grad)
         dot = np.real(Cdot(new_pr_grad, self.pr_grad))

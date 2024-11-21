@@ -88,13 +88,6 @@ class MLSeparateGrads(PositionCorrectionEngine):
     help = Whether to use the object/probe scaling preconditioner
     doc = This parameter can give faster convergence for weakly scattering samples.
 
-    [probe_update_start]
-    default = 0
-    type = int
-    lowlim = 0
-    help = Number of iterations before probe update starts
-    # NOTE: probe_update_start doesn't work with this code, need to add some code to fix this
-
     [poly_line_coeffs]
     default = quadratic
     type = str
@@ -219,17 +212,12 @@ class MLSeparateGrads(PositionCorrectionEngine):
             new_ob_grad, new_pr_grad = self.ob_grad_new, self.pr_grad_new
             tg += time.time() - t1
 
-            if self.p.probe_update_start <= self.curiter:
-                # Apply probe support if needed
-                for name, s in new_pr_grad.storages.items():
-                    self.support_constraint(s)
-                    #support = self.probe_support.get(name)
-                    #if support is not None:
-                    #    s.data *= support
-            # FIXME: this hack doesn't work here as we step in probe and object separately
-            # FIXME: really it's the probe step that should be zeroed out not the gradient
-            else:
-                new_pr_grad.fill(0.)
+            # Apply probe support if needed
+            for name, s in new_pr_grad.storages.items():
+                self.support_constraint(s)
+                #support = self.probe_support.get(name)
+                #if support is not None:
+                #    s.data *= support
 
             # Smoothing preconditioner
             if self.smooth_gradient:
