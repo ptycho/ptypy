@@ -18,6 +18,7 @@ from ptypy.utils import parallel
 from ptypy.engines import register
 from ptypy.engines.projectional import DMMixin, RAARMixin
 from ptypy.accelerate.base.engines import projectional_serial
+from ptypy.accelerate.base.mem_utils import calculate_safe_fpb
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel,\
@@ -124,15 +125,11 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             mempool = cp.get_default_memory_pool()
             mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
             if not int(mem) // aux.nbytes:
-                isGradFull = False
-                if scan.__class__.__name__ == "GradFull":
-                    isGradFull = True
-                    break
-
                 log(1,"Cannot fit memory into device, if possible reduce frames per block or nr. of modes. Exiting...")
-                if not isGradFull:
+                if scan.__class__.__name__ != "GradFull":
+                    # only make sense if the model is not GradFull
                     per_frame = (aux.nbytes / aux.shape[0]) * nmodes
-                    safe_fpb = int(np.floor((mem / NUM_BLK_SAFE_FPB) / per_frame))
+                    safe_fpb = calculate_safe_fpb(mem, per_frame, NUM_BLK_SAFE_FPB)
                     log(1,f"Your current 'frames_per_block' is {fpc}.")
                     log(1,f"With current reconstruction parameters and computing resources, you can try setting 'frames_per_block' to {safe_fpb}.")
                     log(1,f"This would divide your reonstruction into {NUM_BLK_SAFE_FPB} blocks.")

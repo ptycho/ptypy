@@ -20,6 +20,8 @@ from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
 from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
+from ptypy.accelerate.base.mem_utils import (max_fpb_from_scans,
+calculate_safe_fpb)
 from .. import get_context, log_device_memory_stats
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
@@ -166,20 +168,14 @@ class ML_cupy(ML_serial):
         avail_mem = max(int(mem - 200 * 1024 * 1024), 0)
         fit =  avail_mem // blk
         if not fit:
-            # find max number of frames_per_block
-            max_fpc = 0
-            isGradFull = False
-            for scan in self.ptycho.model.scans.values():
-                if scan.__class__.__name__ == "GradFull":
-                    isGradFull = True
-                    break
-                max_fpc = max(scan.max_frames_per_block, max_fpc)
-
             log(1, "Cannot fit memory into device, if possible reduce frames per block. Exiting...")
-            if not isGradFull:
-                per_frame = blk / max_fpc
-                safe_fpb = int(np.floor((avail_mem / NUM_BLK_SAFE_FPB) / per_frame))
-                log(1,f"Your current 'frames_per_block' is {max_fpc}.")
+            # max_fpb is None if there is a GradFull in the scan models
+            # as 'frames_per_block' is irrelevant
+            max_fpb = max_fpb_from_scans(self.ptycho.model.scans)
+            if max_fpb is not None:
+                per_frame = blk / max_fpb
+                safe_fpb = calculate_safe_fpb(avail_mem, per_frame, NUM_BLK_SAFE_FPB)
+                log(1,f"Your current 'frames_per_block' is {max_fpb}.")
                 log(1,f"With current reconstruction parameters and computing resources, you can try setting 'frames_per_block' to {safe_fpb}.")
                 log(1,f"This would divide your reonstruction into {NUM_BLK_SAFE_FPB} blocks.")
             raise SystemExit("ptypy has been exited.")
