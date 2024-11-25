@@ -37,20 +37,14 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - uses: conda-incubator/setup-miniconda@v3
       with:
-        python-version:  ${{ matrix.python-version }}
-    - name: Add conda to system path
-      run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        echo $CONDA/bin >> $GITHUB_PATH
-        conda --version
-        conda info
-    - name: Make sure conda is updated
-      run: |
-        conda update conda
-        conda --version
+        auto-update-conda: true
+        auto-activate-base: false
+        conda-remove-defaults: true
+        channels: conda-forge
+        activate-environment: ptypy_env
+        python-version: ${{ matrix.python-version }}
     - name: Install ${{ matrix.conda-env }} dependencies
       run: |
         # replace python version in dependencies
@@ -62,7 +56,7 @@ jobs:
         #   sed -i '/- mpi4py/d' dependencies_${{ matrix.conda-env }}.yml
         # fi
         conda install --solver=classic mpich
-        conda env update --file dependencies_${{ matrix.conda-env }}.yml --name base
+        conda env update --file dependencies_${{ matrix.conda-env }}.yml --name ptypy_env
         conda install --solver=classic flake8 pytest pytest-cov
         conda list
     - name: Prepare ptypy
