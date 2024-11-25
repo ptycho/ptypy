@@ -20,6 +20,9 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
     strategy:
       max-parallel: 10
       fail-fast: false
