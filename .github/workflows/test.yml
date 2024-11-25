@@ -25,7 +25,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - "3.8"
           - "3.9"
           - "3.10"
           - "3.11"
@@ -58,16 +57,13 @@ jobs:
         if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} == '3.12' ]; then
           sed -i '/- pyfftw/d' dependencies_${{ matrix.conda-env }}.yml
         fi
-        # if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} == '3.8' ]; then
-        #   sed -i '/- mpi4py/d' dependencies_${{ matrix.conda-env }}.yml
-        # fi
         # if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} == '3.9' ]; then
         #   sed -i '/- mpi4py/d' dependencies_${{ matrix.conda-env }}.yml
         # fi
         conda install --solver=classic mpich
         conda env update --file dependencies_${{ matrix.conda-env }}.yml --name base
         conda install --solver=classic flake8 pytest pytest-cov
-        conda list	
+        conda list
     - name: Prepare ptypy
       run: |
         # Install ptypy
