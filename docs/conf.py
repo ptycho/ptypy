@@ -11,6 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path('..', 'ptypy').resolve()))
 
+print(sys.path)
+
 project = 'PtyPy'
 copyright = '2024, AUTHORS'
 author = 'AUTHORS'
@@ -33,6 +35,7 @@ templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 
+#autodoc_mock_imports = ["numpy", "scipy"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

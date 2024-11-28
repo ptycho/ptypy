@@ -6,11 +6,16 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - "docs/**"
+      - ".github/workflows/**"
   pull_request:
     branches:
       - master
       - dev
       - hotfixes
+    paths-ignore:
+      - "docs/**"
   # Also trigger on page_build, as well as release created events
   page_build:
   release:
