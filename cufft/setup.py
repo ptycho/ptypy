@@ -4,11 +4,12 @@
 import setuptools
 from distutils.core import setup, Extension
 import os
-import pybind11
-import sysconfig
+# import pybind11
+# import sysconfig
 
 ext_modules = []
 cmdclass = {}
+ext_include_dir = os.path.join(os.environ['CONDA_PREFIX'], 'include')
 # filtered Cuda FFT extension module
 from extensions import locate_cuda, get_cuda_version # this raises an error if pybind11 is not available
 CUDA = locate_cuda() # this raises an error if CUDA is not available
@@ -21,9 +22,10 @@ ext_modules.append(
     Extension("filtered_cufft",
         sources=[os.path.join(cufft_dir, "module.cpp"),
                 os.path.join(cufft_dir, "filtered_fft.cu")],
-        include_dirs=[pybind11.get_include(),
-                      sysconfig.get_paths()['include'],
-                      ],
+        # include_dirs=[pybind11.get_include(),
+                      # sysconfig.get_paths()['include'],
+                      # ],
+        include_dirs=[ext_include_dir],
     )
 )
 cmdclass = {"build_ext": CustomBuildExt}
