@@ -96,7 +96,7 @@ class PtyScan(BaseModel):
      - mpi capable, child classes should not worry about mpi
     """
     name: Literal["PtyScan"]
-    dfile: str = Field(None,
+    dfile: str | None = Field(None,
         title = "Data File",
         description="File path where prepared data will be saved in the ``ptyd`` format.)",
         json_schema_extra={"user_level": 0},
@@ -106,7 +106,7 @@ class PtyScan(BaseModel):
         description="Appendix to saved files if save == 'link'",
         json_schema_extra={"user_level": 0},
         exclude_schema=True)
-    save: str = Field(None, 
+    save: str | None = Field(None, 
         title="Saving Mode",
         description="Mode to use to save data to file. \
         <newline> \
@@ -118,7 +118,7 @@ class PtyScan(BaseModel):
         in the path given by the link. Links file paths are relative to master file.",
         json_schema_extra={"user_level": 0},
         exclude_schema=False)
-    auto_center: bool = Field(None,
+    auto_center: bool | None = Field(None,
         title="Auto Center",
         description="Determine if center in data is calculated automatically",
         json_schema_extra={"user_level": 0},
@@ -127,7 +127,7 @@ class PtyScan(BaseModel):
         title="Load Parallel",
         json_schema_extra={"user_level": 0},
         exclude_schema=True)
-    rebin: int = Field(None,
+    rebin: int | None = Field(None,
         ge=1, le=32,
         title="Rebin",
         description="Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*",
@@ -152,11 +152,11 @@ class PtyScan(BaseModel):
         description="Minimum number of frames loaded by each node",
         json_schema_extra={"user_level": 2}, 
         exclude_schema=True)
-    num_frames: int = Field(None,
+    num_frames: int | None = Field(None,
         title="Num Frames",
         description="Maximum number of frames to be prepared",
         json_schema_extra={"user_level": 1})
-    label: str = Field(None,
+    label: str | None = Field(None,
         title="Label",
         description="The scan label. Unique string identifying the scan",
         json_schema_extra={"user_level": 1},
@@ -239,7 +239,7 @@ class Aperture(BaseModel):
     rotate: float = Field(0,
         title="Rotate",
         description="Rotate aperture by this value")
-    central_stop: float = Field(None,
+    central_stop: float | None = Field(None,
         title="Central Stop",
         description="Size of central stop as a fraction of aperture.size")
     edge: float = Field(2.0, 
@@ -251,7 +251,7 @@ class Aperture(BaseModel):
     offset: float | tuple_float_two | list_float_two = Field(0,
         title="Offset",
         description="Offset between center of aperture and optical axes")
-    size: float | tuple_float_two | list_float_two = Field(None,
+    size: float | tuple_float_two | list_float_two | None = Field(None,
         title="Size",
         description="Aperture width or diameter")
 
@@ -272,18 +272,18 @@ class IlluminationPropagation(BaseModel):
     antialiasing: int = Field(1, ge=1,
         title="Antialiasing",
         description="Antialiasing factor used when generating the probe. (numbers larger than 2 or 3 are memory hungry)")
-    focussed: float = Field(None,
+    focussed: float | None = Field(None,
         title="Focussed",
         description="Propagation distance from aperture to focus")
-    parallel: float = Field(None,
+    parallel: float | None = Field(None,
         title="Parallel",
         description="Parallel propagation distance")
-    spot_size: float = Field(None,
+    spot_size: float | None = Field(None,
         title="Spot Size",
         description="Focal spot diameter")
 
 class InitialRecon(BaseModel):
-    label: str = Field(None,
+    label: str | None = Field(None,
         title="Label",
         description="Scan label of diffraction that is to be used for probe estimate")
     rfile: str = Field("*.ptyr",
@@ -293,11 +293,11 @@ class InitialRecon(BaseModel):
 class Illumination(BaseModel):
     aperture: Aperture = Field(exclude_schema=True)
     diversity: Diversity = Field(exclude_schema=True)
-    model: InitialModel = Field(None,
+    model: InitialModel | None = Field(None,
         title="Model",
         description="Type of illumination model",
         exclude_schema=True)
-    photons: int | float = Field(None,
+    photons: int | float | None = Field(None,
         title="Photons",
         description="Number of photons in the incident illumination",
         exclude_schema=False)
@@ -308,10 +308,10 @@ class Process(BaseModel):
     offset: tuple_int_two | list_int_two = Field((0,0),
         title="Offset",
         description="Offset between center of object array and scan pattern")
-    zoom: float | tuple_float_two | list_float_two = Field(None,
+    zoom: float | tuple_float_two | list_float_two | None = Field(None,
         title="Zoom",
         description="Zoom value for object simulation.")
-    formula: str = Field(None,
+    formula: str | None = Field(None,
         title="Formula",
         description="A Formula compatible with a cxro database query,e.g. ``'Au'`` or ``'NaCl'`` or ``'H2O'``")
     density: float = Field(1,
@@ -328,7 +328,7 @@ class Process(BaseModel):
         description="Smooth the projection with gaussian kernel of width given by `smoothing_mfs`")
     
 class Sample(BaseModel):
-    model: InitialModel = Field(None,
+    model: InitialModel | None = Field(None,
         title="Model",
         description="Type of initial object model",
         exclude_schema=True)
@@ -373,14 +373,14 @@ class MFScan(BaseModel):
 class BaseEngine(BaseModel):
     numiter: int = Field(20,
         title="Nr. of Iterations",
-        description="Total number of iterations")
+       description="Total number of iterations")
     numiter_contiguous: int = Field(1,
         title="Nr. of contiguous iterations",
         description="Number of iterations without interruption")
     probe_support: float = Field(0.7,
         title="Probe Support",
         description="Valid probe area as fraction of the probe frame")
-    probe_fourier_support: float = Field(None,
+    probe_fourier_support: float | None = Field(None,
         title="Probe Fourier Support",
         description="Valid probe area in frequency domain as fraction of the probe frame")
     record_local_error: bool = Field(False,
@@ -413,7 +413,7 @@ class BaseParamTree(BaseModel):
     data_type: DataType = Field("single",
         title="Data Type", 
         json_schema_extra={"user_level": 1})
-    run: str = Field(None, 
+    run: str | None = Field(None, 
         title="Run Label", 
         description="Reconstruction run identifier. If ``None``, \
                      the run name will be constructed at run time from other information",
