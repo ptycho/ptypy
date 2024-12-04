@@ -4,6 +4,7 @@
 import setuptools
 from distutils.core import setup, Extension
 import os
+import pybind11
 
 ext_modules = []
 cmdclass = {}
@@ -35,7 +36,7 @@ EXTBUILD_MESSAGE = "The filtered cufft extension has been successfully installed
 #     EXTBUILD_MESSAGE += "Make sure to have pybind11 installed.\n"
 #     EXTBUILD_MESSAGE += '*' * 75 + "\n"
 #     EXTBUILD_MESSAGE += 'Error message: ' + str(e)
-    
+
 exclude_packages = []
 package_list = setuptools.find_packages(exclude=exclude_packages)
 setup(
@@ -46,6 +47,7 @@ setup(
     packages=package_list,
     ext_modules=ext_modules,
     install_requires=["pybind11"],
+    include_dirs=[pybind11.get_include()],
     cmdclass=cmdclass
 )
 
