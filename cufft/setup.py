@@ -19,7 +19,8 @@ cufft_dir = "filtered_fft"
 ext_modules.append(
     Extension("filtered_cufft",
         sources=[os.path.join(cufft_dir, "module.cpp"),
-                os.path.join(cufft_dir, "filtered_fft.cu")]
+                os.path.join(cufft_dir, "filtered_fft.cu")],
+        include_dirs=[pybind11.get_include()],
     )
 )
 cmdclass = {"build_ext": CustomBuildExt}
@@ -47,7 +48,6 @@ setup(
     packages=package_list,
     ext_modules=ext_modules,
     install_requires=["pybind11"],
-    include_dirs=[pybind11.get_include()],
     cmdclass=cmdclass
 )
 
