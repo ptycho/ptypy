@@ -20,7 +20,7 @@ ext_modules.append(
     Extension("filtered_cufft",
         sources=[os.path.join(cufft_dir, "module.cpp"),
                 os.path.join(cufft_dir, "filtered_fft.cu")],
-        include_dirs=[pybind11.get_include()],
+        # include_dirs=[pybind11.get_include()],
     )
 )
 cmdclass = {"build_ext": CustomBuildExt}
