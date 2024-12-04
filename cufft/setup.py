@@ -5,6 +5,7 @@ import setuptools
 from distutils.core import setup, Extension
 import os
 import pybind11
+import sysconfig
 
 ext_modules = []
 cmdclass = {}
@@ -20,7 +21,9 @@ ext_modules.append(
     Extension("filtered_cufft",
         sources=[os.path.join(cufft_dir, "module.cpp"),
                 os.path.join(cufft_dir, "filtered_fft.cu")],
-        # include_dirs=[pybind11.get_include()],
+        include_dirs=[pybind11.get_include(),
+                      sysconfig.get_paths()['include'],
+                      ],
     )
 )
 cmdclass = {"build_ext": CustomBuildExt}
