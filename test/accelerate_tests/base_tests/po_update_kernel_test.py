@@ -28,7 +28,7 @@ class PoUpdateKernelTest(unittest.TestCase):
                                 ['pr_update', 'ob_update'],
                                 err_msg='PoUpdateKernel does not have the correct functions registered.')
 
-    def prepare_arrays(self, wavefield=False):
+    def prepare_arrays(self):
         B = 5  # frame size y
         C = 5  # frame size x
 
@@ -88,12 +88,7 @@ class PoUpdateKernelTest(unittest.TestCase):
         for idx in range(D):
             probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2)  # + 1j * np.ones((E, F)) * (5 * idx + 2)
 
-        if wavefield:
-            object_array_wavefield = np.empty_like(object_array, dtype=FLOAT_TYPE)
-            probe_wavefield = np.empty_like(probe, dtype=FLOAT_TYPE)
-            return addr, object_array, object_array_denominator, object_array_wavefield, probe, exit_wave, probe_denominator, probe_wavefield
-        else:
-            return addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator
+        return addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator
 
     def test_ob_update(self):
         # setup
@@ -249,7 +244,8 @@ class PoUpdateKernelTest(unittest.TestCase):
 
     def test_pr_update_ML_wavefield(self):
         # setup  
-        addr, object_array, object_array_denominator, object_array_wavefield, probe, exit_wave, probe_denominator, probe_wavefield = self.prepare_arrays(wavefield=True)
+        addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
+        probe_wavefield = np.empty_like(probe, dtype=FLOAT_TYPE)
 
         # test
         POUK = PoUpdateKernel()
@@ -290,7 +286,8 @@ class PoUpdateKernelTest(unittest.TestCase):
 
     def test_ob_update_ML_wavefield(self):
         # setup
-        addr, object_array, object_array_denominator, object_array_wavefield, probe, exit_wave, probe_denominator, probe_wavefield = self.prepare_arrays(wavefield=True)
+        addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
+        object_array_wavefield = np.empty_like(object_array, dtype=FLOAT_TYPE)
 
         # test
         POUK = PoUpdateKernel()
