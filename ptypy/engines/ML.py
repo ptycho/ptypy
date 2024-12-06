@@ -154,9 +154,8 @@ class ML(PositionCorrectionEngine):
         self.pr_grad_new = None
 
         # Object and probe fluence maps
-        if self.p.wavefield_precond:
-            self.ob_fln = None
-            self.pr_fln = None
+        self.ob_fln = None
+        self.pr_fln = None
 
         # Other
         self.tmin = None
@@ -257,11 +256,9 @@ class ML(PositionCorrectionEngine):
 
             # Wavefield preconditioner
             if self.p.wavefield_precond:
-                self.ob_fln += self.p.wavefield_delta_object
-                self.pr_fln += self.p.wavefield_delta_probe
                 for name, s in new_ob_grad.storages.items():
-                    new_ob_grad.storages[name].data /= np.sqrt(self.ob_fln.storages[name].data)
-                    new_pr_grad.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data)
+                    new_ob_grad.storages[name].data /= np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
+                    new_pr_grad.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe)
 
             # Smoothing preconditioner
             if self.smooth_gradient:
@@ -312,14 +309,17 @@ class ML(PositionCorrectionEngine):
 
             # 3. Next conjugate
             self.ob_h *= bt / self.tmin
-            # Smoothing and wavefield preconditioners for the object
-            if self.smooth_gradient and self.p.wavefield_precond:
+            # Wavefield preconditioner for the object (with and without smoothing preconditioner)
+            if self.p.wavefield_precond:
                 for name, s in self.ob_h.storages.items():
-                    s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data / np.sqrt(self.ob_fln.storages[name].data))
-            elif self.p.wavefield_precond:
-                for name, s in self.ob_h.storages.items():
-                    s.data[:] -= self.ob_grad.storages[name].data / np.sqrt(self.ob_fln.storages[name].data)
-            elif self.smooth_gradient:
+                    if self.smooth_gradient:
+                        s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data 
+                                      / np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object))
+                    else:
+                        s.data[:] -= (self.ob_grad.storages[name].data 
+                                      / np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object))
+            # Smoothing preconditioner for the object
+            if self.smooth_gradient:
                 for name, s in self.ob_h.storages.items():
                     s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
             else:
@@ -330,7 +330,8 @@ class ML(PositionCorrectionEngine):
             # Wavefield preconditioner for the probe
             if self.p.wavefield_precond:
                 for name, s in self.pr_h.storages.items():
-                    s.data[:] -= self.pr_grad.storages[name].data / np.sqrt(self.pr_fln.storages[name].data)
+                    s.data[:] -= (self.pr_grad.storages[name].data 
+                                  / np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe))
             else:
                 self.pr_h -= self.pr_grad
 
@@ -426,9 +427,8 @@ class BaseModel(object):
         self.ob = self.engine.ob
         self.ob_grad = self.engine.ob_grad_new
         self.pr_grad = self.engine.pr_grad_new
-        if self.p.wavefield_precond:
-            self.ob_fln = self.engine.ob_fln
-            self.pr_fln = self.engine.pr_fln
+        self.ob_fln = self.engine.ob_fln
+        self.pr_fln = self.engine.pr_fln
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
 
