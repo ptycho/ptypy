@@ -165,9 +165,9 @@ class ML_serial(ML):
 
         # Wavefield preconditioner for the object
         if self.p.wavefield_precond:
-            self.ob_fln += self.p.wavefield_delta_object
             for name, s in new_ob_grad.storages.items():
-                new_ob_grad.storages[name].data /= np.sqrt(self.ob_fln.storages[name].data)
+                new_ob_grad.storages[name].data /= np.sqrt(self.ob_fln.storages[name].data 
+                                                           + self.p.wavefield_delta_object)
 
         # Smoothing preconditioner
         if self.smooth_gradient:
@@ -193,9 +193,9 @@ class ML_serial(ML):
 
          # Wavefield preconditioner for the probe
         if self.p.wavefield_precond:
-            self.pr_fln += self.p.wavefield_delta_probe
             for name, s in new_pr_grad.storages.items():
-                new_pr_grad.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data)
+                new_pr_grad.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data 
+                                                           + self.p.wavefield_delta_probe)
 
         norm = Cnorm2(new_pr_grad)
         dot = np.real(Cdot(new_pr_grad, self.pr_grad))
@@ -257,16 +257,19 @@ class ML_serial(ML):
 
             # 3. Next conjugate
             self.ob_h *= dt(bt / self.tmin)
-            # Smoothing and wavefield preconditioners for the object
-            if self.smooth_gradient and self.p.wavefield_precond:
+            # Wavefield preconditioner for the object (with and without smoothing preconditioner)
+            if self.p.wavefield_precond:
                 for name, s in self.ob_h.storages.items():
-                    s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data / np.sqrt(self.ob_fln.storages[name].data), self.smooth_gradient.sigma)
-            elif self.p.wavefield_precond:
+                    if self.smooth_gradient:
+                        s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data 
+                                      / np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object))
+                    else:
+                        s.data[:] -= (self.ob_grad.storages[name].data 
+                                      / np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object))
+            # Smoothing preconditioner for the object
+            if self.smooth_gradient:
                 for name, s in self.ob_h.storages.items():
-                    s.data[:] -= self.ob_grad.storages[name].data / np.sqrt(self.ob_fln.storages[name].data)
-            elif self.smooth_gradient:
-                for name, s in self.ob_h.storages.items():
-                    s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
+                    s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
             else:
                 self.ob_h -= self.ob_grad
 
@@ -275,7 +278,8 @@ class ML_serial(ML):
             # Wavefield preconditioner for the probe
             if self.p.wavefield_precond:
                 for name, s in self.pr_h.storages.items():
-                    s.data[:] -= self.pr_grad.storages[name].data / np.sqrt(self.pr_fln.storages[name].data)
+                    s.data[:] -= (self.pr_grad.storages[name].data 
+                                  / np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe))
             else:
                 self.pr_h -= self.pr_grad
 
@@ -476,8 +480,10 @@ class GaussianModel(BaseModelSerial):
             # local references
             ob = self.engine.ob.S[oID].data
             obg = ob_grad.S[oID].data
+            obf = ob_fln.S[oID].data 
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
+            prf = pr_fln.S[pID].data
             I = prep.I
 
             # make propagated exit (to buffer)
@@ -495,14 +501,12 @@ class GaussianModel(BaseModelSerial):
             GDK.error_reduce(addr, err_phot)
             aux[:] = BW(aux)
 
-            #FIXME: need modified POK kernel to compute fluence maps
-            # if self.engine.p.wavefield_precond:
-            #    ob_fln[pod.ob_view] += u.abs2(pod.probe)
-            #    pr_fln[pod.pr_view] += u.abs2(pod.object)
-            #END FIXME
-
-            POK.ob_update_ML(addr, obg, pr, aux)
-            POK.pr_update_ML(addr, prg, ob, aux)
+            if self.engine.p.wavefield_precond:
+                POK.ob_update_ML_wavefield(addr, obg, obf, pr, aux)
+                POK.pr_update_ML_wavefield(addr, prg, prf, ob, aux)
+            else:
+                POK.ob_update_ML(addr, obg, pr, aux)
+                POK.pr_update_ML(addr, prg, ob, aux)
 
         for dID, prep in self.engine.diff_info.items():
             err_phot = prep.err_phot
