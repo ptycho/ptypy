@@ -28,7 +28,7 @@ class PoUpdateKernelTest(unittest.TestCase):
                                 ['pr_update', 'ob_update'],
                                 err_msg='PoUpdateKernel does not have the correct functions registered.')
 
-    def prepare_arrays(self):
+    def prepare_arrays(self, wavefield=False):
         B = 5  # frame size y
         C = 5  # frame size x
 
@@ -88,7 +88,12 @@ class PoUpdateKernelTest(unittest.TestCase):
         for idx in range(D):
             probe_denominator[idx] = np.ones((E, F)) * (5 * idx + 2)  # + 1j * np.ones((E, F)) * (5 * idx + 2)
 
-        return addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator
+        if wavefield:
+            object_array_wavefield = np.empty_like(object_array, dtype=FLOAT_TYPE)
+            probe_wavefield = np.empty_like(probe, dtype=FLOAT_TYPE)
+            return addr, object_array, object_array_denominator, object_array_wavefield, probe, exit_wave, probe_denominator, probe_wavefield
+        else:
+            return addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator
 
     def test_ob_update(self):
         # setup
@@ -242,6 +247,97 @@ class PoUpdateKernelTest(unittest.TestCase):
         np.testing.assert_array_equal(object_array, expected_object_array,
                                       err_msg="The object array has not been updated as expected")
 
+    def test_pr_update_ML_wavefield(self):
+        # setup  
+        addr, object_array, object_array_denominator, object_array_wavefield, probe, exit_wave, probe_denominator, probe_wavefield = self.prepare_arrays(wavefield=True)
+
+        # test
+        POUK = PoUpdateKernel()
+        POUK.allocate()  # this doesn't do anything, but is the call pattern.
+        POUK.pr_update_ML_wavefield(addr, probe, probe_wavefield, object_array, exit_wave)
+
+        # assert
+        expected_probe = np.array([[[625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                    [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                    [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                    [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                    [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j]],
+
+                                   [[786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                    [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                    [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                    [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                    [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j]]],
+                                  dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(probe, expected_probe,
+                                      err_msg="The probe has not been updated as expected")
+
+        # assert
+        expected_probe_wavefield = np.array([[[625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                              [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                              [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                              [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                              [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j]],
+
+                                             [[786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                              [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                              [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                              [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                              [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j]]],
+                                            dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(probe_wavefield, expected_probe_wavefield,
+                                      err_msg="The probe wavefield has not been updated as expected")
+
+    def test_ob_update_ML_wavefield(self):
+        # setup
+        addr, object_array, object_array_denominator, object_array_wavefield, probe, exit_wave, probe_denominator, probe_wavefield = self.prepare_arrays(wavefield=True)
+
+        # test
+        POUK = PoUpdateKernel()
+        POUK.allocate()  # this doesn't do anything, but is the call pattern.
+        POUK.ob_update_ML_wavefield(addr, object_array, object_array_wavefield, probe, exit_wave)
+
+        # assert
+        expected_object_array = np.array(
+            [[[29. + 1.j, 105. + 1.j, 105. + 1.j, 105. + 1.j, 105. + 1.j, 77. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [125. + 1.j, 297. + 1.j, 297. + 1.j, 297. + 1.j, 297. + 1.j, 173. + 1.j, 1. + 1.j],
+              [1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j]],
+
+             [[44. + 4.j, 132. + 4.j, 132. + 4.j, 132. + 4.j, 132. + 4.j, 92. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [140. + 4.j, 324. + 4.j, 324. + 4.j, 324. + 4.j, 324. + 4.j, 188. + 4.j, 4. + 4.j],
+              [4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j]]],
+            dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(object_array, expected_object_array,
+                                      err_msg="The object array has not been updated as expected")
+
+        # assert
+        expected_object_array_wavefield = np.array(
+            [[[29. + 1.j, 105. + 1.j, 105. + 1.j, 105. + 1.j, 105. + 1.j, 77. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [125. + 1.j, 297. + 1.j, 297. + 1.j, 297. + 1.j, 297. + 1.j, 173. + 1.j, 1. + 1.j],
+              [1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j]],
+
+             [[44. + 4.j, 132. + 4.j, 132. + 4.j, 132. + 4.j, 132. + 4.j, 92. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [140. + 4.j, 324. + 4.j, 324. + 4.j, 324. + 4.j, 324. + 4.j, 188. + 4.j, 4. + 4.j],
+              [4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j]]],
+            dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(object_array_wavefield, expected_object_array_wavefield,
+                                      err_msg="The object array wavefield has not been updated as expected")
 
     def test_pr_update_local(self):
         # setup
