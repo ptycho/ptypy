@@ -608,6 +608,32 @@ class PoUpdateKernel(BaseKernel):
                 ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * fac
         return
 
+    def ob_update_ML_wavefield(self, addr, ob, obf, pr, ex, fac=2.0):
+
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += \
+                pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols].conj() * \
+                ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * fac
+            obf[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] += \
+                u.abs2(pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols])
+        return
+
+    def pr_update_ML_wavefield(self, addr, pr, prf, ob, ex, fac=2.0):
+
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            pr[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
+                ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols].conj() * \
+                ex[exc[0], exc[1]:exc[1] + rows, exc[2]:exc[2] + cols] * fac
+            prf[prc[0], prc[1]:prc[1] + rows, prc[2]:prc[2] + cols] += \
+                u.abs2(ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols])
+        return
+
     def ob_update_local(self, addr, ob, pr, ex, aux, prn, a=0., b=1.):
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
