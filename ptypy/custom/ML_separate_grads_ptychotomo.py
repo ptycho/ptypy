@@ -407,6 +407,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             if self.curiter == 24: # curiter starts at 0
                 self.downsample = 1
                 self.projector2.plot_vol(self.rho, title='before')
+                self.projected_rho = self.projector2.forward(self.rho) #FIXME: should this be updated in new_grad?
                 self.rho = self.projector.backward(np.moveaxis(self.projected_rho,1,0))
                 self.rho_h = np.zeros_like(self.rho, dtype=np.complex64)
                 self.projector.plot_vol(self.rho, title='after')
