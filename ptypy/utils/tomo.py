@@ -40,15 +40,16 @@ def refractive_index_map(Nx):
 class AstraTomoWrapper:
     """
     Base class for wrappers for the Astra projectors.
-    """    
+    """
 
-    def __init__(self, obj, vol, angles, shifts=None, obj_is_refractive_index=False, mask_threshold=0):
+    def __init__(self, obj, vol, angles, shifts=None, obj_is_refractive_index=False, mask_threshold=0, downsample=1):
         self._obj = obj
-        self._vol = vol
+        self._vol = vol # downsampled volume
         self._angles = angles
         self._shifts_per_angle = shifts
         self._obj_is_rindex = obj_is_refractive_index
         self._mask_threshold = mask_threshold
+        self.downsample = downsample
         self._create_vol_geom_and_ids()
 
     def _create_proj_array_and_ids(self):
@@ -61,7 +62,7 @@ class AstraTomoWrapper:
         self._proj_id_imag = astra.data3d.create("-sino", self._proj_geom, self._proj_array.imag)
 
     def _create_proj_geometry(self):
-        raise NotImplementedError("Subclass needs to define this.") 
+        raise NotImplementedError("Subclass needs to define this.")
 
     def _create_vol_geom_and_ids(self):
         self._vol_geom = astra.create_vol_geom(self._vol.shape[0], self._vol.shape[1], self._vol.shape[2])
@@ -84,7 +85,7 @@ class AstraTomoWrapper:
 
         fig.suptitle(title)
         fig.colorbar(im1, ax=axes.ravel().tolist())
-        plt.show() 
+        plt.show()
 
     def plot_vol(self, vol, title=''):
         pshape = vol.shape[0]
@@ -146,16 +147,16 @@ class AstraTomoWrapper:
         fig.colorbar(im1, ax=axes.ravel().tolist())
         plt.show()
         plt.savefig('imag_vol_'+title+'.png')
-   
-   
+
+
     def plot_vol_only_recons(self, vol, iter, title=''):
         pshape = vol.shape[0]
         rmap = tu.refractive_index_map(pshape)
 
         R = np.real(vol)
         I = np.imag(vol)
-        pos_limit = max([np.max(R), np.max(I)])  
-        neg_limit = min([np.min(R), np.min(I)])  
+        pos_limit = max([np.max(R), np.max(I)])
+        neg_limit = min([np.min(R), np.min(I)])
         fig, axes = plt.subplots(ncols=3, nrows=2, figsize=(6,4), dpi=100)
         for i in range(3):
             for j in range(2):
@@ -204,12 +205,12 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
             #         'v.storage.center[0]':v.storage.center[0],
             #         'v.storage.center[1]':v.storage.center[1],
             #     })
-            
+
             # Apply shifts if they are provided
             if self._shifts_per_angle is not None:
                 shift_dx, shift_dy = self._shifts_per_angle[v.storageID]
                 corrected_shift_dx, corrected_shift_dy = shift_dx+10, shift_dy+10
-            
+
                 # Hardcoding v.storage.center with 220,220 - needed for real data
                 # FIXME: storage centre shouldn't be harcoded here
                 # The shifts are also only needed for working on real data
@@ -228,23 +229,23 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
             # center of detector
             self._vec[i,3] = x * np.cos(alpha)
             self._vec[i,4] = x * np.sin(alpha)
-            self._vec[i,5] = y 
-            
+            self._vec[i,5] = y
+
             # vector from detector pixel (0,0) to (0,1)
-            self._vec[i,6] = np.cos(alpha)
-            self._vec[i,7] = np.sin(alpha)
+            self._vec[i,6] = np.cos(alpha) / self.downsample
+            self._vec[i,7] = np.sin(alpha) / self.downsample
             self._vec[i,8] = 0
-            
+
             # vector from detector pixel (0,0) to (1,0)
             self._vec[i,9] = 0
             self._vec[i,10] = 0
-            self._vec[i,11] = 1
+            self._vec[i,11] = 1 / self.downsample
         #     i+=1
 
         # # Write geometry values to file
         # if not os.path.exists("/dls/science/users/iat69393/ptycho-tomo-project/coords_NEW2.csv"):
         #     keys = vals_to_save[0].keys()
-            
+
         #     with open('coords_NEW2.csv', 'w', newline='') as output_file:
         #         dict_writer = csv.DictWriter(output_file, keys)
         #         dict_writer.writeheader()
@@ -261,9 +262,9 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
         astra.data3d.delete(id)
 
 
-    def forward(self, input_vol, type = "FP3D_CUDA", iter=10, plot_one_view=False):
+    def forward(self, input_vol, type = "FP3D_CUDA", iter=10):
 
-        # This is done here because it depends on the pods that are 
+        # This is done here because it depends on the pods that are
         # active (mpi) at the time this function is called
         self._create_proj_geometry()
         self._create_proj_array_and_ids()
@@ -292,11 +293,11 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
 
         output_array = []
         for i, (k,v) in enumerate([(i,v) for i,v in self._obj.views.items() if v.pod.active]):
-            real_part = _ob_views_real[i] 
+            real_part = _ob_views_real[i]
             imag_part = _ob_views_imag[i]
             _obj = real_part + 1j * imag_part
             output_array.append(_obj)
-        
+
         # Delete these as we don't need them any more
         self._delete_data_at_id_astra(self._proj_id_real)
         self._delete_data_at_id_astra(self._proj_id_imag)
@@ -305,11 +306,11 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
 
     def backward(self, input_proj, type="BP3D_CUDA", iter=10):
 
-        # This is done here because it depends on the pods that are 
+        # This is done here because it depends on the pods that are
         # active (mpi) at the time this function is called
         self._create_proj_geometry()
         self._create_proj_array_and_ids()
-        
+
         self._update_data_at_id_astra(np.real(input_proj), self._proj_id_real)
         self._update_data_at_id_astra(np.imag(input_proj), self._proj_id_imag)
 
@@ -329,7 +330,7 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
         vol_real = astra.data3d.get(self._vol_id_real)
         vol_imag = astra.data3d.get(self._vol_id_imag)
         volume_update = vol_real + 1j * vol_imag
-        
+
         # Delete these as we don't need them any more
         self._delete_data_at_id_astra(self._proj_id_real)
         self._delete_data_at_id_astra(self._proj_id_imag)

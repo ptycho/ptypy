@@ -217,8 +217,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # Probe gradient
         self.pr_grad_new = None
 
-        # Tomography projector
+        # Tomography projectors
         self.projector = None
+        self.projector2 = None
 
         # View coverage
         self.coverage = None
@@ -229,6 +230,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.tmin_pr = None
         self.ML_model = None
         self.smooth_gradient = None
+        self.downsample = None
 
         self.omega = None
 
@@ -271,6 +273,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
         """
         super(MLPtychoTomo, self).engine_initialize()
 
+        # Start with 2 x downsampled volume
+        self.downsample = 2
+        self.pshape = int(self.pshape / self.downsample)
+
         # Initialise volume gradient and minimization direction              # OLD using containers
         self.rho_grad = np.zeros(3*(self.pshape,), dtype=np.complex64)       # self.ob.copy(self.ob.ID + '_grad', fill=0.)
         self.rho_grad_new = np.zeros(3*(self.pshape,), dtype=np.complex64)   # self.ob.copy(self.ob.ID + '_grad_new', fill=0.)
@@ -283,9 +289,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
         if self.p.init_vol_zero: # starting from zero volume
             rho_real = np.zeros(3*(self.pshape,), dtype=np.complex64)
             rho_imag = np.zeros(3*(self.pshape,), dtype=np.complex64)
-        else: # starting from given volume
-            rho_real = np.load(self.p.init_vol_real)
-            rho_imag = np.load(self.p.init_vol_imag)
+        # FIXME: allow passing in initial volume
+        #else: # starting from given volume
+        #    rho_real = np.load(self.p.init_vol_real)
+        #    rho_imag = np.load(self.p.init_vol_imag)
+        # FIXME: end allow passing in initial volume
         if self.p.init_vol_blur: # gaussian blur initial volume
             rho_real = gaussian_filter(rho_real, sigma=self.p.init_vol_blur_sigma)
             rho_imag = gaussian_filter(rho_imag, sigma=self.p.init_vol_blur_sigma)
@@ -328,15 +336,26 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # Initialise ASTRA projector for volume
         self.projector = AstraTomoWrapperViewBased (
             obj=self.ptycho.obj,
-            vol=self.rho,
+            vol=np.zeros(3*(self.pshape*self.downsample,), dtype=np.complex64),
             angles=self.angles_dict,
             shifts=self.shifts_per_angle,
             obj_is_refractive_index=False,
             mask_threshold=35
             )
 
-        # Initialise projected volume and update views
-        self.projected_rho = self.projector.forward(self.rho)
+        # Initialise 2 x downsampled ASTRA projector
+        self.projector2 = AstraTomoWrapperViewBased (
+            obj=self.ptycho.obj,
+            vol=self.rho,
+            angles=self.angles_dict,
+            shifts=self.shifts_per_angle,
+            obj_is_refractive_index=False,
+            mask_threshold=35,
+            downsample=2
+            )
+
+        # Initialise 2 x downsampled projected volume and update views
+        self.projected_rho = self.projector2.forward(self.rho)
         self.update_views()
 
         # Initialise ML noise model
@@ -381,7 +400,17 @@ class MLPtychoTomo(PositionCorrectionEngine):
         tg = 0.
         tc = 0.
         ta = time.time()
+        reset_cg = False
         for it in range(num):
+
+            # Switch to upsampled volume
+            if self.curiter == 24: # curiter starts at 0
+                self.downsample = 1
+                self.projector2.plot_vol(self.rho, title='before')
+                self.rho = self.projector.backward(np.moveaxis(self.projected_rho,1,0))
+                self.rho_h = np.zeros_like(self.rho, dtype=np.complex64)
+                self.projector.plot_vol(self.rho, title='after')
+                reset_cg = True # as rho gradients differ in size
 
             ########################
             # Compute new gradients
@@ -424,9 +453,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # bt_rho = bt_num_rho/bt_denom_rho
             # bt_pr = bt_num_pr/bt_denom_pr
             ############################
-            if self.curiter == 0:
+            if self.curiter == 0 or reset_cg:
                 bt_rho = 0.
                 bt_pr = 0.
+                reset_cg = False
             else:
                 # For the volume
                 bt_num_rho = u.norm2(new_rho_grad) - np.real(np.vdot(new_rho_grad.flat, self.rho_grad.flat))
@@ -693,8 +723,6 @@ class BaseModel(object):
         else:
             self.Irenorm = self.p.intensity_renormalization
 
-        self.projector = self.engine.projector
-
         if self.p.reg_del2:
             self.regularizer = Regul_del2(self.p.reg_del2_amplitude)
         else:
@@ -814,6 +842,13 @@ class GaussianModel(BaseModel):
         """
         self.rho_grad.fill(0.)
         self.pr_grad.fill(0.)
+
+        # Use correct downsampled projector and rho
+        if self.engine.downsample == 2:
+            self.projector = self.engine.projector2
+        else:
+            self.projector = self.engine.projector
+            self.rho = self.engine.rho # need downsampled rho (not a container)
 
         # We need an array for MPI
         LL = np.array([0.])
