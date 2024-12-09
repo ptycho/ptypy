@@ -1,0 +1,18 @@
+div.disclaimer {
+    /* background-color: #2c5d8a;
+    color: #f9eed0; */
+    text-align: left;
+}
+
+/* div.disclaimer a{
+    color: #d8b340;
+} */
+
+html[data-theme="light"] {
+    --pst-color-border: black;
+}
+
+html[data-theme="dark"] {
+    --pst-color-border: white;
+}
+
