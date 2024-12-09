@@ -25,7 +25,7 @@ from ..engines.base import BaseEngine, PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull
 from ..utils.tomo import AstraTomoWrapperViewBased
 from scipy.ndimage.filters import gaussian_filter
-from scipy.ndimage import shift
+from scipy.ndimage import shift, zoom
 from ..engines.utils import Cnorm2, Cdot, reduce_dimension
 
 
@@ -400,18 +400,14 @@ class MLPtychoTomo(PositionCorrectionEngine):
         tg = 0.
         tc = 0.
         ta = time.time()
-        reset_cg = False
         for it in range(num):
 
-            # Switch to upsampled volume
+            # Switch to upsampled volume, volume gradient, and volume step
             if self.curiter == 24: # curiter starts at 0
+                self.rho = zoom(self.rho, self.downsample)
+                self.rho_grad = zoom(self.rho_grad, self.downsample)
+                self.rho_h = zoom(self.rho_h, self.downsample)
                 self.downsample = 1
-                self.projector2.plot_vol(self.rho, title='before')
-                self.projected_rho = self.projector2.forward(self.rho) #FIXME: should this be updated in new_grad?
-                self.rho = self.projector.backward(np.moveaxis(self.projected_rho,1,0))
-                self.rho_h = np.zeros_like(self.rho, dtype=np.complex64)
-                self.projector.plot_vol(self.rho, title='after')
-                reset_cg = True # as rho gradients differ in size
 
             ########################
             # Compute new gradients
@@ -454,10 +450,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # bt_rho = bt_num_rho/bt_denom_rho
             # bt_pr = bt_num_pr/bt_denom_pr
             ############################
-            if self.curiter == 0 or reset_cg:
+            if self.curiter == 0:
                 bt_rho = 0.
                 bt_pr = 0.
-                reset_cg = False
             else:
                 # For the volume
                 bt_num_rho = u.norm2(new_rho_grad) - np.real(np.vdot(new_rho_grad.flat, self.rho_grad.flat))
