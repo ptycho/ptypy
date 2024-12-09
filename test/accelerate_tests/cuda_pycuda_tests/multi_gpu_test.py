@@ -13,7 +13,7 @@ if have_pycuda():
     from ptypy.accelerate.cuda_pycuda import multi_gpu as mgpu
     from ptypy.utils import parallel
 
-from pkg_resources import parse_version
+from packaging.version import parse
 
 class GpuDataTest(unittest.TestCase):
     """
@@ -51,8 +51,8 @@ class GpuDataTest(unittest.TestCase):
 
     @unittest.skipIf(parallel.rank != 0, "Only in MPI rank 0")
     def test_version(self):
-        v1 = parse_version("3.1.0")
-        v2 = parse_version(parse_version("3.1.0a").base_version)
+        v1 = parse("3.1.0")
+        v2 = parse(parse("3.1.0a").base_version)
 
         self.assertGreaterEqual(v2, v1)
 
