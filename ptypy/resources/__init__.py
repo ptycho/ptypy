@@ -1,15 +1,17 @@
-import pkg_resources
+from importlib.resources import files
 import numpy as np
 
-flowerfile = pkg_resources.resource_filename(__name__,'flowers.png')
-moonfile = pkg_resources.resource_filename(__name__,'moon.png')
-treefile = pkg_resources.resource_filename(__name__,'tree.png')
+_res_dir = files('ptypy.resources')
+flowerfile =  _res_dir / 'flowers.png'
+moonfile = _res_dir / 'moon.png'
+treefile = _res_dir / 'tree.png'
+
 
 def flower_obj(shape=None):
     from ptypy import utils as u
     import numpy as np
     from matplotlib.image import imread
-    
+
     im = u.rgb2complex(imread(flowerfile))
     if shape is not None:
         sh = u.expect2(shape)
@@ -37,7 +39,7 @@ def moon_pr(shape=None):
     from ptypy import utils as u
     import numpy as np
     from matplotlib.image import imread
-    
+
     im = u.rgb2complex(imread(moonfile))
     if shape is not None:
         sh = u.expect2(shape)

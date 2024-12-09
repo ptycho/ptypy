@@ -5,7 +5,7 @@ and if that doesn't work, uses host/device copies with regular MPI.
 
 Findings:
 
-1) NCCL works with unit tests, but not in the engines. It seems to 
+1) NCCL works with unit tests, but not in the engines. It seems to
 add something to the existing pycuda Context or create a new one,
 as a later event recording on an exit wave transfer fails with
 'ivalid resource handle' Cuda Error. This error typically happens if for example
@@ -22,14 +22,14 @@ Note that this is before any allreduce call - straight after initialising.
   - OpenMPI in a conda install needs to have the environment variable
   --> if cuda support isn't enabled, the application simply crashes with a seg fault
 
-4) For NCCL peer-to-peer transfers, the EXCLUSIVE compute mode cannot be used. 
+4) For NCCL peer-to-peer transfers, the EXCLUSIVE compute mode cannot be used.
    It should be in DEFAULT mode.
 
 5) NCCL support has been dropped from PyCUDA module, but can be used with CuPy module instead
 
 """
 
-from pkg_resources import parse_version
+from packaging.version import parse
 import numpy as np
 from pycuda import gpuarray
 import pycuda.driver as cuda
@@ -54,7 +54,7 @@ except ImportError:
 have_cuda_mpi = (mpi4py is not None) and \
     "OMPI_MCA_opal_cuda_support" in os.environ and \
     os.environ["OMPI_MCA_opal_cuda_support"] == "true" and \
-    parse_version(parse_version(mpi4py.__version__).base_version) >= parse_version("3.1.0") and \
+    parse(parse(mpi4py.__version__).base_version) >= parse("3.1.0") and \
     hasattr(gpuarray.GPUArray, '__cuda_array_interface__') and \
     not ('PTYPY_USE_MPI' in os.environ)
 
@@ -97,7 +97,7 @@ class MultiGpuCommunicatorCudaMpi(MultiGpuCommunicatorBase):
         if parallel.MPIenabled:
             comm = parallel.comm
             comm.Allreduce(parallel.MPI.IN_PLACE, arr)
-            
+
 
 # pick the appropriate communicator depending on installed packages
 def get_multi_gpu_communicator(use_cuda_mpi=True):

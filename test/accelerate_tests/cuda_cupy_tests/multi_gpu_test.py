@@ -11,7 +11,7 @@ if have_cupy():
     from ptypy.accelerate.cuda_cupy import multi_gpu as mgpu
     from ptypy.utils import parallel
 
-from pkg_resources import parse_version
+from packaging.version import parse
 
 class GpuDataTest(CupyCudaTest):
     """
@@ -36,8 +36,8 @@ class GpuDataTest(CupyCudaTest):
 
     @unittest.skipIf(parallel.rank != 0, "Only in MPI rank 0")
     def test_version(self):
-        v1 = parse_version("3.1.0")
-        v2 = parse_version(parse_version("3.1.0a").base_version)
+        v1 = parse("3.1.0")
+        v2 = parse(parse("3.1.0a").base_version)
 
         self.assertGreaterEqual(v2, v1)
 
@@ -61,7 +61,7 @@ class GpuDataTest(CupyCudaTest):
 
     def test_multigpu_auto(self):
         self.multigpu_tester(mgpu.get_multi_gpu_communicator())
-        
+
     def test_multigpu_mpi(self):
         self.multigpu_tester(mgpu.MultiGpuCommunicatorMpi())
 
