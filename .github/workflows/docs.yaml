@@ -72,7 +72,7 @@ jobs:
           mpi: mpich
 
       - name: Install Sphinx
-        run: pip install sphinx
+        run: pip install sphinx myst_parser
 
       - name: Install PtyPy
         run: pip install .[full]
