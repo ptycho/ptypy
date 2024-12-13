@@ -55,6 +55,7 @@ testpaths = [
   "test/ptyscan_tests",
   "test/template_tests",
   "test/util_tests",
+  "test/accelerate_tests/base_tests"
 ]
 
 # this is all BETA according to setuptools
