@@ -10,13 +10,23 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path('../..', 'ptypy').resolve()))
+sys.path.insert(0, str(Path(__file__).parent.resolve()))
+from _param_generator import generate_parameters_rst
 
-
-project = 'PtyPy'
-copyright = '2024, Pierre Thibault, Bjoern Enders, Benedikt Daurer and others'
+# Generate List of Parameters
+generate_parameters_rst("ptycho", outfile="ptycho.rst", title="Root/Ptycho (p)")
+generate_parameters_rst("io", outfile="io.rst", title="Input/Output (p.io)")
+generate_parameters_rst("scans", outfile="scans.rst", title="List of Scans (p.scans)")
+generate_parameters_rst("scan", outfile="scan.rst", title="Scan Definition (p.scans.scan_00)")
+generate_parameters_rst("scandata", outfile="scandata.rst", title="Scan Data Definition (p.scans.scan_00.data)")
+generate_parameters_rst("engines", outfile="engines.rst", title="List of Engines (p.engines)")
+generate_parameters_rst("engine", outfile="engine.rst", title="Engine Definition (p.engines.engine_00)")
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+
+project = 'PtyPy'
+copyright = '2024, Pierre Thibault, Bjoern Enders, Benedikt Daurer and others'
 
 extensions = [
     'sphinx.ext.autodoc',
@@ -26,7 +36,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
-    # 'sphinx.ext.linkcode',
+    'sphinx.ext.todo',
     'myst_parser',
 ]
 
@@ -41,6 +51,8 @@ rst_epilog = """
 autosummary_generate = True
 autodoc_mock_imports = ["cupy", "pycuda", "reikna", "hdf5plugin", "bitshuffle", "fabio", "swmr_tools"]
 
+todo_include_todos = True
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
@@ -49,6 +61,7 @@ html_static_path = ['_static']
 html_css_files = ["ptypy.css"]
 html_logo = '_static/logo_100px.png'
 html_favicon = '_static/ptypyicon.ico'
+html_show_sourcelink = False
 html_sidebars = {
     'overview': []
     }
