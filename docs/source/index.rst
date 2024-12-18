@@ -22,6 +22,7 @@ PtyPy Documentation Contents
    overview
    installation
    userguide/index
+   parameters/index
    reference/index
 
 
