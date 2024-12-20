@@ -29,3 +29,5 @@ ghostdriver*
 .ipynb_checkpoints
 .clang-format
 pip-wheel-metadata/
+.venv/
+docs/_build

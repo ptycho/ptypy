@@ -1,0 +1,52 @@
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        description: A tag for the docs artifact
+        required: true
+
+jobs:
+  build_new_docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PtyPy Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          check-latest: true
+
+      - name: Setup MPI
+        uses: mpi4py/setup-mpi@v1
+        with:
+          mpi: mpich
+
+      - name: Install Sphinx
+        run: pip install sphinx myst_parser
+
+      - name: Install PtyPy
+        run: pip install .[full]
+
+      - name: Install docs dependencies
+        run: pip install -r docs/requirements.txt
+
+      - name: Set Path to Sphinx Build
+        run: echo "SPHINXBUILD=`which sphinx-build`" >> $GITHUB_ENV
+
+      - name: Build Sphinx Documentation
+        working-directory: docs
+        run: make html
+
+      - name: Rename Build Directory
+        run: |
+          mkdir artifacts
+          mv docs/_build/html artifacts/${{ inputs.tag }}
+          
+      - name: Upload Docs Artifact
+        uses: actions/upload-artifact@v4.4.3
+        with:
+          name: docs-${{ inputs.tag }}
+          path: artifacts

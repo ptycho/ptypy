@@ -1,0 +1,35 @@
+on:
+  workflow_call:
+
+jobs:
+  publish_pages:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v5.0.0
+
+      - name: Download All Docs Artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          pattern: docs-*
+          merge-multiple: true
+          path: ./
+
+      - name: Fix File Permissions for Pages
+        run: |
+          chmod -R +rX .
+
+      - name: Upload Merged Artifact to Pages
+        uses: actions/upload-pages-artifact@v3.0.1
+        with:
+          path: ./
+
+      - name: Publish Docs to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4.0.5
