@@ -5,6 +5,8 @@ on:
     branches:
       - master
       - dev
+  release:
+    type: [published]
 
 jobs:
   legacy_docs:
@@ -17,8 +19,12 @@ jobs:
     with:
       tag: ${{ github.ref_name }}
 
-  github_pages:
+  switcher:
+    uses: ./.github/workflows/_switcher.yaml
     needs:
       - legacy_docs
       - new_docs
+
+  github_pages:
+    needs: switcher
     uses: ./.github/workflows/_github_pages.yaml

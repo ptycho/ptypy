@@ -14,7 +14,7 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5.0.0
 
-      - name: Download Latest Docs Artifact
+      - name: Download All Docs Artifact
         uses: actions/download-artifact@v4.1.8
         with:
           pattern: docs-*
