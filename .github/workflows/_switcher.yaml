@@ -1,0 +1,32 @@
+on:
+  workflow_call:
+
+jobs:
+  version_switcher:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PtyPy Code
+        uses: actions/checkout@v4
+
+      - name: Upload index.html as Artifact
+        uses: actions/upload-artifact@v4.4.3
+        with:
+          name: docs-index-html
+          path: .github/pages/index.html
+
+      - name: Download All Docs Artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          pattern: docs-*
+          merge-multiple: true
+          path: ./doc_versions
+
+      - name: Create Switcher File
+        run: python .github/pages/switcher.py ./doc_versions ${{ github.repository }} .github/pages/switcher.json
+
+      - name: Upload switcher.json as Artifact
+        uses: actions/upload-artifact@v4.4.3
+        with:
+          name: docs-switcher-json
+          path: .github/pages/switcher.json
+        
