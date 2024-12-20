@@ -79,6 +79,11 @@ html_theme_options = {
             "icon": "fa-solid fa-link ",
         },
     ],
+    "switcher": {
+        "json_url": "https://daurer.github.io/ptypy-new-docs/switcher.json",
+        "version_match": "master",
+    },
+    "navbar_start": ["navbar-logo", "version-switcher"]
 }
 
 
