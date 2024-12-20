@@ -79,7 +79,6 @@ html_theme_options = {
             "icon": "fa-solid fa-link ",
         },
     ],
-    "announcement": "https://daurer.github.io/ptypy-new-docs/docs/_static/banner.html",
 }
 
 
