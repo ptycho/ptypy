@@ -125,6 +125,67 @@ class GradientDescentKernelTest(unittest.TestCase):
         np.testing.assert_array_almost_equal(exp_fic, fic,
             err_msg="floating intensity coeff (fic) has not been updated as expected")
 
+    def test_make_a012_notb(self):
+        b_f, b_a, _, I, w, err_sum, addr = self.prepare_arrays()
+        fic = np.ones((I.shape[0],), dtype=I.dtype)
+        GDK=GradientDescentKernel(b_f, addr.shape[1])
+        GDK.allocate()
+        GDK.make_a012_notb(b_f, b_a, addr, I, fic)
+        #print('Imodel',repr(GDK.npy.Imodel))
+        #print('LLerr',repr(GDK.npy.LLerr))
+        #print('LLden',repr(GDK.npy.LLden))
+        exp_A0 = np.array([[[ 1.,  1.,  1.],
+        [ 2.,  2.,  2.],
+        [ 5.,  5.,  5.]],
+
+       [[12., 12., 12.],
+        [13., 13., 13.],
+        [16., 16., 16.]],
+
+       [[37., 37., 37.],
+        [38., 38., 38.],
+        [41., 41., 41.]],
+
+       [[ 0.,  0.,  0.],
+        [ 0.,  0.,  0.],
+        [ 0.,  0.,  0.]]], dtype=FLOAT_TYPE)
+        np.testing.assert_array_almost_equal(exp_A0, GDK.npy.Imodel,
+                                      err_msg="`Imodel` buffer (=A0) has not been updated as expected")
+        exp_A1 = np.array([[[ 0.,  0.,  0.],
+        [ 2.,  6., 10.],
+        [ 4., 12., 20.]],
+
+       [[ 0.,  0.,  0.],
+        [10., 14., 18.],
+        [20., 28., 36.]],
+
+       [[ 0.,  0.,  0.],
+        [18., 22., 26.],
+        [36., 44., 52.]],
+
+       [[ 0.,  0.,  0.],
+        [ 0.,  0.,  0.],
+        [ 0.,  0.,  0.]]], dtype=FLOAT_TYPE)
+        np.testing.assert_array_almost_equal(exp_A1, GDK.npy.LLerr,
+                                      err_msg="`LLerr` buffer (=A1) has not been updated as expected")
+        exp_A2 = np.array([[[ 0.,  4., 12.],
+        [ 4.,  8., 16.],
+        [12., 16., 24.]],
+
+       [[ 0., 12., 28.],
+        [12., 24., 40.],
+        [28., 40., 56.]],
+
+       [[ 0., 20., 44.],
+        [20., 40., 64.],
+        [44., 64., 88.]],
+
+       [[ 0.,  0.,  0.],
+        [ 0.,  0.,  0.],
+        [ 0.,  0.,  0.]]], dtype=FLOAT_TYPE)
+        print(GDK.npy.LLden)
+        np.testing.assert_array_almost_equal(exp_A2, GDK.npy.LLden,
+                                      err_msg="`LLden` buffer (=A2) has not been updated as expected")
 
     def test_make_a012(self):
         b_f, b_a, b_b, I, w, err_sum, addr = self.prepare_arrays()
