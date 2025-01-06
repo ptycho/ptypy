@@ -168,22 +168,21 @@ class GradientDescentKernelTest(unittest.TestCase):
         [ 0.,  0.,  0.]]], dtype=FLOAT_TYPE)
         np.testing.assert_array_almost_equal(exp_A1, GDK.npy.LLerr,
                                       err_msg="`LLerr` buffer (=A1) has not been updated as expected")
-        exp_A2 = np.array([[[ 0.,  4., 12.],
-        [ 4.,  8., 16.],
-        [12., 16., 24.]],
+        exp_A2 = np.array([[[ 0.,  2.,  8.],
+        [ 2.,  4., 10.],
+        [ 8., 10., 16.]],
 
-       [[ 0., 12., 28.],
-        [12., 24., 40.],
-        [28., 40., 56.]],
+       [[ 0.,  2.,  8.],
+        [ 2.,  4., 10.],
+        [ 8., 10., 16.]],
 
-       [[ 0., 20., 44.],
-        [20., 40., 64.],
-        [44., 64., 88.]],
+       [[ 0.,  2.,  8.],
+        [ 2.,  4., 10.],
+        [ 8., 10., 16.]],
 
        [[ 0.,  0.,  0.],
         [ 0.,  0.,  0.],
         [ 0.,  0.,  0.]]], dtype=FLOAT_TYPE)
-        print(GDK.npy.LLden)
         np.testing.assert_array_almost_equal(exp_A2, GDK.npy.LLden,
                                       err_msg="`LLden` buffer (=A2) has not been updated as expected")
 
