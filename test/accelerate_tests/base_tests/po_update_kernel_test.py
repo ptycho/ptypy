@@ -188,7 +188,7 @@ class PoUpdateKernelTest(unittest.TestCase):
                                       err_msg="The probe denominatorhas not been updated as expected")
 
     def test_pr_update_ML(self):
-        # setup  
+        # setup
         addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
 
         # test
@@ -243,7 +243,7 @@ class PoUpdateKernelTest(unittest.TestCase):
                                       err_msg="The object array has not been updated as expected")
 
     def test_pr_update_ML_wavefield(self):
-        # setup  
+        # setup
         addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
         probe_wavefield = np.empty_like(probe, dtype=FLOAT_TYPE)
 
@@ -269,18 +269,18 @@ class PoUpdateKernelTest(unittest.TestCase):
                                       err_msg="The probe has not been updated as expected")
 
         # assert
-        expected_probe_wavefield = np.array([[[625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
-                                              [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
-                                              [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
-                                              [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
-                                              [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j]],
+        expected_probe_wavefield = np.array([[[136., 138.4375, 136., 138.4375, 136.],
+                                              [138.4375, 136., 138.4375, 136., 138.4375],
+                                              [136., 138.4375, 136., 138.4375, 136.],
+                                              [138.4375, 136., 138.4375, 136., 138.4375],
+                                              [136., 138.4375, 136., 138.4375, 136.]],
 
-                                             [[786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
-                                              [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
-                                              [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
-                                              [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
-                                              [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j]]],
-                                            dtype=COMPLEX_TYPE)
+                                            [[138.4375, 136., 138.4375, 136., 138.4375],
+                                              [136., 138.4375, 136., 138.4375, 136.],
+                                              [138.4375, 136., 138.4375, 136., 138.4375],
+                                              [136., 138.4375, 136., 138.4375, 136.],
+                                              [138.4375, 136., 138.4375, 136., 138.4375]]],
+                                            dtype=FLOAT_TYPE)
         np.testing.assert_array_equal(probe_wavefield, expected_probe_wavefield,
                                       err_msg="The probe wavefield has not been updated as expected")
 
@@ -317,22 +317,22 @@ class PoUpdateKernelTest(unittest.TestCase):
 
         # assert
         expected_object_array_wavefield = np.array(
-            [[[29. + 1.j, 105. + 1.j, 105. + 1.j, 105. + 1.j, 105. + 1.j, 77. + 1.j, 1. + 1.j],
-              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
-              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
-              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
-              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
-              [125. + 1.j, 297. + 1.j, 297. + 1.j, 297. + 1.j, 297. + 1.j, 173. + 1.j, 1. + 1.j],
-              [1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j]],
+            [[[10., 22.4375, 20., 22.4375, 20., 12.4375,  0.],
+              [22.4375, 40., 42.4375, 40., 42.4375, 20., 2.4375],
+              [20., 42.4375, 40., 42.4375, 40., 22.4375, 0.],
+              [22.4375, 40., 42.4375, 40., 42.4375, 20., 2.4375],
+              [20., 42.4375, 40., 42.4375, 40., 22.4375,  0.],
+              [12.4375, 20., 22.4375, 20., 22.4375, 10., 2.4375],
+              [0., 2.4375, 0., 2.4375, 0., 2.4375, 0.]],
 
-             [[44. + 4.j, 132. + 4.j, 132. + 4.j, 132. + 4.j, 132. + 4.j, 92. + 4.j, 4. + 4.j],
-              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
-              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
-              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
-              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
-              [140. + 4.j, 324. + 4.j, 324. + 4.j, 324. + 4.j, 324. + 4.j, 188. + 4.j, 4. + 4.j],
-              [4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j]]],
-            dtype=COMPLEX_TYPE)
+            [[12.4375, 20., 22.4375, 20., 22.4375, 10., 2.4375],
+              [20., 42.4375, 40., 42.4375, 40., 22.4375, 0.],
+              [22.4375, 40., 42.4375, 40., 42.4375, 20., 2.4375],
+              [20., 42.4375, 40., 42.4375, 40., 22.4375, 0.],
+              [22.4375, 40., 42.4375, 40., 42.4375, 20., 2.4375],
+              [10., 22.4375, 20., 22.4375, 20., 12.4375, 0.],
+              [2.4375, 0., 2.4375, 0., 2.4375, 0., 2.4375]]],
+            dtype=FLOAT_TYPE)
         np.testing.assert_array_equal(object_array_wavefield, expected_object_array_wavefield,
                                       err_msg="The object array wavefield has not been updated as expected")
 
