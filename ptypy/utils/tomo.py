@@ -325,13 +325,10 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
 
         astra.algorithm.run(alg_id_real, iter)
         astra.algorithm.run(alg_id_imag, iter)
-
-        vol_real = astra.data3d.get(self._vol_id_real)
-        vol_imag = astra.data3d.get(self._vol_id_imag)
-        volume_update = vol_real + 1j * vol_imag
         
         # Delete these as we don't need them any more
         self._delete_data_at_id_astra(self._proj_id_real)
         self._delete_data_at_id_astra(self._proj_id_imag)
-        return volume_update
+        
+        return astra.data3d.get(self._vol_id_real) + 1j * astra.data3d.get(self._vol_id_imag)
 
