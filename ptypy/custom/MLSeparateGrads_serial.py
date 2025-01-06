@@ -536,7 +536,7 @@ class GaussianModel(BaseModelSerial):
             f[:] = FW(f)
             a[:] = FW(a)
 
-            GDK.make_a012(f, a, 0, addr, I, fic) # FIXME: need new kernel
+            GDK.make_a012_notb(f, a, addr, I, fic)
             GDK.fill_b(addr, Brenorm, w, B)
 
         parallel.allreduce(B)
@@ -596,7 +596,7 @@ def poly_line_coeffs_pr(self, c_pr_h):
             f[:] = FW(f)
             a[:] = FW(a)
 
-            GDK.make_a012(f, a, 0, addr, I, fic) # FIXME: need new kernel
+            GDK.make_a012_notb(f, a, addr, I, fic)
             GDK.fill_b(addr, Brenorm, w, B)
 
         parallel.allreduce(B)
