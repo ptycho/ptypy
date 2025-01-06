@@ -27,7 +27,7 @@ from ..utils.tomo import AstraTomoWrapperViewBased
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import shift
 from ..engines.utils import Cnorm2, Cdot, reduce_dimension
-
+from ptypy.core import View, Container, Storage, Base
 
 __all__ = ['MLPtychoTomo']
 
@@ -434,11 +434,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 if self.DEBUG:
                     print('bt_num_rho, bt_denom_rho: (%.2e, %.2e) ' % (bt_num_rho, bt_denom_rho))
 
-                # FIXME: this shouldn't be needed if we scale correctly
-                if bt_denom_rho == 0:
-                    bt_rho = 0
-                else:
-                    bt_rho = max(0, bt_num_rho/bt_denom_rho)
+                # # FIXME: this shouldn't be needed if we scale correctly #FIXED
+                bt_rho = max(0, bt_num_rho/bt_denom_rho)
 
                 # For the probe
                 bt_num_pr = Cnorm2(new_pr_grad) - np.real(Cdot(new_pr_grad, self.pr_grad))
@@ -830,10 +827,11 @@ class GaussianModel(BaseModel):
                     pod.object = self.projected_rho[i]
                     i+=1
 
-        # FIXME: this should be a container not a list
-        products_xi_psi_conj = []
+        # FIXME: this should be a container not a list  # DONE
+        prods_container = Container()
 
         # Outer loop: through diffraction patterns
+        counter = 0
         for dname, diff_view in self.di.views.items():
             if not diff_view.active:
                 continue
@@ -868,17 +866,29 @@ class GaussianModel(BaseModel):
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
                 expobj = np.exp(1j * pod.object)
                 self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
-                product_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.tot_power
+                prod_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.tot_power
                 if self.p.weight_gradient: # apply coverage mask
-                    product_xi_psi_conj *= self.coverage[pod.ob_view.slice[1:]]
-                products_xi_psi_conj.append(product_xi_psi_conj)
+                    prod_xi_psi_conj *= self.coverage[pod.ob_view.slice[1:]]
+
+                # At the first loop iteration, set the storage dimension
+                # This computation must be done here and not before the loop, otherwise does not work when using mpi
+                # (n_prods is sometimes 0 before the loop)
+                if counter==0:
+                    n_views_active = len([i for i in diff_view.pods.values() if i.active])
+                    n_pods_active = len([i for i in self.di.views.values() if i.active])
+                    n_prods = n_views_active * n_pods_active
+                    pshape = pod.probe.shape
+                    prods_storage = prods_container.new_storage(shape=(n_prods, pshape[0], pshape[1]))
+
+                prods_storage[counter] = prod_xi_psi_conj
+                counter += 1
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
             LL += LLL
 
         # Back project volume
-        self.rho_grad = 2 * self.projector.backward(np.moveaxis(np.array(products_xi_psi_conj), 1, 0))
+        self.rho_grad = 2 * self.projector.backward(np.moveaxis(prods_storage.data, 1, 0))
 
         # MPI reduction of gradients
         parallel.allreduce(self.rho_grad)
