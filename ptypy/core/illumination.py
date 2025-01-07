@@ -366,6 +366,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
             model *= np.sqrt(p.photons) / np.prod(s.shape)
     elif type(p.model) is np.ndarray:
         model = p.model
+        p.photons = None
     elif p.model in resources.probes:
         model = resources.probes[p.model](s.shape)
     elif str(p.model) == 'recon':
