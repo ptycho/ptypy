@@ -14,7 +14,7 @@ This file is part of the PTYPY package.
 import numpy as np
 from pycuda import gpuarray
 import pycuda.driver as cuda
-import pycuda.cumath
+import pycuda.cumath as cm
 
 from ptypy.engines import register
 from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
@@ -279,7 +279,7 @@ class ML_pycuda(ML_serial):
         # Wavefield preconditioner for the object
         if self.p.wavefield_precond:
             for name, s in new_ob_grad.storages.items():
-                s.gpu /= sqrt(self.ob_fln.storages[name].gpu
+                s.gpu /= cm.sqrt(self.ob_fln.storages[name].gpu
                               + self.p.wavefield_delta_object)
 
         # Smoothing preconditioner
@@ -304,7 +304,7 @@ class ML_pycuda(ML_serial):
         # Wavefield preconditioner for the probe
         if self.p.wavefield_precond:
             for name, s in new_pr_grad.storages.items():
-                s.gpu /= sqrt(self.pr_fln.storages[name].gpu
+                s.gpu /= cm.sqrt(self.pr_fln.storages[name].gpu
                               + self.p.wavefield_delta_probe)
 
         return self._replace_grad(self.pr_grad , new_pr_grad)
