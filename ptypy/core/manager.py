@@ -1130,18 +1130,26 @@ class _Full(object):
             # Bypass additional tests if input is a string (previous reconstruction)
             if illu_pars != str(illu_pars):
 
-                # if photon count is None, assign a number from the stats.
                 phot = illu_pars.get('photons')
                 phot_max = self.diff.max_power
-
-                if phot is None:
+                if phot == 'maxdiff':
+                    # probe intensity to be scaled to the brightest diffraction pattern
                     logger.info(
-                        'Found no photon count for probe in parameters.\nUsing photon count %.2e from photon report' % phot_max)
+                        'Probe intensity is being rescaled to match the brightest diffraction pattern.\nUsing photon count %.2e from photon report' % phot_max)
                     illu_pars['photons'] = phot_max
-                elif np.abs(np.log10(phot) - np.log10(phot_max)) > 1:
-                    logger.warning(
-                        'Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' % (
-                        phot, phot_max))
+                elif phot is None:
+                    # probe intensity to remain untouched
+                    pass
+                elif (type(phot) is int) or (type(phot) is float):
+                    # probe intensity to be scaled to a specific value
+                    if phot < 0:
+                        logger.warning(
+                            f'Given photon count is negative. Using the absolute of the given value: {-1 * phot:.2e}')
+                        phot = -1 * phot
+                    if np.abs(np.log10(phot) - np.log10(phot_max)) > 1:
+                        logger.warning(
+                            'Photon count from input parameters (%.2e) differs from statistics (%.2e) by more than a magnitude' % (
+                            phot, phot_max))
 
                 if (self.p.coherence.num_probe_modes > 1) and (type(illu_pars) is not np.ndarray):
 
