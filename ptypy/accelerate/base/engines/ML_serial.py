@@ -166,8 +166,8 @@ class ML_serial(ML):
         # Wavefield preconditioner for the object
         if self.p.wavefield_precond:
             for name, s in new_ob_grad.storages.items():
-                new_ob_grad.storages[name].data /= np.sqrt(self.ob_fln.storages[name].data 
-                                                           + self.p.wavefield_delta_object)
+                s.data /= np.sqrt(self.ob_fln.storages[name].data
+                                  + self.p.wavefield_delta_object)
 
         # Smoothing preconditioner
         if self.smooth_gradient:
@@ -191,11 +191,11 @@ class ML_serial(ML):
         else:
             new_pr_grad.fill(0.)
 
-         # Wavefield preconditioner for the probe
+        # Wavefield preconditioner for the probe
         if self.p.wavefield_precond:
             for name, s in new_pr_grad.storages.items():
-                new_pr_grad.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data 
-                                                           + self.p.wavefield_delta_probe)
+                s.data /= np.sqrt(self.pr_fln.storages[name].data
+                                  + self.p.wavefield_delta_probe)
 
         norm = Cnorm2(new_pr_grad)
         dot = np.real(Cdot(new_pr_grad, self.pr_grad))
@@ -261,11 +261,11 @@ class ML_serial(ML):
             if self.p.wavefield_precond:
                 for name, s in self.ob_h.storages.items():
                     if self.smooth_gradient:
-                        s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data 
+                        s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data
                                       / np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
                                       , self.smooth_gradient.sigma)
                     else:
-                        s.data[:] -= (self.ob_grad.storages[name].data 
+                        s.data[:] -= (self.ob_grad.storages[name].data
                                       / np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object))
             # Smoothing preconditioner for the object
             if self.smooth_gradient:
@@ -279,7 +279,7 @@ class ML_serial(ML):
             # Wavefield preconditioner for the probe
             if self.p.wavefield_precond:
                 for name, s in self.pr_h.storages.items():
-                    s.data[:] -= (self.pr_grad.storages[name].data 
+                    s.data[:] -= (self.pr_grad.storages[name].data
                                   / np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe))
             else:
                 self.pr_h -= self.pr_grad
@@ -481,7 +481,7 @@ class GaussianModel(BaseModelSerial):
             # local references
             ob = self.engine.ob.S[oID].data
             obg = ob_grad.S[oID].data
-            obf = ob_fln.S[oID].data 
+            obf = ob_fln.S[oID].data
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
             prf = pr_fln.S[pID].data

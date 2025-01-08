@@ -275,6 +275,13 @@ class ML_pycuda(ML_serial):
 
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new
+
+        # Wavefield preconditioner for the object
+        if self.p.wavefield_precond:
+            for name, s in new_ob_grad.storages.items():
+                s.gpu /= sqrt(self.ob_fln.storages[name].gpu
+                              + self.p.wavefield_delta_object)
+
         # Smoothing preconditioner
         if self.smooth_gradient:
             self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
@@ -285,13 +292,20 @@ class ML_pycuda(ML_serial):
 
     def _replace_pr_grad(self):
         new_pr_grad = self.pr_grad_new
-        # probe support
+
+        # Probe support
         if self.p.probe_update_start <= self.curiter:
             # Apply probe support if needed
             for name, s in new_pr_grad.storages.items():
                 self.support_constraint(s)
         else:
             new_pr_grad.fill(0.)
+
+        # Wavefield preconditioner for the probe
+        if self.p.wavefield_precond:
+            for name, s in new_pr_grad.storages.items():
+                s.gpu /= sqrt(self.pr_fln.storages[name].gpu
+                              + self.p.wavefield_delta_probe)
 
         return self._replace_grad(self.pr_grad , new_pr_grad)
 
@@ -485,6 +499,12 @@ class GaussianModel(BaseModelSerial):
         qu_htod = self.engine.qu_htod
         queue = self.engine.queue
 
+        if self.engine.p.wavefield_precond:
+            ob_fln = self.engine.ob_fln
+            pr_fln = self.engine.pr_fln
+            ob_fln << 0.
+            pr_fln << 0.
+
         self.engine._set_pr_ob_ref_for_data('gpu')
         ob_grad << 0.
         pr_grad << 0.
@@ -516,8 +536,10 @@ class GaussianModel(BaseModelSerial):
             # local references
             ob = self.engine.ob.S[oID].data
             obg = ob_grad.S[oID].data
+            obf = ob_fln.S[oID].data
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
+            prf = pr_fln.S[pID].data
 
             # Schedule w & I to device
             ev_w, w, data_w = self.engine.w_data.to_gpu(prep.weights, dID, qu_htod)
@@ -545,11 +567,17 @@ class GaussianModel(BaseModelSerial):
 
             use_atomics = self.p.object_update_cuda_atomics
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
-            POK.ob_update_ML(addr, obg, pr, aux, atomics=use_atomics)
+            if self.engine.p.wavefield_precond:
+                POK.ob_update_ML_wavefield(addr, obg, obf, pr, aux, atomics=use_atomics)
+            else:
+                POK.ob_update_ML(addr, obg, pr, aux, atomics=use_atomics)
 
             use_atomics = self.p.probe_update_cuda_atomics
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
-            POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
+            if self.engine.p.wavefield_precond:
+                POK.pr_update_ML_wavefield(addr, prg, prf, ob, aux, atomics=use_atomics)
+            else:
+                POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
 
         queue.synchronize()
         self.engine.dID_list.reverse()
@@ -571,10 +599,18 @@ class GaussianModel(BaseModelSerial):
             s.gpu.get(s.cpu)
         for s in pr_grad.S.values():
             s.gpu.get(s.cpu)
+        if self.engine.p.wavefield_precond:
+            for s in ob_fln.S.values():
+                s.gpu.get(out=s.cpu)
+            for s in pr_fln.S.values():
+                s.gpu.get(out=s.cpu)
         self.engine._set_pr_ob_ref_for_data('cpu')
 
         ob_grad.allreduce()
         pr_grad.allreduce()
+        if self.engine.p.wavefield_precond:
+            ob_fln.allreduce()
+            pr_fln.allreduce()
         parallel.allreduce(LL)
 
         # HtoD cause we continue on gpu
@@ -582,6 +618,11 @@ class GaussianModel(BaseModelSerial):
             s.gpu.set(s.cpu)
         for s in pr_grad.S.values():
             s.gpu.set(s.cpu)
+        if self.engine.p.wavefield_precond:
+            for s in ob_fln.S.values():
+                s.gpu.set(s.cpu)
+            for s in pr_fln.S.values():
+                s.gpu.set(s.cpu)
         self.engine._set_pr_ob_ref_for_data('gpu')
 
         # Object regularizer
