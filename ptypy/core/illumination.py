@@ -365,7 +365,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
 
     if p.model is None:
         model = np.ones(s.shape, s.dtype)
-        if p.photons is not None:
+        if (type(p.photons) is int) or (type(p.photons) is float):
             model *= np.sqrt(p.photons) / np.prod(s.shape)
     elif type(p.model) is np.ndarray:
         model = p.model
