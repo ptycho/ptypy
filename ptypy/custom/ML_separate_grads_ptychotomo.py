@@ -271,10 +271,17 @@ class MLPtychoTomo(PositionCorrectionEngine):
         """
         super(MLPtychoTomo, self).engine_initialize()
 
-        # Initialise volume gradient and minimization direction              # OLD using containers
-        self.rho_grad = np.zeros(3*(self.pshape,), dtype=np.complex64)       # self.ob.copy(self.ob.ID + '_grad', fill=0.)
-        self.rho_grad_new = np.zeros(3*(self.pshape,), dtype=np.complex64)   # self.ob.copy(self.ob.ID + '_grad_new', fill=0.)
-        self.rho_h = np.zeros(3*(self.pshape,), dtype=np.complex64)          # self.ob.copy(self.ob.ID + '_h', fill=0.)
+        # Initialise volume gradient and minimization direction
+        # should self.rho be created somewhere else as a Container and these be copies of that?
+        self.rho_grad = Container()
+        self.rho_grad_new = Container()
+        self.rho_h = Container()
+        # Will need to figure out IDs and why things break when they are different
+        # Note: IDs in lnext 2 lines need to be the same otherwise Cdot in line 448 does not work 
+        # Note2: IDs get an "S" added before the string
+        self.rho_grad.new_storage(ID="_rho", shape=(3*(self.pshape,)))
+        self.rho_grad_new.new_storage(ID="_rho", shape=(3*(self.pshape,)))
+        self.rho_h.new_storage(ID="_rho", shape=(3*(self.pshape,)))
 
         # This is needed in poly_line_coeffs_rho
         self.omega = self.ex
@@ -289,7 +296,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
         if self.p.init_vol_blur: # gaussian blur initial volume
             rho_real = gaussian_filter(rho_real, sigma=self.p.init_vol_blur_sigma)
             rho_imag = gaussian_filter(rho_imag, sigma=self.p.init_vol_blur_sigma)
-        self.rho = rho_real + 1j * rho_imag
+        
+        # Initialise volume rho as container
+        self.rho = Container()
+        self.rho.new_storage(ID="_rho", shape=(3*(self.pshape,)))
+        self.rho.fill(rho_real + 1j * rho_imag)
 
         # Initialise coverage mask
         if self.p.weight_gradient:
@@ -328,7 +339,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # Initialise ASTRA projector for volume
         self.projector = AstraTomoWrapperViewBased (
             obj=self.ptycho.obj,
-            vol=self.rho,
+            vol=self.rho.storages['S_rho'].data,
             angles=self.angles_dict,
             shifts=self.shifts_per_angle,
             obj_is_refractive_index=False,
@@ -336,7 +347,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             )
 
         # Initialise projected volume and update views
-        self.projected_rho = self.projector.forward(self.rho)
+        self.projected_rho = self.projector.forward(self.rho.storages['S_rho'].data)
         self.update_views()
 
         # Initialise ML noise model
@@ -395,8 +406,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
             new_rho_grad, new_pr_grad = self.rho_grad_new, self.pr_grad_new
 
             if self.DEBUG:
-                print('rho_grad: %.2e' % np.linalg.norm(self.rho_grad))
-                print('new_rho_grad: %.2e ' % np.linalg.norm(new_rho_grad))
+                print('rho_grad: %.2e' % np.sqrt(Cnorm2(self.rho_grad)))
+                print('new_rho_grad: %.2e ' % np.sqrt(Cnorm2(new_rho_grad)))
                 print('pr_grad: %.2e ' % np.sqrt(Cnorm2(self.pr_grad)))
                 print('new_pr_grad: %.2e ' % np.sqrt(Cnorm2(new_pr_grad)))
 
@@ -417,7 +428,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # Smoothing preconditioner for the volume
             if self.smooth_gradient:
                 self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
-                new_rho_grad = self.smooth_gradient(new_rho_grad)
+                new_rho_grad_data = self.smooth_gradient(new_rho_grad.storages['S_rho'].data)
+                new_rho_grad.fill(new_rho_grad_data)
 
             ############################
             # Compute Polak-Ribiere betas
@@ -429,8 +441,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 bt_pr = 0.
             else:
                 # For the volume
-                bt_num_rho = u.norm2(new_rho_grad) - np.real(np.vdot(new_rho_grad.flat, self.rho_grad.flat))
-                bt_denom_rho = u.norm2(self.rho_grad)
+                bt_num_rho = Cnorm2(new_rho_grad) - np.real(Cdot(new_rho_grad, self.rho_grad))
+                bt_denom_rho = Cnorm2(self.rho_grad)
                 if self.DEBUG:
                     print('bt_num_rho, bt_denom_rho: (%.2e, %.2e) ' % (bt_num_rho, bt_denom_rho))
 
@@ -442,7 +454,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 bt_denom_pr = Cnorm2(self.pr_grad)
                 bt_pr = max(0, bt_num_pr/bt_denom_pr)
 
-            self.rho_grad = new_rho_grad.copy() # not a container
+            self.rho_grad << new_rho_grad
             self.pr_grad << new_pr_grad
 
             ############################
@@ -459,7 +471,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
             # Smoothing preconditioner for the volume
             if self.smooth_gradient:
-                self.rho_h -= self.smooth_gradient(self.rho_grad)
+                self.rho_h -= self.smooth_gradient(self.rho_grad.storages['S_rho'].data)
             else:
                 self.rho_h -= self.rho_grad
 
@@ -531,7 +543,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # Get SLURM Job ID
                 sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
             # Saving volumes when running Toy Problem (saves to png)
-                self.projector.plot_vol(self.rho, title= '200iters_'+sid)
+                self.projector.plot_vol(self.rho.storages['S_rho'].data, title= '200iters_'+sid)
             # Saving volumes when running Real Data (saves to cmap)
             #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it200_"+sid+".cmap", "w") as f:
             #        f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
@@ -817,7 +829,7 @@ class GaussianModel(BaseModel):
         error_dct = {}
 
         # Forward project volume
-        self.projected_rho = self.projector.forward(self.rho)
+        self.projected_rho = self.projector.forward(self.rho.storages['S_rho'].data)
 
         # Get refractive index per view
         i = 0
@@ -872,7 +884,7 @@ class GaussianModel(BaseModel):
 
                 # At the first loop iteration, set the storage dimension
                 # This computation must be done here and not before the loop, otherwise does not work when using mpi
-                # (n_prods is sometimes 0 before the loop)
+                # (n_prods is sometimes 0 before the loop, when using mpi)
                 if counter==0:
                     n_views_active = len([i for i in diff_view.pods.values() if i.active])
                     n_pods_active = len([i for i in self.di.views.values() if i.active])
@@ -887,31 +899,27 @@ class GaussianModel(BaseModel):
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
             LL += LLL
 
+        # Probably needed
+        del prods_container
+
         # Back project volume
-        self.rho_grad = 2 * self.projector.backward(np.moveaxis(prods_storage.data, 1, 0))
+        self.rho_grad.fill(2 * self.projector.backward(np.moveaxis(prods_storage.data, 1, 0)))
 
         # MPI reduction of gradients
-        parallel.allreduce(self.rho_grad)
+        self.rho_grad.allreduce()
         self.pr_grad.allreduce()
         parallel.allreduce(LL)
 
         # Volume regularizer
         if self.regularizer:
-            # OLD using containers
-            # for name, s in self.ob.storages.items():
-            #     self.rho_grad.storages[name].data += self.regularizer.grad(
-            #         s.data)
-
             # add volume regularizer gradient and regularizer log-likelihood
-            self.rho_grad += self.regularizer.grad(self.rho)
+            for name, s in self.rho.storages.items():
+                self.rho_grad.storages[name].data += self.regularizer.grad(
+                    s.data)
             LL += self.regularizer.LL
 
         self.LL = LL / self.tot_measpts
 
-        # FIXME: it is bizarre that this is actually needed
-        # FIXME: is it because we are not using containers?
-        self.engine.rho_grad_new = self.rho_grad
-        #print('DEBUG rho_grad: %.2e ' % np.linalg.norm(self.rho_grad))
 
         return error_dct
 
@@ -925,7 +933,7 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Forward project volume minimization direction
-        omega = np.array(self.projector.forward(rho_h))
+        omega = np.array(self.projector.forward(rho_h.storages['S_rho'].data))
 
         # Store omega (so that we can use it later) and multiply it by the required 1j
         for i, (k,ov) in enumerate([(i,v) for i,v in self.omega.views.items() if v.pod.active]):
@@ -982,11 +990,9 @@ class GaussianModel(BaseModel):
 
         # Volume regularizer
         if self.regularizer:
-            # OLD using containers
-            # for name, s in self.ob.storages.items():
-            #     B += Brenorm * self.regularizer.poly_line_coeffs(
-            #         ob_h.storages[name].data, s.data)
-            B += Brenorm * self.regularizer.poly_line_coeffs(rho_h, self.rho)
+            for name, s in self.rho.storages.items():
+                B += Brenorm * self.regularizer.poly_line_coeffs(
+                    rho_h.storages[name].data, s.data)
 
         if np.isinf(B).any() or np.isnan(B).any():
             logger.warning(
@@ -1008,7 +1014,7 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Forward project volume minimization direction
-        omega = np.array(self.projector.forward(rho_h))
+        omega = np.array(self.projector.forward(rho_h.storages['S_rho'].data))
 
         # Store omega (so that we can use it later) and multiply it by the required 1j
         for i, (k,ov) in enumerate([(i,v) for i,v in self.omega.views.items() if v.pod.active]):
@@ -1066,11 +1072,9 @@ class GaussianModel(BaseModel):
 
         # Volume regularizer
         if self.regularizer:
-            # OLD using containers
-            # for name, s in self.ob.storages.items():
-            #     B += Brenorm * self.regularizer.poly_line_coeffs(
-            #         ob_h.storages[name].data, s.data)
-            B += Brenorm * self.regularizer.poly_line_coeffs(rho_h, self.rho)
+            for name, s in self.rho.storages.items():
+                B += Brenorm * self.regularizer.poly_line_coeffs(
+                    rho_h.storages[name].data, s.data)
 
         if np.isinf(B).any() or np.isnan(B).any():
             logger.warning(
