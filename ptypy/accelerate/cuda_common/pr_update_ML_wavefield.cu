@@ -62,8 +62,8 @@ extern "C"
 
         atomicAdd(&probe[b * F + c], add_val);
 
-        complex<MATH_TYPE> add_val_m2 = conj(obj_val) * obj_val;
-        complex<OUT_TYPE> add_val2 = add_val_m2;
+        MATH_TYPE add_val_m2 = conj(obj_val) * obj_val;
+        OUT_TYPE add_val2 = add_val_m2;
 
         atomicAdd(&probe_fln[b * F + c], add_val2);
       }
