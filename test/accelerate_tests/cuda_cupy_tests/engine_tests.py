@@ -71,13 +71,13 @@ class MLCupyTest(unittest.TestCase):
         RMSE_ob = (np.mean(np.abs(OBJ_ML_cupy - OBJ_ML_serial)**2))
         RMSE_pr = (np.mean(np.abs(PRB_ML_cupy - PRB_ML_serial)**2))
         # RMSE_LL = (np.mean(np.abs(LL_ML_serial - LL_ML)**2))
-        np.testing.assert_allclose(RMSE_ob, 0.0, atol=1e-2, 
+        np.testing.assert_allclose(RMSE_ob, 0.0, atol=1e-2,
                                     err_msg="The object arrays are not matching as expected")
-        np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-2, 
+        np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-2,
                                     err_msg="The object arrays are not matching as expected")
         # np.testing.assert_allclose(RMSE_LL, 0.0, atol=1e-7,
         #                             err_msg="The log-likelihood errors are not matching as expected")
-    
+
     def test_ML_cupy_base(self):
         out = []
         for eng in ["ML_serial", "ML_cupy"]:
@@ -147,6 +147,25 @@ class MLCupyTest(unittest.TestCase):
             engine_params.smooth_gradient = 20
             engine_params.smooth_gradient_decay = 1/10.
             engine_params.scale_precond = False
+            out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+        self.check_engine_output(out, plotting=False, debug=False)
+
+    def test_ML_cupy_wavefield_preconditioner(self):
+        out = []
+        for eng in ["ML_serial", "ML_cupy"]:
+            engine_params = u.Param()
+            engine_params.name = eng
+            engine_params.numiter = 200
+            engine_params.floating_intensities = False
+            engine_params.reg_del2 = False
+            engine_params.reg_del2_amplitude = 1.
+            engine_params.smooth_gradient = 0
+            engine_params.smooth_gradient_decay = 0.
+            engine_params.scale_precond = False
+            engine_params.wavefield_precond = True
+            engine_params.wavefield_delta_object = 0.1
+            engine_params.wavefield_delta_probe = 0.1
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)
