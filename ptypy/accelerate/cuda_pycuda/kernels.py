@@ -1059,7 +1059,6 @@ class PoUpdateKernel(ab.PoUpdateKernel):
 
     def ob_update_ML_wavefield(self, addr, ob, of, pr, ex, fac=2.0, atomics=True):
         obsh = [np.int32(ax) for ax in ob.shape]
-        ofsh = [np.int32(ax) for ax in of.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
         exsh = [np.int32(ax) for ax in ex.shape]
 
@@ -1071,7 +1070,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             self.ob_update_ML_wavefield_cuda(ex, num_pods, exsh[1], exsh[2],
                                              pr, prsh[0], prsh[1], prsh[2],
                                              ob, obsh[0], obsh[1], obsh[2],
-                                             of, ofsh[0], ofsh[1], ofsh[2],
+                                             of,
                                              addr,
                                              np.float32(fac) if ex.dtype == np.complex64 else np.float64(fac),
                                              block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
@@ -1097,7 +1096,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                               np.int32(ex.shape[0]),
                                               np.int32(ex.shape[1]),
                                               np.int32(ex.shape[2]),
-                                              ob, of, pr, ex, addr,
+                                              ob, pr, ex, of, addr,
                                               np.float32(fac) if ex.dtype == np.complex64 else np.float64(fac),
                                               block=(16, 16, 1), grid=grid, stream=self.queue)
 
@@ -1140,15 +1139,14 @@ class PoUpdateKernel(ab.PoUpdateKernel):
     def pr_update_ML_wavefield(self, addr, pr, pf, ob, ex, fac=2.0, atomics=False):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
-        pfsh = [np.int32(ax) for ax in pf.shape]
         if atomics:
             if addr.shape[3] != 3 or addr.shape[2] != 5:
                 raise ValueError('Address not in required shape for tiled pr_update')
             num_pods = np.int32(addr.shape[0] * addr.shape[1])
             self.pr_update_ML_wavefield_cuda(ex, num_pods, prsh[1], prsh[2],
                                           pr, prsh[0], prsh[1], prsh[2],
-                                          pf, pfsh[0], pfsh[1], pfsh[2],
                                           ob, obsh[0], obsh[1], obsh[2],
+                                          pf,
                                           addr,
                                           np.float32(fac) if ex.dtype == np.complex64 else np.float64(fac),
                                           block=(32, 32, 1), grid=(int(num_pods), 1, 1), stream=self.queue)
@@ -1171,7 +1169,7 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             grid = (grid[0], grid[1], int(1))
             self.pr_update2_ML_wavefield_cuda(prsh[-1], obsh[-2], obsh[-1],
                                            prsh[0], obsh[0], num_pods,
-                                           pr, pf, ob, ex, addr,
+                                           pr, ob, ex, pf, addr,
                                            np.float32(fac) if ex.dtype == np.complex64 else np.float64(fac),
                                            block=(16, 16, 1), grid=grid, stream=self.queue)
 
