@@ -648,6 +648,126 @@ class PoUpdateKernelTest(PyCudaTest):
     def test_ob_update_ML_tiled_REGRESSION(self):
         self.ob_update_ML_tester(False)
 
+    def pr_update_ML_wavefield_tester(self, atomics=False):
+        '''
+        setup
+        '''
+        addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
+        probe_wavefield = gpuarray.to_gpu(np.empty_like(probe, dtype=FLOAT_TYPE))
+        '''
+        test
+        '''
+        POUK = PoUpdateKernel()
+
+        POUK.allocate()  # this doesn't do anything, but is the call pattern.
+
+        if not atomics:
+            addr2 = np.ascontiguousarray(np.transpose(addr.get(), (2, 3, 0, 1)))
+            addr = gpuarray.to_gpu(addr2)
+
+        POUK.pr_update_ML_wavefield(addr, probe, probe_wavefield, object_array, exit_wave, atomics=atomics)
+
+        expected_probe = np.array([[[625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                    [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                    [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                    [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j],
+                                    [625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j, 625. + 1.j]],
+
+                                   [[786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                    [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                    [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                    [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j],
+                                    [786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j, 786. + 2.j]]],
+                                  dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(probe.get(), expected_probe,
+                                      err_msg="The probe has not been updated as expected")
+
+        expected_probe_wavefield = np.array([[[136., 138.4375, 136., 138.4375, 136.],
+                                              [138.4375, 136., 138.4375, 136., 138.4375],
+                                              [136., 138.4375, 136., 138.4375, 136.],
+                                              [138.4375, 136., 138.4375, 136., 138.4375],
+                                              [136., 138.4375, 136., 138.4375, 136.]],
+
+                                            [[138.4375, 136., 138.4375, 136., 138.4375],
+                                              [136., 138.4375, 136., 138.4375, 136.],
+                                              [138.4375, 136., 138.4375, 136., 138.4375],
+                                              [136., 138.4375, 136., 138.4375, 136.],
+                                              [138.4375, 136., 138.4375, 136., 138.4375]]],
+                                            dtype=FLOAT_TYPE)
+        np.testing.assert_array_equal(probe_wavefield.get(), expected_probe_wavefield,
+                                      err_msg="The probe wavefield has not been updated as expected")
+
+    def test_pr_update_ML_wavefield_atomics_REGRESSION(self):
+        self.pr_update_ML_wavefield_tester(True)
+
+    def test_pr_update_ML_wavefield_tiled_REGRESSION(self):
+        self.pr_update_ML_wavefield_tester(False)
+
+    def ob_update_ML_wavefield_tester(self, atomics=True):
+        '''
+        setup
+        '''
+        addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
+        object_array_wavefield = gpuarray.to_gpu(np.empty_like(object_array, dtype=FLOAT_TYPE))
+        '''
+        test
+        '''
+        POUK = PoUpdateKernel()
+
+        POUK.allocate()  # this doesn't do anything, but is the call pattern.
+
+        if not atomics:
+            addr2 = np.ascontiguousarray(np.transpose(addr.get(), (2, 3, 0, 1)))
+            addr = gpuarray.to_gpu(addr2)
+
+        POUK.ob_update_ML_wavefield(addr, object_array, object_array_wavefield, probe, exit_wave, atomics=atomics)
+
+        expected_object_array = np.array(
+            [[[29. + 1.j, 105. + 1.j, 105. + 1.j, 105. + 1.j, 105. + 1.j, 77. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [153. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 401. + 1.j, 249. + 1.j, 1. + 1.j],
+              [125. + 1.j, 297. + 1.j, 297. + 1.j, 297. + 1.j, 297. + 1.j, 173. + 1.j, 1. + 1.j],
+              [1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j, 1. + 1.j]],
+
+             [[44. + 4.j, 132. + 4.j, 132. + 4.j, 132. + 4.j, 132. + 4.j, 92. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [180. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 452. + 4.j, 276. + 4.j, 4. + 4.j],
+              [140. + 4.j, 324. + 4.j, 324. + 4.j, 324. + 4.j, 324. + 4.j, 188. + 4.j, 4. + 4.j],
+              [4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j, 4. + 4.j]]],
+            dtype=COMPLEX_TYPE)
+        np.testing.assert_array_equal(object_array.get(), expected_object_array,
+                                      err_msg="The object array has not been updated as expected")
+
+        expected_object_array_wavefield = np.array(
+            [[[10., 22.4375, 20., 22.4375, 20., 12.4375,  0.],
+              [22.4375, 40., 42.4375, 40., 42.4375, 20., 2.4375],
+              [20., 42.4375, 40., 42.4375, 40., 22.4375, 0.],
+              [22.4375, 40., 42.4375, 40., 42.4375, 20., 2.4375],
+              [20., 42.4375, 40., 42.4375, 40., 22.4375,  0.],
+              [12.4375, 20., 22.4375, 20., 22.4375, 10., 2.4375],
+              [0., 2.4375, 0., 2.4375, 0., 2.4375, 0.]],
+
+            [[12.4375, 20., 22.4375, 20., 22.4375, 10., 2.4375],
+              [20., 42.4375, 40., 42.4375, 40., 22.4375, 0.],
+              [22.4375, 40., 42.4375, 40., 42.4375, 20., 2.4375],
+              [20., 42.4375, 40., 42.4375, 40., 22.4375, 0.],
+              [22.4375, 40., 42.4375, 40., 42.4375, 20., 2.4375],
+              [10., 22.4375, 20., 22.4375, 20., 12.4375, 0.],
+              [2.4375, 0., 2.4375, 0., 2.4375, 0., 2.4375]]],
+            dtype=FLOAT_TYPE)
+        np.testing.assert_array_equal(object_array_wavefield.get(), expected_object_array_wavefield,
+                                      err_msg="The object array wavefield has not been updated as expected")
+
+    def test_ob_update_ML_wavefield_atomics_REGRESSION(self):
+        self.ob_update_ML_wavefield_tester(True)
+
+    def test_ob_update_ML_wavefield_tiled_REGRESSION(self):
+        self.ob_update_ML_wavefield_tester(False)
+
     def test_ob_update_local_UNITY(self):
         '''
         setup
