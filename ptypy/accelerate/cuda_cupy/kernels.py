@@ -1150,11 +1150,8 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             grid = (grid[1], grid[0], int(1))
             self.ob_update2_ML_wavefield_cuda(grid=grid,
                                               block=(16, 16, 1),
-                                              args=(prsh[-1], obsh[0], num_pods, obsh[-2], obsh[-1],
-                                                    prsh[0],
-                                                    np.int32(ex.shape[0]),
-                                                    np.int32(ex.shape[1]),
-                                                    np.int32(ex.shape[2]),
+                                              args=(prsh[-1], obsh[0], num_pods,
+                                                    obsh[-2], obsh[-1], prsh[0],
                                                     ob, pr, ex, of, addr,
                                                     np.float32(
                                                   fac) if ex.dtype == np.complex64 else np.float64(fac)))
