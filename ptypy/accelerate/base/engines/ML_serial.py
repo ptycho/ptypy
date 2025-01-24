@@ -481,11 +481,14 @@ class GaussianModel(BaseModelSerial):
             # local references
             ob = self.engine.ob.S[oID].data
             obg = ob_grad.S[oID].data
-            obf = ob_fln.S[oID].data
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
-            prf = pr_fln.S[pID].data
             I = prep.I
+
+            # local references for wavefield precond
+            if self.engine.p.wavefield_precond:
+                obf = ob_fln.S[oID].data
+                prf = pr_fln.S[pID].data
 
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
