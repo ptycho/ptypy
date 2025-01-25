@@ -105,8 +105,8 @@ extern "C" __global__ void pr_update2_ML_wavefield(int pr_sh,
         complex<MATH_TYPE> ex_val = ex_g[exidx];
         complex<ACC_TYPE> add_val = cob * ex_val * fac;
         pr[idx] += add_val;
-        MATH_TYPE tmp = abs(ob);
-        ACC_TYPE add_val2 = tmp * tmp;
+        complex<MATH_TYPE> abs2_val = cob * ob;
+        ACC_TYPE add_val2 = abs2_val.real();
         pf[idx] += add_val2;
       }
     }

@@ -1,4 +1,4 @@
-/** pr_update_ML_wavefield.
+#/** pr_update_ML_wavefield.
  *
  * Data types:
  * - IN_TYPE: the data type for the inputs (float or double)
@@ -62,9 +62,8 @@ extern "C"
 
         atomicAdd(&probe[b * F + c], add_val);
 
-        MATH_TYPE tmp = abs(obj_val);
-        MATH_TYPE add_val_m2 = tmp * tmp;
-        OUT_TYPE add_val2 = add_val_m2;
+        complex<MATH_TYPE> abs2_val = conj(obj_val) * obj_val;
+        OUT_TYPE add_val2 = abs2_val.real();
 
         atomicAdd(&probe_fln[b * F + c], add_val2);
       }
