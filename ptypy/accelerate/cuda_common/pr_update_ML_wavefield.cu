@@ -45,6 +45,7 @@ extern "C"
     const int* ea = addr + 6 + bid * addr_stride;
 
     probe += pa[0] * E * F + pa[1] * F + pa[2];
+    probe_fln += pa[0] * E * F + pa[1] * F + pa[2];
     obj += oa[0] * H * I + oa[1] * I + oa[2];
 
     assert(oa[0] * H * I + oa[1] * I + oa[2] + (B - 1) * I + C - 1 < G * H * I);

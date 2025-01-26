@@ -48,7 +48,7 @@ p.scans.MF.data.psf = 0.
 # attach a reconstrucion engine
 p.engines = u.Param()
 p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'ML_cupy'
+p.engines.engine00.name = 'ML_serial'
 p.engines.engine00.numiter = 300
 p.engines.engine00.numiter_contiguous = 5
 p.engines.engine00.reg_del2 = True                      # Whether to use a Gaussian prior (smoothing) regularizer
