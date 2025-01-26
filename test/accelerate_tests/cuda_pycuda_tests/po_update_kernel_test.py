@@ -653,7 +653,7 @@ class PoUpdateKernelTest(PyCudaTest):
         setup
         '''
         addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
-        probe_wavefield = gpuarray.to_gpu(np.empty_like(probe, dtype=FLOAT_TYPE))
+        probe_wavefield = gpuarray.to_gpu(np.zeros_like(probe, dtype=FLOAT_TYPE))
         '''
         test
         '''
@@ -682,18 +682,19 @@ class PoUpdateKernelTest(PyCudaTest):
         np.testing.assert_array_equal(probe.get(), expected_probe,
                                       err_msg="The probe has not been updated as expected")
 
-        expected_probe_wavefield = np.array([[[136., 138.4375, 136., 138.4375, 136.],
-                                              [138.4375, 136., 138.4375, 136., 138.4375],
-                                              [136., 138.4375, 136., 138.4375, 136.],
-                                              [138.4375, 136., 138.4375, 136., 138.4375],
-                                              [136., 138.4375, 136., 138.4375, 136.]],
+        expected_probe_wavefield = np.array(
+                                  [[[136., 136., 136., 136., 136.],
+                                    [136., 136., 136., 136., 136.],
+                                    [136., 136., 136., 136., 136.],
+                                    [136., 136., 136., 136., 136.],
+                                    [136., 136., 136., 136., 136.]],
 
-                                            [[138.4375, 136., 138.4375, 136., 138.4375],
-                                              [136., 138.4375, 136., 138.4375, 136.],
-                                              [138.4375, 136., 138.4375, 136., 138.4375],
-                                              [136., 138.4375, 136., 138.4375, 136.],
-                                              [138.4375, 136., 138.4375, 136., 138.4375]]],
-                                            dtype=FLOAT_TYPE)
+                                   [[136., 136., 136., 136., 136.],
+                                    [136., 136., 136., 136., 136.],
+                                    [136., 136., 136., 136., 136.],
+                                    [136., 136., 136., 136., 136.],
+                                    [136., 136., 136., 136., 136.]]], 
+                                    dtype=FLOAT_TYPE)
         np.testing.assert_array_equal(probe_wavefield.get(), expected_probe_wavefield,
                                       err_msg="The probe wavefield has not been updated as expected")
 
@@ -708,7 +709,7 @@ class PoUpdateKernelTest(PyCudaTest):
         setup
         '''
         addr, object_array, object_array_denominator, probe, exit_wave, probe_denominator = self.prepare_arrays()
-        object_array_wavefield = gpuarray.to_gpu(np.empty_like(object_array, dtype=FLOAT_TYPE))
+        object_array_wavefield = gpuarray.to_gpu(np.zeros_like(object_array, dtype=FLOAT_TYPE))
         '''
         test
         '''
@@ -743,21 +744,21 @@ class PoUpdateKernelTest(PyCudaTest):
                                       err_msg="The object array has not been updated as expected")
 
         expected_object_array_wavefield = np.array(
-            [[[10., 22.4375, 20., 22.4375, 20., 12.4375,  0.],
-              [22.4375, 40., 42.4375, 40., 42.4375, 20., 2.4375],
-              [20., 42.4375, 40., 42.4375, 40., 22.4375, 0.],
-              [22.4375, 40., 42.4375, 40., 42.4375, 20., 2.4375],
-              [20., 42.4375, 40., 42.4375, 40., 22.4375,  0.],
-              [12.4375, 20., 22.4375, 20., 22.4375, 10., 2.4375],
-              [0., 2.4375, 0., 2.4375, 0., 2.4375, 0.]],
+          [[[10., 20., 20., 20., 20., 10.,  0.],
+            [20., 40., 40., 40., 40., 20.,  0.],
+            [20., 40., 40., 40., 40., 20.,  0.],
+            [20., 40., 40., 40., 40., 20.,  0.],
+            [20., 40., 40., 40., 40., 20.,  0.],
+            [10., 20., 20., 20., 20., 10.,  0.],
+            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.]],
 
-            [[12.4375, 20., 22.4375, 20., 22.4375, 10., 2.4375],
-              [20., 42.4375, 40., 42.4375, 40., 22.4375, 0.],
-              [22.4375, 40., 42.4375, 40., 42.4375, 20., 2.4375],
-              [20., 42.4375, 40., 42.4375, 40., 22.4375, 0.],
-              [22.4375, 40., 42.4375, 40., 42.4375, 20., 2.4375],
-              [10., 22.4375, 20., 22.4375, 20., 12.4375, 0.],
-              [2.4375, 0., 2.4375, 0., 2.4375, 0., 2.4375]]],
+           [[10., 20., 20., 20., 20., 10.,  0.],
+            [20., 40., 40., 40., 40., 20.,  0.],
+            [20., 40., 40., 40., 40., 20.,  0.],
+            [20., 40., 40., 40., 40., 20.,  0.],
+            [20., 40., 40., 40., 40., 20.,  0.],
+            [10., 20., 20., 20., 20., 10.,  0.],
+            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.]]], 
             dtype=FLOAT_TYPE)
         np.testing.assert_array_equal(object_array_wavefield.get(), expected_object_array_wavefield,
                                       err_msg="The object array wavefield has not been updated as expected")
