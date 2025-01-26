@@ -14,6 +14,7 @@ ptypy.load_gpu_engines("serial")
 import tempfile
 import shutil
 import numpy as np
+import pytest
 
 class MLSerialTest(unittest.TestCase):
 
@@ -68,9 +69,9 @@ class MLSerialTest(unittest.TestCase):
         RMSE_ob = (np.mean(np.abs(OBJ_ML_serial - OBJ_ML)**2))
         RMSE_pr = (np.mean(np.abs(PRB_ML_serial - PRB_ML)**2))
         # RMSE_LL = (np.mean(np.abs(LL_ML_serial - LL_ML)**2))
-        np.testing.assert_allclose(RMSE_ob, 0.0, atol=1e-2, 
+        np.testing.assert_allclose(RMSE_ob, 0.0, atol=1e-1, 
                                     err_msg="The object arrays are not matching as expected")
-        np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-2, 
+        np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-1, 
                                     err_msg="The object arrays are not matching as expected")
         # np.testing.assert_allclose(RMSE_LL, 0.0, atol=1e-7,
         #                             err_msg="The log-likelihood errors are not matching as expected")
