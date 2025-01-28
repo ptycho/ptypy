@@ -73,6 +73,7 @@ class ML_pycuda(ML_serial):
         Maximum likelihood reconstruction engine.
         """
         super().__init__(ptycho_parent, pars)
+        self.sqrt = cm.sqrt
 
     def engine_initialize(self):
         """
@@ -601,9 +602,9 @@ class GaussianModel(BaseModelSerial):
             s.gpu.get(s.cpu)
         if self.engine.p.wavefield_precond:
             for s in ob_fln.S.values():
-                s.gpu.get(out=s.cpu)
+                s.gpu.get(s.cpu)
             for s in pr_fln.S.values():
-                s.gpu.get(out=s.cpu)
+                s.gpu.get(s.cpu)
         self.engine._set_pr_ob_ref_for_data('cpu')
 
         ob_grad.allreduce()
@@ -622,7 +623,7 @@ class GaussianModel(BaseModelSerial):
             for s in ob_fln.S.values():
                 s.gpu.set(s.cpu)
             for s in pr_fln.S.values():
-                s.gpu.set(s.cpu)
+                s.gpu.set(s.cpu)        
         self.engine._set_pr_ob_ref_for_data('gpu')
 
         # Object regularizer
