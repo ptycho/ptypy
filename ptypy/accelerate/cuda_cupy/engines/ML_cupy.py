@@ -69,6 +69,7 @@ class ML_cupy(ML_serial):
         Maximum likelihood reconstruction engine.
         """
         super().__init__(ptycho_parent, pars)
+        self.sqrt = cp.sqrt
 
     def engine_initialize(self):
         """

@@ -50,6 +50,7 @@ class ML_serial(ML):
         self.diff_info = {}
         self.cn2_ob_grad = 0.
         self.cn2_pr_grad = 0.
+        self.sqrt = np.sqrt
 
     def engine_initialize(self):
         """
@@ -262,11 +263,11 @@ class ML_serial(ML):
                 for name, s in self.ob_h.storages.items():
                     if self.smooth_gradient:
                         s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data
-                                      / np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
+                                      / self.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
                                       , self.smooth_gradient.sigma)
                     else:
                         s.data[:] -= (self.ob_grad.storages[name].data
-                                      / np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object))
+                                      / self.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object))
             else:
                 # Smoothing preconditioner for the object
                 if self.smooth_gradient:
@@ -281,7 +282,7 @@ class ML_serial(ML):
             if self.p.wavefield_precond:
                 for name, s in self.pr_h.storages.items():
                     s.data[:] -= (self.pr_grad.storages[name].data
-                                  / np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe))
+                                  / self.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe))
             else:
                 self.pr_h -= self.pr_grad
 
