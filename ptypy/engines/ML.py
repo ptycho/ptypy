@@ -317,13 +317,14 @@ class ML(PositionCorrectionEngine):
                                       / np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object))
                     else:
                         s.data[:] -= (self.ob_grad.storages[name].data 
-                                      / np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object))
-            # Smoothing preconditioner for the object
-            if self.smooth_gradient:
-                for name, s in self.ob_h.storages.items():
-                    s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
+                                      / np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)) 
             else:
-                self.ob_h -= self.ob_grad
+                # Smoothing preconditioner for the object
+                if self.smooth_gradient:
+                    for name, s in self.ob_h.storages.items():
+                        s.data[:] -= self.smooth_gradient(self.ob_grad.storages[name].data)
+                else:
+                    self.ob_h -= self.ob_grad
 
             self.pr_h *= bt / self.tmin
             self.pr_grad *= self.scale_p_o
