@@ -267,12 +267,13 @@ class ML_serial(ML):
                     else:
                         s.data[:] -= (self.ob_grad.storages[name].data
                                       / np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object))
-            # Smoothing preconditioner for the object
-            if self.smooth_gradient:
-                for name, s in self.ob_h.storages.items():
-                    s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
             else:
-                self.ob_h -= self.ob_grad
+                # Smoothing preconditioner for the object
+                if self.smooth_gradient:
+                    for name, s in self.ob_h.storages.items():
+                        s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
+                else:
+                    self.ob_h -= self.ob_grad
 
             self.pr_h *= dt(bt / self.tmin)
             self.pr_grad *= dt(self.scale_p_o)
