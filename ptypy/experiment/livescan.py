@@ -508,8 +508,10 @@ class LiveScan(PtyScan):
         msgs = self.socket.recv_pyobj()
         buff = self.socket.recv(copy=True)
         imgs = decompress_lz4(np.frombuffer(buff, dtype=np.dtype('uint8')), msgs[0]['shape'], msgs[0]['dtype'])
-        if self.loadnr == 1 and 'new_center' in msgs[0].keys():
+        #if self.loadnr == 1 and 'new_center' in msgs[0].keys():
+        if 'new_center' in msgs[0].keys():
             self.info.center = msgs[0]['new_center']
+            self.meta.center = msgs[0]['new_center']
         if self.loadnr == 1 and 'RS_rebinned' in msgs[0].keys():
             print(f'self.info.psize = {self.info.psize}, self.info.rebin_at_RS = {self.info.rebin_at_RS}, self.meta.psize = {self.meta.psize}')  ###DEBUG
             if msgs[0]['RS_rebinned']:
