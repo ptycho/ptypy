@@ -555,10 +555,11 @@ class GaussianModel(BaseModelSerial):
             # local references
             ob = self.engine.ob.S[oID].data
             obg = ob_grad.S[oID].data
-            obf = ob_fln.S[oID].data
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
-            prf = pr_fln.S[pID].data
+            if self.engine.p.wavefield_precond:
+                obf = ob_fln.S[oID].data
+                prf = pr_fln.S[pID].data
 
             # Schedule w & I to device
             ev_w, w, data_w = self.engine.w_data.to_gpu(
