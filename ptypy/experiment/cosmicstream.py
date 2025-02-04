@@ -303,46 +303,6 @@ class CosmicAbortMeta(BaseModel):
     identifier: str
 
 
-class PtyScanDefaults(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    name: str = "PtyScan"
-    dfile: Optional[str] = None
-    chunk_format: str = ".chunk%02d"
-    save: Optional[str] = None
-    auto_center: Optional[bool] = None
-    load_parallel: str = "data"
-    rebin: Optional[int] = None
-    orientation: Optional[int | tuple | list] = None
-    min_frames: int = 1
-    positions_theory: Optional[NDArray] = None
-    num_frames: Optional[int] = None
-    label: Optional[str] = None
-    experimentID: Optional[str] = None
-    version: float = 0.1
-    shape: int | tuple = 256
-    center: list | str | tuple = "fftshift"
-    psize: float | tuple = 0.000172
-    distance: float = 7.19
-    energy: float = 7.2
-    add_poisson_noise: bool = False
-
-
-class CosmicStreamLoaderParams(PtyScanDefaults):
-    name: str = "CosmicStreamLoader"
-    host_start: str = "localhost"
-
-
-class CosmicStreamLoaderMeta(BaseModel):
-    version: float
-    num_frames: int
-    label: Optional[str]
-    shape: int | tuple
-    psize: float | tuple
-    energy: float
-    center: list | str | tuple
-    distance: float
-
-
 @register()
 class CosmicStreamLoader(PtyScan):
     """
@@ -353,22 +313,39 @@ class CosmicStreamLoader(PtyScan):
     type = str
     help =
 
-    [host_start]
+    [source]
     default = 'localhost'
     type = str
     help = Hostname for the publisher that this object will connect to
+
+    [orientation]
+    default = 3
+    
+    [load_parallel]
+    default = None
+
+    [psize]
+    default = None
+
+    [energy]
+    default = None
+
+    [distance]
+    default = None
+
+    [shape]
+    default = None
+
     """
 
-    def __init__(self, pars: Optional[CosmicStreamLoaderParams] = None, **kwargs):
+    def __init__(self, pars, **kwargs):
         super().__init__(pars, **kwargs)
-        self.p = CosmicStreamLoaderParams(**self.info)
-        self._meta: Optional[CosmicStreamLoaderMeta] = None
         self.framecount: int = 0
-        self.num_frames: int = 0
         self.thread: Optional[threading.Thread] = None
+        self._thread_end_of_scan: bool = False
 
     def initialize(self):
-        self.stream = PtychoStream(host_start=self.p.host_start)
+        self.stream = PtychoStream(host_start=self.info.source)
         self.metadata: Optional[CosmicMeta] = None
         print("Waiting for metadata...")
         while True:
@@ -380,70 +357,26 @@ class CosmicStreamLoader(PtyScan):
                 continue
         print("Metadata received.")
 
-        def setup_params(meta: CosmicMeta):
-            # TODO: change this to None, or dfile. for testing we can use uuid and saving
-            self.p.dfile = None
-            self.p.save = None
-            self.p.auto_center = None
-            self.p.load_parallel = "data"  # ?
-            self.p.rebin = meta.geometry.rebin
-
-            # TODO: do we need to invert/transpose this data?
-            self.p.orientation = None
-            self.p.min_frames = 1
-            self.p.positions_theory = None
-            self.p.num_frames = meta.exp_num_total // (meta.double_exposure + 1)
-            self.p.experimentID = meta.identifier
-
-            # TODO: this is the frame shape
-            self.p.shape = meta.output_frame_width
-
-            # TODO: i am not sure we have this, leave as default...
-            # self.p.center = meta.geometry.center
-
-            # TODO: this is 2.99e-11, not sure if it is right...
-            self.p.psize = meta.geometry.psize
-
-            # TODO: this is correct, but dunno units (0.000121, for ex.)
-            self.p.distance = meta.geometry.distance
-
-            # TODO: this is currently in J
-            # self.p.energy = meta.energy / constants.e / 1000
-            self.p.energy = meta.energy
-
-            # TODO: not sure about this...
-            self.p.add_poisson_noise = False
-
-        def setup_meta(params: CosmicStreamLoaderParams):
-            self._meta = CosmicStreamLoaderMeta(**params.model_dump())
-            self.meta = u.Param(self._meta.model_dump())
-
-        def setup_info(params: CosmicStreamLoaderParams):
-            self.info.num_frames = params.num_frames
-            self.info.experimentID = params.experimentID
-            self.info.shape = params.shape
-            self.info.distance = params.distance
-            self.info.energy = params.energy
-            self.info.dfile = params.dfile
-            self.info.psize = params.psize
-
-        setup_params(self.metadata)
-        setup_meta(self.p)
-        setup_info(self.p)
-
-        self.orientation = self.p.orientation  # TODO: fix when we know orientation
-        self.num_frames = self.p.num_frames if self.p.num_frames is not None else 0
+        md = self.metadata
+        self.num_frames = md.exp_num_total // (md.double_exposure + 1)
+        self.meta.energy = md.energy * 6.2425e15
+        self.meta.psize = md.geometry.psize * 1e6
+        self.info.psize = md.geometry.psize * 1e6 # need to set info.psize in case there is a rebining in PtyScan 
+        self.meta.distance = md.geometry.distance * 1e3
 
         self._data = np.empty(
             shape=self.metadata.ptycho_shape, dtype=self.metadata.dtype
         )
         self._pos = np.empty(shape=(self.metadata.ptycho_shape[0], 2), dtype=float)
 
+        super().initialize()
+
         print("Starting receiver thread...")
         self.thread = threading.Thread(target=self.receive_messages, daemon=True)
         self.thread.start()
 
     def receive_messages(self):
+        # TODO: Thread needs to terminate when scan has stopped.
         while True:
             if self.stream.has_frame_arrived():
                 i, frame, idx, posy, posx, _ = self.stream.recv_frame()
@@ -460,15 +393,16 @@ class CosmicStreamLoader(PtyScan):
                 print("Scan has been aborted")
                 print("Receiving abort metadata...")
                 self.stream.recv_abort()
-                # TODO: boolean for stop condition
+                self._thread_end_of_scan = True
+
             elif self.stream.has_scan_stopped():
                 print("Scan has stopped")
                 print("Receiving stop metadata...")
                 self.stream.recv_stop()
-                # TODO: boolean for stop condition
+                self._thread_end_of_scan = True
 
     def check(self, frames=None, start=None):
-        end_of_scan: bool = False  # TODO: set stop condition from recv thread
+        end_of_scan: int = 0  # could also be None if there was a condition that this streaming implementation wouldn't know
         frames_accessible: int = 0
 
         if start is None:
@@ -482,17 +416,17 @@ class CosmicStreamLoader(PtyScan):
         # not reached expected nr. of frames
         if new_frames <= frames:
             # but its last chunk of scan so load it anyway
-            if self.framecount == self.num_frames:
+            if self.framecount == self.num_frames or self._thread_end_of_scan:
                 frames_accessible = new_frames
-                end_of_scan = True
+                end_of_scan = 1
             # otherwise, do nothing
             else:
-                frames_accessible = 0
-                end_of_scan = False
+                frames_accessible = new_frames
+                end_of_scan = 0
         # reached expected nr. of frames
         else:
             frames_accessible = frames
-            end_of_scan = False
+            end_of_scan = 0
 
         return frames_accessible, end_of_scan
 
@@ -505,6 +439,7 @@ class CosmicStreamLoader(PtyScan):
         for ind in indices:
             intensities[ind] = self._data[ind]
             positions[ind] = self._pos[ind]
-            weights[ind] = np.ones(len(intensities[ind]))
+            weights[ind] = np.ones_like(self._data[ind])
 
         return intensities, positions, weights
+
