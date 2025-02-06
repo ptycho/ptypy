@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from ptypy import utils as u
 from ptypy.core.data import PtyScan
 from ptypy.experiment import register
+from ptypy.utils import parallel
 from ptypy.utils.verbose import log
 
 # Instructions:
@@ -345,35 +346,42 @@ class CosmicStreamLoader(PtyScan):
         self._thread_end_of_scan: bool = False
 
     def initialize(self):
-        self.stream = PtychoStream(host_start=self.info.source)
         self.metadata: Optional[CosmicMeta] = None
-        print("Waiting for metadata...")
-        while True:
-            if self.stream.has_scan_started():
-                meta_msg = self.stream.recv_start()
-                self.metadata = CosmicMeta(**meta_msg)
-                break
-            else:
-                continue
-        print("Metadata received.")
+        if parallel.master:
+            self.stream = PtychoStream(host_start=self.info.source)
+            print("Waiting for metadata...")
+            while True:
+                if self.stream.has_scan_started():
+                    meta_msg = self.stream.recv_start()
+                    self.metadata = CosmicMeta(**meta_msg)
+                    break
+                else:
+                    continue
+            print("Metadata received.")
 
-        md = self.metadata
-        self.num_frames = md.exp_num_total // (md.double_exposure + 1)
-        self.meta.energy = md.energy * 6.2425e15
-        self.meta.psize = md.geometry.psize * 1e6
-        self.info.psize = md.geometry.psize * 1e6 # need to set info.psize in case there is a rebining in PtyScan 
-        self.meta.distance = md.geometry.distance * 1e3
+            md = self.metadata
+            self.num_frames = md.exp_num_total // (md.double_exposure + 1)
+            self.meta.energy = md.energy * 6.2425e15
+            self.meta.psize = md.geometry.psize * 1e6
+            self.info.psize = md.geometry.psize * 1e6 # need to set info.psize in case there is a rebining in PtyScan 
+            self.meta.distance = md.geometry.distance * 1e3
 
-        self._data = np.empty(
-            shape=self.metadata.ptycho_shape, dtype=self.metadata.dtype
-        )
-        self._pos = np.empty(shape=(self.metadata.ptycho_shape[0], 2), dtype=float)
-
+            self._data = np.empty(
+                shape=self.metadata.ptycho_shape, dtype=self.metadata.dtype
+            )
+            self._pos = np.empty(shape=(self.metadata.ptycho_shape[0], 2), dtype=float)
+            print("Starting receiver thread...")
+            self.thread = threading.Thread(target=self.receive_messages, daemon=True)
+            self.thread.start()
+            
         super().initialize()
-
-        print("Starting receiver thread...")
-        self.thread = threading.Thread(target=self.receive_messages, daemon=True)
-        self.thread.start()
+        self.meta.energy = self.common["energy"]
+        self.meta.psize = self.common["psize"]
+        self.info.psize = self.common["psize"]
+        self.meta.distance = self.common["distance"]
+        
+    def load_common(self):
+        return self.meta
 
     def receive_messages(self):
         # TODO: Thread needs to terminate when scan has stopped.
