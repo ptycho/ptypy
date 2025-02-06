@@ -423,13 +423,11 @@ class CosmicStreamLoader(PtyScan):
         new_frames = self.framecount - start
         # not reached expected nr. of frames
         if new_frames <= frames:
+            frames_accessible = new_frames
             # but its last chunk of scan so load it anyway
             if self.framecount == self.num_frames or self._thread_end_of_scan:
-                frames_accessible = new_frames
                 end_of_scan = 1
-            # otherwise, do nothing
-            else:
-                frames_accessible = new_frames
+            else: # otherwise, do nothing
                 end_of_scan = 0
         # reached expected nr. of frames
         else:
