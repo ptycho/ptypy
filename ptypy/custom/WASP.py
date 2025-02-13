@@ -237,7 +237,8 @@ class WASP(base.PositionCorrectionEngine):
             # update object first, then probe, and accumulate their sum for
             # averaging after going through all the views
             self.object_update(view, ex_old)
-            self.probe_update(view, ex_old, ob_old)
+            if self.p.probe_update_start <= self.curiter:
+                self.probe_update(view, ex_old, ob_old)
 
         # WASP
         self.wasp_averaging()
@@ -323,16 +324,17 @@ class WASP(base.PositionCorrectionEngine):
 
             self.clip_object(s)
 
-        for name, p in self.pr.storages.items():
-            pr_sum_nmr = self.pr_sum_nmr.storages[name].data
-            pr_sum_dnm = self.pr_sum_dnm.storages[name].data
+        if self.p.probe_update_start <= self.curiter:
+            for name, p in self.pr.storages.items():
+                pr_sum_nmr = self.pr_sum_nmr.storages[name].data
+                pr_sum_dnm = self.pr_sum_dnm.storages[name].data
 
-            parallel.allreduce(pr_sum_nmr)
-            parallel.allreduce(pr_sum_dnm)
+                parallel.allreduce(pr_sum_nmr)
+                parallel.allreduce(pr_sum_dnm)
 
-            # avoid division by zero
-            is_zero = np.isclose(pr_sum_dnm, 0)
-            p.data = np.where(is_zero, pr_sum_nmr, pr_sum_nmr / pr_sum_dnm)
+                # avoid division by zero
+                is_zero = np.isclose(pr_sum_dnm, 0)
+                p.data = np.where(is_zero, pr_sum_nmr, pr_sum_nmr / pr_sum_dnm)
 
     def clip_object(self, ob):
         """Copied from _ProjectionEngine
