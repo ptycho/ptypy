@@ -98,6 +98,7 @@ class WASPCupyTest(unittest.TestCase):
             engine_params = u.Param()
             engine_params.name = eng
             engine_params.numiter = 10
+            engine_params.clip_object = (0, 2)
             engine_params.random_seed = 721
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
@@ -119,12 +120,28 @@ class WASPCupyTest(unittest.TestCase):
         if parallel.master:
             self.check_engine_output(out, plotting=False, debug=False)
 
+    def test_WASP_cupy_probe_start(self):
+        out = []
+        for eng in ["WASP_serial", "WASP_cupy"]:
+            engine_params = u.Param()
+            engine_params.name = eng
+            engine_params.numiter = 10
+            engine_params.clip_object = (0, 2)
+            engine_params.probe_update_start = 4
+            engine_params.random_seed = 721
+            out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+
+        if parallel.master:
+            self.check_engine_output(out, plotting=False, debug=False)
+
     def test_WASP_cupy_alpha_beta(self):
         out = []
         for eng in ["WASP_serial", "WASP_cupy"]:
             engine_params = u.Param()
             engine_params.name = eng
             engine_params.numiter = 10
+            engine_params.clip_object = (0, 2)
             engine_params.alpha = 0.64
             engine_params.beta = 0.94
             engine_params.random_seed = 721
