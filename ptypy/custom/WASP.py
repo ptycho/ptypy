@@ -124,11 +124,11 @@ class WASP(base.PositionCorrectionEngine):
         self.article = dict(
                 title='WASP: Weighted Average of Sequential Projections for ptychographic phase retrieval',
                 author='A. M. Maiden, W. Mei and P. Li',
-                journal='Optica',
-                volume=42,
+                journal='Optics Express',
+                volume=32,
                 year=2024,
-                page=42,
-                doi='doi',
+                page=21327,
+                doi='10.1364/OE.516946',
                 comment='Weighted Average of Sequential Projections',
                 )
         self.ptycho.citations.add_article(**self.article)
