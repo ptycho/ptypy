@@ -128,7 +128,7 @@ except ImportError:
                     print(message)
                 time.sleep(timeout)
 
-# BD: With version 9.1.0 of PIL, _MODE_CONV has been removed, 
+# BD: With version 9.1.0 of PIL, _MODE_CONV has been removed,
 #     see here: https://github.com/python-pillow/Pillow/pull/6057
 #     can't see a reason why this is still needed, therefore commenting it out
 # FIXME: Is this still needed?
@@ -179,7 +179,7 @@ def complex2hsv(cin, vmin=0., vmax=None):
     else:
         assert vmin < vmax
         v = (v.clip(vmin, vmax)-vmin)/(vmax-vmin)
-    
+
     return np.asarray((h, s, v))
 
 
@@ -345,7 +345,7 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
     uses a matplotlib colormap with name 'gray'
     """
     if str(cmap) == cmap:
-        cmap = mpl.colormaps.get_cmap(cmap)
+        cmap = mpl.colormaps[cmap]
 
     if a.dtype.kind == 'c':
         i = complex2rgb(a, vmin=vmin, vmax=vmax)
@@ -426,7 +426,7 @@ def franzmap():
     im = mpl.pyplot.gci()
 
     if im is not None:
-        im.set_cmap(matplotlib.cm.get_cmap('franzmap'))
+        im.set_cmap(mpl.colormaps['franzmap'])
     mpl.pyplot.draw_if_interactive()
 
 
@@ -595,46 +595,46 @@ class PtyAxis(object):
     """
     Plot environment for matplotlib to allow for a Image plot with color axis,
     potentially of a potentially complex array.
-    
+
     Please note that this class may undergo changes or become obsolete altogether.
     """
     def __init__(self, ax=None, data=None, channel='r', cmap=None, fontsize=8, **kwargs):
         """
-        
+
         Parameters
         ----------
-        
+
         ax : pyplot.axis
             An axis in matplotlib figure. If ``None`` a figure with a single
             axis will be created.
-            
+
         data : numpy.ndarray
-            The (complex) twodimensional data to be displayed. 
-            
+            The (complex) twodimensional data to be displayed.
+
         channel : str
             Choose
-            
+
             - ``'a'`` to plot absolute/modulus value of the data,
             - ``'p'`` to plot phase value of the data,
             - ``'a'`` to plot real value of the data,
             - ``'a'`` to plot imaginary value of the data,
-            - ``'a'`` to plot a composite image where phase channel maps to hue and 
+            - ``'a'`` to plot a composite image where phase channel maps to hue and
               modulus channel maps to brightness of the color.
-              
-        cmap : str 
+
+        cmap : str
             String representation of one of matplotlibs colormaps.
-            
+
         fontsize : int
             Base font size of labels, etc.
-            
+
         Keyword Arguments
         -----------------
         vmin, vmax : float
             Minimum and maximum value for colormap scaling
-            
+
         rmramp : bool
             Remove phase ramp if ``True``, default is ``False``
-            
+
         """
         if ax is None:
             fig = plt.figure()
@@ -679,10 +679,10 @@ class PtyAxis(object):
 
     def set_cmap(self, cmap, update=True):
         try:
-            self.cmap = mpl.colormaps.get_cmap(cmap)
+            self.cmap = mpl.colormaps[cmap]
         except:
             logger.debug("Colormap `%s` not found. Using `gray`" % str(cmap))
-            self.cmap = mpl.colormaps.get_cmap('gray')
+            self.cmap = mpl.colormaps['gray']
         if update:
             self._update()
             self._update_colorscale()
