@@ -415,8 +415,12 @@ franzmap_cm = {'red':   ((0.000,   0,    0),
                                                       (0.340,   1,    1),
                                                       (0.650,   0,    0),
                                                       (1.000,   0,    0))}
-                                                      
-mpl.colormaps.register(cmap=LinearSegmentedColormap(name='franzmap', segmentdata=franzmap_cm, N=256))
+
+_lscm = LinearSegmentedColormap(name='franzmap', segmentdata=franzmap_cm, N=256)
+try:
+    mpl.colormaps.register(cmap=_lscm)
+except AttributeError:
+    matplotlib.cm.register_cmap(cmap=_lscm)
 
 def franzmap():
     """\
