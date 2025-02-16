@@ -11,7 +11,7 @@ authors = [
 ]
 description = "Ptychography Reconstruction for Python"
 readme = "README.rst"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Development Status :: 3 - Alpha",
@@ -31,7 +31,7 @@ dependencies = [
 [project.optional-dependencies]
 full = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "pyyaml"]
 cupy-cuda11x = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "cupy-cuda11x"]
-cupy-cuda12x = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "cupy-cuda12x"] 
+cupy-cuda12x = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "cupy-cuda12x"]
 
 [project.scripts]
 "ptypy.plot" = "ptypy.cli.plotter:ptypy_plot"
@@ -55,6 +55,7 @@ testpaths = [
   "test/ptyscan_tests",
   "test/template_tests",
   "test/util_tests",
+  "test/accelerate_tests/base_tests"
 ]
 
 # this is all BETA according to setuptools
