@@ -281,8 +281,8 @@ class LiveScan(PtyScan):
             self.preprocess_RS['rebin'] = self.info.rebin_at_RS
         if self.info.average_x_at_RS is not None:
             self.preprocess_RS['average_x_at_RS'] = self.info.average_x_at_RS
-        if self.info.average_x_at_RS is not None:
-            self.preprocess_RS['average_x_at_RS'] = self.info.average_x_at_RS
+        if self.info.average_y_at_RS is not None:
+            self.preprocess_RS['average_y_at_RS'] = self.info.average_y_at_RS
         # if self.info.maskfile is not None and (self.info.rebin_at_RS or self.info.crop_at_RS):
         #     self.preprocess_RS['maskfile'] = self.info.maskfile
 
