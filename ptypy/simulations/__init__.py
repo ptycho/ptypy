@@ -9,4 +9,4 @@ This file is part of the PTYPY package.
 """
 from .ptysim_utils import *
 from . import detector
-from .simscan import SimScan
+from .simscan import SimScan, SimScan3D

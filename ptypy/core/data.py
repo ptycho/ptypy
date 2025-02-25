@@ -243,15 +243,12 @@ class PtyScan(object):
     type = array
     help = For example, tomographic angles
 
-    [projections]
-    default = 
-    type = list
-    help =
 
-    [tomo_angles]
+
+    [n_frames_per_angle]
     default = 
     type = int
-    help = Number of tomographic angles
+    help = Number of frames per angle
     """
 
     WAIT = WAIT

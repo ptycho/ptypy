@@ -42,10 +42,9 @@ class AstraTomoWrapper:
     Base class for wrappers for the Astra projectors.
     """    
 
-    def __init__(self, obj, vol, angles, shifts=None, obj_is_refractive_index=False, mask_threshold=0):
+    def __init__(self, obj, vol, shifts=None, obj_is_refractive_index=False, mask_threshold=0):
         self._obj = obj
         self._vol = vol
-        self._angles = angles
         self._shifts_per_angle = shifts
         self._obj_is_rindex = obj_is_refractive_index
         self._mask_threshold = mask_threshold
@@ -193,8 +192,7 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
         # i=0
         for i,(k,v) in enumerate([(i,v) for i,v in self._obj.views.items() if v.pod.active]):
 
-            alpha = self._angles[v.storageID]
-
+            alpha = v.extra 
             # # Save the geometry values for a certain angle
             # if i==0:
             #     ref_id = v.storageID
@@ -207,7 +205,7 @@ class AstraTomoWrapperViewBased(AstraTomoWrapper):
             
             # Apply shifts if they are provided
             if self._shifts_per_angle is not None:
-                shift_dx, shift_dy = self._shifts_per_angle[v.storageID]
+                shift_dx, shift_dy = self._shifts_per_angle[alpha]
                 corrected_shift_dx, corrected_shift_dy = shift_dx+10, shift_dy+10
             
                 # Hardcoding v.storage.center with 220,220 - needed for real data
