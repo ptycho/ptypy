@@ -68,6 +68,8 @@ DEFAULT_ACCESSRULE = u.Param(
     # Index of the third dimension if applicable, (int)
     layer=0,
     active=True,
+    # For angles
+    extra=None
 )
 
 BASE_PREFIX = 'B'
@@ -1157,7 +1159,7 @@ class View(Base):
                 ('psize', '(5,)f8'),
                 ('coord', '(5,)f8'),
                 ('sp', '(5,)f8')]
-    __slots__ = Base.__slots__ + ['_ndim', 'storage', 'storageID', '_pod', '_pods', 'error']
+    __slots__ = Base.__slots__ + ['_ndim', 'storage', 'storageID', '_pod', '_pods', 'error', 'extra']
     ########
     # TODO #
     ########
@@ -1231,6 +1233,8 @@ class View(Base):
         #: The "layer" i.e. first axis index in Storage data buffer
         self.dlayer = 0
 
+        self.extra = None
+
         # The messy stuff
         if accessrule is not None or len(kwargs)>0:
             self._set(accessrule, **kwargs)
@@ -1269,6 +1273,7 @@ class View(Base):
         self.psize = rule.psize
         self.coord = rule.coord
         self.layer = rule.layer
+        self.extra = rule.extra
 
         if (self.psize is not None
                 and not np.allclose(self.storage.psize, self.psize)):
