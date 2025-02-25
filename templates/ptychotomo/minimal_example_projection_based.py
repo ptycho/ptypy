@@ -21,7 +21,7 @@ p.data_type = "single"
 
 p.run = None
 p.io = u.Param()
-p.io.home = "/".join([tmpdir, "ptypy_jari"])
+p.io.home = "/".join([tmpdir, "ptypy_letizia"])
 p.io.autosave = u.Param(active=True)
 p.io.autoplot = u.Param(active=False)
 p.io.autoplot.layout='minimal'
@@ -38,6 +38,24 @@ sim.xy.spacing = 0.3e-3
 sim.xy.steps = 9
 sim.xy.extent = (5e-3,5e-3)
 
+nangles = 19
+pshape = 56
+n_frames = 76
+
+angles = np.linspace(0, np.pi, nangles, endpoint=True)
+pgeom = astra.create_proj_geom("parallel3d", 1.0, 1.0, pshape, pshape, angles)
+vgeom = astra.create_vol_geom(pshape, pshape, pshape)
+rmap = tu.refractive_index_map(pshape)
+proj_real_id, proj_real = astra.create_sino3d_gpu(rmap.real, pgeom, vgeom)
+proj_imag_id, proj_imag = astra.create_sino3d_gpu(rmap.imag, pgeom, vgeom)
+proj = np.moveaxis(proj_real + 1j * proj_imag, 1,0)
+
+sim.extra = u.Param()
+repeated_angles = []
+for angle in angles:
+    repeated_angles += n_frames*[angle]
+sim.extra.vals = np.array(repeated_angles)
+
 sim.illumination = u.Param()
 sim.illumination.model = None
 sim.illumination.photons = int(1e9)
@@ -52,59 +70,11 @@ sim.illumination.propagation.focussed = None
 sim.illumination.propagation.parallel = 0.13
 sim.illumination.propagation.spot_size = None
 
-nangles = 19
-pshape = 56
-angles = np.linspace(0, np.pi, nangles, endpoint=True)
-pgeom = astra.create_proj_geom("parallel3d", 1.0, 1.0, pshape, pshape, angles)
-vgeom = astra.create_vol_geom(pshape, pshape, pshape)
-rmap = tu.refractive_index_map(pshape)#.ravel()
-proj_real_id, proj_real = astra.create_sino3d_gpu(rmap.real, pgeom, vgeom)
-proj_imag_id, proj_imag = astra.create_sino3d_gpu(rmap.imag, pgeom, vgeom)
-proj = np.moveaxis(proj_real + 1j * proj_imag, 1,0)
-
-sim.sample = u.Param()
-#sim.sample.model = proj[0]
-sim.sample.process = u.Param()
-sim.sample.process.offset = (0,0)
-sim.sample.process.formula = None
-sim.sample.process.density = None
-sim.sample.process.thickness = None
-sim.sample.process.ref_index = None
-sim.sample.process.smoothing = None
-sim.sample.fill = 1.0+0.j
-sim.plot=False
-sim.detector = u.Param(dtype=np.uint32,full_well=2**32-1,psf=None)
-
-
-# Scan model
-scan = u.Param()
-scan.name = 'BlockFull' #'Full'
-
-scan.coherence = u.Param()
-scan.coherence.num_probe_modes=1
-
-scan.illumination = u.Param()
-scan.illumination.model=None
-scan.illumination.aperture = u.Param()
-scan.illumination.aperture.diffuser = None
-scan.illumination.aperture.form = "circ"
-scan.illumination.aperture.size = 1.0e-3
-scan.illumination.aperture.edge = 15
-scan.illumination.propagation = u.Param()
-scan.illumination.propagation.focussed = None
-scan.illumination.propagation.parallel = 0.03
-scan.illumination.propagation.spot_size = None
-
-# Scan data (simulation) parameters
-scan.data = u.Param()
-scan.data.name = 'SimScan'
-#scan.data.update(sim)
-
 all_shifts = [
     (-1, 0), (-1, 1), (0, 1), (0, -1), (1, -1), (1, 0), (1, 1)
 ]
 
-shift_probes = False
+shift_probes = True
 if shift_probes:
     # Repeatable random shifts
     random.seed(0)
@@ -116,9 +86,8 @@ if shift_probes:
 
 # Iterate over nr. of tomographic angles
 print('##########################')
-p.scans = u.Param()
+list_new_proj = []
 for i in range(nangles):
-    simi = sim.copy(depth=99)
     proj_new = proj[i]
 
     if shift_probes:
@@ -131,19 +100,68 @@ for i in range(nangles):
         shifted_proj_1 = np.roll(proj_new, selected_shift[0], axis=0)   # up or down (neg = up, pos = down)
         proj_new = np.roll(shifted_proj_1, selected_shift[1], axis=1)   # right or left (neg = left, pos = right)
 
-    simi.sample.model = np.exp(1j * proj_new)
-    scani = scan.copy(depth=99)
-    scani.data.update(simi)
-    setattr(p.scans, f"scan{i}", scani)
+    list_new_proj.append(np.exp(1j * proj_new).reshape((1, 56, 56)))
+
+# sim.projections = [np.exp(1j * proj[i, :, :]).reshape((1, 56, 56)) for i in range(np.shape(proj)[0])]   # 19 * [np.ones((1, 56, 56))]
+sim.projections = list_new_proj
+sim.tomo_angles = 19
+sim.n_frames_per_angle = 76
+
+
+sim.sample = u.Param()
+sim.sample.process = u.Param()
+sim.sample.process.offset = (0,0)
+sim.sample.process.formula = None
+sim.sample.process.density = None
+sim.sample.process.thickness = None
+sim.sample.process.ref_index = None
+sim.sample.process.smoothing = None
+sim.sample.fill = 1.0+0.j
+sim.plot=False
+sim.detector = u.Param(dtype=np.uint32,full_well=2**32-1,psf=None)
+
+# Scan model
+p.scans = u.Param()
+p.scans.sim = u.Param() 
+p.scans.sim.name = 'BlockFull3D' #'Full'
+
+p.scans.sim.coherence = u.Param()
+p.scans.sim.coherence.num_probe_modes=1
+p.scans.sim.n_frames_per_angle = 76
+
+p.scans.sim.illumination = u.Param()
+p.scans.sim.illumination.model=None
+p.scans.sim.illumination.aperture = u.Param()
+p.scans.sim.illumination.aperture.diffuser = None
+p.scans.sim.illumination.aperture.form = "circ"
+p.scans.sim.illumination.aperture.size = 1.0e-3
+p.scans.sim.illumination.aperture.edge = 15
+p.scans.sim.illumination.propagation = u.Param()
+p.scans.sim.illumination.propagation.focussed = None
+p.scans.sim.illumination.propagation.parallel = 0.03
+p.scans.sim.illumination.propagation.spot_size = None
+
+p.scans.sim.sample = u.Param()
+p.scans.sim.sample.diversity = u.Param()
+p.scans.sim.sample.diversity.power = 1
+
+# Scan data (simulation) parameters
+p.scans.sim.data = u.Param()
+p.scans.sim.data.name = 'SimScan3D'
+p.scans.sim.data.update(sim)
+
+
+
 
 # Write out angles
-np.save("simulated_angles.npy", angles)
+# Not needed any more
+# np.save("simulated_angles.npy", angles)
 
 # Reconstruction parameters
 p.engines = u.Param()
 p.engines.engine = u.Param()
 p.engines.engine.name = 'MLPtychoTomo'
-p.engines.engine.angles = 'simulated_angles.npy'
+p.engines.engine.n_angles = 19
 p.engines.engine.init_vol_zero = True
 #p.engines.engine.init_vol_real = 'starting_vol_for_ML_simulated/real_vol_35it.npy'
 #p.engines.engine.init_vol_imag = 'starting_vol_for_ML_simulated/imag_vol_35it.npy'

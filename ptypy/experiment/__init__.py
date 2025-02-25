@@ -19,15 +19,16 @@ This file is part of the PTYPY package.
 from importlib import import_module
 from .. import defaults_tree
 from ..core.data import MoonFlowerScan, PtydScan, PtyScan, QuickScan
-from ..simulations import SimScan
+from ..simulations import SimScan, SimScan3D
 from ..utils.verbose import log
 
-__all__ = ['MoonFlowerScan', 'PtydScan', 'PtyScan', 'QuickScan', 'SimScan']
+__all__ = ['MoonFlowerScan', 'PtydScan', 'PtyScan', 'QuickScan', 'SimScan', 'SimScan3D']
 PTYSCANS = {'MoonFlowerScan': MoonFlowerScan,
             'PtydScan': PtydScan,
             'PtyScan': PtyScan,
             'QuickScan': QuickScan,
-            'SimScan': SimScan}
+            'SimScan': SimScan,
+            'SimScan3D': SimScan3D}
 
 
 def register(name=None):
