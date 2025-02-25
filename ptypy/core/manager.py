@@ -109,6 +109,21 @@ class ScanModel(object):
     help = Resampling fraction of the image frames w.r.t. diffraction frames
     doc = A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
           as densely as the raw diffraction data.
+
+    [extra]
+    default = 
+    type = Param
+    help =  ---
+
+    [projections]
+    default = 
+    type = list
+    help =
+
+    [tomo_angles]
+    default = 
+    type = int
+    help = Number of tomographic angles
     """
     _PREFIX = MODEL_PREFIX
 
@@ -168,6 +183,9 @@ class ScanModel(object):
 
         # By default we create a new exit buffer for each view
         self._single_exit_buffer_for_all_views = False
+
+        # Additional attribute for angles
+        self.extra = None
 
     @classmethod
     def makePtyScan(cls, pars):
@@ -298,6 +316,7 @@ class ScanModel(object):
             AR_mask.layer = index
             AR_diff.active = active
             AR_mask.active = active
+            AR_diff.extra = dct['extra']
 
             # check here: is there already a view to this layer? Is it active?
             try:
@@ -547,7 +566,8 @@ class BlockScanModel(ScanModel):
             return None
         else:
             common = dp['common']
-            chunk = dp['chunk']
+            chunk = dp['chunk']          # dp['chunk']['indices'] has length of 76
+            iterable = dp['iterable']    # this has length of 76
 
         # Generalized shape which works for 2d and 3d cases
         sh = (max(len(chunk.indices_node),1),) + tuple(self.diff_shape)
@@ -580,8 +600,10 @@ class BlockScanModel(ScanModel):
 
         # First pass: create or update views and reformat corresponding storage
         for index in chunk['indices']:
+            self.extra = iterable[index]['extra'] # this is a single angle
 
             if dv is None:
+                AR_diff.extra = self.extra
                 dv = View(self.Cdiff, accessrule=AR_diff)  # maybe use index here
                 mv = View(self.Cmask, accessrule=AR_mask)
             else:
@@ -595,6 +617,7 @@ class BlockScanModel(ScanModel):
             mv.active = active
             dv.layer = index
             mv.layer = index
+            dv.extra = self.extra 
 
             diff_views.append(dv)
             mask_views.append(mv)
@@ -957,6 +980,7 @@ class _Full(object):
         # Loop through diffraction patterns
         for i in range(len(self.new_diff_views)):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
+            angle = dv.extra
 
             # For stochastic engines (e.g. ePIE) we only need one exit buffer
             if self._single_exit_buffer_for_all_views:
@@ -1016,7 +1040,8 @@ class _Full(object):
                                               'coord': pos_pr,
                                               'storageID': probe_id_suf,
                                               'layer': pm,
-                                              'active': True})
+                                              'active': True,
+                                              'extra': angle})
 
                         ov = View(container=self.ptycho.obj,
                                   accessrule={'shape': self.object_shape,
@@ -1024,7 +1049,8 @@ class _Full(object):
                                               'coord': pos_obj,
                                               'storageID': object_id_suf,
                                               'layer': om,
-                                              'active': True})
+                                              'active': True,
+                                              'extra': angle})
 
                         ev = View(container=self.ptycho.exit,
                                   accessrule={'shape': self.exit_shape,
@@ -1033,7 +1059,8 @@ class _Full(object):
                                               'storageID': (dv.storageID +
                                                             'G%02d' % ii),
                                               'layer': exit_index,
-                                              'active': dv.active})
+                                              'active': dv.active,
+                                              'extra': angle})
 
                         views = {'probe': pv,
                                  'obj': ov,
