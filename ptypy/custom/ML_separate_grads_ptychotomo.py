@@ -22,7 +22,7 @@ from ..utils import parallel
 from ..engines.utils import Cnorm2, Cdot
 from ..engines import register
 from ..engines.base import BaseEngine, PositionCorrectionEngine
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, BlockFull3D, GradFull, BlockGradFull
 from ..utils.tomo import AstraTomoWrapperViewBased
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import shift
@@ -53,11 +53,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
     choices = ['gaussian','poisson','euclid']
     doc = One of ‘gaussian’, poisson’ or ‘euclid’.
 
-    [angles]
+    [n_angles]
     default = None
-    type = str
-    help = Tomography angles
-    doc = Path to the tomography angles.
+    type = int
+    help = Number of tomography angles
 
     [shifts]
     default = None
@@ -179,7 +178,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, BlockFull3D, GradFull, BlockGradFull]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -224,7 +223,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.coverage = None
 
         # Other
-        self.nangles = None
+        self.nangles = self.p.n_angles
         self.tmin_rho = None
         self.tmin_pr = None
         self.ML_model = None
@@ -237,20 +236,13 @@ class MLPtychoTomo(PositionCorrectionEngine):
         if self.DEBUG:
             print('self.pshape:   ', self.pshape)
 
-        # Load tomography angles and create angles dictionary
-        # FIXME: there should be a more efficient way to do this
-        angles = np.load(self.p.angles)
-        self.nangles = len(angles)
-        self.angles_dict = {}
-        for i,k in enumerate(self.ptycho.obj.S):
-            self.angles_dict[k] = angles[i]
-
+        angles = list(np.linspace(0, np.pi, self.nangles, endpoint=True))
         # Load angle shifts if provided and create dictionary
         self.shifts_per_angle = None
         if self.p.shifts is not None:
             self.shifts_per_angle = {}
             self.shifts = np.load(self.p.shifts)
-            for i,k in enumerate(self.ptycho.obj.S):
+            for i, k in enumerate(angles):
                 self.shifts_per_angle[k]  =  self.shifts[:,i]  # dx, dy
 
         # FIXME: update with paper
@@ -321,7 +313,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         # Initialise stacked views
         stacked_views = np.array([v.data for v in self.ptycho.obj.views.values() if v.pod.active])
-        self.projected_rho = np.zeros_like((stacked_views), dtype=np.complex64)
+        self.projected_rho = np.zeros_like((stacked_views), dtype=np.complex64)  #1444 x 32 x 32
 
         # Initialise probe gradient and minimization direction
         self.pr_grad = self.pr.copy(self.pr.ID + '_grad', fill=0.)
@@ -340,7 +332,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.projector = AstraTomoWrapperViewBased (
             obj=self.ptycho.obj,
             vol=self.rho.storages['S_rho'].data,
-            angles=self.angles_dict,
             shifts=self.shifts_per_angle,
             obj_is_refractive_index=False,
             mask_threshold=35
