@@ -15,7 +15,6 @@ import numpy as np
 import time
 import h5py
 import subprocess
-
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
@@ -23,7 +22,7 @@ from ..engines.utils import Cnorm2, Cdot
 from ..engines import register
 from ..engines.base import BaseEngine, PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, BlockFull3D, GradFull, BlockGradFull
-from ..utils.tomo import AstraTomoWrapperViewBased
+from ..utils.tomo import AstraTomoWrapperViewBased, AstraViewBased
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import shift
 from ..engines.utils import Cnorm2, Cdot, reduce_dimension
@@ -328,17 +327,39 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.smooth_gradient = prepare_smoothing_preconditioner(
             self.p.smooth_gradient)
 
-        # Initialise ASTRA projector for volume
-        self.projector = AstraTomoWrapperViewBased (
-            obj=self.ptycho.obj,
+        n_frames = 76
+        angles = list(np.linspace(0, np.pi, self.nangles, endpoint=True))
+
+        repeated_angles = []
+        for angle in angles:
+            repeated_angles += n_frames*[angle]
+        
+        list_view_to_proj_vectors = []
+
+        # this will be overall for all blocks
+        for i, (k,v) in enumerate([(i,v) for i,v in self.ptycho.obj.views.items()]):
+            y = v.dcoord[0] - v.storage.center[0]
+            x = v.dcoord[1] - v.storage.center[1]   
+            list_view_to_proj_vectors.append((y, x))         
+
+        view_to_proj_vectors = np.array(list_view_to_proj_vectors)  # 1444x2
+
+        self.projector = AstraViewBased(
             vol=self.rho.storages['S_rho'].data,
-            shifts=self.shifts_per_angle,
-            obj_is_refractive_index=False,
-            mask_threshold=35
-            )
+            n_views = 1444,
+            view_shape = (32, 32),
+            block_size = len(self.get_indices_of_active_views()),
+            angles = repeated_angles,
+            shifts = None,
+            view_to_proj_vectors = view_to_proj_vectors
+        )
+
 
         # Initialise projected volume and update views
-        self.projected_rho = self.projector.forward(self.rho.storages['S_rho'].data)
+        self.projector.vol = self.rho.storages['S_rho'].data
+        self.projector.ind_of_views = self.get_indices_of_active_views()
+        self.projected_rho = self.projector.forward()
+
         self.update_views()
 
         # Initialise ML noise model
@@ -375,6 +396,15 @@ class MLPtychoTomo(PositionCorrectionEngine):
         for i, (k,v) in enumerate([(i,v) for i,v in self.ptycho.obj.views.items() if v.pod.active]):
             v.data[:] = self.projected_rho[i]
 
+    def get_indices_of_active_views(self):
+        """
+        Get indices of active views
+        """
+        ind_active_views = []
+        for ind, v in enumerate(self.ptycho.obj.views.values()):
+            if v.pod.active:
+                ind_active_views.append(ind)
+        return ind_active_views
 
     def engine_iterate(self, num=1):
         """
@@ -684,6 +714,7 @@ class BaseModel(object):
         self.omega = self.engine.omega
         self.ex = self.engine.ex
         self.coverage = self.engine.coverage
+        self.curiter = self.engine.curiter
 
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
@@ -805,6 +836,19 @@ class GaussianModel(BaseModel):
         del self.engine.ptycho.containers[self.weights.ID]
         del self.weights
 
+    def get_indices_of_active_views(self):
+        """
+        Get indices of active views
+        """
+        ind_active_views = []
+        i = 0
+        for dname, diff_view in self.di.views.items():
+            for name, pod in diff_view.pods.items():
+                if pod.active:
+                    ind_active_views.append(i)
+                i+=1
+                    
+        return ind_active_views
 
     def new_grad(self):
         """
@@ -818,9 +862,11 @@ class GaussianModel(BaseModel):
         # We need an array for MPI
         LL = np.array([0.])
         error_dct = {}
-
+        
         # Forward project volume
-        self.projected_rho = self.projector.forward(self.rho.storages['S_rho'].data)
+        self.projector.vol = self.rho.storages['S_rho'].data
+        self.projector.ind_of_views = self.get_indices_of_active_views()
+        self.projected_rho = self.projector.forward()
 
         # Get refractive index per view
         i = 0
@@ -894,7 +940,9 @@ class GaussianModel(BaseModel):
         del prods_container
 
         # Back project volume
-        self.rho_grad.fill(2 * self.projector.backward(np.moveaxis(prods_storage.data, 1, 0)))
+        self.projector.vol = self.rho.storages['S_rho'].data
+        self.projector.proj_array = np.moveaxis(prods_storage.data, 1, 0)
+        self.rho_grad.fill(2 * self.projector.backward())
 
         # MPI reduction of gradients
         self.rho_grad.allreduce()
@@ -924,7 +972,10 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Forward project volume minimization direction
-        omega = np.array(self.projector.forward(rho_h.storages['S_rho'].data))
+        self.projector.vol = rho_h.storages['S_rho'].data
+        self.projector.ind_of_views = self.get_indices_of_active_views()
+        omega = self.projector.forward()
+
 
         # Store omega (so that we can use it later) and multiply it by the required 1j
         for i, (k,ov) in enumerate([(i,v) for i,v in self.omega.views.items() if v.pod.active]):
@@ -1005,7 +1056,9 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Forward project volume minimization direction
-        omega = np.array(self.projector.forward(rho_h.storages['S_rho'].data))
+        self.projector.vol = rho_h.storages['S_rho'].data
+        self.projector.ind_of_views = self.get_indices_of_active_views()
+        omega = self.projector.forward()
 
         # Store omega (so that we can use it later) and multiply it by the required 1j
         for i, (k,ov) in enumerate([(i,v) for i,v in self.omega.views.items() if v.pod.active]):
@@ -1330,3 +1383,4 @@ def prepare_smoothing_preconditioner(amplitude):
         # logger.debug(
         #    'Using a smooth gradient filter (Hann window - only for ML)')
         # return HannFilt()
+
