@@ -113,7 +113,7 @@ class ScanModel(object):
     [extra]
     default = 
     type = Param
-    help =  ---
+    help =  Extra access rule
 
     [projections]
     default = 
@@ -189,7 +189,6 @@ class ScanModel(object):
         # By default we create a new exit buffer for each view
         self._single_exit_buffer_for_all_views = False
 
-        # Additional attribute for angles
         self.extra = None
 
     @classmethod
@@ -571,8 +570,8 @@ class BlockScanModel(ScanModel):
             return None
         else:
             common = dp['common']
-            chunk = dp['chunk']          # dp['chunk']['indices'] has length of 76
-            iterable = dp['iterable']    # this has length of 76
+            chunk = dp['chunk']
+            iterable = dp['iterable']
 
         # Generalized shape which works for 2d and 3d cases
         sh = (max(len(chunk.indices_node),1),) + tuple(self.diff_shape)
@@ -605,7 +604,8 @@ class BlockScanModel(ScanModel):
 
         # First pass: create or update views and reformat corresponding storage
         for index in chunk['indices']:
-            self.extra = iterable[index]['extra'] # this is a single angle
+            # When storing angles, this is a single angle
+            self.extra = iterable[index]['extra']
 
             if dv is None:
                 AR_diff.extra = self.extra
@@ -958,11 +958,6 @@ class _Full(object):
     type = None, float
     userlevel = 0
     lowlim = 0
-
-    [n_frames_per_angle]
-    default = 
-    type = int
-    help = Number of frames per angle
     """
 
     def _create_pods(self):
