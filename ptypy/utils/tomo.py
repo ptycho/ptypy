@@ -17,7 +17,6 @@ import astra
 import matplotlib.pyplot as plt
 from matplotlib import cm, colors
 import ptypy.utils.tomo as tu
-from exceptions import ValueError
 
 # For creating example
 def sample_volume(N):
