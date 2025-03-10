@@ -239,16 +239,10 @@ class PtyScan(object):
     help =  Extra access rule
 
     [extra.vals]
-    default = None
+    default = 
     type = array
     help = For example, tomographic angles
 
-
-
-    [n_frames_per_angle]
-    default = 
-    type = int
-    help = Number of frames per angle
     """
 
     WAIT = WAIT
@@ -952,7 +946,8 @@ class PtyScan(object):
         for pos, index in zip(chunk.positions, chunk.indices):
             extra_val = None
             if isinstance(chunk.extra_vals, np.ndarray):
-                extra_val = chunk.extra_vals[index]   # this is a single angle
+                # When storing angles, this is a single angle
+                extra_val = chunk.extra_vals[index]
             frame = {'index': index,
                      'data': chunk.data.get(index),
                      'position': pos,

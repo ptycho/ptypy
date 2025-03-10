@@ -68,7 +68,7 @@ DEFAULT_ACCESSRULE = u.Param(
     # Index of the third dimension if applicable, (int)
     layer=0,
     active=True,
-    # For angles
+    # Used, for example, to store tomographic angles
     extra=None
 )
 
