@@ -196,26 +196,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
     help = Whether to use the object/probe scaling preconditioner
     doc = This parameter can give faster convergence for weakly scattering samples.
 
-    [OPR]
-    default = False
-    type = bool
-    help = Whether to enable orthogonal probe modes
-    doc = This parameter enables orthogonal probe modes
-
-    [OPR_modes]
-    default = 1
-    type = int
-    lowlim = 1
-    help = Number of orthogonal probe modes to use
-    doc = This parameter sets the number of orthogonal probe modes to use
-
-    [OPR_method]
-    default = `second`
-    type = str
-    help = Type of OPR method to use
-    choices = ['first','second']
-    doc = One of ‘first’ or ‘second’.
-
     [probe_update_start]
     default = 0
     type = int
@@ -609,101 +589,12 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # Position correction
             self.position_update()
 
-            # Allow for customized modifications at the end of each iteration
-            self._post_iterate_update()
-
             # increase iteration counter
             self.curiter +=1
 
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
-
-    ########################
-    # OPR Section
-    ########################
-    def _post_iterate_update(self):
-        """
-        Orthogonal Probe Relaxation (OPR) update.
-        """
-
-        # FIXME: this should be updated to use MPI
-        if self.p.OPR:
-
-            # FIRST OPR METHOD (probes not shifted) ###################
-            if self.p.OPR_method.lower() == "first":
-
-                # Assemble probes
-                probe_size = list(self.pr.S.values())[0].shape[1:]
-                pr_input = np.zeros((self.nangles,*probe_size))
-                for i, (name, s) in enumerate(self.pr.storages.items()):
-                    pr_input[i,:] = s.data
-
-                # Apply low dimensional approximation to probes
-                new_pr, modes, coeffs = reduce_dimension(pr_input, self.p.OPR_modes)
-
-                # Update probes
-                for i, (name, s) in enumerate(self.pr.storages.items()):
-
-                    # Rescale new probes to match old probes (needed so that probes do not explode)
-                    new_pr[i] = np.linalg.norm(pr_input[i]) * new_pr[i] / np.linalg.norm(new_pr[i])
-
-                    # Update probes
-                    s.data[:] = new_pr[i,:]
-
-                # FIXME: move saving probes to run script
-                if parallel.master and self.curiter == 199: # curiter starts at zero
-                    sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
-                    np.save('opr_probes_'+sid, new_pr)
-
-                #if parallel.master:
-                #    np.save('pr_input', pr_input)
-                #    np.save('new_pr', new_pr)
-
-            # SECOND OPR METHOD (probes are shifted) ###################
-            elif self.p.OPR_method.lower() == "second":
-
-                # Compute average probe mass center and assemble probes
-                centers = np.zeros((self.nangles,2))
-                probe_size = list(self.pr.S.values())[0].shape[1:]
-                pr_input = np.zeros((self.nangles,*probe_size))
-                for i, (name, s) in enumerate(self.pr.storages.items()):
-                    centers[i,:] = u.mass_center(np.abs(s.data))[1:]
-                    pr_input[i,:] = s.data
-                mean_center = np.mean(centers, axis=0)
-
-                # Shift probes
-                for i, (name, s) in enumerate(self.pr.storages.items()):
-                    pr_input[i,:] = shift(pr_input[i], mean_center-centers[i], mode='nearest')
-
-                # Apply low dimensional approximation to probes
-                new_pr, modes, coeffs = reduce_dimension(pr_input, self.p.OPR_modes)
-
-                # Unshift probes and update
-                for i, (name, s) in enumerate(self.pr.storages.items()):
-
-                    # Rescale new probes to match old probes (needed so that probes do not explode)
-                    new_pr[i] = np.linalg.norm(pr_input[i]) * new_pr[i] / np.linalg.norm(new_pr[i])
-
-                    # Unshift new probes
-                    new_pr[i,:] = shift(new_pr[i], centers[i]-mean_center, mode='nearest')
-
-                    # Update probes
-                    s.data[:] = new_pr[i,:]
-
-                # FIXME: move saving probes to run script
-                if parallel.master and self.curiter == 199: # curiter starts at zero
-                    sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
-                    np.save('opr_probes_'+sid, new_pr)
-
-                #if parallel.master:
-                #    print('mean_center:',end=None)
-                #    print(mean_center)
-                #    np.save('pr_input', pr_input)
-                #    np.save('new_pr', new_pr)
-
-            else:
-                raise RuntimeError("Unsupported OPR_method: '%s'" % self.p.OPR_method)
 
     def engine_finalize(self):
         """
