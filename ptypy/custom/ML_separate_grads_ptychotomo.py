@@ -31,6 +31,61 @@ from ptypy.core import View, Container, Storage, Base
 __all__ = ['MLPtychoTomo']
 
 
+class PtypyTomoWrapper:
+    def __init__(self, obj, vol):
+        self.setup_projector(obj, vol)
+
+    def get_indices_of_active_views(self, obj):
+        """
+        Get indices of active views
+        """
+        ind_active_views = []
+        for ind, v in enumerate(obj.views.values()):
+            if v.pod.active:
+                ind_active_views.append(ind)
+        return ind_active_views
+
+    def setup_projector(self, obj, vol):
+     
+        list_view_to_proj_vectors = []
+        all_angles = []
+
+        # For all blocks
+        for i, (k,v) in enumerate([(i,v) for i,v in obj.views.items()]):
+            y = v.dcoord[0] - v.storage.center[0]
+            x = v.dcoord[1] - v.storage.center[1]   
+            list_view_to_proj_vectors.append((y, x))    
+            all_angles.append(v.extra)     
+
+        view_to_proj_vectors = np.array(list_view_to_proj_vectors)
+
+        self.projector = AstraViewBased(
+            vol=vol,
+            n_views = len(all_angles),
+            view_shape = np.shape(list(obj.views.values())[0]),
+            block_size = len(self.get_indices_of_active_views(obj)),
+            angles = all_angles,
+            shifts = None,
+            view_to_proj_vectors = view_to_proj_vectors
+        )
+
+
+    # Forward
+    def forward_wrapper(self, vol, ind):
+        self.projector.vol = vol
+        self.projector.ind_of_views = ind 
+        return self.projector.forward()
+
+    # Backward
+    def backward_wrapper(self, proj_array, ind):
+        self.projector.proj_array = proj_array 
+        self.projector.ind_of_views = ind      
+        return self.projector.backward()
+
+
+
+
+
 @register()
 class MLPtychoTomo(PositionCorrectionEngine):
     """
@@ -327,38 +382,17 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.smooth_gradient = prepare_smoothing_preconditioner(
             self.p.smooth_gradient)
 
-        n_frames = 76
-        angles = list(np.linspace(0, np.pi, self.nangles, endpoint=True))
-
-        repeated_angles = []
-        for angle in angles:
-            repeated_angles += n_frames*[angle]
-        
-        list_view_to_proj_vectors = []
-
-        # this will be overall for all blocks
-        for i, (k,v) in enumerate([(i,v) for i,v in self.ptycho.obj.views.items()]):
-            y = v.dcoord[0] - v.storage.center[0]
-            x = v.dcoord[1] - v.storage.center[1]   
-            list_view_to_proj_vectors.append((y, x))         
-
-        view_to_proj_vectors = np.array(list_view_to_proj_vectors)  # 1444x2
-
-        self.projector = AstraViewBased(
-            vol=self.rho.storages['S_rho'].data,
-            n_views = 1444,
-            view_shape = (32, 32),
-            block_size = len(self.get_indices_of_active_views()),
-            angles = repeated_angles,
-            shifts = None,
-            view_to_proj_vectors = view_to_proj_vectors
+        self.tomo_wrapper = PtypyTomoWrapper(
+            obj=self.ptycho.obj, 
+            vol=self.rho.storages['S_rho'].data, 
         )
 
 
         # Initialise projected volume and update views
-        self.projector.vol = self.rho.storages['S_rho'].data
-        self.projector.ind_of_views = self.get_indices_of_active_views()
-        self.projected_rho = self.projector.forward()
+        self.projected_rho = self.tomo_wrapper.forward_wrapper(
+            vol=self.rho.storages['S_rho'].data,
+            ind=self.get_indices_of_active_views(), 
+        )
 
         self.update_views()
 
@@ -564,7 +598,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # Get SLURM Job ID
                 sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
             # Saving volumes when running Toy Problem (saves to png)
-                self.projector.plot_vol(self.rho.storages['S_rho'].data, title= '200iters_'+sid)
+                self.tomo_wrapper.projector.plot_vol(self.rho.storages['S_rho'].data, title= '200iters_'+sid)
             # Saving volumes when running Real Data (saves to cmap)
             #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it200_"+sid+".cmap", "w") as f:
             #        f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
@@ -725,6 +759,7 @@ class BaseModel(object):
             self.Irenorm = self.p.intensity_renormalization
 
         self.projector = self.engine.projector
+        self.tomo_wrapper = self.engine.ptypy_tomo_wrapper
 
         if self.p.reg_del2:
             self.regularizer = Regul_del2(self.p.reg_del2_amplitude)
@@ -864,9 +899,10 @@ class GaussianModel(BaseModel):
         error_dct = {}
         
         # Forward project volume
-        self.projector.vol = self.rho.storages['S_rho'].data
-        self.projector.ind_of_views = self.get_indices_of_active_views()
-        self.projected_rho = self.projector.forward()
+        self.projected_rho = self.tomo_wrapper.forward_wrapper(
+            vol=self.rho.storages['S_rho'].data,
+            ind=self.get_indices_of_active_views()
+        )
 
         # Get refractive index per view
         i = 0
@@ -940,10 +976,10 @@ class GaussianModel(BaseModel):
         del prods_container
 
         # Back project volume
-        self.projector.vol = self.rho.storages['S_rho'].data
-        self.projector.proj_array = np.moveaxis(prods_storage.data, 1, 0)
-        self.rho_grad.fill(2 * self.projector.backward())
-
+        self.rho_grad.fill(2 * self.tomo_wrapper.backward_wrapper(
+            proj_array=np.moveaxis(prods_storage.data, 1, 0),
+            ind=self.get_indices_of_active_views()
+        ))
         # MPI reduction of gradients
         self.rho_grad.allreduce()
         self.pr_grad.allreduce()
@@ -972,10 +1008,10 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Forward project volume minimization direction
-        self.projector.vol = rho_h.storages['S_rho'].data
-        self.projector.ind_of_views = self.get_indices_of_active_views()
-        omega = self.projector.forward()
-
+        omega = self.tomo_wrapper.forward_wrapper(
+            vol=rho_h.storages['S_rho'].data,
+            ind=self.get_indices_of_active_views() 
+        )
 
         # Store omega (so that we can use it later) and multiply it by the required 1j
         for i, (k,ov) in enumerate([(i,v) for i,v in self.omega.views.items() if v.pod.active]):
@@ -1056,10 +1092,10 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Forward project volume minimization direction
-        self.projector.vol = rho_h.storages['S_rho'].data
-        self.projector.ind_of_views = self.get_indices_of_active_views()
-        omega = self.projector.forward()
-
+        omega = self.tomo_wrapper.forward_wrapper(
+            vol=rho_h.storages['S_rho'].data,
+            ind=self.get_indices_of_active_views() 
+        )
         # Store omega (so that we can use it later) and multiply it by the required 1j
         for i, (k,ov) in enumerate([(i,v) for i,v in self.omega.views.items() if v.pod.active]):
             ov.data[:] = 1j * omega[i]
