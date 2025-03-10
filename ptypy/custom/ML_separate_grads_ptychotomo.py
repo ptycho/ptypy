@@ -759,7 +759,7 @@ class BaseModel(object):
             self.Irenorm = self.p.intensity_renormalization
 
         self.projector = self.engine.projector
-        self.tomo_wrapper = self.engine.ptypy_tomo_wrapper
+        self.tomo_wrapper = self.engine.tomo_wrapper
 
         if self.p.reg_del2:
             self.regularizer = Regul_del2(self.p.reg_del2_amplitude)
