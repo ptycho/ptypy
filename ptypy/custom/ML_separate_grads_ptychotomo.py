@@ -22,7 +22,7 @@ from ..engines.utils import Cnorm2, Cdot
 from ..engines import register
 from ..engines.base import BaseEngine, PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, BlockFull3D, GradFull, BlockGradFull
-from ..utils.tomo import AstraTomoWrapperViewBased, AstraViewBased
+from ..utils.tomo import AstraViewBased
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import shift
 from ..engines.utils import Cnorm2, Cdot, reduce_dimension
