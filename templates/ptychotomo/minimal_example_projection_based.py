@@ -74,7 +74,7 @@ all_shifts = [
     (-1, 0), (-1, 1), (0, 1), (0, -1), (1, -1), (1, 0), (1, 1)
 ]
 
-shift_probes = True
+shift_probes = False
 if shift_probes:
     # Repeatable random shifts
     random.seed(0)
