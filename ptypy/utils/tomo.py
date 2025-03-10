@@ -17,7 +17,7 @@ import astra
 import matplotlib.pyplot as plt
 from matplotlib import cm, colors
 import ptypy.utils.tomo as tu
-
+from exceptions import ValueError
 
 # For creating example
 def sample_volume(N):
@@ -400,7 +400,8 @@ class AstraViewBased:
     def proj_array(self, proj_array):
         """
         Sets _proj_array to the value passed as input. 
-        """        
+        """ 
+        # When this gets called, it's important to update ind_of_views too      
         self._proj_array = proj_array
         self._update_data_at_id_astra(self._proj_id_real, proj_array.real)
         self._update_data_at_id_astra(self._proj_id_imag, proj_array.imag)
@@ -574,7 +575,10 @@ class AstraViewBased:
         elif out is None:
             out = _ob_views_complex
         else:
-            print("Wrong type")
+            raise ValueError(
+                "The parameter 'out' provided as input to forward "
+                "should be of type np.ndarray."
+                )
         return out
 
     def backward(self, iter=1, out=None):
@@ -592,7 +596,10 @@ class AstraViewBased:
         elif out is None:
             out = _vol
         else:
-            print("Wrong type")
+            raise ValueError(
+                "The parameter 'out' provided as input to forward "
+                "should be of type np.ndarray."
+                )
         return out
 
 
