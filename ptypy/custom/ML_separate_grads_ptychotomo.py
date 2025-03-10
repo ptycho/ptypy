@@ -153,7 +153,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
     default = False
     type = bool
     help = Adaptive diffraction pattern rescaling
-    doc = If True, allow for adaptative rescaling of the diffraction pattern intensities (to correct for incident beam intensity fluctuations).
+    doc = If True, allow for adaptative rescaling of the diffraction pattern intensities 
+          (to correct for incident beam intensity fluctuations).
 
     [intensity_renormalization]
     default = 1.
@@ -298,13 +299,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
         super(MLPtychoTomo, self).engine_initialize()
 
         # Initialise volume gradient and minimization direction
-        # should self.rho be created somewhere else as a Container and these be copies of that?
         self.rho_grad = Container()
         self.rho_grad_new = Container()
         self.rho_h = Container()
-        # Will need to figure out IDs and why things break when they are different
-        # Note: IDs in lnext 2 lines need to be the same otherwise Cdot in line 448 does not work 
-        # Note2: IDs get an "S" added before the string
+
         self.rho_grad.new_storage(ID="_rho", shape=(3*(self.pshape,)))
         self.rho_grad_new.new_storage(ID="_rho", shape=(3*(self.pshape,)))
         self.rho_h.new_storage(ID="_rho", shape=(3*(self.pshape,)))
@@ -330,24 +328,24 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         # Initialise coverage mask
         if self.p.weight_gradient:
-             self.coverage = list(self.ptycho.obj.S.values())[0].get_view_coverage()
-             self.coverage = np.squeeze(np.real(self.coverage)) # extract
-             # FIXME: parameterise coverage mask
-             # Simulated data
-             views_threshold = 25
-             filter_sigma = 1
-             # Real data
-             #views_threshold = 50
-             #filter_sigma = 2.5
-             # FIXME: end parametrise coverage
-             self.coverage[self.coverage <= views_threshold] = 0 # threshold zero
-             self.coverage[self.coverage > views_threshold] = 1  # threshold one
-             self.coverage = gaussian_filter(self.coverage, sigma=filter_sigma) # smooth
-             #np.save('coverage_mask', self.coverage)
+            self.coverage = list(self.ptycho.obj.S.values())[0].get_view_coverage()
+            self.coverage = np.squeeze(np.real(self.coverage)) # extract
+            # FIXME: parameterise coverage mask
+            # Simulated data
+            views_threshold = 25
+            filter_sigma = 1
+            # Real data
+            #views_threshold = 50
+            #filter_sigma = 2.5
+            # FIXME: end parametrise coverage
+            self.coverage[self.coverage <= views_threshold] = 0 # threshold zero
+            self.coverage[self.coverage > views_threshold] = 1  # threshold one
+            self.coverage = gaussian_filter(self.coverage, sigma=filter_sigma) # smooth
+            #np.save('coverage_mask', self.coverage)
 
         # Initialise stacked views
         stacked_views = np.array([v.data for v in self.ptycho.obj.views.values() if v.pod.active])
-        self.projected_rho = np.zeros_like((stacked_views), dtype=np.complex64)  #1444 x 32 x 32
+        self.projected_rho = np.zeros_like((stacked_views), dtype=np.complex64)
 
         # Initialise probe gradient and minimization direction
         self.pr_grad = self.pr.copy(self.pr.ID + '_grad', fill=0.)
@@ -367,13 +365,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
             vol=self.rho.storages['S_rho'].data, 
         )
 
-
         # Initialise projected volume and update views
         self.projected_rho = self.tomo_wrapper.forward_wrapper(
             vol=self.rho.storages['S_rho'].data,
             ind=self.get_indices_of_active_views(), 
         )
-
         self.update_views()
 
         # Initialise ML noise model
@@ -391,15 +387,12 @@ class MLPtychoTomo(PositionCorrectionEngine):
         else:
             raise RuntimeError("Unsupported ML_type: '%s'" % self.p.ML_type)
 
-
-
     def engine_prepare(self):
         """
         Last minute initialization, everything, that needs to be recalculated,
         when new data arrives.
         """
         self.ML_model.prepare()
-
 
     def update_views(self):
 
@@ -481,7 +474,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 if self.DEBUG:
                     print('bt_num_rho, bt_denom_rho: (%.2e, %.2e) ' % (bt_num_rho, bt_denom_rho))
 
-                # # FIXME: this shouldn't be needed if we scale correctly #FIXED
                 bt_rho = max(0, bt_num_rho/bt_denom_rho)
 
                 # For the probe
@@ -600,11 +592,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
         """
         Delete temporary containers.
         """
-        # del self.ptycho.containers[self.ob_grad.ID]
         del self.rho_grad
-        # del self.ptycho.containers[self.ob_grad_new.ID]
         del self.rho_grad_new
-        # del self.ptycho.containers[self.ob_h.ID]
         del self.rho_h
         del self.ptycho.containers[self.pr_grad.ID]
         del self.pr_grad
@@ -803,7 +792,6 @@ class GaussianModel(BaseModel):
                     pod.object = self.projected_rho[i]
                     i+=1
 
-        # FIXME: this should be a container not a list  # DONE
         prods_container = Container()
 
         # Outer loop: through diffraction patterns
@@ -863,7 +851,6 @@ class GaussianModel(BaseModel):
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
             LL += LLL
 
-        # Probably needed
         del prods_container
 
         # Back project volume
