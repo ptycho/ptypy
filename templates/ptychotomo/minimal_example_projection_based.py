@@ -38,11 +38,11 @@ sim.xy.spacing = 0.3e-3
 sim.xy.steps = 9
 sim.xy.extent = (5e-3,5e-3)
 
-nangles = 19
 pshape = 56
+n_angles = 19
 n_frames = 76
 
-angles = np.linspace(0, np.pi, nangles, endpoint=True)
+angles = np.linspace(0, np.pi, n_angles, endpoint=True)
 pgeom = astra.create_proj_geom("parallel3d", 1.0, 1.0, pshape, pshape, angles)
 vgeom = astra.create_vol_geom(pshape, pshape, pshape)
 rmap = tu.refractive_index_map(pshape)
@@ -70,42 +70,10 @@ sim.illumination.propagation.focussed = None
 sim.illumination.propagation.parallel = 0.13
 sim.illumination.propagation.spot_size = None
 
-all_shifts = [
-    (-1, 0), (-1, 1), (0, 1), (0, -1), (1, -1), (1, 0), (1, 1)
-]
 
-shift_probes = False
-if shift_probes:
-    # Repeatable random shifts
-    random.seed(0)
-    # For saving shifts to file
-    # Make sure file is empty
-    if u.parallel.master:
-        with open("probe_shifts.txt", "w") as myfile:
-            myfile.write('\n')
-
-# Iterate over nr. of tomographic angles
-print('##########################')
-list_new_proj = []
-for i in range(nangles):
-    proj_new = proj[i]
-
-    if shift_probes:
-        selected_shift = random.choice(all_shifts)
-
-        # Save the shifts applied to file
-        if u.parallel.master:
-            with open("probe_shifts.txt", "a") as myfile:
-                myfile.write('probe '+ str(i) + ':    (' +str(selected_shift[0]) +  ', ' + str(selected_shift[1]) + ') \n')
-        shifted_proj_1 = np.roll(proj_new, selected_shift[0], axis=0)   # up or down (neg = up, pos = down)
-        proj_new = np.roll(shifted_proj_1, selected_shift[1], axis=1)   # right or left (neg = left, pos = right)
-
-    list_new_proj.append(np.exp(1j * proj_new).reshape((1, 56, 56)))
-
-# sim.projections = [np.exp(1j * proj[i, :, :]).reshape((1, 56, 56)) for i in range(np.shape(proj)[0])]   # 19 * [np.ones((1, 56, 56))]
-sim.projections = list_new_proj
-sim.tomo_angles = 19
-sim.n_frames_per_angle = 76
+sim.projections = [np.exp(1j * slice).reshape((1, 56, 56)) for slice in proj]  
+sim.tomo_angles = n_angles
+sim.n_frames_per_angle = n_frames
 
 
 sim.sample = u.Param()
@@ -127,7 +95,7 @@ p.scans.sim.name = 'BlockFull3D' #'Full'
 
 p.scans.sim.coherence = u.Param()
 p.scans.sim.coherence.num_probe_modes=1
-p.scans.sim.n_frames_per_angle = 76
+p.scans.sim.n_frames_per_angle = n_frames
 
 p.scans.sim.illumination = u.Param()
 p.scans.sim.illumination.model=None
@@ -161,10 +129,10 @@ p.scans.sim.data.update(sim)
 p.engines = u.Param()
 p.engines.engine = u.Param()
 p.engines.engine.name = 'MLPtychoTomo'
-p.engines.engine.n_angles = 19
+p.engines.engine.n_angles = n_angles
 p.engines.engine.init_vol_zero = True
-#p.engines.engine.init_vol_real = 'starting_vol_for_ML_simulated/real_vol_35it.npy'
-#p.engines.engine.init_vol_imag = 'starting_vol_for_ML_simulated/imag_vol_35it.npy'
+# p.engines.engine.init_vol_real = 'real_vol_35it.npy'
+# p.engines.engine.init_vol_imag = 'imag_vol_35it.npy'
 #p.engines.engine.init_vol_blur = False
 #p.engines.engine.init_vol_blur_sigma = 2.5
 p.engines.engine.numiter = 200
@@ -172,13 +140,15 @@ p.engines.engine.numiter_contiguous = 10
 p.engines.engine.probe_support = None
 p.engines.engine.probe_fourier_support = None
 #p.engines.engine.weight_gradient = True
-#p.engines.engine.reg_del2 = True
-#p.engines.engine.reg_del2_amplitude = 1e8
-#p.engines.engine.smooth_gradient = 2.5
-#p.engines.engine.smooth_gradient_decay = 0.75
-#p.engines.engine.OPR = True
-#p.engines.engine.OPR_modes = 15
-#p.engines.engine.OPR_method = "second"
+# Add regularization
+# p.engines.engine.reg_del2 = True
+# p.engines.engine.reg_del2_amplitude = 0.005
+# Add smoothing grad
+# p.engines.engine.smooth_gradient = 2.5
+# p.engines.engine.smooth_gradient_decay = 0.75
+# p.engines.engine.OPR = True
+# p.engines.engine.OPR_modes = 15
+# p.engines.engine.OPR_method = "second"
 #p.engines.engine.probe_update_start = 0 # is the default
 #p.engines.engine.poly_line_coeffs = "quadratic"
 
