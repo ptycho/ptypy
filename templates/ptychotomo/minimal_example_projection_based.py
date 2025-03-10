@@ -146,36 +146,3 @@ u.verbose.set_level("info")
 
 if __name__ == "__main__":
     P = Ptycho(p,level=5)
-
-    ## Modifying probes  #############################
-#     P = Ptycho(p,level=3)
-
-#     storage_list = list(P.probe.storages.values())
-
-#     # shift storages and Transfer views
-#     i = 0
-#     for storage in storage_list:
-#         # storage.center = (20,20)       # changed from (16, 16)
-#         storage.data[:] = gaussian_filter(storage.data, sigma=0.8)
-
-#         for v in storage.views:
-#             v.storage = storage
-#             v.storageID = storage.ID
-
-#         i += 1
-
-#     # # Update probe
-#     P.probe.reformat()
-
-#     # # Unforunately we need to delete the storage here due to DM being unable
-#     # # to ignore unused storages. This is due to the /=nrm division in the
-#     # # probe update
-#     # for s in storage_list[1:]:
-#     #     P.probe.storages.pop(s.ID)
-
-#     # Finish level 4
-#     P.print_stats()
-#     P.init_engine()
-#     P.run()
-#     P.finalize()
-    # ##############################
