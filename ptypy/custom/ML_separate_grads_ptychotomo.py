@@ -25,7 +25,6 @@ from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull,
 from ..utils.tomo import AstraViewBased
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import shift
-from ..engines.utils import Cnorm2, Cdot, reduce_dimension
 from ptypy.core import View, Container, Storage, Base
 
 __all__ = ['MLPtychoTomo']
@@ -33,9 +32,9 @@ __all__ = ['MLPtychoTomo']
 
 class PtypyTomoWrapper:
     def __init__(self, obj, vol):
-        self.setup_projector(obj, vol)
+        self._setup_projector(obj, vol)
 
-    def get_indices_of_active_views(self, obj):
+    def get_indexes_of_active_views(self, obj):
         """
         Get indices of active views
         """
@@ -45,7 +44,7 @@ class PtypyTomoWrapper:
                 ind_active_views.append(ind)
         return ind_active_views
 
-    def setup_projector(self, obj, vol):
+    def _setup_projector(self, obj, vol):
      
         list_view_to_proj_vectors = []
         all_angles = []
@@ -63,27 +62,21 @@ class PtypyTomoWrapper:
             vol=vol,
             n_views = len(all_angles),
             view_shape = np.shape(list(obj.views.values())[0]),
-            block_size = len(self.get_indices_of_active_views(obj)),
+            block_size = len(self.get_indexes_of_active_views(obj)),
             angles = all_angles,
             shifts = None,
             view_to_proj_vectors = view_to_proj_vectors
         )
 
-
-    # Forward
-    def forward_wrapper(self, vol, ind):
+    def forward(self, vol, ind):
         self.projector.vol = vol
         self.projector.ind_of_views = ind 
         return self.projector.forward()
 
-    # Backward
-    def backward_wrapper(self, proj_array, ind):
+    def backward(self, proj_array, ind):
         self.projector.proj_array = proj_array 
         self.projector.ind_of_views = ind      
         return self.projector.backward()
-
-
-
 
 
 @register()
@@ -272,6 +265,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             print('self.pshape:   ', self.pshape)
 
         angles = list(np.linspace(0, np.pi, self.nangles, endpoint=True))
+
         # Load angle shifts if provided and create dictionary
         self.shifts_per_angle = None
         if self.p.shifts is not None:
@@ -307,7 +301,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.rho_grad_new.new_storage(ID="_rho", shape=(3*(self.pshape,)))
         self.rho_h.new_storage(ID="_rho", shape=(3*(self.pshape,)))
 
-        # This is needed in poly_line_coeffs_rho
+        # Needed in poly_line_coeffs_rho
         self.omega = self.ex
 
         # Initialise volume
@@ -366,9 +360,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
         )
 
         # Initialise projected volume and update views
-        self.projected_rho = self.tomo_wrapper.forward_wrapper(
+        self.projected_rho = self.tomo_wrapper.forward(
             vol=self.rho.storages['S_rho'].data,
-            ind=self.get_indices_of_active_views(), 
+            ind=self.get_indexes_of_active_views(), 
         )
         self.update_views()
 
@@ -395,17 +389,16 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.ML_model.prepare()
 
     def update_views(self):
-
         """
         Updates the views so that the projected rho (non-exponentiated)
         can be retrieved from pod.object.
         """
-        for i, (k,v) in enumerate([(i,v) for i,v in self.ptycho.obj.views.items() if v.pod.active]):
-            v.data[:] = self.projected_rho[i]
+        for ind, v in enumerate([v for v in self.ptycho.obj.views.values() if v.pod.active]):
+            v.data[:] = self.projected_rho[ind]
 
-    def get_indices_of_active_views(self):
+    def get_indexes_of_active_views(self):
         """
-        Get indices of active views
+        Get indexes of active views.
         """
         ind_active_views = []
         for ind, v in enumerate(self.ptycho.obj.views.values()):
@@ -751,7 +744,7 @@ class GaussianModel(BaseModel):
         del self.engine.ptycho.containers[self.weights.ID]
         del self.weights
 
-    def get_indices_of_active_views(self):
+    def get_indexes_of_active_views(self):
         """
         Get indices of active views
         """
@@ -779,9 +772,9 @@ class GaussianModel(BaseModel):
         error_dct = {}
         
         # Forward project volume
-        self.projected_rho = self.tomo_wrapper.forward_wrapper(
+        self.projected_rho = self.tomo_wrapper.forward(
             vol=self.rho.storages['S_rho'].data,
-            ind=self.get_indices_of_active_views()
+            ind=self.get_indexes_of_active_views()
         )
 
         # Get refractive index per view
@@ -854,9 +847,9 @@ class GaussianModel(BaseModel):
         del prods_container
 
         # Back project volume
-        self.rho_grad.fill(2 * self.tomo_wrapper.backward_wrapper(
+        self.rho_grad.fill(2 * self.tomo_wrapper.backward(
             proj_array=np.moveaxis(prods_storage.data, 1, 0),
-            ind=self.get_indices_of_active_views()
+            ind=self.get_indexes_of_active_views()
         ))
         # MPI reduction of gradients
         self.rho_grad.allreduce()
@@ -886,9 +879,9 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Forward project volume minimization direction
-        omega = self.tomo_wrapper.forward_wrapper(
+        omega = self.tomo_wrapper.forward(
             vol=rho_h.storages['S_rho'].data,
-            ind=self.get_indices_of_active_views() 
+            ind=self.get_indexes_of_active_views() 
         )
 
         # Store omega (so that we can use it later) and multiply it by the required 1j
@@ -970,13 +963,13 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Forward project volume minimization direction
-        omega = self.tomo_wrapper.forward_wrapper(
+        omega = self.tomo_wrapper.forward(
             vol=rho_h.storages['S_rho'].data,
-            ind=self.get_indices_of_active_views() 
+            ind=self.get_indexes_of_active_views() 
         )
         # Store omega (so that we can use it later) and multiply it by the required 1j
-        for i, (k,ov) in enumerate([(i,v) for i,v in self.omega.views.items() if v.pod.active]):
-            ov.data[:] = 1j * omega[i]
+        for i, v in enumerate([v for v in self.omega.views.values() if v.pod.active]):
+            v.data[:] = 1j * omega[i]
 
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
