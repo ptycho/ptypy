@@ -148,7 +148,6 @@ class AstraViewBased:
         self._update_data_at_id_astra(self._vol_id_real, np.real(vol))
         self._update_data_at_id_astra(self._vol_id_imag, np.imag(vol))
         
-
     def _update_data_at_id_astra(self, id, data):
         """
         Helper function that updates data at a certain astra id.
@@ -163,7 +162,6 @@ class AstraViewBased:
         """
         astra.data3d.change_geometry(id, new_geom)
 
-
     def _create_proj_array_ids(self):
         """
         Creates astra ids for proj_array (real and imag).
@@ -176,7 +174,6 @@ class AstraViewBased:
         self._proj_id_imag = astra.data3d.create(
             "-sino", self._proj_geom, self._proj_array.imag
             )
-
 
     def _create_vol_ids(self):
         """
@@ -191,13 +188,11 @@ class AstraViewBased:
             "-vol", self._vol_geom, self._vol.imag
             )
 
-
     def _create_vol_geom(self):
         """Creates volume geometry"""
         self._vol_geom = astra.create_vol_geom(
             self._vol.shape[0], self._vol.shape[1], self._vol.shape[2]
             )
-
 
     def _create_vector_for_proj_geom(self):
         """
@@ -230,7 +225,6 @@ class AstraViewBased:
             self._vec[i,10] = 0
             self._vec[i,11] = 1
 
-
     def _create_proj_geom(self):
         """Creates proj_array geometry"""
         self._sub_vec = self._vec[[self._ind_of_views]]
@@ -240,7 +234,6 @@ class AstraViewBased:
             self._view_shape[1], 
             np.squeeze(self._sub_vec)
         )
-
 
     def _setup_config_for_forward(self, type="FP3D_CUDA"):
         """
@@ -269,7 +262,6 @@ class AstraViewBased:
         cfg["ReconstructionDataId"] = self._vol_id_imag
         cfg["ProjectionDataId"] = self._proj_id_imag
         self.backward_alg_id_imag = astra.algorithm.create(cfg)
-        
 
     def forward(self, iter=1, out=None):
         """
@@ -317,7 +309,6 @@ class AstraViewBased:
                 "should be of type np.ndarray."
                 )
         return out
-
 
     def plot_vol(self, vol, title=''):
         pshape = vol.shape[0]
