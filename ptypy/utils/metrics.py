@@ -14,7 +14,7 @@ from scipy.ndimage import fourier_shift, gaussian_filter
 from skimage.registration import phase_cross_correlation
 
 __all__ = ['nyquist', 'ringthickness', 'apodization', 'fourierringcorrelation',
-            'imgregistration']
+            'imgregistration','frc_plot']
 
 def nyquist(arraysize):
     """
@@ -291,7 +291,7 @@ def frc_plot(FRC, T, fn):
     
     plt.figure()
     plt.clf()
-    plt.plot(fn, FSC.real, "-b", label="FRC")
+    plt.plot(fn, FRC.real, "-b", label="FRC")
     plt.plot(fn, T, "--r", label="1 bit threshold")
     plt.legend()
     plt.xlim(0, 1)
