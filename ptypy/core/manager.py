@@ -1156,7 +1156,7 @@ class _Full(object):
         # Loop through diffraction patterns
         for i in range(len(self.new_diff_views)):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
-            angle = dv.extra
+            extra_val = dv.extra
 
             if dv.storageID != last_diff_storage_ID:
                 gmodes = len(self.geometries)
@@ -1223,7 +1223,7 @@ class _Full(object):
                                                 'storageID': probe_id_suf,
                                                 'layer': pm,
                                                 'active': True,
-                                                'extra': angle})
+                                                'extra': extra_val})
                         else:
                             pv[ii] = pv[ii].copy(update=False)
                             pv[ii].layer = pm
@@ -1236,7 +1236,7 @@ class _Full(object):
                                                 'storageID': object_id_suf,
                                                 'layer': om,
                                                 'active': True,
-                                                'extra': angle})
+                                                'extra': extra_val})
                         else:
                             ov[ii] = ov[ii].copy(update=False)
                             ov[ii].layer = om
@@ -1251,7 +1251,7 @@ class _Full(object):
                                                                 'G%02d' % ii),
                                                 'layer': exit_index,
                                                 'active': dv.active,
-                                                'extra': angle})
+                                                'extra': extra_val})
                         else:
                             ev[ii] = ev[ii].copy(update=False)
                             ev[ii].layer = exit_index
@@ -1503,7 +1503,7 @@ class BlockFull3D(BlockFull):
         # Loop through diffraction patterns
         for i in range(len(self.new_diff_views)):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
-            angle = dv.extra
+            extra_val = dv.extra
 
             # For stochastic engines (e.g. ePIE) we only need one exit buffer
             if self._single_exit_buffer_for_all_views:
@@ -1547,13 +1547,12 @@ class BlockFull3D(BlockFull):
 
                 # Loop through modes
                 for pm in range(self.p.coherence.num_probe_modes):
-                    # for om in range(self.p.coherence.num_object_modes):
-                    angle_index = i // self.p.n_frames_per_angle   # get angle index  
+                    extra_val_index = i // self.p.n_frames_per_angle   
 
                     # Make a unique layer index for exit view
                     # The actual number does not matter due to the
                     # layermap access
-                    exit_index = index * 10000 + pm * 100 + angle
+                    exit_index = index * 10000 + pm * 100 + extra_val
 
                     # Create views
                     # Please note that mostly references are passed,
@@ -1566,16 +1565,16 @@ class BlockFull3D(BlockFull):
                                             'storageID': probe_id_suf,
                                             'layer': pm,
                                             'active': True,
-                                            'extra': angle})
+                                            'extra': extra_val})
 
                     ov = View(container=self.ptycho.obj,
                                 accessrule={'shape': self.object_shape,
                                             'psize': geometry.resolution,
                                             'coord': pos_obj,
                                             'storageID': object_id_suf,
-                                            'layer': angle_index,
+                                            'layer': extra_val_index,
                                             'active': True,
-                                            'extra': angle})
+                                            'extra': extra_val})
 
                     ev = View(container=self.ptycho.exit,
                                 accessrule={'shape': self.exit_shape,
@@ -1585,7 +1584,7 @@ class BlockFull3D(BlockFull):
                                                         'G%02d' % ii),
                                             'layer': exit_index,
                                             'active': dv.active,
-                                            'extra': angle})
+                                            'extra': extra_val})
 
                     views = {'probe': pv,
                              'obj': ov,
