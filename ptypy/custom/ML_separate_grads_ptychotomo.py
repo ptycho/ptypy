@@ -216,9 +216,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         # Instance attributes
 
-        # FIXME: remove debug printing
-        self.DEBUG = False
-
         # Volume
         self.rho = None
 
@@ -261,18 +258,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         # Get volume size
         self.pshape = list(self.ptycho.obj.S.values())[0].data.shape[-1]
-        if self.DEBUG:
-            print('self.pshape:   ', self.pshape)
-
-        angles = list(np.linspace(0, np.pi, self.nangles, endpoint=True))
-
-        # Load angle shifts if provided and create dictionary
-        self.shifts_per_angle = None
-        if self.p.shifts is not None:
-            self.shifts_per_angle = {}
-            self.shifts = np.load(self.p.shifts)
-            for i, k in enumerate(angles):
-                self.shifts_per_angle[k]  =  self.shifts[:,i]  # dx, dy
 
         # FIXME: update with paper
         self.ptycho.citations.add_article(
@@ -426,12 +411,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
             error_dct = self.ML_model.new_grad()
             new_rho_grad, new_pr_grad = self.rho_grad_new, self.pr_grad_new
 
-            if self.DEBUG:
-                print('rho_grad: %.2e' % np.sqrt(Cnorm2(self.rho_grad)))
-                print('new_rho_grad: %.2e ' % np.sqrt(Cnorm2(new_rho_grad)))
-                print('pr_grad: %.2e ' % np.sqrt(Cnorm2(self.pr_grad)))
-                print('new_pr_grad: %.2e ' % np.sqrt(Cnorm2(new_pr_grad)))
-
             tg += time.time() - t1
 
             if self.p.probe_update_start <= self.curiter:
@@ -464,9 +443,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 # For the volume
                 bt_num_rho = Cnorm2(new_rho_grad) - np.real(Cdot(new_rho_grad, self.rho_grad))
                 bt_denom_rho = Cnorm2(self.rho_grad)
-                if self.DEBUG:
-                    print('bt_num_rho, bt_denom_rho: (%.2e, %.2e) ' % (bt_num_rho, bt_denom_rho))
-
                 bt_rho = max(0, bt_num_rho/bt_denom_rho)
 
                 # For the probe
@@ -485,8 +461,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # as did h*tmin when taking steps
             # (don't you just love containers?)
             ############################
-            if self.DEBUG:
-                print('bt_rho, self.tmin_rho: (%.2e,%.2e)' % (bt_rho, self.tmin_rho))
             self.rho_h *= bt_rho / self.tmin_rho
 
             # Smoothing preconditioner for the volume
@@ -509,9 +483,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
             if self.p.poly_line_coeffs == "quadratic":
                 B_rho = self.ML_model.poly_line_coeffs_rho(self.rho_h)
                 B_pr = self.ML_model.poly_line_coeffs_pr(self.pr_h)
-
-                if self.DEBUG:
-                    print('B_rho, B_pr', B_rho, B_pr)
 
                 # same as below but quicker when poly quadratic
                 self.tmin_rho = dt(-0.5 * B_rho[1] / B_rho[2])
@@ -542,9 +513,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 raise NotImplementedError("poly_line_coeffs should be 'quadratic' or 'all'")
 
             tc += time.time() - t2
-
-            if self.DEBUG:
-                print('self.tmin_pr, self.tmin_rho: (%.2e,%.2e)' % (self.tmin_pr, self.tmin_rho))
 
             ########################
             # Take conjugate steps
@@ -834,8 +802,8 @@ class GaussianModel(BaseModel):
                     n_views_active = len([i for i in diff_view.pods.values() if i.active])
                     n_pods_active = len([i for i in self.di.views.values() if i.active])
                     n_prods = n_views_active * n_pods_active
-                    pshape = pod.probe.shape
-                    prods_storage = prods_container.new_storage(shape=(n_prods, pshape[0], pshape[1]))
+                    probe_shape = pod.probe.shape
+                    prods_storage = prods_container.new_storage(shape=(n_prods, probe_shape[0], probe_shape[1]))
 
                 prods_storage[counter] = prod_xi_psi_conj
                 counter += 1
