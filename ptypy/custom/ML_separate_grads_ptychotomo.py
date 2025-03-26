@@ -68,32 +68,40 @@ class PtypyTomoWrapper:
             view_to_proj_vectors = view_to_proj_vectors
         )
 
-    def forward(self, vol, ind):
+    def forward(self, vol, ind, output):
         """
+        Computes the forward projection, so a 3d array of shape 
+        (n_active_views, view_shape_1, view_shape_2), and places
+        it in the container passed as argument.
+
         Receives:
             vol     3d numpy array - the volume
             ind     list[int] - the indices of the active views
-
-        Returns:
-            3d array of shape (n_active_views, view_shape_1, view_shape_2)
+            output  container - to store the result
         """
         self.projector.vol = vol
         self.projector.ind_of_views = ind 
-        return self.projector.forward()
+        output_proj_array = self.projector.forward()
+        for ID, s in output.storages.items():
+            s.data[:] = output_proj_array
 
-    def backward(self, proj_array, ind):
+    def backward(self, proj_array, ind, output):
         """
+        Computes the backward projection, so a 3d array having 
+        same shape as volume, and places it in the container 
+        passed as argument.
+
         Receives:
             proj_array  3d numpy array - what we want to backward project
                         Has shape : (view_shape_1, n_active_views, view_shape_2)
             ind         list[int] - the indices of the active views
-
-        Returns:
-            3d array having same shape as volume
+            output      container - to store the result
         """
         self.projector.proj_array = proj_array 
-        self.projector.ind_of_views = ind      
-        return self.projector.backward()
+        self.projector.ind_of_views = ind   
+        output_vol = self.projector.backward()
+        for ID, s in output.storages.items():
+            s.data[:] = output_vol
 
 
 @register()
@@ -311,6 +319,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         # Needed in poly_line_coeffs_rho
         self.omega = self.ex
+        self.projected_rho = self.ex.copy(self.ex.ID + '_proj_rho', fill=0.)
 
         # Initialise volume
         if self.p.init_vol_zero and self.p.vol_size:
@@ -332,10 +341,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.rho = Container()
         self.rho.new_storage(ID="_rho", shape=(3*(self.view_shape,)))
         self.rho.fill(rho_real + 1j * rho_imag)
-
-        # Initialise stacked views
-        stacked_views = np.array([v.data for v in self.ptycho.obj.views.values() if v.pod.active])
-        self.projected_rho = np.zeros_like((stacked_views), dtype=np.complex64)
 
         # Initialise probe gradient and minimization direction
         self.pr_grad = self.pr.copy(self.pr.ID + '_grad', fill=0.)
@@ -586,6 +591,7 @@ class BaseModel(object):
         self.ex = self.engine.ex
         self.coverage = self.engine.coverage
         self.curiter = self.engine.curiter
+        self.projected_rho = self.engine.projected_rho 
 
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
@@ -736,18 +742,11 @@ class GaussianModel(BaseModel):
         error_dct = {}
         
         # Forward project volume
-        self.projected_rho = self.tomo_wrapper.forward(
+        self.tomo_wrapper.forward(
             vol=self.rho.storages['S_rho'].data,
-            ind=self.get_indexes_of_active_views()
+            ind=self.get_indexes_of_active_views(), 
+            output=self.projected_rho
         )
-
-        # Get refractive index per view
-        i = 0
-        for dname, diff_view in self.di.views.items():
-            for name, pod in diff_view.pods.items():
-                if pod.active:
-                    pod.object = self.projected_rho[i]
-                    i+=1
 
         prods_container = Container()
 
@@ -768,7 +767,7 @@ class GaussianModel(BaseModel):
             for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
-                f[name] = pod.fw(pod.probe * np.exp(1j * pod.object))
+                f[name] = pod.fw(pod.probe * np.exp(1j * self.projected_rho[pod.ex_view]))
                 Imodel += pod.downsample(u.abs2(f[name]))
 
             # Floating intensity option
@@ -785,7 +784,7 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
-                expobj = np.exp(1j * pod.object)
+                expobj = np.exp(1j * self.projected_rho[pod.ex_view])
                 self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
                 prod_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.tot_power
 
@@ -809,10 +808,13 @@ class GaussianModel(BaseModel):
         del prods_container
 
         # Back project volume
-        self.rho_grad.fill(2 * self.tomo_wrapper.backward(
+        self.tomo_wrapper.backward(
             proj_array=np.moveaxis(prods_storage.data, 1, 0),
-            ind=self.get_indexes_of_active_views()
-        ))
+            ind=self.get_indexes_of_active_views(),
+            output=self.rho_grad
+        )
+        self.rho_grad.__imul__(2)
+
         # MPI reduction of gradients
         self.rho_grad.allreduce()
         self.pr_grad.allreduce()
@@ -841,14 +843,14 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Forward project volume minimization direction
-        omega = self.tomo_wrapper.forward(
+        self.tomo_wrapper.forward(
             vol=rho_h.storages['S_rho'].data,
-            ind=self.get_indexes_of_active_views() 
+            ind=self.get_indexes_of_active_views() , 
+            output=self.omega
         )
 
-        # Store omega (so that we can use it later) and multiply it by the required 1j
-        for i, (k,ov) in enumerate([(i,v) for i,v in self.omega.views.items() if v.pod.active]):
-            ov.data[:] = 1j * omega[i]
+        # Multiply omega by the required 1j
+        self.omega.__imul__(1j)
 
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
@@ -867,7 +869,7 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
 
-                psi = pod.probe * np.exp(1j * pod.object)   # exit_wave
+                psi = pod.probe * np.exp(1j * self.projected_rho[pod.ex_view]) # exit_wave
                 f = pod.fw(psi)
 
                 omega_i = self.omega[pod.ex_view]
@@ -925,13 +927,13 @@ class GaussianModel(BaseModel):
         Brenorm = 1. / self.LL[0]**2
 
         # Forward project volume minimization direction
-        omega = self.tomo_wrapper.forward(
+        self.tomo_wrapper.forward(
             vol=rho_h.storages['S_rho'].data,
-            ind=self.get_indexes_of_active_views() 
+            ind=self.get_indexes_of_active_views(),  
+            output=self.omega
         )
-        # Store omega (so that we can use it later) and multiply it by the required 1j
-        for i, v in enumerate([v for v in self.omega.views.values() if v.pod.active]):
-            v.data[:] = 1j * omega[i]
+        # Multiply omega by the required 1j
+        self.omega.__imul__(1j)
 
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
@@ -950,7 +952,7 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
 
-                psi = pod.probe * np.exp(1j * pod.object)   # exit_wave
+                psi = pod.probe * np.exp(1j * self.projected_rho[pod.ex_view])   # exit_wave
                 f = pod.fw(psi)
 
                 omega_i = self.omega[pod.ex_view]
@@ -1025,8 +1027,8 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
 
-                f = pod.fw(pod.probe * np.exp(1j * pod.object))
-                a = pod.fw(pr_h[pod.pr_view] * np.exp(1j * pod.object))
+                f = pod.fw(pod.probe * np.exp(1j * self.projected_rho[pod.ex_view]))
+                a = pod.fw(pr_h[pod.pr_view] * np.exp(1j * self.projected_rho[pod.ex_view]))
 
                 if A0 is None:
 
@@ -1089,8 +1091,8 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
 
-                f = pod.fw(pod.probe * np.exp(1j * pod.object))
-                a = pod.fw(pr_h[pod.pr_view] * np.exp(1j * pod.object))
+                f = pod.fw(pod.probe * np.exp(1j * self.projected_rho[pod.ex_view]))
+                a = pod.fw(pr_h[pod.pr_view] * np.exp(1j * self.projected_rho[pod.ex_view]))
 
                 if A0 is None:
 
