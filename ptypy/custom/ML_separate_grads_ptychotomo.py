@@ -54,7 +54,7 @@ class PtypyTomoWrapper:
             y = v.dcoord[0] - v.storage.center[0]
             x = v.dcoord[1] - v.storage.center[1]   
             list_view_to_proj_vectors.append((y, x))    
-            all_angles.append(v.extra)     
+            all_angles.append(v.extra['val'])     
 
         view_to_proj_vectors = np.array(list_view_to_proj_vectors)
 
