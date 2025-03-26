@@ -316,23 +316,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.rho.new_storage(ID="_rho", shape=(3*(self.view_shape,)))
         self.rho.fill(rho_real + 1j * rho_imag)
 
-        # Initialise coverage mask
-        if self.p.weight_gradient:
-            self.coverage = list(self.ptycho.obj.S.values())[0].get_view_coverage()
-            self.coverage = np.squeeze(np.real(self.coverage)) # extract
-            # FIXME: parameterise coverage mask
-            # Simulated data
-            views_threshold = 25
-            filter_sigma = 1
-            # Real data
-            #views_threshold = 50
-            #filter_sigma = 2.5
-            # FIXME: end parametrise coverage
-            self.coverage[self.coverage <= views_threshold] = 0 # threshold zero
-            self.coverage[self.coverage > views_threshold] = 1  # threshold one
-            self.coverage = gaussian_filter(self.coverage, sigma=filter_sigma) # smooth
-            #np.save('coverage_mask', self.coverage)
-
         # Initialise stacked views
         stacked_views = np.array([v.data for v in self.ptycho.obj.views.values() if v.pod.active])
         self.projected_rho = np.zeros_like((stacked_views), dtype=np.complex64)
@@ -803,8 +786,6 @@ class GaussianModel(BaseModel):
                 expobj = np.exp(1j * pod.object)
                 self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
                 prod_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.tot_power
-                if self.p.weight_gradient: # apply coverage mask
-                    prod_xi_psi_conj *= self.coverage[pod.ob_view.slice[1:]]
 
                 # At the first loop iteration, set the storage dimension
                 # This computation must be done here and not before the loop, otherwise does not work when using mpi
