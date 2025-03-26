@@ -49,7 +49,7 @@ class AstraViewBased:
         view_to_proj_vectors    2D array of vectors, computed as differences between the center of views and 
                                 the center of projections (same length as n_views)
 
-        Does the fllowing:
+        Does the following:
          - the astra geometry for the projection array and the volume
          - the astra ids for real and imag parts of both proj array and volume.
          - sets up the configuration for both backward and forward 
