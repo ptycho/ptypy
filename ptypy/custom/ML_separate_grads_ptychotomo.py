@@ -117,17 +117,23 @@ class MLPtychoTomo(PositionCorrectionEngine):
     help = Zero initial volume
     doc = Start with a zero initial volume for the reconstruction.
 
+    [vol_size]
+    default = None
+    type = tuple
+    help = Shape of volume
+    doc = Size for the initial volume, if starting from a zero volume.
+
     [init_vol_real]
     default = None
-    type = str
+    type = np.ndarray
     help = Initial volume (real part)
-    doc = Path to real part of the starting volume for the reconstruction.
+    doc = Real part of the starting volume for the reconstruction.
 
     [init_vol_imag]
     default = None
-    type = str
+    type = np.ndarray
     help = Initial volume (imaginary part)
-    doc = Path to imaginary part of the starting volume for the reconstruction.
+    doc = Imaginary part of the starting volume for the reconstruction.
 
     [init_vol_blur]
     default = False
@@ -257,7 +263,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.omega = None
 
         # Get volume size
-        self.pshape = list(self.ptycho.obj.S.values())[0].data.shape[-1]
+        self.view_shape = list(self.ptycho.obj.S.values())[0].data.shape[-1]
 
         # FIXME: update with paper
         self.ptycho.citations.add_article(
@@ -282,27 +288,32 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.rho_grad_new = Container()
         self.rho_h = Container()
 
-        self.rho_grad.new_storage(ID="_rho", shape=(3*(self.pshape,)))
-        self.rho_grad_new.new_storage(ID="_rho", shape=(3*(self.pshape,)))
-        self.rho_h.new_storage(ID="_rho", shape=(3*(self.pshape,)))
+        self.rho_grad.new_storage(ID="_rho", shape=(3*(self.view_shape,)))
+        self.rho_grad_new.new_storage(ID="_rho", shape=(3*(self.view_shape,)))
+        self.rho_h.new_storage(ID="_rho", shape=(3*(self.view_shape,)))
 
         # Needed in poly_line_coeffs_rho
         self.omega = self.ex
 
         # Initialise volume
-        if self.p.init_vol_zero: # starting from zero volume
-            rho_real = np.zeros(3*(self.pshape,), dtype=np.complex64)
-            rho_imag = np.zeros(3*(self.pshape,), dtype=np.complex64)
-        else: # starting from given volume
-            rho_real = np.load(self.p.init_vol_real)
-            rho_imag = np.load(self.p.init_vol_imag)
-        if self.p.init_vol_blur: # gaussian blur initial volume
+        if self.p.init_vol_zero and self.p.vol_size:
+            rho_real = np.zeros(self.p.vol_size, dtype=np.complex64)
+            rho_imag = np.zeros(self.p.vol_size, dtype=np.complex64)
+        elif self.p.init_vol_zero:
+            rho_real = np.zeros(3*(self.view_shape,), dtype=np.complex64)
+            rho_imag = np.zeros(3*(self.view_shape,), dtype=np.complex64)            
+        else: 
+            rho_real = self.p.init_vol_real
+            rho_imag = self.p.init_vol_imag
+
+        # gaussian blur initial volume
+        if self.p.init_vol_blur:
             rho_real = gaussian_filter(rho_real, sigma=self.p.init_vol_blur_sigma)
             rho_imag = gaussian_filter(rho_imag, sigma=self.p.init_vol_blur_sigma)
         
         # Initialise volume rho as container
         self.rho = Container()
-        self.rho.new_storage(ID="_rho", shape=(3*(self.pshape,)))
+        self.rho.new_storage(ID="_rho", shape=(3*(self.view_shape,)))
         self.rho.fill(rho_real + 1j * rho_imag)
 
         # Initialise coverage mask
