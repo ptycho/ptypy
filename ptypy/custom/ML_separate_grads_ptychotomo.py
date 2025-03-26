@@ -201,7 +201,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
     type = int
     lowlim = 0
     help = Number of iterations before probe update starts
-    # NOTE: probe_update_start doesn't work with this code, need to add some code to fix this
+    doc = probe_update_start doesn't work with MLPtychoTomo yet.
 
     [poly_line_coeffs]
     default = quadratic
@@ -338,13 +338,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
             vol=self.rho.storages['S_rho'].data, 
         )
 
-        # Initialise projected volume and update views
-        self.projected_rho = self.tomo_wrapper.forward(
-            vol=self.rho.storages['S_rho'].data,
-            ind=self.get_indexes_of_active_views(), 
-        )
-        self.update_views()
-
         # Initialise ML noise model
         self._initialize_model()
 
@@ -366,14 +359,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
         when new data arrives.
         """
         self.ML_model.prepare()
-
-    def update_views(self):
-        """
-        Updates the views so that the projected rho (non-exponentiated)
-        can be retrieved from pod.object.
-        """
-        for ind, v in enumerate([v for v in self.ptycho.obj.views.values() if v.pod.active]):
-            v.data[:] = self.projected_rho[ind]
 
     def get_indexes_of_active_views(self):
         """

@@ -124,23 +124,10 @@ p.engines.engine = u.Param()
 p.engines.engine.name = 'MLPtychoTomo'
 p.engines.engine.n_angles = n_angles
 p.engines.engine.init_vol_zero = True
-# p.engines.engine.init_vol_real = 'real_vol_35it.npy'
-# p.engines.engine.init_vol_imag = 'imag_vol_35it.npy'
-# p.engines.engine.init_vol_blur = False
-# p.engines.engine.init_vol_blur_sigma = 2.5
 p.engines.engine.numiter = 200
 p.engines.engine.numiter_contiguous = 10
 p.engines.engine.probe_support = None
 p.engines.engine.probe_fourier_support = None
-# p.engines.engine.weight_gradient = True
-# Add regularization
-# p.engines.engine.reg_del2 = True
-# p.engines.engine.reg_del2_amplitude = 0.005
-# Add smoothing grad
-# p.engines.engine.smooth_gradient = 2.5
-# p.engines.engine.smooth_gradient_decay = 0.75
-# p.engines.engine.probe_update_start = 0 # is the default
-# p.engines.engine.poly_line_coeffs = "quadratic"
 
 u.verbose.set_level("info")
 
