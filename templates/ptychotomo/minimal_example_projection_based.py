@@ -55,6 +55,7 @@ repeated_angles = []
 for angle in angles:
     repeated_angles += n_frames*[angle]
 sim.extra.vals = np.array(repeated_angles)
+sim.extra.ind = np.arange(len(repeated_angles)).astype(int)
 
 sim.illumination = u.Param()
 sim.illumination.model = None
