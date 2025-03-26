@@ -705,6 +705,8 @@ class GaussianModel(BaseModel):
                 continue
             self.weights[di_view] = (self.Irenorm * di_view.pod.ma_view.data
                                      / (1./self.Irenorm + di_view.data))
+        
+        self.prods_container = self.ex.copy(self.ex.ID + '_prods_container', fill=0.)
 
     def __del__(self):
         """
@@ -746,12 +748,9 @@ class GaussianModel(BaseModel):
             vol=self.rho.storages['S_rho'].data,
             ind=self.get_indexes_of_active_views(), 
             output=self.projected_rho
-        )
-
-        prods_container = Container()
+        )    
 
         # Outer loop: through diffraction patterns
-        counter = 0
         for dname, diff_view in self.di.views.items():
             if not diff_view.active:
                 continue
@@ -787,29 +786,15 @@ class GaussianModel(BaseModel):
                 expobj = np.exp(1j * self.projected_rho[pod.ex_view])
                 self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
                 prod_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.tot_power
-
-                # At the first loop iteration, set the storage dimension
-                # This computation must be done here and not before the loop, otherwise does not work when using mpi
-                # (n_prods is sometimes 0 before the loop, when using mpi)
-                if counter==0:
-                    n_views_active = len([i for i in diff_view.pods.values() if i.active])
-                    n_pods_active = len([i for i in self.di.views.values() if i.active])
-                    n_prods = n_views_active * n_pods_active
-                    probe_shape = pod.probe.shape
-                    prods_storage = prods_container.new_storage(shape=(n_prods, probe_shape[0], probe_shape[1]))
-
-                prods_storage[counter] = prod_xi_psi_conj
-                counter += 1
+                self.prods_container[pod.ex_view] = prod_xi_psi_conj
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
             LL += LLL
 
-        del prods_container
-
         # Back project volume
         self.tomo_wrapper.backward(
-            proj_array=np.moveaxis(prods_storage.data, 1, 0),
+            proj_array=np.moveaxis(self.prods_container.S['S0000G00'].data, 1, 0),
             ind=self.get_indexes_of_active_views(),
             output=self.rho_grad
         )
