@@ -189,7 +189,6 @@ class ScanModel(object):
         # By default we create a new exit buffer for each view
         self._single_exit_buffer_for_all_views = False
 
-        self.extra = None
 
     @classmethod
     def makePtyScan(cls, pars):
@@ -605,10 +604,12 @@ class BlockScanModel(ScanModel):
         # First pass: create or update views and reformat corresponding storage
         for index in chunk['indices']:
             # When storing angles, this is a single angle
-            self.extra = iterable[index]['extra']
+            extra_val = iterable[index]['extra']['val']
+            extra_ind = iterable[index]['extra']['ind']
+            extra_dict = {'val': extra_val, 'ind': extra_ind}
 
             if dv is None:
-                AR_diff.extra = self.extra
+                AR_diff.extra = extra_dict
                 dv = View(self.Cdiff, accessrule=AR_diff)  # maybe use index here
                 mv = View(self.Cmask, accessrule=AR_mask)
             else:
@@ -622,7 +623,7 @@ class BlockScanModel(ScanModel):
             mv.active = active
             dv.layer = index
             mv.layer = index
-            dv.extra = self.extra 
+            dv.extra = extra_dict
 
             diff_views.append(dv)
             mask_views.append(mv)
@@ -984,7 +985,7 @@ class _Full(object):
         # Loop through diffraction patterns
         for i in range(len(self.new_diff_views)):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
-            extra_val = dv.extra
+            extra_dict = dv.extra
 
             # For stochastic engines (e.g. ePIE) we only need one exit buffer
             if self._single_exit_buffer_for_all_views:
@@ -1045,7 +1046,7 @@ class _Full(object):
                                               'storageID': probe_id_suf,
                                               'layer': pm,
                                               'active': True,
-                                              'extra': extra_val})
+                                              'extra': extra_dict})
 
                         ov = View(container=self.ptycho.obj,
                                   accessrule={'shape': self.object_shape,
@@ -1054,7 +1055,7 @@ class _Full(object):
                                               'storageID': object_id_suf,
                                               'layer': om,
                                               'active': True,
-                                              'extra': extra_val})
+                                              'extra': extra_dict})
 
                         ev = View(container=self.ptycho.exit,
                                   accessrule={'shape': self.exit_shape,
@@ -1064,7 +1065,7 @@ class _Full(object):
                                                             'G%02d' % ii),
                                               'layer': exit_index,
                                               'active': dv.active,
-                                              'extra': extra_val})
+                                              'extra': extra_dict})
 
                         views = {'probe': pv,
                                  'obj': ov,
@@ -1312,7 +1313,9 @@ class BlockFull3D(BlockFull):
         # Loop through diffraction patterns
         for i in range(len(self.new_diff_views)):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
-            extra_val = dv.extra
+            extra_dict = dv.extra
+            extra_val = extra_dict['val']
+            extra_ind = extra_dict['ind']
 
             # For stochastic engines (e.g. ePIE) we only need one exit buffer
             if self._single_exit_buffer_for_all_views:
@@ -1356,8 +1359,6 @@ class BlockFull3D(BlockFull):
 
                 # Loop through modes
                 for pm in range(self.p.coherence.num_probe_modes):
-                    extra_val_index = i // self.p.n_frames_per_angle   
-
                     # Make a unique layer index for exit view
                     # The actual number does not matter due to the
                     # layermap access
@@ -1374,16 +1375,16 @@ class BlockFull3D(BlockFull):
                                             'storageID': probe_id_suf,
                                             'layer': pm,
                                             'active': True,
-                                            'extra': extra_val})
+                                            'extra': extra_dict})
 
                     ov = View(container=self.ptycho.obj,
                                 accessrule={'shape': self.object_shape,
                                             'psize': geometry.resolution,
                                             'coord': pos_obj,
                                             'storageID': object_id_suf,
-                                            'layer': extra_val_index,
+                                            'layer': extra_ind,
                                             'active': True,
-                                            'extra': extra_val})
+                                            'extra': extra_dict})
 
                     ev = View(container=self.ptycho.exit,
                                 accessrule={'shape': self.exit_shape,
@@ -1393,7 +1394,7 @@ class BlockFull3D(BlockFull):
                                                         'G%02d' % ii),
                                             'layer': exit_index,
                                             'active': dv.active,
-                                            'extra': extra_val})
+                                            'extra': extra_dict})
 
                     views = {'probe': pv,
                              'obj': ov,
