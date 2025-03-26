@@ -69,11 +69,28 @@ class PtypyTomoWrapper:
         )
 
     def forward(self, vol, ind):
+        """
+        Receives:
+            vol     3d numpy array - the volume
+            ind     list[int] - the indices of the active views
+
+        Returns:
+            3d array of shape (n_active_views, view_shape_1, view_shape_2)
+        """
         self.projector.vol = vol
         self.projector.ind_of_views = ind 
         return self.projector.forward()
 
     def backward(self, proj_array, ind):
+        """
+        Receives:
+            proj_array  3d numpy array - what we want to backward project
+                        Has shape : (view_shape_1, n_active_views, view_shape_2)
+            ind         list[int] - the indices of the active views
+
+        Returns:
+            3d array having same shape as volume
+        """
         self.projector.proj_array = proj_array 
         self.projector.ind_of_views = ind      
         return self.projector.backward()
