@@ -412,14 +412,23 @@ class SimScan3D(PtyScan):
             storage.data.fill(0.)
 
         #### New : overwrite P.obj.S['SsimG00'] ######################
+        # pod.ob_view.extra is {'val': None, 'ind': None} here, so can't use that
+        all_unique_angles = set(self.info.extra['vals'])
+        angles_ordered_list = sorted(all_unique_angles)
+
         for key, pod in P.pods.items():
             if not pod.active: continue
+
             current_index = int(key[1:])
-            angle = current_index // pp.scans.sim.n_frames_per_angle        
+            angle = self.info.extra['vals'][current_index]     
+
+            #previously computed as current_index // pp.scans.sim.n_frames_per_angle
+            angle_ind = angles_ordered_list.index(angle)
             
             # this if condition only works when NOT using mpi
+            # if we don't use this, then we should remove n_frames_per_angle
             # if not (current_index % pp.scans.sim.n_frames_per_angle):
-            P.obj.S['SsimG00'].data = pp.scans.sim.projections[angle]
+            P.obj.S['SsimG00'].data = pp.scans.sim.projections[angle_ind]
             pod.exit = pod.probe * pod.object 
         #############################################################
 
