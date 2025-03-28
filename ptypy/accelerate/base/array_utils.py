@@ -83,7 +83,10 @@ def complex_gaussian_filter(input, mfs):
     else:
         raise NotImplementedError(f"Cannot interpret mfs of type {type(mfs)}")
 
-    return (ndi.gaussian_filter(np.real(input), mfs_list).astype(input.dtype) + 1j * ndi.gaussian_filter(np.imag(input), mfs_list))
+    tmp = (ndi.gaussian_filter(np.real(input), mfs_list).astype(input.dtype) + 1j * ndi.gaussian_filter(np.imag(input), mfs_list))
+    print("ML_serial", input.shape, input.dtype, np.abs(input).mean(), mfs, mfs_list, type(mfs), tmp.dtype, np.abs(tmp).mean())
+
+    return tmp
 
 
 def complex_gaussian_filter_fft(input, mfs):

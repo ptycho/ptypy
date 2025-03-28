@@ -1290,7 +1290,9 @@ def prepare_smoothing_preconditioner(amplitude):
             self.sigma = sigma
 
         def __call__(self, x):
-            return  u.c_gf(x, [0, self.sigma, self.sigma])
+            tmp =  u.c_gf(x, [0, self.sigma, self.sigma])
+            print("ML", x.shape, x.dtype, np.abs(x).mean(), self.sigma, [0, self.sigma, self.sigma], type(self.sigma), tmp.dtype, np.abs(tmp).mean())
+            return  tmp
 
     # from scipy.signal import correlate2d
     # class HannFilt:
