@@ -52,9 +52,9 @@ jobs:
       run: |
         # replace python version in dependencies
         sed -i 's/python/python=${{ matrix.python-version }}/' dependencies_${{ matrix.conda-env }}.yml
-        if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} == '3.12' ]; then
-          sed -i '/- pyfftw/d' dependencies_${{ matrix.conda-env }}.yml
-        fi
+        # if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} == '3.12' ]; then
+        #   sed -i '/- pyfftw/d' dependencies_${{ matrix.conda-env }}.yml
+        # fi
         # if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} == '3.9' ]; then
         #   sed -i '/- mpi4py/d' dependencies_${{ matrix.conda-env }}.yml
         # fi
