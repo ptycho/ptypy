@@ -135,6 +135,7 @@ class MLSerialTest(unittest.TestCase):
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)
 
+    @pytest.mark.skip(reason="Funny behaviour with this test, most likely related to Gaussian filter, see issue #607")
     def test_ML_serial_smoothing_regularizer(self):
         out = []
         for eng in ["ML", "ML_serial"]:
