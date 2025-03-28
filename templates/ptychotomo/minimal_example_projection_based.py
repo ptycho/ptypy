@@ -38,14 +38,14 @@ sim.xy.spacing = 0.3e-3
 sim.xy.steps = 9
 sim.xy.extent = (5e-3,5e-3)
 
-pshape = 56
+view_shape = 56
 n_angles = 19
 n_frames = 76
 
 angles = np.linspace(0, np.pi, n_angles, endpoint=True)
-pgeom = astra.create_proj_geom("parallel3d", 1.0, 1.0, pshape, pshape, angles)
-vgeom = astra.create_vol_geom(pshape, pshape, pshape)
-rmap = tu.refractive_index_map(pshape)
+pgeom = astra.create_proj_geom("parallel3d", 1.0, 1.0, view_shape, view_shape, angles)
+vgeom = astra.create_vol_geom(view_shape, view_shape, view_shape)
+rmap = tu.refractive_index_map(view_shape)
 proj_real_id, proj_real = astra.create_sino3d_gpu(rmap.real, pgeom, vgeom)
 proj_imag_id, proj_imag = astra.create_sino3d_gpu(rmap.imag, pgeom, vgeom)
 proj = np.moveaxis(proj_real + 1j * proj_imag, 1,0)
@@ -72,7 +72,7 @@ sim.illumination.propagation.parallel = 0.13
 sim.illumination.propagation.spot_size = None
 
 
-sim.projections = [np.exp(1j * slice).reshape((1, 56, 56)) for slice in proj]  
+sim.projections = [np.exp(1j * slice).reshape((1, view_shape, view_shape)) for slice in proj]  
 sim.tomo_angles = n_angles
 sim.n_frames_per_angle = n_frames
 
