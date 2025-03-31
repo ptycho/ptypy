@@ -422,13 +422,12 @@ class SimScan3D(PtyScan):
             current_index = int(key[1:])
             angle = self.info.extra['vals'][current_index]     
 
-            #previously computed as current_index // pp.scans.sim.n_frames_per_angle
             angle_ind = angles_ordered_list.index(angle)
             
             # this if condition only works when NOT using mpi
-            # if we don't use this, then we should remove n_frames_per_angle
             # if not (current_index % pp.scans.sim.n_frames_per_angle):
-            P.obj.S['SsimG00'].data = pp.scans.sim.projections[angle_ind]
+            storage_key = next(iter(P.obj.S))
+            P.obj.S[storage_key].data = pp.scans.sim.projections[angle_ind]
             pod.exit = pod.probe * pod.object 
         #############################################################
 
