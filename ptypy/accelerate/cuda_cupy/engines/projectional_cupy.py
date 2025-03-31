@@ -18,6 +18,7 @@ from ptypy.utils import parallel
 from ptypy.engines import register
 from ptypy.engines.projectional import DMMixin, RAARMixin
 from ptypy.accelerate.base.engines import projectional_serial
+from ptypy.accelerate.base.mem_utils import calculate_safe_fpb
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel,\
@@ -27,6 +28,9 @@ from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..multi_gpu import get_multi_gpu_communicator
 
 __all__ = ['DM_cupy', 'RAAR_cupy']
+
+# the number of blocks to have with a safe value of frames_per_block
+NUM_BLK_SAFE_FPB = 3
 
 
 class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
@@ -122,6 +126,13 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
             if not int(mem) // aux.nbytes:
                 log(1,"Cannot fit memory into device, if possible reduce frames per block or nr. of modes. Exiting...")
+                if scan.__class__.__name__ != "GradFull":
+                    # only make sense if the model is not GradFull
+                    per_frame = (aux.nbytes / aux.shape[0]) * nmodes
+                    safe_fpb = calculate_safe_fpb(mem, per_frame, NUM_BLK_SAFE_FPB)
+                    log(1,f"Your current 'frames_per_block' is {fpc}.")
+                    log(1,f"With current reconstruction parameters and computing resources, you can try setting 'frames_per_block' to {safe_fpb}.")
+                    log(1,f"This would divide your reonstruction into {NUM_BLK_SAFE_FPB} blocks.")
                 raise SystemExit("ptypy has been exited.")
             kern.aux = cp.asarray(aux)
 
@@ -209,7 +220,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         queue.use()
 
         for it in range(num):
-                        
+
             reduced_error = np.zeros((3,))
             reduced_error_count = 0
             local_error = {}

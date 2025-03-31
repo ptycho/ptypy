@@ -20,6 +20,8 @@ from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
 from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
+from ptypy.accelerate.base.mem_utils import (max_fpb_from_scans,
+calculate_safe_fpb)
 from .. import get_context, log_device_memory_stats
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
@@ -34,6 +36,8 @@ __all__ = ['ML_cupy']
 # can be used to limit the number of blocks, simulating that they don't fit
 MAX_BLOCKS = 99999
 # MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
+# the number of blocks to have with a safe value of frames_per_block
+NUM_BLK_SAFE_FPB = 3
 
 
 @register()
@@ -161,9 +165,19 @@ class ML_cupy(ML_serial):
         mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
 
         # leave 200MB room for safety
-        fit = int(mem - 200 * 1024 * 1024) // blk
+        avail_mem = max(int(mem - 200 * 1024 * 1024), 0)
+        fit =  avail_mem // blk
         if not fit:
             log(1, "Cannot fit memory into device, if possible reduce frames per block. Exiting...")
+            # max_fpb is None if there is a GradFull in the scan models
+            # as 'frames_per_block' is irrelevant
+            max_fpb = max_fpb_from_scans(self.ptycho.model.scans)
+            if max_fpb is not None:
+                per_frame = blk / max_fpb
+                safe_fpb = calculate_safe_fpb(avail_mem, per_frame, NUM_BLK_SAFE_FPB)
+                log(1,f"Your current 'frames_per_block' is {max_fpb}.")
+                log(1,f"With current reconstruction parameters and computing resources, you can try setting 'frames_per_block' to {safe_fpb}.")
+                log(1,f"This would divide your reonstruction into {NUM_BLK_SAFE_FPB} blocks.")
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
@@ -318,7 +332,7 @@ class ML_cupy(ML_serial):
         return err
 
     def position_update(self):
-        """ 
+        """
         Position refinement
         """
         if not self.do_position_refinement or (not self.curiter):
@@ -746,7 +760,7 @@ class Regul_del2_cupy(object):
         self.dot = lambda x, y: self.AUK.dot(x, y).get().item()
 
         self._grad_reg_kernel = cp.ElementwiseKernel(
-            "float32 fac, complex64 py, complex64 px, complex64 my, complex64 mx", 
+            "float32 fac, complex64 py, complex64 px, complex64 my, complex64 mx",
             "complex64 out",
             "out = (px+py-my-mx) * fac",
             "grad_reg",
