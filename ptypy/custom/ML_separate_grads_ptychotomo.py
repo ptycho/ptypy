@@ -80,7 +80,9 @@ class PtypyTomoWrapper:
             output  container - to store the result
         """
         self.projector.vol = vol
-        self.projector.ind_of_views = ind 
+        self.projector.ind_of_views = ind
+
+        # Does not currently work with multiple storages
         output_proj_array = self.projector.forward()
         for ID, s in output.storages.items():
             s.data[:] = output_proj_array
@@ -99,6 +101,8 @@ class PtypyTomoWrapper:
         """
         self.projector.proj_array = proj_array 
         self.projector.ind_of_views = ind   
+
+        # Does not currently work with multiple storages
         output_vol = self.projector.backward()
         for ID, s in output.storages.items():
             s.data[:] = output_vol
@@ -793,12 +797,13 @@ class GaussianModel(BaseModel):
             LL += LLL
 
         # Back project volume
+        storage_key = next(iter(self.prods_container.S)) #list(self.prods_container.S)[0]
         self.tomo_wrapper.backward(
-            proj_array=np.moveaxis(self.prods_container.S['S0000G00'].data, 1, 0),
+            proj_array=np.moveaxis(self.prods_container.S[storage_key].data, 1, 0),
             ind=self.get_indexes_of_active_views(),
             output=self.rho_grad
         )
-        self.rho_grad.__imul__(2)
+        self.rho_grad *= 2
 
         # MPI reduction of gradients
         self.rho_grad.allreduce()
@@ -835,7 +840,7 @@ class GaussianModel(BaseModel):
         )
 
         # Multiply omega by the required 1j
-        self.omega.__imul__(1j)
+        self.omega *= 1j
 
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
