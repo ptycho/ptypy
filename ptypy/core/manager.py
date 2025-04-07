@@ -1673,12 +1673,13 @@ class ModelManager(object):
 
         # Attempt to get new data
         new_data = []
+        prb_ids, obj_ids, pod_ids = dict(), dict(), set()
         for label, scan in self.scans.items():
             if not scan.data_available:
                 continue
             else:
                 ilog_streamer('%s: loading data for scan %s' %(type(scan).__name__,label))
-                prb_ids, obj_ids, pod_ids = dict(), dict(), set()
+                
                 nd = scan.new_data(_nframes)
                 while nd:
                     new_data.append((label, nd[0]))
@@ -1690,16 +1691,16 @@ class ModelManager(object):
                     nd = scan.new_data(_nframes)
                 ilog_newline()
 
-                # Reformatting
-                ilog_message('%s: loading data for scan %s (reformatting probe/obj/exit)'  %(type(scan).__name__,label))
-                self.ptycho.probe.reformat(True)
-                self.ptycho.obj.reformat(True)
-                self.ptycho.exit.reformat(True)
+        # Reformatting
+        ilog_message('Reformatting probe/obj/exit)')
+        self.ptycho.probe.reformat(True, update=True)
+        self.ptycho.obj.reformat(True, update=True)
+        self.ptycho.exit.reformat(True, update=True)
 
-                # Initialize probe/object/exit
-                ilog_message('%s: loading data for scan %s (initializing probe/obj/exit)'  %(type(scan).__name__,label))
-                scan._initialize_probe(prb_ids)
-                scan._initialize_object(obj_ids)
-                scan._initialize_exit(list(pod_ids))
+        # Initialize probe/object/exit
+        ilog_message('%Initializing probe/obj/exit)')
+        scan._initialize_probe(prb_ids)
+        scan._initialize_object(obj_ids)
+        scan._initialize_exit(list(pod_ids))
 
         return new_data
