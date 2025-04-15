@@ -602,11 +602,14 @@ class BlockScanModel(ScanModel):
         weights = chunk['weights']
 
         # First pass: create or update views and reformat corresponding storage
-        for index in chunk['indices']:
+        for i, index in enumerate(chunk['indices']):
             # When storing angles, this is a single angle
-            extra_val = iterable[index]['extra']['val']
-            extra_ind = iterable[index]['extra']['ind']
-            extra_dict = {'val': extra_val, 'ind': extra_ind}
+            extra_val = iterable[i]['extra']['val']
+            extra_global_ind = iterable[i]['extra']['ind']
+            extra_dict = {
+                'val': extra_val, 
+                'ind': extra_global_ind,
+                }
 
             if dv is None:
                 AR_diff.extra = extra_dict
