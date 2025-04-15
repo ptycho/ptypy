@@ -710,7 +710,6 @@ class GaussianModel(BaseModel):
             self.weights[di_view] = (self.Irenorm * di_view.pod.ma_view.data
                                      / (1./self.Irenorm + di_view.data))
         
-        self.prods_container = self.ex.copy(self.ex.ID + '_prods_container', fill=0.)
 
     def __del__(self):
         """
@@ -790,16 +789,16 @@ class GaussianModel(BaseModel):
                 expobj = np.exp(1j * self.projected_rho[pod.ex_view])
                 self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
                 prod_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.tot_power
-                self.prods_container[pod.ex_view] = prod_xi_psi_conj
+                self.projected_rho[pod.ex_view] = prod_xi_psi_conj
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
             LL += LLL
 
         # Back project volume
-        storage_key = next(iter(self.prods_container.S)) #list(self.prods_container.S)[0]
+        storage_key = next(iter(self.projected_rho.S)) #list(self.prods_container.S)[0]
         self.tomo_wrapper.backward(
-            proj_array=np.moveaxis(self.prods_container.S[storage_key].data, 1, 0),
+            proj_array=np.moveaxis(self.projected_rho.S[storage_key].data, 1, 0),
             ind=self.get_indexes_of_active_views(),
             output=self.rho_grad
         )
@@ -838,7 +837,11 @@ class GaussianModel(BaseModel):
             ind=self.get_indexes_of_active_views() , 
             output=self.omega
         )
-
+        self.tomo_wrapper.forward(
+            vol=self.rho.storages['S_rho'].data,
+            ind=self.get_indexes_of_active_views(), 
+            output=self.projected_rho
+        )
         # Multiply omega by the required 1j
         self.omega *= 1j
 
