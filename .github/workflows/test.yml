@@ -48,6 +48,7 @@ jobs:
         channels: conda-forge
         activate-environment: ptypy_env
         python-version: ${{ matrix.python-version }}
+        miniforge-version: latest
     - name: Install ${{ matrix.conda-env }} dependencies
       run: |
         sed -i 's/python/python=${{ matrix.python-version }}/' dependencies_${{ matrix.conda-env }}.yml
