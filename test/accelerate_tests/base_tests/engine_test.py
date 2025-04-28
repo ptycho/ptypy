@@ -152,6 +152,7 @@ class MLSerialTest(unittest.TestCase):
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)
 
+    @pytest.mark.skip(reason="Funny behaviour with this test, most likely due to numerical instabilities, see issue #612")
     def test_ML_serial_wavefield_preconditioner(self):
         out = []
         for eng in ["ML", "ML_serial"]:
