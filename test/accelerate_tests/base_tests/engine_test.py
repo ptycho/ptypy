@@ -75,7 +75,7 @@ class MLSerialTest(unittest.TestCase):
                                     err_msg="The object arrays are not matching as expected")
         # np.testing.assert_allclose(RMSE_LL, 0.0, atol=1e-7,
         #                             err_msg="The log-likelihood errors are not matching as expected")
-    
+
 
     def test_ML_serial_base(self):
         out = []
@@ -148,6 +148,26 @@ class MLSerialTest(unittest.TestCase):
             engine_params.smooth_gradient = 20
             engine_params.smooth_gradient_decay = 1/10.
             engine_params.scale_precond = False
+            out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+        self.check_engine_output(out, plotting=False, debug=False)
+
+    @pytest.mark.skip(reason="Funny behaviour with this test, most likely due to numerical instabilities, see issue #612")
+    def test_ML_serial_wavefield_preconditioner(self):
+        out = []
+        for eng in ["ML", "ML_serial"]:
+            engine_params = u.Param()
+            engine_params.name = eng
+            engine_params.numiter = 100
+            engine_params.floating_intensities = False
+            engine_params.reg_del2 = False
+            engine_params.reg_del2_amplitude = 1.
+            engine_params.smooth_gradient = 0.
+            engine_params.smooth_gradient_decay = 0.
+            engine_params.scale_precond = False
+            engine_params.wavefield_precond = True
+            engine_params.wavefield_delta_object = 0.1
+            engine_params.wavefield_delta_probe = 0.1
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)

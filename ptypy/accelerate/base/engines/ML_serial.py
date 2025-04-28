@@ -50,6 +50,7 @@ class ML_serial(ML):
         self.diff_info = {}
         self.cn2_ob_grad = 0.
         self.cn2_pr_grad = 0.
+        self.sqrt = np.sqrt
 
     def engine_initialize(self):
         """
@@ -162,6 +163,13 @@ class ML_serial(ML):
 
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new
+
+        # Wavefield preconditioner for the object
+        if self.p.wavefield_precond:
+            for name, s in new_ob_grad.storages.items():
+                s.data /= np.sqrt(self.ob_fln.storages[name].data
+                                  + self.p.wavefield_delta_object)
+
         # Smoothing preconditioner
         if self.smooth_gradient:
             self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
@@ -175,13 +183,20 @@ class ML_serial(ML):
 
     def _replace_pr_grad(self):
         new_pr_grad = self.pr_grad_new
-        # probe support
+
+        # Probe support
         if self.p.probe_update_start <= self.curiter:
             # Apply probe support if needed
             for name, s in new_pr_grad.storages.items():
                 self.support_constraint(s)
         else:
             new_pr_grad.fill(0.)
+
+        # Wavefield preconditioner for the probe
+        if self.p.wavefield_precond:
+            for name, s in new_pr_grad.storages.items():
+                s.data /= np.sqrt(self.pr_fln.storages[name].data
+                                  + self.p.wavefield_delta_probe)
 
         norm = Cnorm2(new_pr_grad)
         dot = np.real(Cdot(new_pr_grad, self.pr_grad))
@@ -240,19 +255,36 @@ class ML_serial(ML):
             self.cn2_pr_grad = cn2_new_pr_grad
 
             dt = self.ptycho.FType
+
             # 3. Next conjugate
             self.ob_h *= dt(bt / self.tmin)
-
-            # Smoothing preconditioner
-            if self.smooth_gradient:
+            # Wavefield preconditioner for the object (with and without smoothing preconditioner)
+            if self.p.wavefield_precond:
                 for name, s in self.ob_h.storages.items():
-                    s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
+                    if self.smooth_gradient:
+                        s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data
+                                      / self.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
+                                      , self.smooth_gradient.sigma)
+                    else:
+                        s.data[:] -= (self.ob_grad.storages[name].data
+                                      / self.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object))
             else:
-                self.ob_h -= self.ob_grad
+                # Smoothing preconditioner for the object
+                if self.smooth_gradient:
+                    for name, s in self.ob_h.storages.items():
+                        s.data[:] -= self._get_smooth_gradient(self.ob_grad.storages[name].data, self.smooth_gradient.sigma)
+                else:
+                    self.ob_h -= self.ob_grad
 
             self.pr_h *= dt(bt / self.tmin)
             self.pr_grad *= dt(self.scale_p_o)
-            self.pr_h -= self.pr_grad
+            # Wavefield preconditioner for the probe
+            if self.p.wavefield_precond:
+                for name, s in self.pr_h.storages.items():
+                    s.data[:] -= (self.pr_grad.storages[name].data
+                                  / self.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe))
+            else:
+                self.pr_h -= self.pr_grad
 
             # In principle, the way things are now programmed this part
             # could be iterated over in a real Newton-Raphson style.
@@ -416,6 +448,11 @@ class GaussianModel(BaseModelSerial):
         pr_grad = self.engine.pr_grad_new
         ob_grad << 0.
         pr_grad << 0.
+        if self.engine.p.wavefield_precond:
+            ob_fln = self.engine.ob_fln
+            pr_fln = self.engine.pr_fln
+            ob_fln << 0.
+            pr_fln << 0.
 
         # We need an array for MPI
         LL = np.array([0.])
@@ -450,6 +487,11 @@ class GaussianModel(BaseModelSerial):
             prg = pr_grad.S[pID].data
             I = prep.I
 
+            # local references for wavefield precond
+            if self.engine.p.wavefield_precond:
+                obf = ob_fln.S[oID].data
+                prf = pr_fln.S[pID].data
+
             # make propagated exit (to buffer)
             AWK.build_aux_no_ex(aux, addr, ob, pr, add=False)
 
@@ -465,8 +507,12 @@ class GaussianModel(BaseModelSerial):
             GDK.error_reduce(addr, err_phot)
             aux[:] = BW(aux)
 
-            POK.ob_update_ML(addr, obg, pr, aux)
-            POK.pr_update_ML(addr, prg, ob, aux)
+            if self.engine.p.wavefield_precond:
+                POK.ob_update_ML_wavefield(addr, obg, obf, pr, aux)
+                POK.pr_update_ML_wavefield(addr, prg, prf, ob, aux)
+            else:
+                POK.ob_update_ML(addr, obg, pr, aux)
+                POK.pr_update_ML(addr, prg, ob, aux)
 
         for dID, prep in self.engine.diff_info.items():
             err_phot = prep.err_phot
@@ -480,6 +526,9 @@ class GaussianModel(BaseModelSerial):
         # MPI reduction of gradients
         ob_grad.allreduce()
         pr_grad.allreduce()
+        if self.engine.p.wavefield_precond:
+            ob_fln.allreduce()
+            pr_fln.allreduce()
         parallel.allreduce(LL)
 
         # Object regularizer
