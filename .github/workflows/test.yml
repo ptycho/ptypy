@@ -48,55 +48,19 @@ jobs:
         channels: conda-forge
         activate-environment: ptypy_env
         python-version: ${{ matrix.python-version }}
+        miniforge-version: latest
     - name: Install ${{ matrix.conda-env }} dependencies
       run: |
-        # replace python version in dependencies
         sed -i 's/python/python=${{ matrix.python-version }}/' dependencies_${{ matrix.conda-env }}.yml
-        # if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} == '3.12' ]; then
-        #   sed -i '/- pyfftw/d' dependencies_${{ matrix.conda-env }}.yml
-        # fi
-        # if [ ${{ matrix.conda-env }} == 'full' ] && [ ${{ matrix.python-version }} == '3.9' ]; then
-        #   sed -i '/- mpi4py/d' dependencies_${{ matrix.conda-env }}.yml
-        # fi
-        conda install --solver=classic mpich
+        conda install -c conda-forge mpich
         conda env update --file dependencies_${{ matrix.conda-env }}.yml --name ptypy_env
-        conda install --solver=classic flake8 pytest pytest-cov
+        conda install -c conda-forge flake8 pytest pytest-cov
         conda list
     - name: Prepare ptypy
-      run: |
-        # Install ptypy
-        pip install .
+      run: pip install .
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --ignore=F824 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        # flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
-      run: |
-        # pytest ptypy/test -v --doctest-modules --junitxml=junit/test-results.xml --cov=ptypy --cov-report=xml --cov-report=html --cov-config=.coveragerc
-        pytest -v
-#    - name: cobertura-report
-#      if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize')
-#      uses: 5monkeys/cobertura-action@v7
-#      with:
-#        # The GITHUB_TOKEN for this repo
-#        repo_token:  ${{ secrets.GITHUB_TOKEN }}
-#        # Path to the cobertura file.
-#        path: coverage.xml
-#        # If files with 100% should be skipped from report.
-#        skip_covered: true
-#        # Minimum allowed coverage percentage as an integer.
-#        minimum_coverage: 90
-#        only_changed_files: true
-#    - name: Junit Report to Annotations
-#      uses: ashley-taylor/junit-report-annotations-action@master
-#      with:
-#        # github token
-#        access-token: ${{ secrets.GITHUB_TOKEN }}
-#        # glob to junit xml files
-#        path: junit/test-results.xml
-#        # include summary annotation
-#        includeSummary: true
-#        # max number of failed tests to include
-#        numFailures: 10
+      run: pytest -v
