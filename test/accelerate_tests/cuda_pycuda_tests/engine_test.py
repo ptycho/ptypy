@@ -94,7 +94,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.reg_del2_amplitude = 1.
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical", frames_per_block=100))
         self.check_engine_output(out, plotting=False, debug=False)
 
     def test_ML_pycuda_regularizer(self):
@@ -108,7 +108,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.reg_del2_amplitude = 1.
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical", frames_per_block=100))
         self.check_engine_output(out, plotting=False, debug=False)
 
     def test_ML_pycuda_preconditioner(self):
@@ -123,7 +123,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.scale_precond = True
             engine_params.scale_probe_object = 1e-6
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical", frames_per_block=100))
         self.check_engine_output(out, plotting=False, debug=False)
 
     def test_ML_pycuda_floating(self):
@@ -137,7 +137,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.reg_del2_amplitude = 1.
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical", frames_per_block=100))
         self.check_engine_output(out, plotting=False, debug=False)
 
     def test_ML_pycuda_smoothing_regularizer(self):
@@ -153,7 +153,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.smooth_gradient_decay = 1/10.
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical", frames_per_block=100))
         self.check_engine_output(out, plotting=False, debug=False, tol=0.3)
 
     def test_ML_pycuda_wavefield_preconditioner(self):
@@ -172,7 +172,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.wavefield_delta_object = 0.1
             engine_params.wavefield_delta_probe = 0.1
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           scanmodel="BlockFull", autosave=False, verbose_level="critical"))
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical", frames_per_block=100))
         self.check_engine_output(out, plotting=False, debug=False, tol=0.3)
 
     def test_ML_pycuda_all(self):
@@ -189,7 +189,7 @@ class MLPycudaTest(unittest.TestCase):
             engine_params.scale_precond = True
             engine_params.scale_probe_object = 1e-6
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
-                                           scanmodel="BlockFull", autosave=False, verbose_level="info"))
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical", frames_per_block=100))
         self.check_engine_output(out, plotting=False, debug=False)
 
 if __name__ == "__main__":
