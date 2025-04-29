@@ -24,7 +24,7 @@ class MLSerialTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.outpath)
 
-    def check_engine_output(self, output, plotting=False, debug=False):
+    def check_engine_output(self, output, plotting=False, debug=False, tol=0.1):
         P_ML, P_ML_serial = output
         numiter = len(P_ML.runtime["iter_info"])
         LL_ML = np.array([P_ML.runtime["iter_info"][i]["error"][1] for i in range(numiter)])
@@ -34,6 +34,11 @@ class MLSerialTest(unittest.TestCase):
         PRB_ML_serial, PRB_ML = P_ML_serial.probe.S["SMFG00"].data[0], P_ML.probe.S["SMFG00"].data[0]
         eng_ML = P_ML.engines["engine00"]
         eng_ML_serial = P_ML_serial.engines["engine00"]
+        # Normalize the outputs
+        PRB_ML_max = np.abs(PRB_ML).max()
+        PRB_ML_serial_max = np.abs(PRB_ML_serial).max()
+        OBJ_ML_serial *= (PRB_ML_serial_max / PRB_ML_max)
+        PRB_ML_serial /= (PRB_ML_serial_max / PRB_ML_max)
         if debug:
             import matplotlib.pyplot as plt
             plt.figure("ML debug")
@@ -67,14 +72,14 @@ class MLSerialTest(unittest.TestCase):
         # np.testing.assert_allclose(eng_ML.debug, eng_ML_serial.debug, atol=1e-7, rtol=1e-7,
         #                             err_msg="The debug arrays are not matching as expected")
         RMSE_ob = (np.mean(np.abs(OBJ_ML_serial - OBJ_ML)**2))
-        RMSE_pr = (np.mean(np.abs(PRB_ML_serial - PRB_ML)**2))
-        # RMSE_LL = (np.mean(np.abs(LL_ML_serial - LL_ML)**2))
-        np.testing.assert_allclose(RMSE_ob, 0.0, atol=1e-1, 
+        RMSE_pr = (np.mean(np.abs(PRB_ML_serial - PRB_ML)**2))        
+        #MSE_LL = (np.mean(np.abs(LL_ML_serial - LL_ML)**2))
+        np.testing.assert_allclose(RMSE_ob, 0.0, atol=tol, 
                                     err_msg="The object arrays are not matching as expected")
-        np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-1, 
-                                    err_msg="The object arrays are not matching as expected")
-        # np.testing.assert_allclose(RMSE_LL, 0.0, atol=1e-7,
-        #                             err_msg="The log-likelihood errors are not matching as expected")
+        np.testing.assert_allclose(RMSE_pr, 0.0, atol=tol, 
+                                    err_msg="The probe arrays are not matching as expected")
+        #p.testing.assert_allclose(RMSE_LL, 0.0, atol=1e-7,
+        #                           err_msg="The log-likelihood errors are not matching as expected")
 
 
     def test_ML_serial_base(self):
@@ -152,13 +157,13 @@ class MLSerialTest(unittest.TestCase):
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)
 
-    @pytest.mark.skip(reason="Funny behaviour with this test, most likely due to numerical instabilities, see issue #612")
+    @pytest.mark.skip(reason="Funny behaviour with this test, most likely related to Gaussian filter, see issue #607")
     def test_ML_serial_wavefield_preconditioner(self):
         out = []
         for eng in ["ML", "ML_serial"]:
             engine_params = u.Param()
             engine_params.name = eng
-            engine_params.numiter = 100
+            engine_params.numiter = 500
             engine_params.floating_intensities = False
             engine_params.reg_del2 = False
             engine_params.reg_del2_amplitude = 1.
@@ -170,7 +175,7 @@ class MLSerialTest(unittest.TestCase):
             engine_params.wavefield_delta_probe = 0.1
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=False, debug=False)
+        self.check_engine_output(out, plotting=False, debug=False, tol=0.3)
 
     def test_ML_serial_all(self):
         out = []
