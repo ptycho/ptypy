@@ -96,6 +96,22 @@ class LBFGS(ML):
     lowlim = 0
     help = Number of iterations before probe update starts
 
+    [wavefield_precond]
+    default = False
+    type = bool
+    help = Whether to use the wavefield preconditioner
+    doc = This parameter can give faster convergence.
+
+    [wavefield_delta_object]
+    default = 0.1
+    type = float
+    help = Wavefield preconditioner damping constant for the object.
+
+    [wavefield_delta_probe]
+    default = 0.1
+    type = float
+    help = Wavefield preconditioner damping constant for the probe.
+
     [bfgs_memory_size]
     default = 5
     type = int
@@ -205,14 +221,29 @@ class LBFGS(ML):
             ############################
             if self.curiter == 0: # Initial steepest-descent step
 
+                # Wavefield preconditioner (applied twice)
+                if self.p.wavefield_precond:
+                    for name, s in new_ob_grad.storages.items():
+                        new_ob_grad.storages[name].data /= self.ob_fln.storages[name].data + self.p.wavefield_delta_object
+                        new_pr_grad.storages[name].data /= self.pr_fln.storages[name].data + self.p.wavefield_delta_probe
+
                 # Object steepest-descent step
                 self.ob_h -= new_ob_grad
 
                 # Probe steepest-descent step
-                new_pr_grad *= self.scale_p_o # probe preconditioning
+                new_pr_grad *= self.scale_p_o # probe preconditioning (applied twice)
                 self.pr_h -= new_pr_grad
 
             else: # Two-loop LBFGS recursion
+
+                # Wavefield preconditioner
+                if self.p.wavefield_precond:
+                    for name, s in self.ob_h.storages.items():
+                        self.ob_h.storages[name].data *= np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
+                        self.pr_h.storages[name].data *= np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe)
+                    for name, s in new_ob_grad.storages.items():
+                        new_ob_grad.storages[name].data /= np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
+                        new_pr_grad.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe)
 
                 # Memory index
                 mi = min(self.curiter,self.p.bfgs_memory_size)
@@ -270,6 +301,12 @@ class LBFGS(ML):
                     self.pr_h /= (self.alpha[i]-beta)
                     self.pr_h += self.pr_s[i]
                     self.pr_h *= (self.alpha[i]-beta)
+
+                # Wavefield preconditioner
+                if self.p.wavefield_precond:
+                    for name, s in self.ob_h.storages.items():
+                        self.ob_h.storages[name].data /= np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
+                        self.pr_h.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe)
 
                 # Flip step direction for minimisation
                 self.ob_h *= -1

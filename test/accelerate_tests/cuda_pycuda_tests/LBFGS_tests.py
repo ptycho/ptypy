@@ -150,6 +150,25 @@ class LBFGSPycudaTest(unittest.TestCase):
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)
 
+    def test_LBFGS_pycuda_wavefield_preconditioner(self):
+        out = []
+        for eng in ["LBFGS_serial", "LBFGS_pycuda"]:
+            engine_params = u.Param()
+            engine_params.name = eng
+            engine_params.numiter = 700
+            engine_params.floating_intensities = False
+            engine_params.reg_del2 = False
+            engine_params.reg_del2_amplitude = 1.
+            engine_params.smooth_gradient = 0
+            engine_params.smooth_gradient_decay = 0.
+            engine_params.scale_precond = False
+            engine_params.wavefield_precond = True
+            engine_params.wavefield_delta_object = 0.1
+            engine_params.wavefield_delta_probe = 0.1
+            out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
+                                           scanmodel="BlockFull", autosave=False, verbose_level="critical", frames_per_block=100))
+        self.check_engine_output(out, plotting=False, debug=False, tol=0.3)
+
     def test_LBFGS_pycuda_all(self):
         out = []
         for eng in ["LBFGS_serial", "LBFGS_pycuda"]:
