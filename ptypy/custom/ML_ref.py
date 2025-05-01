@@ -104,6 +104,22 @@ class ML_ref(ML):
     help = How many coefficients to be used in the the linesearch
     doc = choose between the 'quadratic' approximation (default) or 'all'
 
+    [wavefield_precond]
+    default = False
+    type = bool
+    help = Whether to use the wavefield preconditioner
+    doc = This parameter can give faster convergence.
+
+    [wavefield_delta_object]
+    default = 0.1
+    type = float
+    help = Wavefield preconditioner damping constant for the object.
+
+    [wavefield_delta_probe]
+    default = 0.1
+    type = float
+    help = Wavefield preconditioner damping constant for the probe.
+
     """
 
     SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
@@ -166,6 +182,9 @@ class GaussianModel(BaseModel):
         """
         self.ob_grad.fill(0.)
         self.pr_grad.fill(0.)
+        if self.p.wavefield_precond:
+            self.ob_fln.fill(0.)
+            self.pr_fln.fill(0.)
 
         # We need an array for MPI
         LL = np.array([0.])
@@ -207,6 +226,11 @@ class GaussianModel(BaseModel):
                 self.ob_grad[pod.ob_view] += 2. * xi * (1j * np.exp(1j * pod.object) * pod.probe).conj()
                 self.pr_grad[pod.pr_view] += 2. * xi * np.exp(1j * pod.object).conj()
 
+                # Compute fluence maps for object and probe
+                if self.p.wavefield_precond:
+                    self.ob_fln[pod.ob_view] += u.abs2(pod.probe)
+                    self.pr_fln[pod.pr_view] += u.abs2(pod.object)
+
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
             LL += LLL
@@ -214,6 +238,9 @@ class GaussianModel(BaseModel):
         # MPI reduction of gradients
         self.ob_grad.allreduce()
         self.pr_grad.allreduce()
+        if self.p.wavefield_precond:
+            self.ob_fln.allreduce()
+            self.pr_fln.allreduce()
         parallel.allreduce(LL)
 
         # Object regularizer
