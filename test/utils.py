@@ -45,9 +45,11 @@ def PtyscanTestRunner(ptyscan_instance, data_params, save_type='append', auto_fr
 
 
 def EngineTestRunner(engine_params,propagator='farfield',output_path='./', output_file=None,
-                    autosave=True, scanmodel="Full", verbose_level="info", init_correct_probe=False):
+                    autosave=True, scanmodel="Full", verbose_level="info", init_correct_probe=False,
+                    frames_per_block=100000):
 
     p = u.Param()
+    p.frames_per_block = frames_per_block
     p.verbose_level = verbose_level
     p.io = u.Param()
     p.io.home = output_path

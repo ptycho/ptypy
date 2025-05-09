@@ -292,8 +292,9 @@ class WASP_serial(WASP):
                     ob_old = ob.copy()
                     POK.ob_update_wasp(addr, ob, pr, ex, aux, ob_sum_nmr,
                                        ob_sum_dnm, alpha=self.p.alpha)
-                    POK.pr_update_wasp(addr, pr, ob_old, ex, aux, pr_sum_nmr,
-                                       pr_sum_dnm, beta=self.p.beta)
+                    if self.p.probe_update_start <= self.curiter:
+                        POK.pr_update_wasp(addr, pr, ob_old, ex, aux, pr_sum_nmr,
+                                           pr_sum_dnm, beta=self.p.beta)
 
                     self.benchmark.wasp_ob_pr_update += time.time() - t1
                     self.benchmark.calls_wasp_ob_pr_update += 1
@@ -321,7 +322,8 @@ class WASP_serial(WASP):
                 parallel.allreduce(pr_sum_dnm)
 
                 POK.avg_wasp(ob, ob_sum_nmr, ob_sum_dnm)
-                POK.avg_wasp(pr, pr_sum_nmr, pr_sum_dnm)
+                if self.p.probe_update_start <= self.curiter:
+                    POK.avg_wasp(pr, pr_sum_nmr, pr_sum_dnm)
 
                 self.benchmark.wasp_averaging += time.time() - t1
                 self.benchmark.calls_wasp_averaging += 1

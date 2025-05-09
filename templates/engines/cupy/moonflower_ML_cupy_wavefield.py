@@ -51,12 +51,7 @@ p.engines.engine00 = u.Param()
 p.engines.engine00.name = 'ML_cupy'
 p.engines.engine00.numiter = 300
 p.engines.engine00.numiter_contiguous = 5
-p.engines.engine00.reg_del2 = True                      # Whether to use a Gaussian prior (smoothing) regularizer
-p.engines.engine00.reg_del2_amplitude = 1.             # Amplitude of the Gaussian prior if used
-p.engines.engine00.scale_precond = True
-p.engines.engine00.smooth_gradient = 20.
-p.engines.engine00.smooth_gradient_decay = 1/50.
-p.engines.engine00.floating_intensities = False
+p.engines.engine00.wavefield_precond = True
 
 # prepare and run
 if __name__ == "__main__":
