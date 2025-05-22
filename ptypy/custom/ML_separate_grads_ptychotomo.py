@@ -325,12 +325,16 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.omega = self.ex
         self.projected_rho = self.ex.copy(self.ex.ID + '_proj_rho', fill=0.)
 
-        if self.p.init_vol_zero: # starting from zero volume
+        if self.p.init_vol_zero and self.p.vol_size:
+            rho_real = np.zeros(self.p.vol_size, dtype=np.complex64)
+            rho_imag = np.zeros(self.p.vol_size, dtype=np.complex64)
+        elif self.p.init_vol_zero: # starting from zero volume
             rho_real = np.zeros(3*(self.view_shape,), dtype=np.complex64)
             rho_imag = np.zeros(3*(self.view_shape,), dtype=np.complex64)
         else: # starting from given volume
             rho_real = np.load(self.p.init_vol_real)
             rho_imag = np.load(self.p.init_vol_imag)
+            
         if self.p.init_vol_blur: # gaussian blur initial volume
             rho_real = gaussian_filter(rho_real, sigma=self.p.init_vol_blur_sigma)
             rho_imag = gaussian_filter(rho_imag, sigma=self.p.init_vol_blur_sigma)
