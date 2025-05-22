@@ -326,8 +326,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.projected_rho = self.ex.copy(self.ex.ID + '_proj_rho', fill=0.)
 
         if self.p.init_vol_zero: # starting from zero volume
-            rho_real = np.zeros(3*(self.pshape,), dtype=np.complex64)
-            rho_imag = np.zeros(3*(self.pshape,), dtype=np.complex64)
+            rho_real = np.zeros(3*(self.view_shape,), dtype=np.complex64)
+            rho_imag = np.zeros(3*(self.view_shape,), dtype=np.complex64)
         else: # starting from given volume
             rho_real = np.load(self.p.init_vol_real)
             rho_imag = np.load(self.p.init_vol_imag)
