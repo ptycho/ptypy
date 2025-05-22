@@ -154,15 +154,15 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
     [init_vol_real]
     default = None
-    type = np.ndarray
+    type = str
     help = Initial volume (real part)
-    doc = Real part of the starting volume for the reconstruction.
+    doc = Path to real part of the starting volume for the reconstruction.
 
     [init_vol_imag]
     default = None
-    type = np.ndarray
+    type = str
     help = Initial volume (imaginary part)
-    doc = Imaginary part of the starting volume for the reconstruction.
+    doc = Path to imaginary part of the starting volume for the reconstruction.
 
     [init_vol_blur]
     default = False
@@ -325,19 +325,13 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.omega = self.ex
         self.projected_rho = self.ex.copy(self.ex.ID + '_proj_rho', fill=0.)
 
-        # Initialise volume
-        if self.p.init_vol_zero and self.p.vol_size:
-            rho_real = np.zeros(self.p.vol_size, dtype=np.complex64)
-            rho_imag = np.zeros(self.p.vol_size, dtype=np.complex64)
-        elif self.p.init_vol_zero:
-            rho_real = np.zeros(3*(self.view_shape,), dtype=np.complex64)
-            rho_imag = np.zeros(3*(self.view_shape,), dtype=np.complex64)            
-        else: 
-            rho_real = self.p.init_vol_real
-            rho_imag = self.p.init_vol_imag
-
-        # gaussian blur initial volume
-        if self.p.init_vol_blur:
+        if self.p.init_vol_zero: # starting from zero volume
+            rho_real = np.zeros(3*(self.pshape,), dtype=np.complex64)
+            rho_imag = np.zeros(3*(self.pshape,), dtype=np.complex64)
+        else: # starting from given volume
+            rho_real = np.load(self.p.init_vol_real)
+            rho_imag = np.load(self.p.init_vol_imag)
+        if self.p.init_vol_blur: # gaussian blur initial volume
             rho_real = gaussian_filter(rho_real, sigma=self.p.init_vol_blur_sigma)
             rho_imag = gaussian_filter(rho_imag, sigma=self.p.init_vol_blur_sigma)
         
