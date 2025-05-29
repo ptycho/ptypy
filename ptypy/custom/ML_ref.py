@@ -229,7 +229,7 @@ class GaussianModel(BaseModel):
                 # Compute fluence maps for object and probe
                 if self.p.wavefield_precond:
                     self.ob_fln[pod.ob_view] += u.abs2(pod.probe)
-                    self.pr_fln[pod.pr_view] += u.abs2(pod.object)
+                    self.pr_fln[pod.pr_view] += u.abs2(np.exp(1j * pod.object))
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
