@@ -13,20 +13,12 @@ import astra
 import matplotlib.pyplot as plt
 import ptypy.utils.tomo as tu
 
-# For creating example
-def sample_volume(N):
-    vol = np.zeros((N,N,N))
-    xx,yy,zz = np.meshgrid(np.arange(N)-N/2, np.arange(N)-N/2,np.arange(N)-N/2)
-    m = lambda r,dx,dy,dz: np.sqrt((xx+dx)**2 + (yy+dy)**2 + (zz+dz)**2) < r
-    vol[m(N//6,0,0,0)] = 1
-    vol[m(N//8,N//9,N//9,N//9)] = 2
-    vol[m(N//12,N//12,0,0)] = 5
-    vol[m(N//12,0,N//8,0)] = 5
-    return ndimage.gaussian_filter(vol,1)
-
+# For porous volume example
 def refractive_index_map(Nx):
-    beta = np.log(sample_volume(Nx)+20)-np.log(20)
-    delta = 0.05 * sample_volume(Nx)
+    vol = np.load('porous_volume_'+str(Nx)+'.npy')
+    pixlam = 6.60109200e+02
+    delta = 3.19261635E-05 * 2 * np.pi * pixlam * vol
+    beta = 2.46560012E-06 * 2 * np.pi * pixlam * vol
     return delta + 1j * beta
 
 
