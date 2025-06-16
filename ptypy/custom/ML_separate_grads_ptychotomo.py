@@ -230,7 +230,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
     type = int
     lowlim = 0
     help = Number of iterations before probe update starts
-    doc = Sometimes the start of the probe update needs to be delayed.
+    doc = probe_update_start doesn't work with MLPtychoTomo yet.
 
     [poly_line_coeffs]
     default = quadratic
@@ -402,6 +402,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         tc = 0.
         ta = time.time()
         for it in range(num):
+
             ########################
             # Compute new gradients
             # vol: new_rho_grad
@@ -410,16 +411,22 @@ class MLPtychoTomo(PositionCorrectionEngine):
             t1 = time.time()
 
             # volume and probe gradient, volume regularizer, LL
-            error_dct = self.ML_model.new_grad(curiter=self.curiter)
+            error_dct = self.ML_model.new_grad()
             new_rho_grad, new_pr_grad = self.rho_grad_new, self.pr_grad_new
+
             tg += time.time() - t1
 
-            # Apply probe support if needed
-            for name, s in new_pr_grad.storages.items():
-                self.support_constraint(s)
-                #support = self.probe_support.get(name)
-                #if support is not None:
-                #    s.data *= support
+            if self.p.probe_update_start <= self.curiter:
+                # Apply probe support if needed
+                for name, s in new_pr_grad.storages.items():
+                    self.support_constraint(s)
+                    #support = self.probe_support.get(name)
+                    #if support is not None:
+                    #    s.data *= support
+            # FIXME: this hack doesn't work here as we step in probe and volume separately
+            # FIXME: really it's the probe step that should be zeroed out not the gradient
+            else:
+                new_pr_grad.fill(0.)
 
             # Smoothing preconditioner for the volume
             if self.smooth_gradient:
@@ -442,12 +449,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 bt_rho = max(0, bt_num_rho/bt_denom_rho)
 
                 # For the probe
-                if self.p.probe_update_start+1 <= self.curiter: # reset CG after probe_update_start
-                    bt_num_pr = Cnorm2(new_pr_grad) - np.real(Cdot(new_pr_grad, self.pr_grad))
-                    bt_denom_pr = Cnorm2(self.pr_grad)
-                    bt_pr = max(0, bt_num_pr/bt_denom_pr)
-                else:
-                    bt_pr = 0.
+                bt_num_pr = Cnorm2(new_pr_grad) - np.real(Cdot(new_pr_grad, self.pr_grad))
+                bt_denom_pr = Cnorm2(self.pr_grad)
+                bt_pr = max(0, bt_num_pr/bt_denom_pr)
 
             self.rho_grad << new_rho_grad
             self.pr_grad << new_pr_grad
@@ -480,14 +484,13 @@ class MLPtychoTomo(PositionCorrectionEngine):
             t2 = time.time()
 
             if self.p.poly_line_coeffs == "quadratic":
-                # same as below but quicker when poly quadratic
                 B_rho = self.ML_model.poly_line_coeffs_rho(self.rho_h)
+                B_pr = self.ML_model.poly_line_coeffs_pr(self.pr_h)
+
+                # same as below but quicker when poly quadratic
                 self.tmin_rho = dt(-0.5 * B_rho[1] / B_rho[2])
-                if self.p.probe_update_start <= self.curiter:
-                    B_pr = self.ML_model.poly_line_coeffs_pr(self.pr_h)
-                    self.tmin_pr = dt(-0.5 * B_pr[1] / B_pr[2])
-                else:
-                    self.tmin_pr = 1
+                self.tmin_pr = dt(-0.5 * B_pr[1] / B_pr[2])
+
             elif self.p.poly_line_coeffs == "all":
                 B_rho = self.ML_model.poly_line_all_coeffs_rho(self.rho_h)
                 diffB_rho = np.arange(1,len(B_rho))*B_rho[1:] # coefficients of poly derivative
@@ -499,18 +502,15 @@ class MLPtychoTomo(PositionCorrectionEngine):
                     evalp = lambda root: np.polyval(np.flip(B_rho),root)
                     self.tmin_rho = dt(min(real_roots, key=evalp)) # root with smallest poly objective
 
-                if self.p.probe_update_start <= self.curiter:
-                    B_pr = self.ML_model.poly_line_all_coeffs_pr(self.pr_h)
-                    diffB_pr = np.arange(1,len(B_pr))*B_pr[1:] # coefficients of poly derivative
-                    roots = np.roots(np.flip(diffB_pr.astype(np.double))) # roots only supports double
-                    real_roots = np.real(roots[np.isreal(roots)]) # not interested in complex roots
-                    if real_roots.size == 1: # single real root
-                        self.tmin_pr = dt(real_roots[0])
-                    else: # find real root with smallest poly objective
-                        evalp = lambda root: np.polyval(np.flip(B_pr),root)
-                        self.tmin_pr = dt(min(real_roots, key=evalp)) # root with smallest poly objective
-                else:
-                    self.tmin_pr = 1
+                B_pr = self.ML_model.poly_line_all_coeffs_pr(self.pr_h)
+                diffB_pr = np.arange(1,len(B_pr))*B_pr[1:] # coefficients of poly derivative
+                roots = np.roots(np.flip(diffB_pr.astype(np.double))) # roots only supports double
+                real_roots = np.real(roots[np.isreal(roots)]) # not interested in complex roots
+                if real_roots.size == 1: # single real root
+                    self.tmin_pr = dt(real_roots[0])
+                else: # find real root with smallest poly objective
+                    evalp = lambda root: np.polyval(np.flip(B_pr),root)
+                    self.tmin_pr = dt(min(real_roots, key=evalp)) # root with smallest poly objective
 
             else:
                 raise NotImplementedError("poly_line_coeffs should be 'quadratic' or 'all'")
@@ -530,13 +530,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
             self.pr += self.pr_h
 
             # FIXME: move saving volumes to run script
-            if parallel.master and self.curiter == 4: # curiter starts at zero
+            if parallel.master and self.curiter == 199: # curiter starts at zero
             # Get SLURM Job ID
                 sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
             # Saving volumes when running Toy Problem (saves to png)
-                self.tomo_wrapper.projector.plot_vol(self.rho.storages['S_rho'].data, title= '5iters_'+sid)
-            # Saving probe when running Toy Problem (saves to npy)
-                np.save('probe_5iters_'+sid, self.pr.storages['SsimG00'].data)
+                self.tomo_wrapper.projector.plot_vol(self.rho.storages['S_rho'].data, title= '200iters_'+sid)
             # Saving volumes when running Real Data (saves to cmap)
             #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it200_"+sid+".cmap", "w") as f:
             #        f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
@@ -594,7 +592,8 @@ class BaseModel(object):
         self.omega = self.engine.omega
         self.ex = self.engine.ex
         self.coverage = self.engine.coverage
-        self.projected_rho = self.engine.projected_rho
+        self.curiter = self.engine.curiter
+        self.projected_rho = self.engine.projected_rho 
 
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
@@ -650,7 +649,7 @@ class BaseModel(object):
             except:
                 pass
 
-    def new_grad(self, curiter=None):
+    def new_grad(self):
         """
         Compute new volume and probe gradient directions according to the noise model.
 
@@ -732,7 +731,7 @@ class GaussianModel(BaseModel):
                     
         return ind_active_views
 
-    def new_grad(self, curiter=None):
+    def new_grad(self):
         """
         Compute new volume and probe gradient directions according to a Gaussian noise model.
 
@@ -786,8 +785,7 @@ class GaussianModel(BaseModel):
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
                 expobj = np.exp(1j * self.projected_rho[pod.ex_view])
-                if self.p.probe_update_start <= curiter:
-                    self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
+                self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
                 prod_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.tot_power
                 self.projected_rho[pod.ex_view] = prod_xi_psi_conj
 
