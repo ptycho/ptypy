@@ -45,16 +45,16 @@ class PtypyTomoWrapper:
         return ind_active_views
 
     def _setup_projector(self, obj, vol):
-     
+
         list_view_to_proj_vectors = []
         all_angles = []
 
         # For all blocks
         for i, (k,v) in enumerate([(i,v) for i,v in obj.views.items()]):
             y = v.dcoord[0] - v.storage.center[0]
-            x = v.dcoord[1] - v.storage.center[1]   
-            list_view_to_proj_vectors.append((y, x))    
-            all_angles.append(v.extra['val'])     
+            x = v.dcoord[1] - v.storage.center[1]
+            list_view_to_proj_vectors.append((y, x))
+            all_angles.append(v.extra['val'])
 
         view_to_proj_vectors = np.array(list_view_to_proj_vectors)
 
@@ -70,7 +70,7 @@ class PtypyTomoWrapper:
 
     def forward(self, vol, ind, output):
         """
-        Computes the forward projection, so a 3d array of shape 
+        Computes the forward projection, so a 3d array of shape
         (n_active_views, view_shape_1, view_shape_2), and places
         it in the container passed as argument.
 
@@ -89,8 +89,8 @@ class PtypyTomoWrapper:
 
     def backward(self, proj_array, ind, output):
         """
-        Computes the backward projection, so a 3d array having 
-        same shape as volume, and places it in the container 
+        Computes the backward projection, so a 3d array having
+        same shape as volume, and places it in the container
         passed as argument.
 
         Receives:
@@ -99,8 +99,8 @@ class PtypyTomoWrapper:
             ind         list[int] - the indices of the active views
             output      container - to store the result
         """
-        self.projector.proj_array = proj_array 
-        self.projector.ind_of_views = ind   
+        self.projector.proj_array = proj_array
+        self.projector.ind_of_views = ind
 
         # Does not currently work with multiple storages
         output_vol = self.projector.backward()
@@ -181,7 +181,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
     default = False
     type = bool
     help = Adaptive diffraction pattern rescaling
-    doc = If True, allow for adaptative rescaling of the diffraction pattern intensities 
+    doc = If True, allow for adaptative rescaling of the diffraction pattern intensities
           (to correct for incident beam intensity fluctuations).
 
     [intensity_renormalization]
@@ -334,11 +334,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
         else: # starting from given volume
             rho_real = np.load(self.p.init_vol_real)
             rho_imag = np.load(self.p.init_vol_imag)
-            
+
         if self.p.init_vol_blur: # gaussian blur initial volume
             rho_real = gaussian_filter(rho_real, sigma=self.p.init_vol_blur_sigma)
             rho_imag = gaussian_filter(rho_imag, sigma=self.p.init_vol_blur_sigma)
-        
+
         # Initialise volume rho as container
         self.rho = Container()
         self.rho.new_storage(ID="_rho", shape=(3*(self.view_shape,)))
@@ -358,8 +358,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
             self.p.smooth_gradient)
 
         self.tomo_wrapper = PtypyTomoWrapper(
-            obj=self.ptycho.obj, 
-            vol=self.rho.storages['S_rho'].data, 
+            obj=self.ptycho.obj,
+            vol=self.rho.storages['S_rho'].data,
         )
 
         # Initialise ML noise model
@@ -533,9 +533,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
             if parallel.master and self.curiter == 199: # curiter starts at zero
             # Get SLURM Job ID
                 sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
-            # Saving volumes when running Toy Problem (saves to png)
-                self.tomo_wrapper.projector.plot_vol(self.rho.storages['S_rho'].data, title= '200iters_'+sid)
-            # Saving volumes when running Real Data (saves to cmap)
+            # Saving volumes when running simulated problem (saves to npy)
+                np.save('vol_200iters_'+sid, self.rho.storages['S_rho'].data)
+            # Saving probe when running simulated problem
+                np.save('probe_200iters_'+sid, self.pr.storages['SsimG00'].data)
+            # Saving volumes when running real data (saves to cmap)
             #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it200_"+sid+".cmap", "w") as f:
             #        f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
             #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it200_"+sid+".cmap", "w") as f:
@@ -592,8 +594,7 @@ class BaseModel(object):
         self.omega = self.engine.omega
         self.ex = self.engine.ex
         self.coverage = self.engine.coverage
-        self.curiter = self.engine.curiter
-        self.projected_rho = self.engine.projected_rho 
+        self.projected_rho = self.engine.projected_rho
 
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
@@ -707,7 +708,7 @@ class GaussianModel(BaseModel):
                 continue
             self.weights[di_view] = (self.Irenorm * di_view.pod.ma_view.data
                                      / (1./self.Irenorm + di_view.data))
-        
+
 
     def __del__(self):
         """
@@ -728,7 +729,7 @@ class GaussianModel(BaseModel):
                 if pod.active:
                     ind_active_views.append(i)
                 i+=1
-                    
+
         return ind_active_views
 
     def new_grad(self):
@@ -743,13 +744,13 @@ class GaussianModel(BaseModel):
         # We need an array for MPI
         LL = np.array([0.])
         error_dct = {}
-        
+
         # Forward project volume
         self.tomo_wrapper.forward(
             vol=self.rho.storages['S_rho'].data,
-            ind=self.get_indexes_of_active_views(), 
+            ind=self.get_indexes_of_active_views(),
             output=self.projected_rho
-        )    
+        )
 
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
@@ -832,12 +833,12 @@ class GaussianModel(BaseModel):
         # Forward project volume minimization direction
         self.tomo_wrapper.forward(
             vol=rho_h.storages['S_rho'].data,
-            ind=self.get_indexes_of_active_views() , 
+            ind=self.get_indexes_of_active_views() ,
             output=self.omega
         )
         self.tomo_wrapper.forward(
             vol=self.rho.storages['S_rho'].data,
-            ind=self.get_indexes_of_active_views(), 
+            ind=self.get_indexes_of_active_views(),
             output=self.projected_rho
         )
         # Multiply omega by the required 1j
@@ -920,7 +921,7 @@ class GaussianModel(BaseModel):
         # Forward project volume minimization direction
         self.tomo_wrapper.forward(
             vol=rho_h.storages['S_rho'].data,
-            ind=self.get_indexes_of_active_views(),  
+            ind=self.get_indexes_of_active_views(), 
             output=self.omega
         )
         # Multiply omega by the required 1j
