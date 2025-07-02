@@ -320,6 +320,12 @@ class Hdf5Loader(PtyScan):
     type = list, ndarray
     help = This is the array or list with the re-ordered indices.
 
+    [nearfield_defocus]
+    default = None
+    type = float
+    help = Distance from sample to focus (for nearfield only)
+    doc = If set, magnification will be calculated automatically and applied to detector distance and pixelsize 
+
     """
 
     def __init__(self, pars=None, swmr=False, **kwargs):
@@ -378,6 +384,10 @@ class Hdf5Loader(PtyScan):
         if self.p.electron_data:
             self.meta.energy = u.m2keV(u.electron_wavelength(self.meta.energy))
 
+        # For nearfield data, manipulate distance and psize
+        if self.p.nearfield_defocus:
+            self._prepare_nearfield()
+            
         # it's much better to have this logic here than in load!
         if (self._ismapped and (self._scantype == 'arb')):
             log(3, "This scan looks to be a mapped arbitrary trajectory scan.")
@@ -590,6 +600,20 @@ class Hdf5Loader(PtyScan):
             assert self.pad.size == 4, "self.p.padding needs to of size 4"
             log(3, "Padding the detector frames by {}".format(self.p.padding))
 
+    def _prepare_nearfield(self):
+        """
+        Calculate magnification and modify distance and psize
+        """
+        defocus = self.p.nearfield_defocus
+        mag = self.meta.distance / defocus
+        dist_eff = (self.meta.distance - defocus) / mag
+        psize_eff = self.info.psize / mag
+        log(3, f"Nearfield: With defocus {defocus} m the magmification is {mag}")
+        log(3, f"Nearfield: The effective detector distance is {dist_eff}")
+        log(3, f"Nearfield: The effective pixel size is {psize_eff}")
+        self.meta.distance = dist_eff
+        self.info.psize = psize_eff
+            
     def _prepare_center(self):
         """
         define how data should be loaded (center, cropping)
