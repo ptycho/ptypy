@@ -60,11 +60,11 @@ FROM build AS full-post
 
 # For pycuda build, install filtered cufft
 FROM build AS pycuda-post
-RUN micromamba run pip install ./cufft
+RUN pip install ./cufft
 
 # For pycuda build, install filtered cufft
 FROM build AS cupy-post
-# RUN micromamba run pip install ./cufft
+RUN pip install ./cufft
 
 # Platform specific runtime container
 FROM ${PLATFORM}-post AS runtime

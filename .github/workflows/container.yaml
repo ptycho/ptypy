@@ -54,8 +54,8 @@ jobs:
           context: .
           file: Dockerfile
           target: runtime
-          push: false
-          load: true
+          push: true
+          load: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
