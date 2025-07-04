@@ -324,6 +324,11 @@ class SimScan3D(PtyScan):
     type = list
     help =
 
+    [positions]
+    default = None
+    type = list
+    help = List of position arrays per angle
+
     [tomo_angles]
     default = 
     type = int
@@ -377,11 +382,11 @@ class SimScan3D(PtyScan):
         pp.scans.sim.extra = self.info.extra
         ################################################
 
-        pos_to_repeat = xy.from_pars(self.info.xy)
-        final_positions = pos_to_repeat
-        for i in range(pp.scans.sim.tomo_angles - 1):
-            final_positions = np.vstack((final_positions, pos_to_repeat))
-        pp.scans.sim.data.positions_theory = final_positions   # 2 x 1444 
+        if self.info.positions is None:
+            pos_to_repeat = xy.from_pars(self.info.xy)
+            pp.scans.sim.data.positions_theory = np.tile(pos_to_repeat, (pp.scans.sim.tomo_angles,1))
+        else:
+            pp.scans.sim.data.positions_theory = np.vstack(self.info.positions)
 
         pp.scans.sim.data.name = 'PtyScan'
         pp.scans.sim.data.shape = self.info.shape
