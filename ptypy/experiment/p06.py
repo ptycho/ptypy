@@ -1,5 +1,10 @@
-"""  Implementation of PtyScan subclasses to hold nanomax scan data. The
-     beamline is developing, as is the data format. """
+# -*- coding: utf-8 -*-
+"""
+Data preparation class for P06 at Petra III.
+"""
+import os
+import os.path
+import warnings
 
 from ..core.data import PtyScan
 from .. import utils as u
@@ -7,33 +12,32 @@ from . import register
 logger = u.verbose.logger
 
 import numpy as np
+from PIL import Image
 try:
     import hdf5plugin
 except ImportError:
-    logger.warning('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
+    logger.warning("Couldn't find hdf5plugin - better hope your h5py has bitshuffle!")
 import h5py
-import os.path
-from PIL import Image
+
+__all__ = ["P06Scan", "P06Scan_scanning_mirror"]
+
 
 @register()
-class p06nano_raw(PtyScan):
+class P06Scan(PtyScan):
     """
-    This class loads data written by sardana at the P06 nano probe.
-
-    Todo: 
-    * add feature for normalization of the frames
+    This class loads data at the P06 beamline.
 
     Defaults:
 
     [name]
-    default = p06nano_raw
+    default = P06Scan
     type = str
     help =
 
     [path]
     default = None
     type = str
-    help = Path to where the data is at
+    help = Path to where the data is
     doc =
 
     [scanNumber]
@@ -85,15 +89,29 @@ class p06nano_raw(PtyScan):
     doc =
 
     [xMotor]
-    default = samx
+    default = samy
     type = str
     help = Which x motor to use
     doc =
 
     [yMotor]
-    default = samy
+    default = samz
     type = str
     help = Which y motor to use
+    doc =
+
+    [xMotor_unit]
+    default = None
+    type = float, int
+    help = Motor unit, i.e. 1 for meters, 1e-3 for mm, 1e-6 for microns, etc. \
+    Lookup table will be used if value is None
+    doc =
+
+    [yMotor_unit]
+    default = None
+    type = float, int
+    help = Motor unit, i.e. 1 for meters, 1e-3 for mm, 1e-6 for microns, etc. \
+    Lookup table will be used if value is None
     doc =
 
     [xMotorFlipped]
@@ -133,7 +151,7 @@ class p06nano_raw(PtyScan):
     doc = If the Detector is mounted rotated around the beam axis relative to the scanning motors, use this angle to rotate the motor position into the detector frame of reference. The rotation angle is in mathematical positive sense from the motors to the detector pixel grid.
 
     [detector]
-    default = 'eiger'
+    default = 'eiger_4m_01'
     type = str
     help = Which detector to use, can be pil100k or merlin
 
@@ -150,6 +168,30 @@ class p06nano_raw(PtyScan):
     doc =
 
     """
+    # Lookup table for motor units.
+    UNITS = {
+        'scanu': 1e-6,
+        'scanv': 1e-6,
+        'scanw': 1e-6,
+        'scanx': 1e-6,
+        'scany': 1e-6,
+        'scanz': 1e-6,
+        'samx': 1e-3,
+        'samy': 1e-3,
+        'samz': 1e-3,
+        'hexx': 1e-3,
+        'hexy': 1e-3,
+        'hexz': 1e-3,
+        'cenx': 1e-3,
+        'ceny': 1e-3,
+    }
+
+    def __init__(self, pars=None, **kwargs):
+        self.p = self.DEFAULT.copy()
+        if pars is not None:
+            self.p.update(pars)
+        self.p.update(kwargs)
+        super(self.__class__, self).__init__(self.p)
 
     def clean_mask(self, mask):
         mask[mask>=0.5] = 1
@@ -158,28 +200,49 @@ class p06nano_raw(PtyScan):
 
     def load_mask_h5(self):
         with h5py.File(self.info.maskfile, 'r') as hf:
-            mask = np.array(hf.get('mask')) 
+            mask = np.array(hf.get('mask'))
         return self.clean_mask(mask)
 
     def load_mask_tiff(self):
         with Image.open(self.info.maskfile) as im:
-            mask = np.array(im) 
+            mask = np.array(im)
         return self.clean_mask(mask)
 
-    def load_positions(self):
+    def _check_unit(self, motor_name, motor_unit):
+        """
+        Checks that units are ok.
 
-        scan_nmb_str = str(self.info.scanNumber).zfill(5)
-        fpath_scan = self.info.path +  f'scan_{scan_nmb_str}.nxs' 
-        dpath_plc = self.info.path + f'/scan_{scan_nmb_str}/pilctriggergenerator_04/'
+        Parameters
+        ----------
+        motor_name : str
+        motor_unit : float, None
+            The given motor unit parameter for the parameter tree. If None,
+            the UNITS lookup table will be used.
 
-        flist_plc = [os.path.join(dpath_plc,x) for x in os.listdir(dpath_plc) if not('master' in x)]
-        flist_plc = sorted(flist_plc)
-        with h5py.File(flist_plc[0], 'r') as fp:
-            frames = fp['entry/data/encoder_1'][:] 
-            eiger_mod = len(frames)
+        Returns
+        -------
+        float
+            The unit, i.e. the number to multiply with in order to convert
+            to meters.
+        """
+        if motor_name in self.UNITS:
+            lookup_unit = self.UNITS[motor_name]
+        else:
+            lookup_unit = None
 
-        self.frames_per_scan = {}
+        if motor_unit is not None:
+            unit = motor_unit
+            if lookup_unit is not None and unit != lookup_unit:
+                raise Warning(
+                    f"The given unit for {motor_name}, is not equal to the unit defined in the lookup table, which is {lookup_unit}.")
+        elif lookup_unit is not None:
+            unit = lookup_unit
+        else:
+            raise NotImplementedError(
+                f'There is no unit defined for {self.info.xMotor}. Please define xMotor_unit in the parameter tree')
+        return unit
 
+    def _apply_transformations(self, positions):
         xFlipper, yFlipper = 1, 1
         if self.info.xMotorFlipped:
             xFlipper = -1
@@ -191,143 +254,139 @@ class p06nano_raw(PtyScan):
         # if the x/y axis is tilted with respect to the beam axis, take that into account.
         xCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
         yCosFactor = np.cos(self.info.yMotorAngle / 180.0 * np.pi)
-        logger.info("x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
+        logger.info(
+            "x and y motor angles result in multiplication by %.2f, %.2f" % (
+                xCosFactor, yCosFactor))
 
-
-        # read samr
-        with h5py.File(fpath_scan, 'r') as hf:
-            samr = hf['scan/sample/transformations/phi'][0]
-
-        # read encoderes of the physical axes
-        normdata, scanu, scanv, scanw, samr = [], [], [], [], []
-        for fpath in flist_plc:
-            with h5py.File(fpath, 'r') as hf:
-                part_samr = list(hf['entry/data/encoder_1'])
-                part_scanu = list(hf['entry/data/encoder_3'])
-                part_scanv = list(hf['entry/data/encoder_2'])
-                part_scanw = list(hf['entry/data/encoder_4'])
-                
-            scanu = scanu + part_scanu
-            scanv = scanv + part_scanv
-            scanw = scanw + part_scanw
-            samr = samr + part_samr
-        pos = {}
-        pos['scanu'] = np.array(scanu)
-        pos['scanv'] = np.array(scanv)
-        pos['scanw'] = np.array(scanw)
-        pos['scanx'] = np.sin(np.array(samr)*np.pi/180.) * pos['scanv'] - np.cos(np.array(samr)*np.pi/180.) * pos['scanu']
-        pos['scany'] = np.cos(np.array(samr)*np.pi/180.) * pos['scanv'] + np.sin(np.array(samr)*np.pi/180.) * pos['scanu']
-        pos['scanz'] = np.array(scanw)
-
-        # assign / calculate x and y positions 
-        if not(self.info.xMotor in pos.keys()):
-            logger.info("[!] given xMotor is not an allowed motor name")
-        if not(self.info.yMotor in pos.keys()):
-            logger.info("[!] given yMotor is not an allowed motor name")
-
-        x = pos[self.info.xMotor] * xFlipper * xCosFactor
-        y = pos[self.info.yMotor] * yFlipper * yCosFactor
+        x = positions[:, 1] * xFlipper * xCosFactor
+        y = positions[:, 0] * yFlipper * yCosFactor
 
         chi_rad_x = 0
         chi_rad_y = 0
-        # if the detector and motor frame of reference are roated around the beam axis
+        # if the detector and motor frame of reference are rotated around the beam axis
         if self.info.zDetectorAngle != 0:
             chi_rad_x = self.info.zDetectorAngle / 180.0 * np.pi
-            chi_rad_y = 1.*chi_rad_x
-            logger.info("x and y motor positions were roated by %.4f degree to align with the detector pixel grid" % (self.info.zDetectorAngle))
+            chi_rad_y = 1. * chi_rad_x
+            logger.info(
+                "x and y motor positions were roated by %.4f degree to align with the detector pixel grid" % (
+                    self.info.zDetectorAngle))
+
         # if x and y are not under 90 degrees to each other
         if self.info.xyAxisSkewOffset != 0:
             chi_rad_x += -0.5 * self.info.xyAxisSkewOffset / 180.0 * np.pi
             chi_rad_y += +0.5 * self.info.xyAxisSkewOffset / 180.0 * np.pi
-            logger.info("x and y motor positions were skewed by %.4f degree to each other" % (self.info.xyAxisSkewOffset))
-        x, y = np.cos(chi_rad_x)*x-np.sin(chi_rad_y)*y, np.sin(chi_rad_x)*x+np.cos(chi_rad_y)*y
-            
-        # set minimum to zero so ptypy can work out the proper object size
-        x -= np.min(x)
-        y -= np.min(y)
+            logger.info(
+                "x and y motor positions were skewed by %.4f degree to each other" % (
+                    self.info.xyAxisSkewOffset))
+        x, y = np.cos(chi_rad_x) * x - np.sin(chi_rad_y) * y, np.sin(
+            chi_rad_x) * x + np.cos(chi_rad_y) * y
 
-        # put the two arrays together and express in [m]
-        positions = -np.vstack((y, x)).T * 1e-6
+        return np.vstack((y, x)).T
+
+    def load_positions(self):
+        scan_nmb_str = str(self.info.scanNumber).zfill(5)
+        pospath = self.info.path.replace('raw', 'processed') + f'scan_{scan_nmb_str}/raw_processed_data.h5'
+        x_unit = self._check_unit(self.info.xMotor, self.info.xMotor_unit)
+        y_unit = self._check_unit(self.info.yMotor, self.info.yMotor_unit)
+        pos = {}
+        with h5py.File(pospath, 'r') as f:
+            pos['x'] = np.array(f[f'/axes/{self.info.xMotor}'][:]) * x_unit
+            pos['y'] = np.array(f[f'/axes/{self.info.yMotor}'][:]) * y_unit
+        nan_mask = np.logical_not(np.isnan(pos['x']))
+        pos['x'] = pos['x'][nan_mask]  # necessary for cmesh
+        pos['y'] = pos['y'][nan_mask]  # necessary for cmesh
+
+        # put the two arrays together
+        positions = -np.vstack((pos['y'], pos['x'])).T
+
+        # make transformations
+        positions = self._apply_transformations(positions)
+
+        # set minimum to zero so ptypy can work out the proper object size
+        positions = positions - np.min(positions, axis=0)
+
+        # This may or may not be needed.
+        self.frames_per_scan = {}
+
         return positions
 
-    def pad_to_size(self, frame, value):
-        ny, nx = np.shape(frame)
-        cy, cx = self.info.tmp_center
-        dy, dx = self.info.shape
-        ry, rx = dy//2 , dx//2
-        pad_xl   = rx - cx
-        pad_xu   = rx + cx - nx 
-        pad_yl   = ry - cy
-        pad_yu   = ry + cy - ny 
-        return np.pad(frame, [[pad_yl,pad_yu],[pad_xl,pad_xu]], mode='constant', constant_values=[value])
-
-
     def load(self, indices):
+        if self.info.detector == 'eiger':
+            self.info.detector = 'eiger_4m_01' # temporary fix to avoid breaking scripts
+
         raw, weights, positions = {}, {}, {}
 
         scan_nmb_str = str(self.info.scanNumber).zfill(5)
         fpath_scan = self.info.path + f'scan_{scan_nmb_str}.nxs'
-        dpath_eiger = self.info.path + f'/scan_{scan_nmb_str}/eiger_4m_01/'
 
-        flist_eiger = [os.path.join(dpath_eiger,x) for x in os.listdir(dpath_eiger) if not('master' in x)]
-        flist_eiger = sorted(flist_eiger)
-        with h5py.File(flist_eiger[0], 'r') as fp:
-            frames = fp['entry/data/data'][:,:5,:5] 
+        detector_data_directory = os.path.join(
+            self.info.path, f"scan_{scan_nmb_str}", self.info.detector
+        )
+        detector_file_list = sorted([
+            os.path.join(detector_data_directory, x) for x in os.listdir(detector_data_directory) if not ('master' in x)
+        ])
+        detector_file_list = sorted(detector_file_list)
+        with h5py.File(detector_file_list[0], 'r') as fp:
+            frames = fp['entry/data/data'][:, :5, :5]
             eiger_mod = len(frames)
 
         # crop on load is requested, but the actual indices to crop are not yet defined
         if self.info.cropOnLoad and self.info.cropOnLoad_y_lower == None:
-            
+
             # center of the diffraction patterns is not explicitly given
-            if self.info.center==None:
+            if self.info.center == None:
                 # requires to load the first frame and to find the center of mass there
-                with h5py.File(flist_eiger[0], 'r') as fp:
+                with h5py.File(detector_file_list[0], 'r') as fp:
                     frame = fp['entry/data/data'][0]
                 # and to mask the hot pixels ... sadly this will have double with self.load_weight
                 mask = np.ones_like(frame)
-                if self.info.detector == 'pilatus':
+                if self.info.detector == 'pilatus_1m_01':
                     mask[np.where(frame < 0)] = 0
-                if 'eiger' in self.info.detector:
-                    mask[np.where(frame == 2**32-1)] = 0
-                    mask[np.where(frame == 2**16-1)] = 0
+                if self.info.detector == 'eiger_4m_01':
+                    mask[np.where(frame == 2 ** 32 - 1)] = 0
+                    mask[np.where(frame == 2 ** 16 - 1)] = 0
                 if self.info.maskfile:
                     if self.info.maskfile.endswith('.h5'):
                         mask2 = self.load_mask_h5()
                     else:
                         mask2 = self.load_mask_tiff()
-                    mask *= mask2
+                    mask = mask * mask2
                 # now find the center of mass can be estimated using the ptypy internal function and make it integers
-                self.info.center = u.scripts.mass_center(frame*mask)
+                self.info.center = u.scripts.mass_center(frame * mask)
                 self.info.center = [int(x) for x in self.info.center]
-                logger.info(f'Estimated the center of the (first) diffraction pattern to be {self.info.center}')
+                logger.info(
+                    f'Estimated the center of the (first) diffraction pattern to be {self.info.center}')
 
             # the center of the full frames is (now) known, and thus the indices for the cropping can be defined
-            cy, cx  = self.info.center
-            dy, dx  = self.info.shape
-            logger.info(f'Found the center of the full frames at {self.info.center}')
-            logger.info(f'Will crop all diffraction patterns on load to a size of {self.info.shape}')
-            self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(cy)-dy//2, int(cx)-dy//2
-            self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower+dy, self.info.cropOnLoad_x_lower+dx
+            cy, cx = self.info.center
+            dy, dx = self.info.shape
+            logger.info(
+                f'Found the center of the full frames at {self.info.center}')
+            logger.info(
+                f'Will crop all diffraction patterns on load to a size of {self.info.shape}')
+            self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(
+                cy) - dy // 2, int(cx) - dy // 2
+            self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower + dy, self.info.cropOnLoad_x_lower + dx
 
             # the (temporary) center needs to be redefined for the cropped frames
-            tmp_center_y, tmp_center_x = dy//2, dx//2
+            tmp_center_y, tmp_center_x = dy // 2, dx // 2
 
             # if the lower crop indices are negative, set them zero
-            if self.info.cropOnLoad_y_lower<0:
+            if self.info.cropOnLoad_y_lower < 0:
                 tmp_center_y += self.info.cropOnLoad_y_lower
                 self.info.cropOnLoad_y_lower = 0
-            if self.info.cropOnLoad_x_lower<0:
+            if self.info.cropOnLoad_x_lower < 0:
                 tmp_center_x += self.info.cropOnLoad_x_lower
-                self.info.cropOnLoad_x_lower = 0    
-            # no need to have something similar for too large upper indices due to the way python slices arrays
+                self.info.cropOnLoad_x_lower = 0
+                # no need to have something similar for too large upper indices due to the way python slices arrays
 
             # now fix the new center
             self.info.tmp_center = (tmp_center_y, tmp_center_x)
-            self.info.center = (dy//2, dx//2)
-        
+            self.info.center = (dy // 2, dx // 2)
+
         # set the photon energy
         path_options = ['scan/data/energy']
-        if self.info.energy == None:	
+        if self.info.energy == None:
             with h5py.File(fpath_scan, 'r') as fp:
                 existing_paths = [x for x in path_options if x in fp.keys()]
                 self.meta.energy = fp[existing_paths[0]][:] * 1e-3
@@ -336,37 +395,39 @@ class p06nano_raw(PtyScan):
 
         # actually loading the detector frames
         for ind in indices:
-            i_file = ind//eiger_mod
-            i_frame =ind%eiger_mod
+            i_file = ind // eiger_mod
+            i_frame = ind % eiger_mod
 
-            with h5py.File(flist_eiger[i_file], 'r') as fp:
+            with h5py.File(detector_file_list[i_file], 'r') as fp:
                 # load only a cropped bit of the full frame
                 if self.info.cropOnLoad:
-                    frame = fp['entry/data/data'][i_frame,self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
-                    #print('--', ind, np.shape(frame))
+                    frame = fp['entry/data/data'][i_frame,
+                            self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper,
+                            self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                    # print('--', ind, np.shape(frame))
                     raw[ind] = self.pad_to_size(frame, -1)
-                # load the full raw frame                
-                else:	
-                    raw[ind] = fp['entry/data/data'%self.info.detector][ind]
-                # if there is I0 information, use it to normalize the just loaded frame                
-                if self.info.I0!=None:
+                # load the full raw frame
+                else:
+                    raw[ind] = fp['entry/data/data' % self.info.detector][ind]
+                # if there is I0 information, use it to normalize the just loaded frame
+                if self.info.I0 != None:
                     self.normdata = self.normdata.flatten()
-                    #logger.info('normalizing frame %u by %f' % (ind, self.normdata[ind]))
-                    #logger.info('hack! assuming mask = 2**32-1 when I0-normalizing')
-                    msk = np.where(raw[ind] == 2**32-1)
-                    raw[ind] = np.round(raw[ind] / self.normdata[ind]).astype(raw[ind].dtype)
-                    raw[ind][msk] = 2**32-1
+                    # logger.info('normalizing frame %u by %f' % (ind, self.normdata[ind]))
+                    # logger.info('hack! assuming mask = 2**32-1 when I0-normalizing')
+                    msk = np.where(raw[ind] == 2 ** 32 - 1)
+                    raw[ind] = np.round(raw[ind] / self.normdata[ind]).astype(
+                        raw[ind].dtype)
+                    raw[ind][msk] = 2 ** 32 - 1
 
         return raw, positions, weights
 
     def load_weight(self):
         """
-        Provides the mask used for every single diffraction pattern ofthe whole scan.
+        Provides the mask used for every single diffraction pattern of the whole scan.
         """
 
         r, w, p = self.load(indices=(0,))
         data = r[0]
-
         mask = np.ones_like(data)
         if self.info.detector == 'pilatus':
             mask[np.where(data < 0)] = 0
@@ -376,7 +437,7 @@ class p06nano_raw(PtyScan):
             logger.info(f"    -> masking all pixels with values of {2**(bit_depth) -1} and above")
             mask[np.where(data < 0)] = 0
             mask[np.where(data >= ((2**bit_depth)-1))] = 0
-            #mask[np.where(data == 2**16-1)] = 0
+
         logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
                     (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
 
@@ -385,18 +446,30 @@ class p06nano_raw(PtyScan):
                 mask2 = self.load_mask_h5()
             else:
                 mask2 = self.load_mask_tiff()
-                
+
             if self.info.cropOnLoad:
-                mask2 = mask2[self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, 
-                                self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                mask2 = mask2[
+                        self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper,
+                        self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
                 mask2 = self.pad_to_size(mask2, 0)
 
-            logger.info("loaded additional mask, %u x %u, sum %u, so %u masked pixels" %
-                        (mask2.shape + (np.sum(mask2), np.prod(mask2.shape)-np.sum(mask2))))
+            logger.info(
+                "loaded additional mask, %u x %u, sum %u, so %u masked pixels" %
+                (mask2.shape + (np.sum(mask2),
+                                np.prod(mask2.shape) - np.sum(mask2))))
             mask = mask * mask2
             logger.info("total mask, %u x %u, sum %u, so %u masked pixels" %
-                    (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
-
+                        (mask.shape + (np.sum(mask),
+                                       np.prod(mask.shape) - np.sum(mask))))
         return mask
 
-
+    def pad_to_size(self, frame, value):
+        ny, nx = np.shape(frame)
+        cy, cx = self.info.tmp_center
+        dy, dx = self.info.shape
+        ry, rx = dy//2 , dx//2
+        pad_xl   = rx - cx
+        pad_xu   = rx + cx - nx
+        pad_yl   = ry - cy
+        pad_yu   = ry + cy - ny
+        return np.pad(frame, [[pad_yl,pad_yu],[pad_xl,pad_xu]], mode='constant', constant_values=[value])
