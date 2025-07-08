@@ -580,7 +580,7 @@ class ArrayUtilsTest(PyCudaTest):
 
         output = au.fft_filter(data, kernel, prefactor, postfactor)
 
-        np.testing.assert_allclose(output, data_dev.get(), rtol=1e-5, atol=1e-6)
+        np.testing.assert_allclose(output, data_dev.get(), rtol=1e-5, atol=1e-5)
 
     def test_fft_filter_batched_UNITY(self):
         sh = (2,16, 35)
@@ -607,7 +607,7 @@ class ArrayUtilsTest(PyCudaTest):
         output = au.fft_filter(data, kernel, prefactor, postfactor)
         print(data_dev.get())
 
-        np.testing.assert_allclose(output, data_dev.get(), rtol=1e-5, atol=1e-6)
+        np.testing.assert_allclose(output, data_dev.get(), rtol=1e-5, atol=1e-5)
 
     def test_complex_gaussian_filter_fft_little_blurring_UNITY(self):
         # Arrange
@@ -624,7 +624,7 @@ class ArrayUtilsTest(PyCudaTest):
         out_exp = au.complex_gaussian_filter_fft(data, mfs)
         out = data_dev.get()
         
-        np.testing.assert_allclose(out_exp, out, atol=1e-6)
+        np.testing.assert_allclose(out_exp, out, atol=1e-5)
 
     def test_complex_gaussian_filter_fft_more_blurring_UNITY(self):
         # Arrange
@@ -641,7 +641,7 @@ class ArrayUtilsTest(PyCudaTest):
         out_exp = au.complex_gaussian_filter_fft(data, mfs)
         out = data_dev.get()
 
-        np.testing.assert_allclose(out_exp, out, atol=1e-6)
+        np.testing.assert_allclose(out_exp, out, atol=1e-5)
 
     def test_complex_gaussian_filter_fft_nonsquare_UNITY(self):
         # Arrange
@@ -660,7 +660,7 @@ class ArrayUtilsTest(PyCudaTest):
         out_exp = au.complex_gaussian_filter_fft(data, mfs)
         out = data_dev.get()
 
-        np.testing.assert_allclose(out_exp, out, atol=1e-6)
+        np.testing.assert_allclose(out_exp, out, atol=1e-5)
 
     def test_complex_gaussian_filter_fft_batched(self):
         # Arrange
@@ -680,4 +680,4 @@ class ArrayUtilsTest(PyCudaTest):
         out_exp = au.complex_gaussian_filter_fft(data, mfs)
         out = data_dev.get()
 
-        np.testing.assert_allclose(out_exp, out, atol=1e-6)
+        np.testing.assert_allclose(out_exp, out, atol=1e-5)

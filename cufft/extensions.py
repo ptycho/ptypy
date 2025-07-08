@@ -4,8 +4,8 @@ Compilation tools for Nvidia builds of extension modules.
 import os, re
 import subprocess
 import sysconfig
-from distutils.unixccompiler import UnixCCompiler
-from distutils.command.build_ext import build_ext
+from setuptools._distutils.unixccompiler import UnixCCompiler
+from setuptools.command.build_ext import build_ext
 
 
 def find_in_path(name, path):
@@ -116,6 +116,7 @@ class NvccCompiler(UnixCCompiler):
         compiler_command = [self.CUDA["nvcc"]] + self.NVCC_FLAGS + self.OPTFLAGS + ["-Xcompiler"] + self.CXXFLAGS + CPPFLAGS
         compiler_exec = " ".join(compiler_command)
         self.set_executable('compiler_so', compiler_exec)
+        self.set_executable('compiler_so_cxx', compiler_exec)
         postargs = [] # we don't actually have any postargs
         super(NvccCompiler, self)._compile(obj, src, ext, cc_args, postargs, pp_opts) # the _compile method
         # reset the default compiler_so, which we might have changed for cuda

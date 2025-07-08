@@ -10,12 +10,12 @@ Findings:
   - OpenMPI in a conda install needs to have the environment variable
   --> if cuda support isn't enabled, the application simply crashes with a seg fault
 
-2) For NCCL peer-to-peer transfers, the EXCLUSIVE compute mode cannot be used. 
+2) For NCCL peer-to-peer transfers, the EXCLUSIVE compute mode cannot be used.
    It should be in DEFAULT mode.
 
 """
 
-from pkg_resources import parse_version
+from packaging.version import parse
 import numpy as np
 import cupy as cp
 from ptypy.utils import parallel
@@ -44,7 +44,7 @@ have_nccl = (not 'PTYPY_USE_CUDAMPI' in os.environ) and \
 have_cuda_mpi = (mpi4py is not None) and \
     "OMPI_MCA_opal_cuda_support" in os.environ and \
     os.environ["OMPI_MCA_opal_cuda_support"] == "true" and \
-    parse_version(parse_version(mpi4py.__version__).base_version) >= parse_version("3.1.0") and \
+    parse(parse(mpi4py.__version__).base_version) >= parse("3.1.0") and \
     not ('PTYPY_USE_MPI' in os.environ)
 
 
@@ -114,7 +114,7 @@ class MultiGpuCommunicatorNccl(MultiGpuCommunicatorBase):
 
         count, datatype = self.__get_NCCL_count_dtype(arr)
 
-        self.com.allReduce(arr.data.ptr, arr.data.ptr, count, datatype, nccl.NCCL_SUM, 
+        self.com.allReduce(arr.data.ptr, arr.data.ptr, count, datatype, nccl.NCCL_SUM,
             cp.cuda.get_current_stream().ptr)
 
     def __get_NCCL_count_dtype(self, arr):

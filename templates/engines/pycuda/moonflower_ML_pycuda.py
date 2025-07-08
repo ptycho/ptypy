@@ -16,7 +16,7 @@ p = u.Param()
 
 # for verbose output
 p.verbose_level = "info"
-p.frames_per_block = 400
+p.frames_per_block = 100
 # set home path
 p.io = u.Param()
 p.io.home =  "/".join([tmpdir, "ptypy"])

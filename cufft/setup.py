@@ -2,7 +2,7 @@
 
 # we should aim to remove the distutils dependency
 import setuptools
-from distutils.core import setup, Extension
+from setuptools import setup, Extension
 import os
 
 ext_modules = []
