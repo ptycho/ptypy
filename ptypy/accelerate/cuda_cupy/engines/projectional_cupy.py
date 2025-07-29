@@ -555,8 +555,9 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         Clips magnitudes of object into given range.
         """
         if self.p.clip_object is not None:
-            cmin, cmax = self.p.clip_object
-            self.CMK.clip_magnitudes_to_range(ob, cmin, cmax)
+            clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase = self.p.clip_object
+            self.CMK.clip_magnitudes_to_range(ob, clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase)
+
 
     def engine_finalize(self):
         """

@@ -563,18 +563,19 @@ class ClipMagnitudesKernel:
             'IN_TYPE': 'complex<float>',
         })
 
-    def clip_magnitudes_to_range(self, array, clip_min, clip_max):
+    def clip_magnitudes_to_range(self, array, clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase):
         if self.queue is not None:
             self.queue.use()
 
-        cmin = np.float32(clip_min)
-        cmax = np.float32(clip_max)
+        clip_min_mag = np.float32(clip_min_mag)
+        clip_max_mag = np.float32(clip_max_mag)
+        clip_min_phase = np.float32(clip_min_phase)
+        clip_max_phase = np.float32(clip_max_phase)        
 
         npixel = np.int32(np.prod(array.shape))
         bx = 256
         gx = int((npixel + bx - 1) // bx)
-        self.clip_magnitudes_cuda((gx, 1, 1), (bx, 1, 1), (array, cmin, cmax,
-                npixel))
+        self.clip_magnitudes_cuda((gx, 1, 1), (bx, 1, 1), (array, clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase , npixel))
 
 class MassCenterKernel:
 
