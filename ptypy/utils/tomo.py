@@ -10,7 +10,6 @@ This file is part of the PTYPY package.
 import numpy as np
 import scipy.ndimage as ndimage
 import astra
-import matplotlib.pyplot as plt
 import ptypy.utils.tomo as tu
 
 
