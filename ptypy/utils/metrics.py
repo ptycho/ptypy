@@ -46,14 +46,18 @@ def ringthickness(inputarray):
     Parameters
     ----------
     inputarray :  array-like
-        input array, must be at least two-dimensional
+        input array, two-dimensional or three-dimensional
 
     Returns
     -------
     index : array-like
         Indexes for the rings
     """
-    nr,nc = inputarray.shape
+    if len(inputarray.shape)==2:
+        nr, nc = inputarray.shape
+    elif len(inputarray.shape)==3:
+        ns, nr, nc = inputarray.shape 
+
     nmax = np.max((nr,nc)).astype(np.int16)
     x = (
         np.arange(-np.fix(nc / 2.0), np.ceil(nc / 2.0))
@@ -68,13 +72,44 @@ def ringthickness(inputarray):
     # bring the central pixel to the corners (important for odd array dimensions)
     x = ifftshift(x)
     y = ifftshift(y)
-    # meshgriding
-    X = np.meshgrid(x,y)
-    # sum of the squares
-    sumsquares = X[0]**2 + X[1]**2
-    index = np.round(np.sqrt(sumsquares)).astype(np.int16)
+
+    if len(inputarray.shape)==2:
+        # meshgriding
+        X = np.meshgrid(x, y)
+    elif len(inputarray.shape)==3:
+        z = (
+            np.arange(-np.fix(ns / 2.0), np.ceil(ns / 2.0))
+            * np.floor(nmax / 2.0)
+            / np.floor(ns / 2.0)
+        )
+        # bring the central pixel to the corners  (important for odd array dimensions)
+        z = ifftshift(z)
+        # meshgriding
+        X = np.meshgrid(y, z, x)
+
+    # sum of the squares independent of ndim
+    sumsquares = np.zeros_like(X[0])
+    for ii in range(len(X)):
+        sumsquares += X[ii] ** 2
+    index = np.round(np.sqrt(sumsquares)).astype(np.int)
+
     return index
-    
+
+
+def hanning_like_window(nr): 
+    Nr = fftshift(np.arange(nr))
+    window = (
+        1.0
+        + np.cos(
+            2
+            * np.pi
+            * (Nr - np.floor((nr - 2 * apod_width - 1) / 2))
+            / (1 + 2 * apod_width)
+        )
+    ) / 2.0
+
+    return window
+
 def apodization(inputarray, apod_width=1):
     """
     Compute a tapered Hanning-like window of the size of the data
@@ -95,32 +130,59 @@ def apodization(inputarray, apod_width=1):
     
     """
     print("Calculating the transverse apodization")
-    nr, nc = inputarray.shape
-    Nr = fftshift(np.arange(nr))
-    Nc = fftshift(np.arange(nc))
-    window1D1 = (
-        1.0
-        + np.cos(
-            2
-            * np.pi
-            * (Nr - np.floor((nr - 2 * apod_width - 1) / 2))
-            / (1 + 2 * apod_width)
-        )
-    ) / 2.0
-    window1D2 = (
-        1.0
-        + np.cos(
-            2
-            * np.pi
-            * (Nc - np.floor((nc - 2 * apod_width - 1) / 2))
-            / (1 + 2 * apod_width)
-        )
-    ) / 2.0
-    window1D1[apod_width : -apod_width] = 1
-    window1D2[apod_width : -apod_width] = 1
+    if len(inputarray.shape)==2:
+        nr, nc = inputarray.shape
+
+        window1D1 = hanning_like_window(nr)
+        window1D2 = hanning_like_window(nc)
+
+        window1D1[apod_width : -apod_width] = 1
+        window1D2[apod_width : -apod_width] = 1
+        result = np.outer(window1D1, window1D2)
     
-    return np.outer(window1D1, window1D2)
+    elif len(inputarray.shape)==3:
+        ns, nr, nc = inputarray.shape         
+        
+        window1D1 = hanning_like_window(ns)
+        window1D2 = hanning_like_window(nr)
+        window1D3 = hanning_like_window(nc)
+
+        windowaxial = np.outer(window1D2, window1D3)
+        windowsag = np.array([window1D1 for ii in range(nr)]).swapaxes(0, 1)
+        window2D = np.array([np.tile(windowaxial, (1, 1)) for ii in range(ns)])
+        result = (
+            np.array(
+                [np.squeeze(window2D[:, :, ii]) * windowsag for ii in range(nc)]
+            )
+            .swapaxes(0, 1)
+            .swapaxes(1, 2)
+        )
+    return result
+
+
+def transverse_apodization(input_array, apod_width=1):
+    """
+    Compute a tapered Hanning-like window of the size of the data
+    for the apodization
+    """
+    print("Calculating the transverse apodization")
+    transv_apod = apod_width
+
+    if len(input_array.shape) == 3:
+        ns, nr, nc = inputarray.shape 
+
+        window1D1 = hanning_like_window(ns)
+        window1D2 = hanning_like_window(nr)
+        window1D3 = hanning_like_window(nc)
+
+        window1D1[transv_apod : -transv_apod] = 1
+        window1D2[transv_apod : -transv_apod] = 1
+        window1D3[transv_apod : -transv_apod] = 1
+        window = [np.outer(window1D1, window1D2), np.outer(window1D1, window1D3)]
+
+    return window
     
+
 def imgregistration(ref_img,mov_img,upsamp=1):
     """
     Routine for image registration before the FRC
@@ -272,7 +334,167 @@ def fourierringcorrelation(input1, input2, apod_width = 1, ringthick=1):
 
     return FRC, T, fn
     
+
+
+def fouriershellcorrelation(input1, input2, apod_width = 1, ringthick=1):
+    """
+    Routine to compute the FRC
     
+    Parameters
+    ----------
+    input1 :  array-like
+        array containing the first image, must be three-dimensional
+    
+    input2 : array-like
+        array containing the second image, must be three-dimensional
+    
+    apod_width : array-like
+        width of the apodization margin
+    
+    ringthick : int
+        thickness of the ring for averaging the correlation
+
+    Returns
+    -------
+    FRC : array-like
+        1D array containing the FRC values
+    
+    T : array-like
+        1D array containing the 1-bit threshold
+    
+    fn : array-like
+        1D array containing the normalized frequencies
+    
+    """
+    # Check if the arrays have 2 dimensions
+    if input1.ndim==3 and input2.ndim==3:
+        ns, nr, nc = input1.shape
+    else:
+        raise ValueError("The arrays must have 3 dimensions")
+    # Check if the arrays have the same size
+    if input1.shape != input2.shape:
+        raise ValueError("The arrays must have the same size")
+        
+    # image registration
+    # need to align the two image
+    # input2 = imgregistration(input1,input2,upsamp=100)
+    
+    # Forcing to using 1 bit threshold because it is ring correlation
+    # 1/2 bit threshold must only be used for tomography
+    print('Computing FRC using 1 bit threshold')
+    snrt = 0.5
+    
+    # Apodization of the borders    
+    if self.apod_width == 0:
+        window = 1
+    else:
+        print("Apodization in 3D. This takes time and memory...")
+
+        #NOT SURE if need use apod or transverse_apod
+        window3D = transverse_apodization(input1, apod_width)    
+        circle3D = np.asarray([circular_region for ii in range(ns)])
+        window = (
+            np.array(
+                [
+                    np.squeeze(circle3D[:, :, ii]) * window3D[0]
+                    for ii in range(self.nc)
+                ]
+            )
+            .swapaxes(0, 1)
+            .swapaxes(1, 2)
+        )
+        window = np.array(
+            [
+                np.squeeze(window[:, ii, :]) * window3D[1]
+                for ii in range(nr)
+            ]
+        ).swapaxes(0, 1)
+        print("Done. Time elapsed: {:.02f}s".format(time.time() - p0))
+
+    # sagital slices
+    slicenum = np.round(nr / 2).astype("int")
+    img1_apod = (window * input1)
+    img2_apod = (window * input2)
+    slice1 = img1_apod[:, slicenum, :]
+    slice2 = img2_apod[:, slicenum, :]
+
+    # plotting
+    fig1 = plt.figure(1)
+    ax1 = fig1.add_subplot(121)
+    ax2 = fig1.add_subplot(122)
+    im1 = ax1.imshow(slice1, cmap="bone", interpolation="none")
+    ax1.set_title("image1")
+    ax1.set_axis_off()
+    im2 = ax2.imshow(slice2, cmap="bone", interpolation="none")
+    ax2.set_title("image2")
+    ax2.set_axis_off()
+
+    # Computation of the FFTs
+    F1 = np.fft.fftn(np.fft.ifftshift(img1_apod)) # FFT of input1
+    F2 = np.fft.fftn(np.fft.ifftshift(img2_apod)) # FFT of input2
+    # F1 = fastfftn(self.img1 * self.window)  # FFT of the first image
+    # F2 = fastfftn(self.img2 * self.window)  # FFT of the second image
+
+    # normalized frequencies
+    f,fnyquist = nyquist((ns, nr,nc)) # Frequencies and Nyquist frequency
+    fn = f/fnyquist
+    
+    # initializing variables
+    C = np.empty_like(f)
+    C1 = np.empty_like(f)
+    C2 = np.empty_like(f)
+    npts = np.zeros_like(f)
+    
+    print("Calculating the correlation...")
+    index = ringthickness(F1) # indexes for the ring thickness
+    for ii in range(len(f)):
+        if ringthick == 0 or ringthick == 1:
+            auxF1 = F1[np.where(index == ii)]
+            auxF2 = F2[np.where(index == ii)]
+        else:
+            auxF1 = F1[
+                (
+                    np.where(
+                        (index >= (ii - ringthick / 2))
+                        & (index <= (ii + ringthick / 2))
+                    )
+                )
+            ]
+            auxF2 = F2[
+                (
+                    np.where(
+                        (index >= (ii - ringthick / 2))
+                        & (index <= (ii + ringthick / 2))
+                    )
+                )
+            ]
+        C[ii] = np.abs((auxF1 * np.conj(auxF2)).sum()) # Cross-correlation
+        C1[ii] = np.abs((auxF1 * np.conj(auxF1)).sum()) # auto-correlation
+        C2[ii] = np.abs((auxF2 * np.conj(auxF2)).sum()) # auto-correlation
+        npts[ii] = auxF1.shape[0]
+
+    # The correlation
+    FSC = C / (np.sqrt(C1 * C2))
+
+    # The computation of the threshold
+    # This might need changing here in 3D
+    Tnum = (
+        snrt
+        + (2 * np.sqrt(snrt) / np.sqrt(npts))
+        + 1 / np.sqrt(npts)
+    )
+    Tden = (
+        snrt
+        + (2 * np.sqrt(snrt) / np.sqrt(npts))
+        + 1
+    )
+    # The threshold
+    T = Tnum / Tden
+
+    return FSC, T, fn
+    
+
+
 def frc_plot(FRC, T, fn):
     """
     Routine to plot the FRC curves
@@ -301,4 +523,7 @@ def frc_plot(FRC, T, fn):
     plt.show()
     
     return None
+
+
+
     
