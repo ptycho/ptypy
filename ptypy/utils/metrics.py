@@ -542,11 +542,3 @@ def frc_plot(FRC, T, fn, plot_name):
     return None
 
 
-g_truth = np.load("/home/kpv14943/ptypy/rmap_242_glass.npy")
-vol_joint = np.load("/home/kpv14943/ptypy/vol_200iters_subs_half.npy")
-vol_conv = np.load("/home/kpv14943/ptypy/overall_vol_conv_REAL_400_subsampled_half.npy")
-
-#FSC, T, fn = fourierringcorrelation(np.real(g_truth)[:, 100, :], np.real(vol_joint)[:, 100, :])
-FSC, T, fn = fouriershellcorrelation(np.real(g_truth), np.real(vol_joint))
-
-frc_plot(FSC, T, fn, 'z_joint_subs_half.png')
