@@ -91,12 +91,12 @@ def ringthickness(inputarray):
     sumsquares = np.zeros_like(X[0])
     for ii in range(len(X)):
         sumsquares += X[ii] ** 2
-    index = np.round(np.sqrt(sumsquares)).astype(np.int)
+    index = np.round(np.sqrt(sumsquares)).astype(int)
 
     return index
 
 
-def hanning_like_window(nr): 
+def hanning_like_window(nr, apod_width): 
     Nr = fftshift(np.arange(nr))
     window = (
         1.0
@@ -133,8 +133,8 @@ def apodization(inputarray, apod_width=1):
     if len(inputarray.shape)==2:
         nr, nc = inputarray.shape
 
-        window1D1 = hanning_like_window(nr)
-        window1D2 = hanning_like_window(nc)
+        window1D1 = hanning_like_window(nr, apod_width)
+        window1D2 = hanning_like_window(nc, apod_width)
 
         window1D1[apod_width : -apod_width] = 1
         window1D2[apod_width : -apod_width] = 1
@@ -143,9 +143,9 @@ def apodization(inputarray, apod_width=1):
     elif len(inputarray.shape)==3:
         ns, nr, nc = inputarray.shape         
         
-        window1D1 = hanning_like_window(ns)
-        window1D2 = hanning_like_window(nr)
-        window1D3 = hanning_like_window(nc)
+        window1D1 = hanning_like_window(ns, apod_width)
+        window1D2 = hanning_like_window(nr, apod_width)
+        window1D3 = hanning_like_window(nc, apod_width)
 
         windowaxial = np.outer(window1D2, window1D3)
         windowsag = np.array([window1D1 for ii in range(nr)]).swapaxes(0, 1)
@@ -169,11 +169,11 @@ def transverse_apodization(input_array, apod_width=1):
     transv_apod = apod_width
 
     if len(input_array.shape) == 3:
-        ns, nr, nc = inputarray.shape 
+        ns, nr, nc = input_array.shape 
 
-        window1D1 = hanning_like_window(ns)
-        window1D2 = hanning_like_window(nr)
-        window1D3 = hanning_like_window(nc)
+        window1D1 = hanning_like_window(ns, apod_width)
+        window1D2 = hanning_like_window(nr, apod_width)
+        window1D3 = hanning_like_window(nc, apod_width)
 
         window1D1[transv_apod : -transv_apod] = 1
         window1D2[transv_apod : -transv_apod] = 1
@@ -334,6 +334,24 @@ def fourierringcorrelation(input1, input2, apod_width = 1, ringthick=1):
 
     return FRC, T, fn
     
+def circle(apod_width, nr, nc):
+    """
+    Create circle with apodized edges
+    """
+    Y, X = np.indices((nr, nc))
+    Y -= np.round(nr / 2).astype(int)
+    X -= np.round(nc / 2).astype(int)
+    axial_apod = apod_width
+    R = np.sqrt(X ** 2 + Y ** 2)
+    Rmax = np.round(np.max(R.shape) / 2.0)
+    maskout = R < Rmax
+    t = (
+        maskout
+        * (1 - np.cos(np.pi * (R - Rmax - 2 * axial_apod) / axial_apod))
+        / 2.0
+    )
+    t[np.where(R < (Rmax - axial_apod))] = 1
+    return t
 
 
 def fouriershellcorrelation(input1, input2, apod_width = 1, ringthick=1):
@@ -385,11 +403,11 @@ def fouriershellcorrelation(input1, input2, apod_width = 1, ringthick=1):
     snrt = 0.5
     
     # Apodization of the borders    
-    if self.apod_width == 0:
+    if apod_width == 0:
         window = 1
     else:
         print("Apodization in 3D. This takes time and memory...")
-
+        circular_region = circle(apod_width, nr, nc)
         #NOT SURE if need use apod or transverse_apod
         window3D = transverse_apodization(input1, apod_width)    
         circle3D = np.asarray([circular_region for ii in range(ns)])
@@ -397,7 +415,7 @@ def fouriershellcorrelation(input1, input2, apod_width = 1, ringthick=1):
             np.array(
                 [
                     np.squeeze(circle3D[:, :, ii]) * window3D[0]
-                    for ii in range(self.nc)
+                    for ii in range(nc)
                 ]
             )
             .swapaxes(0, 1)
@@ -409,7 +427,6 @@ def fouriershellcorrelation(input1, input2, apod_width = 1, ringthick=1):
                 for ii in range(nr)
             ]
         ).swapaxes(0, 1)
-        print("Done. Time elapsed: {:.02f}s".format(time.time() - p0))
 
     # sagital slices
     slicenum = np.round(nr / 2).astype("int")
@@ -495,7 +512,7 @@ def fouriershellcorrelation(input1, input2, apod_width = 1, ringthick=1):
     
 
 
-def frc_plot(FRC, T, fn):
+def frc_plot(FRC, T, fn, plot_name):
     """
     Routine to plot the FRC curves
     
@@ -521,9 +538,15 @@ def frc_plot(FRC, T, fn):
     plt.xlabel("Spatial frequency/Nyquist [normalized units]")
     plt.ylabel("Magnitude [normalized units]")
     plt.show()
-    
+    plt.savefig(plot_name)
     return None
 
 
+g_truth = np.load("/home/kpv14943/ptypy/rmap_242_glass.npy")
+vol_joint = np.load("/home/kpv14943/ptypy/vol_200iters_subs_half.npy")
+vol_conv = np.load("/home/kpv14943/ptypy/overall_vol_conv_REAL_400_subsampled_half.npy")
 
-    
+#FSC, T, fn = fourierringcorrelation(np.real(g_truth)[:, 100, :], np.real(vol_joint)[:, 100, :])
+FSC, T, fn = fouriershellcorrelation(np.real(g_truth), np.real(vol_joint))
+
+frc_plot(FSC, T, fn, 'z_joint_subs_half.png')
