@@ -4,7 +4,6 @@ Data preparation class for P06 at Petra III.
 """
 import os
 import os.path
-import warnings
 
 from ..core.data import PtyScan
 from .. import utils as u
@@ -19,7 +18,7 @@ except ImportError:
     logger.warning("Couldn't find hdf5plugin - better hope your h5py has bitshuffle!")
 import h5py
 
-__all__ = ["P06Scan", "P06Scan_scanning_mirror"]
+__all__ = ["P06Scan"]
 
 
 @register()
@@ -34,10 +33,16 @@ class P06Scan(PtyScan):
     type = str
     help =
 
-    [path]
+    [scan_path_raw]
     default = None
     type = str
-    help = Path to where the data is
+    help = Path to where the raw data is. Detector data is found in scan_path_raw/{detector}
+    doc =
+
+    [positions_path]
+    default = None
+    type = str
+    help = Path to hdf5 file where positions are stored. The motor positions should be found under, for example, "/axes/{x_motor}"
     doc =
 
     [scanNumber]
@@ -49,7 +54,13 @@ class P06Scan(PtyScan):
     [energy]
     default = None
     type = float
-    help = photon energy in keV, if None it will be read from the scan file
+    help = photon energy in keV, if None it will be read from the nexus file
+    doc =
+
+    [nexus_path]
+    default = None
+    type = str
+    help = Path to nexus file.
     doc =
 
     [cropOnLoad]
@@ -252,6 +263,8 @@ class P06Scan(PtyScan):
             logger.warning("note: y motor is specified as flipped")
 
         # if the x/y axis is tilted with respect to the beam axis, take that into account.
+        from pprint import pprint
+        print(self.info)
         xCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
         yCosFactor = np.cos(self.info.yMotorAngle / 180.0 * np.pi)
         logger.info(
@@ -284,12 +297,11 @@ class P06Scan(PtyScan):
         return np.vstack((y, x)).T
 
     def load_positions(self):
-        scan_nmb_str = str(self.info.scanNumber).zfill(5)
-        pospath = self.info.path.replace('raw', 'processed') + f'scan_{scan_nmb_str}/raw_processed_data.h5'
+        positions_path = self.info.positions_path
         x_unit = self._check_unit(self.info.xMotor, self.info.xMotor_unit)
         y_unit = self._check_unit(self.info.yMotor, self.info.yMotor_unit)
         pos = {}
-        with h5py.File(pospath, 'r') as f:
+        with h5py.File(positions_path, 'r') as f:
             pos['x'] = np.array(f[f'/axes/{self.info.xMotor}'][:]) * x_unit
             pos['y'] = np.array(f[f'/axes/{self.info.yMotor}'][:]) * y_unit
         nan_mask = np.logical_not(np.isnan(pos['x']))
@@ -311,21 +323,14 @@ class P06Scan(PtyScan):
         return positions
 
     def load(self, indices):
-        if self.info.detector == 'eiger':
-            self.info.detector = 'eiger_4m_01' # temporary fix to avoid breaking scripts
-
         raw, weights, positions = {}, {}, {}
 
-        scan_nmb_str = str(self.info.scanNumber).zfill(5)
-        fpath_scan = self.info.path + f'scan_{scan_nmb_str}.nxs'
-
-        detector_data_directory = os.path.join(
-            self.info.path, f"scan_{scan_nmb_str}", self.info.detector
+        detector_directory = os.path.join(
+            self.info.scan_path_raw, self.info.detector
         )
         detector_file_list = sorted([
-            os.path.join(detector_data_directory, x) for x in os.listdir(detector_data_directory) if not ('master' in x)
+            os.path.join(detector_directory, x) for x in os.listdir(detector_directory) if not ('master' in x)
         ])
-        detector_file_list = sorted(detector_file_list)
         with h5py.File(detector_file_list[0], 'r') as fp:
             frames = fp['entry/data/data'][:, :5, :5]
             eiger_mod = len(frames)
@@ -387,7 +392,7 @@ class P06Scan(PtyScan):
         # set the photon energy
         path_options = ['scan/data/energy']
         if self.info.energy == None:
-            with h5py.File(fpath_scan, 'r') as fp:
+            with h5py.File(self.info.nexus_path, 'r') as fp:
                 existing_paths = [x for x in path_options if x in fp.keys()]
                 self.meta.energy = fp[existing_paths[0]][:] * 1e-3
         else:
