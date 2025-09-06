@@ -21,12 +21,12 @@ def scan_00039_paths():
     detector_data_dir = os.path.join(scan_path_raw, detector_name)
     raw_processed_data_path = os.path.join(scan_path_processed, "raw_processed_data.h5")
     mask_path = os.path.join(experiment_path, 'shared/analysis_config/masks/eiger_4m_01_mask.tiff')
-    parameters_path = os.path.join(experiment_path, 'scan_00039_parameters.json')
-    nexus_path = os.path.join(session_path_raw, 'scan_00039.nxs')
-    home_path = os.path.join(scan_path_processed, rec_name, 'rec')
-    rfile = os.path.join(home_path, "rec_scan_00039_%(engine)s_%(iterations)04d.ptyr")
-    autosave_rfile = os.path.join("rec_scan_00039_%(engine)s_%(iterations)04d.ptyr")
-    dfile = os.path.join(scan_path_processed, rec_name, 'data', "data_scan_00039.ptyd")
+    parameters_path = os.path.join(experiment_path, f'scan_{scan_id:05.0f}_parameters.json')
+    nexus_path = os.path.join(session_path_raw, f'scan_{scan_id:05.0f}.nxs')
+    home_path = os.path.join(scan_path_processed, rec_name)
+    rfile = os.path.join("rec", f"rec_scan_{scan_id:05.0f}_%(engine)s_%(iterations)04d.ptyr")
+    autosave_rfile = os.path.join("dumps", f"dump_scan_{scan_id:05.0f}_%(engine)s_%(iterations)04d.ptyr")
+    dfile = os.path.join(scan_path_processed, rec_name, 'data', f"data_scan_{scan_id:05.0f}.ptyd")
 
     return {
         "detector_data_dir": detector_data_dir,
@@ -68,8 +68,8 @@ def scan_00039_parameters(scan_00039_paths):
     p.scans.scan00.data.yMotorAngle = 0
     p.scans.scan00.data.zDetectorAngle = 0
     p.scans.scan00.data.xyAxisSkewOffset = 0
-    p.scans.scan00.data.center = (1000, 1000)
-    p.scans.scan00.data.shape = (8, 8)
+    p.scans.scan00.data.center = (1, 1)
+    p.scans.scan00.data.shape = (2, 2)
     p.scans.scan00.data.energy = None
     p.scans.scan00.data.detector = "eiger_4m_01"
 
@@ -77,7 +77,7 @@ def scan_00039_parameters(scan_00039_paths):
     #p.io = u.Param()
     p.io.home = scan_00039_paths["home_path"]
     p.io.rfile = scan_00039_paths["rfile"]
-    p.io.autosave.rfile = "autosave_"+scan_00039_paths["rfile"]
+    p.io.autosave.rfile = scan_00039_paths["autosave_rfile"]
 
 
 

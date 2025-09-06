@@ -178,6 +178,12 @@ class P06Scan(PtyScan):
     help = Normalization channel, like alba2/1 for example
     doc =
 
+    [debug_data_omit_fraction]
+    default = None
+    type = str
+    help = debugging aid, specifying the fraction of files
+    doc =
+
     """
     # Lookup table for motor units.
     UNITS = {
@@ -281,7 +287,7 @@ class P06Scan(PtyScan):
             chi_rad_x = self.info.zDetectorAngle / 180.0 * np.pi
             chi_rad_y = 1. * chi_rad_x
             logger.info(
-                "x and y motor positions were roated by %.4f degree to align with the detector pixel grid" % (
+                "x and y motor positions were rotated by %.4f degree to align with the detector pixel grid" % (
                     self.info.zDetectorAngle))
 
         # if x and y are not under 90 degrees to each other
