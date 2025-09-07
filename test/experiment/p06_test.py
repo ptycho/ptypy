@@ -3,6 +3,7 @@ import pytest
 import os
 
 import ptypy.utils as u
+from ptypy import defaults_tree
 from ptypy.io.json_rw import jwrite
 from ptypy.experiment.p06 import *
 import numpy as np
@@ -48,13 +49,14 @@ def scan_00039_parameters(scan_00039_paths):
     """
 
     template_path = "test/experiment/p06_test_data/scan_00039_parameters_old.json"
+    #template_path = "test/experiment/p06_test_data/little_star_v1.json"
     p = u.param_from_json(template_path)
     meta = p.pop('__meta__')  # Remove '__meta__' as it will fail parameter validation.
 
     #p = u.Param()
-    p.scans = u.Param()
-    p.scans.scan00 = u.Param()
-    p.scans.scan00.name = "BlockFull"
+    #p.scans = u.Param()
+    #p.scans.scan00 = u.Param()
+    #p.scans.scan00.name = "BlockFull"
     p.scans.scan00.data = u.Param()
     p.scans.scan00.data.name = "P06Scan"
     p.scans.scan00.data.scan_path_raw = scan_00039_paths["scan_path_raw"]
@@ -66,23 +68,33 @@ def scan_00039_parameters(scan_00039_paths):
     p.scans.scan00.data.yMotor = "scanz"
     p.scans.scan00.data.xMotorAngle = 0
     p.scans.scan00.data.yMotorAngle = 0
+    p.scans.scan00.data.xMotorFlipped = True
+    p.scans.scan00.data.yMotorFlipped = True
     p.scans.scan00.data.zDetectorAngle = 0
     p.scans.scan00.data.xyAxisSkewOffset = 0
     p.scans.scan00.data.center = (1, 1)
     p.scans.scan00.data.shape = (2, 2)
     p.scans.scan00.data.energy = None
     p.scans.scan00.data.detector = "eiger_4m_01"
-
+    p.scans.scan00.data.psize = 75e-6
+    p.scans.scan00.data.distance = 3.58
+    p.scans.scan00.data.rebin = 1
+    p.scans.scan00.data.save = "append"
+    p.scans.scan00.data.cropOnLoad = True
+    p.scans.scan00.data.I0 = None
+    p.scans.scan00.data.min_frames = 10
+    p.scans.scan00.data.load_parallel = "all"
+    p.scans.scan00.data.orientation = [False, False, False]
 
     #p.io = u.Param()
     p.io.home = scan_00039_paths["home_path"]
     p.io.rfile = scan_00039_paths["rfile"]
     p.io.autosave.rfile = scan_00039_paths["autosave_rfile"]
 
+    defaults_tree['ptycho'].validate(p)
 
-
-
-    jwrite("test/experiment/p06_test_data/scan_00039_parameters.json", p)
+    jwrite("test/experiment/p06_test_data/scan_00039_parameters_tmp.json", p)
+    #jwrite("test/experiment/p06_test_data/little_star_v2.json", p)
 
     return p
 

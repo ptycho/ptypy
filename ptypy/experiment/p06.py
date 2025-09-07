@@ -57,6 +57,18 @@ class P06Scan(PtyScan):
     help = photon energy in keV, if None it will be read from the nexus file
     doc =
 
+    [energy]
+    default = None
+    type = float
+    help = photon energy in keV, if None it will be read from the nexus file
+    doc =
+
+    [energy]
+    default = None
+    type = float
+    help = photon energy in keV, if None it will be read from the nexus file
+    doc =
+
     [nexus_path]
     default = None
     type = str
@@ -176,12 +188,6 @@ class P06Scan(PtyScan):
     default = None
     type = str
     help = Normalization channel, like alba2/1 for example
-    doc =
-
-    [debug_data_omit_fraction]
-    default = None
-    type = str
-    help = debugging aid, specifying the fraction of files
     doc =
 
     """
