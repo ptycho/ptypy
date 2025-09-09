@@ -214,7 +214,7 @@ class P06Scan(PtyScan):
         if pars is not None:
             self.p.update(pars)
         self.p.update(kwargs)
-        super(self.__class__, self).__init__(self.p)
+        super(P06Scan, self).__init__(self.p)
 
     def clean_mask(self, mask):
         mask[mask>=0.5] = 1
@@ -333,6 +333,8 @@ class P06Scan(PtyScan):
         self.frames_per_scan = {}
 
         return positions
+
+
 
     def load(self, indices):
         raw, weights, positions = {}, {}, {}
