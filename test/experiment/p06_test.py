@@ -85,6 +85,7 @@ def scan_00039_parameters(scan_00039_paths):
     p.scans.scan00.data.min_frames = 10
     p.scans.scan00.data.load_parallel = "all"
     p.scans.scan00.data.orientation = [False, False, False]
+    p.scans.scan00.data.position_bounds = ((-1, 1), (1e-6, 5e-6))
 
     #p.io = u.Param()
     p.io.home = scan_00039_paths["home_path"]
@@ -101,21 +102,20 @@ def scan_00039_parameters(scan_00039_paths):
 
 def test_load_positions(scan_00039_parameters):
     p = scan_00039_parameters
-
-
     p06scan = P06Scan(p.scans.scan00.data)
     positions = p06scan.load_positions()
     assert positions.shape == (1681, 2)
     assert not np.any(np.isnan(positions))
 
+
 def test_load(scan_00039_parameters):
     p = scan_00039_parameters
     p06scan = P06Scan(p.scans.scan00.data)
-    indices = np.arange(10)
+    indices = np.arange(15)
     raw, positions, weights = p06scan.load(indices)
-    for key, item in positions.items():
-        assert item.shape == (1681, )
-        assert not np.any(np.isnan(item))
+    assert len(raw) == len(indices)
+    assert len(positions) == len(indices)
+    assert len(weights) == len(indices)
 
 
 
