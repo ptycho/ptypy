@@ -728,7 +728,7 @@ def phase_from_dpc(dpc_row, dpc_col):
     sh = np.asarray(sh)
     fac = np.ones_like(sh)
     fac[-2:] = 2
-    f = np.zeros(sh * fac, dtype=np.complex)
+    f = np.zeros(sh * fac, dtype=complex)
     c = px + 1j*py
     f[..., :sh[-2], :sh[-1]] = c
     f[..., :sh[-2], sh[-1]:] = c[..., :, ::-1]

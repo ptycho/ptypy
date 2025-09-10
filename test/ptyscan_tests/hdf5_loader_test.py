@@ -325,6 +325,106 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         np.testing.assert_equal(out_data.shape, ground_truth.shape, err_msg="The shapes don't match for the positions for case 1 with framefilter")
         np.testing.assert_array_equal(out_data, ground_truth, err_msg='There is something up with the positions for case 1 with framefilter')
 
+    def test_position_data_mapping_case_1_with_frameorder_1(self):
+        '''
+        axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n),
+        '''
+        A = 106
+        B = 101
+        frame_size_m = 5
+        frame_size_n = 5
+
+        positions_slow = np.arange(A)
+        positions_fast = np.arange(B)
+        fast, slow = np.meshgrid(positions_fast, positions_slow) # just pretend it's a simple grid
+        fast = fast[..., np.newaxis, np.newaxis]
+        slow = slow[..., np.newaxis, np.newaxis]
+        # now chuck them in the files
+        with h5.File(self.positions_file, 'w') as f:
+            f[self.positions_slow_key] = slow
+            f[self.positions_fast_key] = fast
+
+        # make up some data ...
+        data = np.arange(A*B*frame_size_m*frame_size_n).reshape(A, B, frame_size_m, frame_size_n)
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
+
+        # create frameorder array of indices
+        frameorder = np.arange(A*B)
+        np.random.shuffle(frameorder)
+
+        data_params = u.Param()
+        data_params.auto_center = False
+        data_params.intensities = u.Param()
+        data_params.intensities.file = self.intensity_file
+        data_params.intensities.key = self.intensity_key
+
+        data_params.positions = u.Param()
+        data_params.positions.file = self.positions_file
+        data_params.positions.slow_key = self.positions_slow_key
+        data_params.positions.fast_key = self.positions_fast_key
+
+        data_params.frameorder = u.Param()
+        data_params.frameorder.indices = frameorder
+        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=A*B, cleanup=False)
+
+        with h5.File(output['output_file'],'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
+        ground_truth = data.reshape((-1, frame_size_m, frame_size_n))[frameorder]
+        np.testing.assert_equal(out_data.shape, ground_truth.shape, err_msg="The shapes don't match for the positions for case 1 with different frameorder")
+        np.testing.assert_array_equal(out_data, ground_truth, err_msg='There is something up with the positions for case 1 with different frameorder')
+
+
+    def test_position_data_mapping_case_1_with_frameorder_2(self):
+        '''
+        axis_data.shape (A, B) for data.shape (A, B, frame_size_m, frame_size_n),
+        '''
+        A = 106
+        B = 101
+        frame_size_m = 5
+        frame_size_n = 5
+
+        positions_slow = np.arange(A)
+        positions_fast = np.arange(B)
+        fast, slow = np.meshgrid(positions_fast, positions_slow) # just pretend it's a simple grid
+        fast = fast[..., np.newaxis, np.newaxis]
+        slow = slow[..., np.newaxis, np.newaxis]
+        # now chuck them in the files
+        with h5.File(self.positions_file, 'w') as f:
+            f[self.positions_slow_key] = slow
+            f[self.positions_fast_key] = fast
+
+        # make up some data ...
+        data = np.arange(A*B*frame_size_m*frame_size_n).reshape(A, B, frame_size_m, frame_size_n)
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
+
+        # create frameorder array of indices
+        frameorder = np.hstack([np.arange(A*B), np.random.randint(A*B, size=int(0.1*A*B))])
+        np.random.shuffle(frameorder)
+
+        data_params = u.Param()
+        data_params.auto_center = False
+        data_params.intensities = u.Param()
+        data_params.intensities.file = self.intensity_file
+        data_params.intensities.key = self.intensity_key
+
+        data_params.positions = u.Param()
+        data_params.positions.file = self.positions_file
+        data_params.positions.slow_key = self.positions_slow_key
+        data_params.positions.fast_key = self.positions_fast_key
+
+        data_params.frameorder = u.Param()
+        data_params.frameorder.indices = frameorder
+        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=len(frameorder), cleanup=False)
+
+        with h5.File(output['output_file'],'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
+        ground_truth = data.reshape((-1, frame_size_m, frame_size_n))[frameorder]
+        np.testing.assert_equal(out_data.shape, ground_truth.shape, err_msg="The shapes don't match for the positions for case 1 with different frameorder")
+        np.testing.assert_array_equal(out_data, ground_truth, err_msg='There is something up with the positions for case 1 with different frameorder')
+
+
     def test_darkfield_applied_case_1(self):
         '''
         Applies the darkfield and assumes it is shaped like the data
@@ -600,6 +700,57 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
                                       err_msg='There is something up with the positions for case 2 with framefilter')
 
 
+    def test_position_data_mapping_case_2_with_frameorder(self):
+        '''
+        axis_data.shape (k,) for data.shape (k, frame_size_m, frame_size_n)
+        '''
+        k = 12
+        frame_size_m = 5
+        frame_size_n = 5
+
+        positions_slow = np.arange(k)
+        positions_fast = np.arange(k)
+
+        # now chuck them in the files
+        with h5.File(self.positions_file, 'w') as f:
+            f[self.positions_slow_key] = positions_slow
+            f[self.positions_fast_key] = positions_fast
+
+        # make up some data ...
+        data = np.arange(k*frame_size_m*frame_size_n).reshape(k, frame_size_m, frame_size_n)
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
+
+        # create frameorder array of indices
+        frameorder = np.hstack([np.arange(k), np.random.randint(k, size=int(0.1*k))])
+        np.random.shuffle(frameorder)
+
+        data_params = u.Param()
+        data_params.auto_center = False
+        data_params.intensities = u.Param()
+        data_params.intensities.file = self.intensity_file
+        data_params.intensities.key = self.intensity_key
+
+        data_params.positions = u.Param()
+        data_params.positions.file = self.positions_file
+        data_params.positions.slow_key = self.positions_slow_key
+        data_params.positions.fast_key = self.positions_fast_key
+
+        data_params.frameorder = u.Param()
+        data_params.frameorder.indices = frameorder
+
+        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=len(frameorder), cleanup=False)
+
+        with h5.File(output['output_file'], 'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
+        ground_truth = data.reshape((-1, frame_size_m, frame_size_n))[frameorder]
+
+        np.testing.assert_equal(ground_truth.shape, out_data.shape,
+                                err_msg="The shapes don't match for the positions for case 2 with different order of frames")
+        np.testing.assert_array_equal(ground_truth, out_data,
+                                      err_msg='There is something up with the positions for case 2 with different order of frames')
+
+
     def test_flatfield_applied_case_2(self):
         '''
         Applies the flatfield and assumes it is shaped like a single frame
@@ -865,6 +1016,58 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
         np.testing.assert_array_equal(out_data, ground_truth,
                                       err_msg='There is something up with the positions for case 4 with skipping')
 
+    def test_position_data_mapping_case_3_with_frameorder(self):
+        '''
+        axis_data.shape (C, D) for data.shape (C*D, frame_size_m, frame_size_n) ,
+        '''
+        C = 10
+        D = 11
+        frame_size_m = 5
+        frame_size_n = 5
+
+        positions_slow = np.arange(C)
+        positions_fast = np.arange(D)
+        fast, slow = np.meshgrid(positions_fast, positions_slow) # just pretend it's a simple grid
+        # now chuck them in the files
+        with h5.File(self.positions_file, 'w') as f:
+            f[self.positions_slow_key] = slow
+            f[self.positions_fast_key] = fast
+
+        # make up some data ...
+        data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C*D, frame_size_m, frame_size_n)
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
+
+        # create frameorder array of indices
+        frameorder = np.hstack([np.arange(C*D), np.random.randint(C*D, size=int(0.1*C*D))])
+        np.random.shuffle(frameorder)
+
+        data_params = u.Param()
+        data_params.auto_center = False
+        data_params.intensities = u.Param()
+        data_params.intensities.file = self.intensity_file
+        data_params.intensities.key = self.intensity_key
+
+        data_params.positions = u.Param()
+        data_params.positions.file = self.positions_file
+        data_params.positions.slow_key = self.positions_slow_key
+        data_params.positions.fast_key = self.positions_fast_key
+
+        data_params.frameorder = u.Param()
+        data_params.frameorder.indices = frameorder
+
+        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=len(frameorder), cleanup=False)
+
+        with h5.File(output['output_file'], 'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
+        ground_truth = data.reshape((-1, frame_size_m, frame_size_n))[frameorder]
+
+        np.testing.assert_equal(out_data.shape, ground_truth.shape,
+                                err_msg="The shapes don't match for the positions for case 4 with different order of frames")
+        np.testing.assert_array_equal(out_data, ground_truth,
+                                      err_msg='There is something up with the positions for case 4 with different order of frames')
+
+
     def test_position_data_mapping_case_4(self):
         '''
         axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the size of the other axis,
@@ -1007,6 +1210,57 @@ class Hdf5LoaderTestNoSWMR(unittest.TestCase):
                                 err_msg="The shapes don't match for the positions for case 4 with skipping")
         np.testing.assert_array_equal(out_data, ground_truth,
                                       err_msg='There is something up with the positions for case 4 with skipping')
+
+
+    def test_position_data_mapping_case_4_with_frameorder(self):
+        '''
+        axis_data.shape (C,) for data.shape (C, D, frame_size_m, frame_size_n) where D is the size of the other axis,
+        '''
+        C = 4
+        D = 8
+        frame_size_m = 5
+        frame_size_n = 5
+
+        slow = np.arange(C)
+        fast = np.arange(D)
+        # now chuck them in the files
+        with h5.File(self.positions_file, 'w') as f:
+            f[self.positions_slow_key] = slow
+            f[self.positions_fast_key] = fast
+
+        # make up some data ...
+        data = np.arange(C*D*frame_size_m*frame_size_n).reshape(C, D, frame_size_m, frame_size_n)
+        with h5.File(self.intensity_file, 'w') as f:
+            f[self.intensity_key] = data
+
+        # create frameorder array of indices
+        frameorder = np.hstack([np.arange(C*D), np.random.randint(C*D, size=int(0.1*C*D))])
+        np.random.shuffle(frameorder)
+
+        data_params = u.Param()
+        data_params.auto_center = False
+        data_params.intensities = u.Param()
+        data_params.intensities.file = self.intensity_file
+        data_params.intensities.key = self.intensity_key
+
+        data_params.positions = u.Param()
+        data_params.positions.file = self.positions_file
+        data_params.positions.slow_key = self.positions_slow_key
+        data_params.positions.fast_key = self.positions_fast_key
+
+        data_params.frameorder = u.Param()
+        data_params.frameorder.indices = frameorder
+
+        output = PtyscanTestRunner(Hdf5Loader, data_params, auto_frames=len(frameorder), cleanup=False)
+
+        with h5.File(output['output_file'], 'r') as f:
+            out_data = f['chunks/0/data'][...].squeeze()
+        ground_truth = data.reshape((-1, frame_size_m, frame_size_n))[frameorder]
+        np.testing.assert_equal(out_data.shape, ground_truth.shape,
+                                err_msg="The shapes don't match for the positions for case 4 with different order of frames")
+        np.testing.assert_array_equal(out_data, ground_truth,
+                                      err_msg='There is something up with the positions for case 4 with different order of frames')
+
 
     def test_position_data_mapping_case_5(self):
         '''

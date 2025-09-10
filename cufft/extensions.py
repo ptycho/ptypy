@@ -4,8 +4,8 @@ Compilation tools for Nvidia builds of extension modules.
 import os, re
 import subprocess
 import sysconfig
-from distutils.unixccompiler import UnixCCompiler
-from distutils.command.build_ext import build_ext
+from setuptools._distutils.unixccompiler import UnixCCompiler
+from setuptools.command.build_ext import build_ext
 
 
 def find_in_path(name, path):
@@ -40,6 +40,11 @@ def locate_cuda():
     cudaconfig = {'home': home, 'nvcc': nvcc,
                   'include': os.path.join(home, 'include'),
                   'lib64': os.path.join(home, 'lib64')}
+
+    # If lib64 does not exist, try lib instead (as common in conda env)
+    if not os.path.exists(cudaconfig['lib64']):
+        cudaconfig['lib64'] = os.path.join(home, 'lib')
+    
     for k, v in cudaconfig.items():
         if not os.path.exists(v):
             raise EnvironmentError('The CUDA %s path could not be located in %s' % (k, v))
@@ -111,6 +116,7 @@ class NvccCompiler(UnixCCompiler):
         compiler_command = [self.CUDA["nvcc"]] + self.NVCC_FLAGS + self.OPTFLAGS + ["-Xcompiler"] + self.CXXFLAGS + CPPFLAGS
         compiler_exec = " ".join(compiler_command)
         self.set_executable('compiler_so', compiler_exec)
+        self.set_executable('compiler_so_cxx', compiler_exec)
         postargs = [] # we don't actually have any postargs
         super(NvccCompiler, self)._compile(obj, src, ext, cc_args, postargs, pp_opts) # the _compile method
         # reset the default compiler_so, which we might have changed for cuda

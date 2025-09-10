@@ -1,10 +1,9 @@
-import skcuda.fft as cu_fft
-from skcuda.fft import cufft as cufftlib
+
 from pycuda import gpuarray
 from . import load_kernel
 import numpy as np
 
-class FFT_cuda(object):
+class FFT_base(object):
 
     def __init__(self, array, queue=None,
                  inplace=False,
@@ -17,15 +16,29 @@ class FFT_cuda(object):
         if dims < 2:
             raise AssertionError('Input array must be at least 2-dimensional')
         self.arr_shape = (array.shape[-2], array.shape[-1])
-        rows = self.arr_shape[0]
-        columns = self.arr_shape[1]
-        if rows != columns or rows not in [16, 32, 64, 128, 256, 512, 1024, 2048]:
-            raise ValueError("CUDA FFT only supports powers of 2 for rows/columns, from 16 to 2048")
         self.batches = int(np.prod(array.shape[0:dims-2]) if dims > 2 else 1)
         self.forward = forward
 
         self._load(array, pre_fft, post_fft, symmetric, forward)
 
+class FFT_cuda(FFT_base):
+
+    def __init__(self, array, queue=None,
+                 inplace=False,
+                 pre_fft=None,
+                 post_fft=None,
+                 symmetric=True,
+                 forward=True):
+        rows, columns = (array.shape[-2], array.shape[-1])
+        if rows != columns or rows not in [16, 32, 64, 128, 256, 512, 1024, 2048]:
+            raise ValueError("CUDA FFT only supports powers of 2 for rows/columns, from 16 to 2048")
+        super(FFT_cuda, self).__init__(array, queue=queue, 
+                                       inplace=inplace,
+                                       pre_fft=pre_fft,
+                                       post_fft=post_fft,
+                                       symmetric=symmetric,
+                                       forward=forward)
+        
     def _load(self, array, pre_fft, post_fft, symmetric, forward):
         if pre_fft is not None:
             self.pre_fft = gpuarray.to_gpu(pre_fft)
@@ -68,7 +81,23 @@ class FFT_cuda(object):
         self.fftobj.ifft(input.gpudata, output.gpudata)
         
 
-class FFT_skcuda(FFT_cuda):
+class FFT_skcuda(FFT_base):
+
+    def __init__(self, array, queue=None,
+                 inplace=False,
+                 pre_fft=None,
+                 post_fft=None,
+                 symmetric=True,
+                 forward=True):
+        import skcuda.fft as cu_fft
+        self._fft = cu_fft.fft
+        self._ifft = cu_fft.ifft
+        super(FFT_cuda, self).__init__(array, queue=queue, 
+                                inplace=inplace,
+                                pre_fft=pre_fft,
+                                post_fft=post_fft,
+                                symmetric=symmetric,
+                                forward=forward)
 
     @property
     def queue(self):
@@ -77,6 +106,7 @@ class FFT_skcuda(FFT_cuda):
     @queue.setter
     def queue(self, queue):
         self._queue = queue
+        from skcuda.fft import cufft as cufftlib
         cufftlib.cufftSetStream(self.plan.handle, queue.handle)
 
     def _load(self, array, pre_fft, post_fft, symmetric, forward):
@@ -112,6 +142,7 @@ class FFT_skcuda(FFT_cuda):
             int((self.arr_shape[1] + 31) // 32),
             int(self.batches)
         )
+        import skcuda.fft as cu_fft
         self.plan = cu_fft.Plan(
             self.arr_shape,
             array.dtype,
@@ -166,11 +197,11 @@ class FFT_skcuda(FFT_cuda):
 
     def _ft(self, x, y):
         d = self._prefilt(x, y)
-        cu_fft.fft(d, y, self.plan)
+        self._fft(d, y, self.plan)
         self._postfilt(y)
 
     def _ift(self, x, y):
         d = self._prefilt(x, y)
-        cu_fft.ifft(d, y, self.plan)
+        self._ifft(d, y, self.plan)
         self._postfilt(y)
 

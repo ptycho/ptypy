@@ -23,7 +23,7 @@ from ptypy.utils import parallel
 from .. import get_context, log_device_memory_stats
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
-from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, TransposeKernel
+from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, FFTGaussianSmoothingKernel, TransposeKernel
 from ..mem_utils import GpuDataManager
 
 #from ..mem_utils import GpuDataManager
@@ -69,6 +69,7 @@ class ML_cupy(ML_serial):
         Maximum likelihood reconstruction engine.
         """
         super().__init__(ptycho_parent, pars)
+        self.sqrt = cp.sqrt
 
     def engine_initialize(self):
         """
@@ -79,8 +80,12 @@ class ML_cupy(ML_serial):
         self.qu_htod = cp.cuda.Stream()
         self.qu_dtoh = cp.cuda.Stream()
 
-        self.GSK = GaussianSmoothingKernel(queue=self.queue)
-        self.GSK.tmp = None
+        if self.p.smooth_gradient_method == "convolution":
+            self.GSK = GaussianSmoothingKernel(queue=self.queue)
+            self.GSK.tmp = None
+
+        if self.p.smooth_gradient_method == "fft":
+            self.FGSK = FFTGaussianSmoothingKernel(queue=self.queue)
 
         # Real/Fourier Support Kernel
         self.RSK = {}
@@ -165,6 +170,8 @@ class ML_cupy(ML_serial):
         # TODO grow blocks dynamically
         nma = min(fit, MAX_BLOCKS)
         log_device_memory_stats(4)
+        log(4, 'Free memory available: {:.2f} GB'.format(float(mem)/(1024**3)))
+        log(4, 'Memory to be allocated per block: {:.2f} GB'.format(float(blk)/(1024**3)))
         log(4, 'CuPy max blocks fitting on GPU: ma_arrays={}'.format(nma))
         # reset memory or create new
         self.w_data = GpuDataManager(ma_mem, 0, nma, False)
@@ -258,13 +265,29 @@ class ML_cupy(ML_serial):
                     dev=dev, container=container, sync_copy=sync_copy)
 
     def _get_smooth_gradient(self, data, sigma):
-        if self.GSK.tmp is None:
-            self.GSK.tmp = cp.empty(data.shape, dtype=np.complex64)
-        self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
+        if self.p.smooth_gradient_method == "convolution":
+            if self.GSK.tmp is None:
+                self.GSK.tmp = cp.empty(data.shape, dtype=np.complex64)
+            try:
+                self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
+            except MemoryError:
+                raise RuntimeError("Convolution kernel too large for direct convolution on GPU",
+                                   "Please reduce parameter smooth_gradient or set smooth_gradient_method='fft'.")
+        elif self.p.smooth_gradient_method == "fft":
+            self.FGSK.filter(data, sigma)
+        else:
+            raise NotImplementedError("smooth_gradient_method should be ```convolution``` or ```fft```.")
         return data
 
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new
+
+        # Wavefield preconditioner for the object
+        if self.p.wavefield_precond:
+            for name, s in new_ob_grad.storages.items():
+                s.gpu /= cp.sqrt(self.ob_fln.storages[name].gpu
+                                 + self.p.wavefield_delta_object)
+
         # Smoothing preconditioner
         if self.smooth_gradient:
             self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
@@ -276,13 +299,20 @@ class ML_cupy(ML_serial):
 
     def _replace_pr_grad(self):
         new_pr_grad = self.pr_grad_new
-        # probe support
+
+        # Probe support
         if self.p.probe_update_start <= self.curiter:
             # Apply probe support if needed
             for name, s in new_pr_grad.storages.items():
                 self.support_constraint(s)
         else:
             new_pr_grad.fill(0.)
+
+        # Wavefield preconditioner for the probe
+        if self.p.wavefield_precond:
+            for name, s in new_pr_grad.storages.items():
+                s.gpu /= cp.sqrt(self.pr_fln.storages[name].gpu
+                                 + self.p.wavefield_delta_probe)
 
         return self._replace_grad(self.pr_grad, new_pr_grad)
 
@@ -303,7 +333,7 @@ class ML_cupy(ML_serial):
         return err
 
     def position_update(self):
-        """ 
+        """
         Position refinement
         """
         if not self.do_position_refinement or (not self.curiter):
@@ -488,6 +518,12 @@ class GaussianModel(BaseModelSerial):
         qu_htod = self.engine.qu_htod
         queue = self.engine.queue
 
+        if self.engine.p.wavefield_precond:
+            ob_fln = self.engine.ob_fln
+            pr_fln = self.engine.pr_fln
+            ob_fln << 0.
+            pr_fln << 0.
+
         self.engine._set_pr_ob_ref_for_data('gpu')
         ob_grad << 0.
         pr_grad << 0.
@@ -521,6 +557,9 @@ class GaussianModel(BaseModelSerial):
             obg = ob_grad.S[oID].data
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
+            if self.engine.p.wavefield_precond:
+                obf = ob_fln.S[oID].data
+                prf = pr_fln.S[pID].data
 
             # Schedule w & I to device
             ev_w, w, data_w = self.engine.w_data.to_gpu(
@@ -549,11 +588,17 @@ class GaussianModel(BaseModelSerial):
 
             use_atomics = self.p.object_update_cuda_atomics
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
-            POK.ob_update_ML(addr, obg, pr, aux, atomics=use_atomics)
+            if self.engine.p.wavefield_precond:
+                POK.ob_update_ML_wavefield(addr, obg, obf, pr, aux, atomics=use_atomics)
+            else:
+                POK.ob_update_ML(addr, obg, pr, aux, atomics=use_atomics)
 
             use_atomics = self.p.probe_update_cuda_atomics
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
-            POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
+            if self.engine.p.wavefield_precond:
+                POK.pr_update_ML_wavefield(addr, prg, prf, ob, aux, atomics=use_atomics)
+            else:
+                POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
 
         queue.synchronize()
         self.engine.dID_list.reverse()
@@ -576,10 +621,18 @@ class GaussianModel(BaseModelSerial):
             s.gpu.get(out=s.cpu)
         for s in pr_grad.S.values():
             s.gpu.get(out=s.cpu)
+        if self.engine.p.wavefield_precond:
+            for s in ob_fln.S.values():
+                s.gpu.get(out=s.cpu)
+            for s in pr_fln.S.values():
+                s.gpu.get(out=s.cpu)
         self.engine._set_pr_ob_ref_for_data('cpu')
 
         ob_grad.allreduce()
         pr_grad.allreduce()
+        if self.engine.p.wavefield_precond:
+            ob_fln.allreduce()
+            pr_fln.allreduce()
         parallel.allreduce(LL)
 
         # HtoD cause we continue on gpu
@@ -587,6 +640,11 @@ class GaussianModel(BaseModelSerial):
             s.gpu.set(s.cpu)
         for s in pr_grad.S.values():
             s.gpu.set(s.cpu)
+        if self.engine.p.wavefield_precond:
+            for s in ob_fln.S.values():
+                s.gpu.set(s.cpu)
+            for s in pr_fln.S.values():
+                s.gpu.set(s.cpu)
         self.engine._set_pr_ob_ref_for_data('gpu')
 
         # Object regularizer
@@ -731,7 +789,7 @@ class Regul_del2_cupy(object):
         self.dot = lambda x, y: self.AUK.dot(x, y).get().item()
 
         self._grad_reg_kernel = cp.ElementwiseKernel(
-            "float32 fac, complex64 py, complex64 px, complex64 my, complex64 mx", 
+            "float32 fac, complex64 py, complex64 px, complex64 my, complex64 mx",
             "complex64 out",
             "out = (px+py-my-mx) * fac",
             "grad_reg",

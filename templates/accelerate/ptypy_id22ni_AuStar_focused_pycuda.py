@@ -6,7 +6,7 @@ experimental farfield conditions and with a focused beam in the hard X-ray regim
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import ptypy
-ptypy.load_gpu_engines(arch="cuda")
+ptypy.load_gpu_engines(arch="pycuda")
 
 import numpy as np
 import tempfile

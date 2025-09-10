@@ -2,6 +2,7 @@ import cupy as cp
 import numpy as np
 
 from ptypy.accelerate.cuda_common.utils import map2ctype
+from ptypy.accelerate.base.array_utils import gaussian_kernel_2d
 from ptypy.utils.math_utils import gaussian
 from . import load_kernel
 
@@ -62,6 +63,37 @@ class ArrayUtilsKernel:
     def norm2(self, A, out=None):
         return self.dot(A, A, out)
 
+class BatchedMultiplyKernel:
+    def __init__(self, array, queue=None, math_type=np.complex64):
+        self.queue = queue
+        self.array_shape = array.shape[-2:]
+        self.batches = int(np.prod(array.shape[0:array.ndim-2]) if array.ndim > 2 else 1)
+        self.batched_multiply_cuda = load_kernel("batched_multiply", {
+            'MPY_DO_SCALE': 'true',
+            'MPY_DO_FILT': 'true',
+            'IN_TYPE': 'float' if array.dtype==np.complex64 else 'double',
+            'OUT_TYPE': 'float' if array.dtype==np.complex64 else 'double',
+            'MATH_TYPE': 'float' if math_type==np.complex64 else 'double'
+        })
+        self.block = (32,32,1)
+        self.grid = (
+            int((self.array_shape[0] + 31) // 32),
+            int((self.array_shape[1] + 31) // 32),
+            int(self.batches)
+        )
+
+    def multiply(self, x,y, scale=1.):
+        assert x.dtype == y.dtype, "Input arrays must be of same data type"
+        assert x.shape[-2:] == y.shape[-2:], "Input arrays must be of the same size in last 2 dims"
+        if self.queue is not None:
+            self.queue.use()
+        self.batched_multiply_cuda(self.grid,
+                                   self.block,
+                                   args=(x,x,y,
+                                   np.float32(scale),
+                                   np.int32(self.batches),
+                                   np.int32(self.array_shape[0]),
+                                   np.int32(self.array_shape[1])))
 
 class TransposeKernel:
 
@@ -320,6 +352,62 @@ class DerivativesKernel:
             gz = int(higher_dim)
             self.delxb_mid((gx, gy, gz), self.mid_axis_block, (input,
                            out, lower_dim, higher_dim, np.int32(input.shape[axis])))
+
+
+class FFTGaussianSmoothingKernel:
+    def __init__(self, queue=None, kernel_type='float'):
+        if kernel_type not in ['float', 'double']:
+            raise ValueError('Invalid data type for kernel')
+        self.kernel_type = kernel_type
+        self.dtype = np.complex64
+        self.stype = "complex<float>"
+        self.queue = queue
+        self.sigma = None
+
+        from .kernels import FFTFilterKernel
+
+        # Create general FFT filter object 
+        self.fft_filter = FFTFilterKernel(queue_thread=queue)
+        
+    def allocate(self, shape, sigma=1.):
+
+        # Create kernel
+        self.sigma = sigma
+        kernel = self._compute_kernel(shape, sigma)
+
+        # Allocate filter
+        kernel_dev = cp.asarray(kernel)
+        self.fft_filter.allocate(kernel=kernel_dev)
+
+    def _compute_kernel(self, shape, sigma):
+        # Create kernel
+        sigma = np.array(sigma)
+        if sigma.size == 1:
+            sigma = np.array([sigma, sigma])
+        if sigma.size > 2:
+            raise NotImplementedError("Only batches of 2D arrays allowed!")
+        self.sigma = sigma
+
+        kernel = gaussian_kernel_2d(shape, sigma[0], sigma[1]).astype(self.dtype)
+        
+        # Extend kernel if needed
+        if len(shape) == 3:
+            kernel = np.tile(kernel, (shape[0],1,1))
+
+        return kernel
+
+    def filter(self, data, sigma=None):
+        """
+        Apply filter in-place
+        
+        If sigma is not None: reallocate a new fft filter first.
+        """
+        if self.sigma is None:
+            self.allocate(shape=data.shape, sigma=sigma)
+        else:
+            self.fft_filter.set_kernel(self._compute_kernel(data.shape, sigma))
+        
+        self.fft_filter.apply_filter(data)
 
 
 class GaussianSmoothingKernel:

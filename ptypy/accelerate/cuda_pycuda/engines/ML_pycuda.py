@@ -14,18 +14,17 @@ This file is part of the PTYPY package.
 import numpy as np
 from pycuda import gpuarray
 import pycuda.driver as cuda
-import pycuda.cumath
-from pycuda.tools import DeviceMemoryPool
+import pycuda.cumath as cm
 
 from ptypy.engines import register
 from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
 from ptypy import utils as u
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
-from .. import get_context
+from .. import get_context, get_dev_pool
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..kernels import GradientDescentKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
-from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, TransposeKernel
+from ..array_utils import ArrayUtilsKernel, DerivativesKernel, GaussianSmoothingKernel, FFTGaussianSmoothingKernel, TransposeKernel
 
 from ..mem_utils import GpuDataManager
 from ptypy.accelerate.base import address_manglers
@@ -74,25 +73,30 @@ class ML_pycuda(ML_serial):
         Maximum likelihood reconstruction engine.
         """
         super().__init__(ptycho_parent, pars)
+        self.sqrt = cm.sqrt
 
     def engine_initialize(self):
         """
         Prepare for ML reconstruction.
         """
-        self.context, self.queue = get_context(new_context=True, new_queue=True)
+        self.context, self.queue = get_context(new_queue=True)
 
         if self.p.use_cuda_device_memory_pool:
-            self._dmp = DeviceMemoryPool()
-            self.allocate = self._dmp.allocate
+            self._dev_pool = get_dev_pool()
+            self.allocate = self._dev_pool.allocate
         else:
-            self._dmp = None
+            self._dev_pool = None
             self.allocate = cuda.mem_alloc
 
         self.qu_htod = cuda.Stream()
         self.qu_dtoh = cuda.Stream()
 
-        self.GSK = GaussianSmoothingKernel(queue=self.queue)
-        self.GSK.tmp = None
+        if self.p.smooth_gradient_method == "convolution":
+            self.GSK = GaussianSmoothingKernel(queue=self.queue)
+            self.GSK.tmp = None
+
+        if self.p.smooth_gradient_method == "fft":
+            self.FGSK = FFTGaussianSmoothingKernel(queue=self.queue)
 
         # Real/Fourier Support Kernel
         self.RSK = {}
@@ -163,13 +167,12 @@ class ML_pycuda(ML_serial):
         fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
         if not fit:
             log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
-            self.context.pop()
-            self.context.detach()
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
         nma = min(fit, MAX_BLOCKS)
-        log(4, 'Free memory on device: %.2f GB' % (float(mem)/1e9))
+        log(4, 'Free memory available: {:.2f} GB'.format(float(mem)/(1024**3)))
+        log(4, 'Memory to be allocated per block {:.2f} GB'.format(float(blk)/(1024**3)))
         log(4, 'PyCUDA max blocks fitting on GPU: ma_arrays={}'.format(nma))
         # reset memory or create new
         self.w_data = GpuDataManager(ma_mem, 0, nma, False)
@@ -257,13 +260,29 @@ class ML_pycuda(ML_serial):
                 self._set_pr_ob_ref_for_data(dev=dev, container=container, sync_copy=sync_copy)
 
     def _get_smooth_gradient(self, data, sigma):
-        if self.GSK.tmp is None:
-            self.GSK.tmp = gpuarray.empty(data.shape, dtype=np.complex64)
-        self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
+        if self.p.smooth_gradient_method == "convolution":
+            if self.GSK.tmp is None:
+                self.GSK.tmp = gpuarray.empty(data.shape, dtype=np.complex64)
+            try:
+                self.GSK.convolution(data, [sigma, sigma], tmp=self.GSK.tmp)
+            except MemoryError:
+                raise RuntimeError("Convolution kernel too large for direct convolution on GPU",
+                                   "Please reduce parameter smooth_gradient or set smooth_gradient_method='fft'.")
+        elif self.p.smooth_gradient_method == "fft":
+            self.FGSK.filter(data, sigma)
+        else:
+            raise NotImplementedError("smooth_gradient_method should be ```convolution``` or ```fft```.")
         return data
 
     def _replace_ob_grad(self):
         new_ob_grad = self.ob_grad_new
+
+        # Wavefield preconditioner for the object
+        if self.p.wavefield_precond:
+            for name, s in new_ob_grad.storages.items():
+                s.gpu /= cm.sqrt(self.ob_fln.storages[name].gpu
+                              + self.p.wavefield_delta_object)
+
         # Smoothing preconditioner
         if self.smooth_gradient:
             self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
@@ -274,13 +293,20 @@ class ML_pycuda(ML_serial):
 
     def _replace_pr_grad(self):
         new_pr_grad = self.pr_grad_new
-        # probe support
+
+        # Probe support
         if self.p.probe_update_start <= self.curiter:
             # Apply probe support if needed
             for name, s in new_pr_grad.storages.items():
                 self.support_constraint(s)
         else:
             new_pr_grad.fill(0.)
+
+        # Wavefield preconditioner for the probe
+        if self.p.wavefield_precond:
+            for name, s in new_pr_grad.storages.items():
+                s.gpu /= cm.sqrt(self.pr_fln.storages[name].gpu
+                              + self.p.wavefield_delta_probe)
 
         return self._replace_grad(self.pr_grad , new_pr_grad)
 
@@ -301,7 +327,7 @@ class ML_pycuda(ML_serial):
         return err
 
     def position_update(self):
-        """ 
+        """
         Position refinement
         """
         if not self.do_position_refinement or (not self.curiter):
@@ -342,7 +368,7 @@ class ML_pycuda(ML_serial):
                 max_oby = ob.shape[-2] - aux.shape[-2] - 1
                 max_obx = ob.shape[-1] - aux.shape[-1] - 1
 
-                # We need to re-calculate the current error 
+                # We need to re-calculate the current error
                 PCK.build_aux(aux, addr, ob, pr)
                 PROP.fw(aux, aux)
                 PCK.queue.wait_for_event(ev)
@@ -351,9 +377,9 @@ class ML_pycuda(ML_serial):
                 cuda.memcpy_dtod(dest=error_state.ptr,
                                     src=err_phot.ptr,
                                     size=err_phot.nbytes)
-                
+
                 PCK.mangler.setup_shifts(self.curiter, nframes=addr.shape[0])
-                                
+
                 log(4, 'Position refinement trial: iteration %s' % (self.curiter))
                 for i in range(PCK.mangler.nshifts):
                     PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
@@ -422,8 +448,6 @@ class ML_pycuda(ML_serial):
 
 
         #self.queue.synchronize()
-        self.context.pop()
-        self.context.detach()
         super().engine_finalize()
 
 class GaussianModel(BaseModelSerial):
@@ -476,6 +500,12 @@ class GaussianModel(BaseModelSerial):
         qu_htod = self.engine.qu_htod
         queue = self.engine.queue
 
+        if self.engine.p.wavefield_precond:
+            ob_fln = self.engine.ob_fln
+            pr_fln = self.engine.pr_fln
+            ob_fln << 0.
+            pr_fln << 0.
+
         self.engine._set_pr_ob_ref_for_data('gpu')
         ob_grad << 0.
         pr_grad << 0.
@@ -509,6 +539,9 @@ class GaussianModel(BaseModelSerial):
             obg = ob_grad.S[oID].data
             pr = self.engine.pr.S[pID].data
             prg = pr_grad.S[pID].data
+            if self.engine.p.wavefield_precond:
+                obf = ob_fln.S[oID].data
+                prf = pr_fln.S[pID].data
 
             # Schedule w & I to device
             ev_w, w, data_w = self.engine.w_data.to_gpu(prep.weights, dID, qu_htod)
@@ -536,11 +569,17 @@ class GaussianModel(BaseModelSerial):
 
             use_atomics = self.p.object_update_cuda_atomics
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
-            POK.ob_update_ML(addr, obg, pr, aux, atomics=use_atomics)
+            if self.engine.p.wavefield_precond:
+                POK.ob_update_ML_wavefield(addr, obg, obf, pr, aux, atomics=use_atomics)
+            else:
+                POK.ob_update_ML(addr, obg, pr, aux, atomics=use_atomics)
 
             use_atomics = self.p.probe_update_cuda_atomics
             addr = prep.addr_gpu if use_atomics else prep.addr2_gpu
-            POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
+            if self.engine.p.wavefield_precond:
+                POK.pr_update_ML_wavefield(addr, prg, prf, ob, aux, atomics=use_atomics)
+            else:
+                POK.pr_update_ML(addr, prg, ob, aux, atomics=use_atomics)
 
         queue.synchronize()
         self.engine.dID_list.reverse()
@@ -562,10 +601,18 @@ class GaussianModel(BaseModelSerial):
             s.gpu.get(s.cpu)
         for s in pr_grad.S.values():
             s.gpu.get(s.cpu)
+        if self.engine.p.wavefield_precond:
+            for s in ob_fln.S.values():
+                s.gpu.get(s.cpu)
+            for s in pr_fln.S.values():
+                s.gpu.get(s.cpu)
         self.engine._set_pr_ob_ref_for_data('cpu')
 
         ob_grad.allreduce()
         pr_grad.allreduce()
+        if self.engine.p.wavefield_precond:
+            ob_fln.allreduce()
+            pr_fln.allreduce()
         parallel.allreduce(LL)
 
         # HtoD cause we continue on gpu
@@ -573,6 +620,11 @@ class GaussianModel(BaseModelSerial):
             s.gpu.set(s.cpu)
         for s in pr_grad.S.values():
             s.gpu.set(s.cpu)
+        if self.engine.p.wavefield_precond:
+            for s in ob_fln.S.values():
+                s.gpu.set(s.cpu)
+            for s in pr_fln.S.values():
+                s.gpu.set(s.cpu)        
         self.engine._set_pr_ob_ref_for_data('gpu')
 
         # Object regularizer
@@ -683,11 +735,11 @@ class Regul_del2_pycuda(object):
         self.DELK_f = DerivativesKernel(np.float32, queue=queue)
 
         if allocator is None:
-            self._dmp = DeviceMemoryPool()
-            self.allocator=self._dmp.allocate
+            self._dev_pool = get_dev_pool()
+            self.allocator=self._dev_pool.allocate
         else:
             self.allocator = allocator
-            self._dmp= None
+            self._dev_pool= None
 
         empty = lambda x: gpuarray.empty(x.shape, x.dtype, allocator=self.allocator)
 

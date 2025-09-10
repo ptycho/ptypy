@@ -262,11 +262,17 @@ class BaseEngine(object):
         parallel.barrier()
 
     def _fill_runtime(self):
-        local_error = u.parallel.gather_dict(self.error)
-        if local_error:
-            error = np.array(list(local_error.values())).mean(0)
+        local_error = None
+        if isinstance(self.error, np.ndarray) and (len(self.error)== 3):
+            error = self.error
+        elif isinstance(self.error, dict):
+            local_error = u.parallel.gather_dict(self.error)
+            if local_error:
+                error = np.array(list(local_error.values())).mean(0)
+            else:
+                error = np.zeros((3,))
         else:
-            error = np.zeros((1,))
+            logger.error("Reconstruction error should be dictionary or ndarray of shape (3,)")
         info = dict(
             iteration=self.curiter,
             iterations=self.alliter,
@@ -277,7 +283,7 @@ class BaseEngine(object):
         )
 
         self.ptycho.runtime.iter_info.append(info)
-        if self.p.record_local_error:
+        if self.p.record_local_error and (local_error is not None):
             self.ptycho.runtime.error_local = local_error
 
     def finalize(self):

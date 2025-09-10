@@ -83,7 +83,7 @@ def load_gpu_engines(arch='cuda'):
         from .accelerate.cuda_pycuda.engines import projectional_pycuda_stream
         from .accelerate.cuda_pycuda.engines import stochastic
         from .accelerate.cuda_pycuda.engines import ML_pycuda
-    if arch=='cupy':
+    if arch in ['cuda', 'cupy']:
         from .accelerate.cuda_cupy.engines import projectional_cupy
         from .accelerate.cuda_cupy.engines import projectional_cupy_stream
         from .accelerate.cuda_cupy.engines import stochastic

@@ -15,16 +15,18 @@ def choose_fft(arr_shape, fft_type=None):
     columns = arr_shape[1]
     if rows != columns or rows not in [16, 32, 64, 128, 256, 512, 1024, 2048]:
         dims_are_powers_of_two = False
-    if dims_are_powers_of_two:
+    if fft_type=='cuda' and not dims_are_powers_of_two:
+        logger.warning('cufft: array dimensions are not powers of two (16 to 2048) - using cufft with seperated callbacks')
+        from ptypy.accelerate.cuda_cupy.cufft import FFT_cupy as FFT
+    elif fft_type=='cuda' and dims_are_powers_of_two:
         try:
+            import filtered_cufft
             from ptypy.accelerate.cuda_cupy.cufft import FFT_cuda as FFT
         except:
-            logger.info(
+            logger.warning(
                 'Unable to import optimised cufft version - using cufft with separte callbacks instead')
             from ptypy.accelerate.cuda_cupy.cufft import FFT_cupy as FFT
     else:
-        logger.info(
-            'cufft: array dimensions are not powers of two (16 to 2048) - using cufft with separated callbacks')
         from ptypy.accelerate.cuda_cupy.cufft import FFT_cupy as FFT
     return FFT
 
@@ -166,6 +168,34 @@ class RealSupportKernel:
         if self.queue is not None:
             self.queue.use()
         x *= self.support
+
+
+class FFTFilterKernel:
+    def __init__(self, queue_thread=None, fft='cupy'):
+        # Current implementation recompiles every time there is a change in input shape.
+        self.queue = queue_thread
+        self._fft_type = fft
+        self._fft1 = None
+        self._fft2 = None
+    def allocate(self, kernel, prefactor=None, postfactor=None, forward=True):
+        FFT = choose_fft(kernel.shape[-2:], fft_type=self._fft_type)
+
+        self._fft1 = FFT(kernel, self.queue,
+                        pre_fft=prefactor,
+                        post_fft=kernel,
+                        symmetric=True,
+                        forward=forward)
+        self._fft2 = FFT(kernel, self.queue,
+                         post_fft=postfactor,
+                        symmetric=True,
+                        forward=not forward)
+
+    def set_kernel(self, kernel):
+        self._fft1.post_fft.set(kernel)
+
+    def apply_filter(self, x):
+        self._fft1.ft(x, x)
+        self._fft2.ift(x, x)
 
 
 class FourierUpdateKernel(ab.FourierUpdateKernel):
@@ -879,6 +909,18 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             'MATH_TYPE': self.math_type
         })
         self.pr_update2_ML_cuda = None
+        self.ob_update_ML_wavefield_cuda = load_kernel("ob_update_ML_wavefield", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
+        self.ob_update2_ML_wavefield_cuda = None
+        self.pr_update_ML_wavefield_cuda = load_kernel("pr_update_ML_wavefield", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type
+        })
+        self.pr_update2_ML_wavefield_cuda = None
         self.ob_update_local_cuda = load_kernel("ob_update_local", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
@@ -898,6 +940,24 @@ class PoUpdateKernel(ab.PoUpdateKernel):
             'ACC_TYPE': self.accumulator_type
         })
         self.pr_norm_local_cuda = load_kernel("pr_norm_local", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
+        self.ob_update_wasp_cuda = load_kernel("ob_update_wasp", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
+        self.pr_update_wasp_cuda = load_kernel("pr_update_wasp", {
+            'IN_TYPE': 'float',
+            'OUT_TYPE': 'float',
+            'MATH_TYPE': self.math_type,
+            'ACC_TYPE': self.accumulator_type
+        })
+        self.avg_wasp_cuda = load_kernel("avg_wasp", {
             'IN_TYPE': 'float',
             'OUT_TYPE': 'float',
             'MATH_TYPE': self.math_type,
@@ -1048,6 +1108,54 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                           np.float32(
                                         fac) if ex.dtype == np.complex64 else np.float64(fac)))
 
+    def ob_update_ML_wavefield(self, addr, ob, of, pr, ex, fac=2.0, atomics=True):
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        exsh = [np.int32(ax) for ax in ex.shape]
+
+        if self.queue is not None:
+            self.queue.use()
+        if atomics:
+            if addr.shape[3] != 3 or addr.shape[2] != 5:
+                raise ValueError(
+                    'Address not in required shape for tiled ob_update')
+
+            num_pods = np.int32(addr.shape[0] * addr.shape[1])
+            self.ob_update_ML_wavefield_cuda(grid=(int(num_pods), 1, 1),
+                                             block=(32, 32, 1),
+                                             args=(ex, num_pods, exsh[1], exsh[2],
+                                                   pr, prsh[0], prsh[1], prsh[2],
+                                                   ob, obsh[0], obsh[1], obsh[2],
+                                                   of,
+                                                   addr,
+                                                   np.float32(
+                                                 fac) if ex.dtype == np.complex64 else np.float64(fac)))
+        else:
+            if addr.shape[0] != 5 or addr.shape[1] != 3:
+                raise ValueError(
+                    'Address not in required shape for tiled ob_update')
+
+            num_pods = np.int32(addr.shape[2] * addr.shape[3])
+            if not self.ob_update2_ML_wavefield_cuda:
+                self.ob_update2_ML_wavefield_cuda = load_kernel("ob_update2_ML_wavefield", {
+                    "NUM_MODES": obsh[0],
+                    "BDIM_X": 16,
+                    "BDIM_Y": 16,
+                    'IN_TYPE': 'float',
+                    'OUT_TYPE': 'float',
+                    'MATH_TYPE': self.math_type,
+                    'ACC_TYPE': self.accumulator_type
+                })
+            grid = [int((x+15)//16) for x in ob.shape[-2:]]
+            grid = (grid[1], grid[0], int(1))
+            self.ob_update2_ML_wavefield_cuda(grid=grid,
+                                              block=(16, 16, 1),
+                                              args=(prsh[-1], obsh[0], num_pods,
+                                                    obsh[-2], obsh[-1], prsh[0],
+                                                    ob, pr, ex, of, addr,
+                                                    np.float32(
+                                                  fac) if ex.dtype == np.complex64 else np.float64(fac)))
+
     def pr_update_ML(self, addr, pr, ob, ex, fac=2.0, atomics=False):
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
@@ -1091,6 +1199,51 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                           pr, ob, ex, addr,
                                           np.float32(
                                         fac) if ex.dtype == np.complex64 else np.float64(fac)))
+
+    def pr_update_ML_wavefield(self, addr, pr, pf, ob, ex, fac=2.0, atomics=False):
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        if self.queue is not None:
+            self.queue.use()
+        if atomics:
+            if addr.shape[3] != 3 or addr.shape[2] != 5:
+                raise ValueError(
+                    'Address not in required shape for tiled pr_update')
+            num_pods = np.int32(addr.shape[0] * addr.shape[1])
+            self.pr_update_ML_wavefield_cuda(grid=(int(num_pods), 1, 1),
+                                             block=(32, 32, 1),
+                                             args=(ex, num_pods, prsh[1], prsh[2],
+                                                   pr, prsh[0], prsh[1], prsh[2],
+                                                   ob, obsh[0], obsh[1], obsh[2],
+                                                   pf,
+                                                   addr,
+                                                   np.float32(
+                                                 fac) if ex.dtype == np.complex64 else np.float64(fac)))
+        else:
+            if addr.shape[0] != 5 or addr.shape[1] != 3:
+                raise ValueError(
+                    'Address not in required shape for tiled pr_update')
+            num_pods = np.int32(addr.shape[2] * addr.shape[3])
+            if not self.pr_update2_ML_wavefield_cuda:
+                self.pr_update2_ML_wavefield_cuda = load_kernel("pr_update2_ML_wavefield", {
+                    "NUM_MODES": prsh[0],
+                    "BDIM_X": 16,
+                    "BDIM_Y": 16,
+                    'IN_TYPE': 'float',
+                    'OUT_TYPE': 'float',
+                    'MATH_TYPE': self.math_type,
+                    'ACC_TYPE': self.accumulator_type
+                })
+
+            grid = [int((x+15)//16) for x in pr.shape[-2:]]
+            grid = (grid[0], grid[1], int(1))
+            self.pr_update2_ML_wavefield_cuda(grid=grid,
+                                              block=(16, 16, 1),
+                                              args=(prsh[-1], obsh[-2], obsh[-1],
+                                                    prsh[0], obsh[0], num_pods,
+                                                    pr, ob, ex, pf, addr,
+                                                    np.float32(
+                                                  fac) if ex.dtype == np.complex64 else np.float64(fac)))
 
     def ob_update_local(self, addr, ob, pr, ex, aux, prn, a=0., b=1.):
         if self.queue is not None:
@@ -1180,6 +1333,83 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                   pr,
                   prsh[0], prsh[1], prsh[2],
                   addr))
+
+    def ob_update_wasp(self, addr, ob, pr, ex, aux, ob_sum_nmr, ob_sum_dnm,
+                       alpha=1):
+        # ensure it is C-contiguous!
+        pr_abs2 = cp.ascontiguousarray((pr * pr.conj()).real)
+        pr_abs2_mean = cp.mean(pr_abs2, axis=(1,2))
+
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        exsh = [np.int32(ax) for ax in ex.shape]
+
+        # atomics version only
+        if addr.shape[3] != 3 or addr.shape[2] != 5:
+            raise ValueError('Address not in required shape for tiled ob_update')
+
+        num_pods = np.int32(addr.shape[0] * addr.shape[1])
+        bx = 64
+        by = 1
+        if self.queue is not None:
+            self.queue.use()
+        self.ob_update_wasp_cuda(
+                grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
+                block=(bx, by, 1),
+                args=(ex, aux,
+                      exsh[0], exsh[1], exsh[2],
+                      pr,
+                      pr_abs2,
+                      prsh[0], prsh[1], prsh[2],
+                      ob,
+                      ob_sum_nmr,
+                      ob_sum_dnm,
+                      obsh[0], obsh[1], obsh[2],
+                      addr,
+                      pr_abs2_mean,
+                      np.float32(alpha)))
+
+    def pr_update_wasp(self, addr, pr, ob, ex, aux, pr_sum_nmr, pr_sum_dnm,
+                       beta=1):
+        if self.queue is not None:
+            self.queue.use()
+
+        obsh = [np.int32(ax) for ax in ob.shape]
+        prsh = [np.int32(ax) for ax in pr.shape]
+        exsh = [np.int32(ax) for ax in ex.shape]
+
+        # atomics version only
+        if addr.shape[3] != 3 or addr.shape[2] != 5:
+            raise ValueError('Address not in required shape for tiled ob_update')
+
+        num_pods = np.int32(addr.shape[0] * addr.shape[1])
+        bx = 64
+        by = 1
+        self.pr_update_wasp_cuda(
+                grid=(1, int((exsh[1] + by - 1)//by), int(num_pods)),
+                block=(bx, by, 1),
+                args=(ex, aux,
+                      exsh[0], exsh[1], exsh[2],
+                      pr,
+                      pr_sum_nmr,
+                      pr_sum_dnm,
+                      prsh[0], prsh[1], prsh[2],
+                      ob,
+                      obsh[0], obsh[1], obsh[2],
+                      addr,
+                      np.float32(beta)))
+
+    def avg_wasp(self, arr, nmr, dnm):
+        arrsh = [np.int32(ax) for ax in arr.shape]
+        bx = 64
+        by = 1
+
+        if self.queue is not None:
+            self.queue.use()
+        self.avg_wasp_cuda(
+                grid=(1, int((arrsh[1] + by - 1)//by), int(arrsh[0])),
+                block=(bx, by, 1),
+                args=(arr, nmr, dnm, arrsh[0], arrsh[1], arrsh[2]))
 
 
 class PositionCorrectionKernel(ab.PositionCorrectionKernel):

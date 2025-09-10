@@ -56,18 +56,72 @@ def norm2(input):
     return np.sum(abs2(input))
 
 
+def gaussian_kernel_2d(shape, sigmau, sigmav):
+    """
+    2D Gaussian kernel using the last 2 dimension of given shape
+    Requires sigma for both dimensions (sigmau and sigmav)
+    """
+    u, v = np.fft.fftfreq(shape[-2]), np.fft.fftfreq(shape[-1])
+    uu, vv = np.meshgrid(u, v, sparse=True, indexing='ij')
+    kernel = np.exp(-2* ( (np.pi*sigmau)**2 * uu**2 + (np.pi*sigmav)**2 * vv**2 ) )
+    return kernel
+
 def complex_gaussian_filter(input, mfs):
+    '''
+    takes 2D and 3D arrays. Complex input, complex output. mfs has len 0<x<=2
+    '''
+    if isinstance(mfs, list) and len(mfs) > 2:
+        raise NotImplementedError("Only batches of 2D arrays allowed!")
+    if isinstance(mfs, (int, float)):
+        mfs_list = [mfs, mfs]
+        if input.ndim == 3:
+            mfs_list = [0, mfs, mfs]
+    elif isinstance(mfs, (list,tuple)):
+        mfs_list = list(mfs)
+        if input.ndim == 3:
+            mfs_list.insert(0,0)
+    else:
+        raise NotImplementedError(f"Cannot interpret mfs of type {type(mfs)}")
+
+    return (ndi.gaussian_filter(np.real(input), mfs_list).astype(input.dtype) + 1j * ndi.gaussian_filter(np.imag(input), mfs_list))
+
+
+def complex_gaussian_filter_fft(input, mfs):
     '''
     takes 2D and 3D arrays. Complex input, complex output. mfs has len 0<x<=2
     '''
     if len(mfs) > 2:
         raise NotImplementedError("Only batches of 2D arrays allowed!")
+    elif len(mfs) == 1:
+        mfs = np.array([mfs,mfs])
+    else:
+        mfs = np.array(mfs)
 
-    if input.ndim == 3:
-        mfs = np.insert(mfs, 0, 0)
+    k = gaussian_kernel_2d(input.shape, mfs[0], mfs[1]).astype(input.dtype)
+    return fft_filter(input, k)
 
-    return (ndi.gaussian_filter(np.real(input), mfs) + 1j * ndi.gaussian_filter(np.imag(input), mfs)).astype(
-        input.dtype)
+
+def fft_filter(input, kernel, prefactor=None, postfactor=None, forward=True):
+    """
+    Compute
+    output = ifft(fft( prefactor * input ) * kernel) * postfactor
+    """
+    # Make a copy (and cast if necessary)
+    x = np.array(input)
+
+
+    if prefactor is not None:
+        x *= prefactor
+
+    if forward:
+        x = np.fft.ifftn(np.fft.fftn(x, norm="ortho") * kernel, norm="ortho")
+    else:
+        x = np.fft.fftn(np.fft.ifftn(x, norm="ortho") * kernel, norm="ortho")
+
+    if postfactor is not None:
+        x *= postfactor
+
+    return x
 
 
 def mass_center(A):
@@ -81,7 +135,7 @@ def interpolated_shift(c, shift, do_linear=False):
     '''
     complex bicubic interpolated shift.
     complex output. This shift should be applied to 2D arrays. shift should have len=c.ndims 
-    
+
     '''
     if not do_linear:
         return ndi.shift(np.real(c), shift, order=3, prefilter=True) + 1j * ndi.shift(

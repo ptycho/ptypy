@@ -11,7 +11,9 @@ class FFT(object):
                  post_fft=None,
                  symmetric=True,
                  forward=True):
-
+        """
+        array should be gpuarray already
+        """
         self._queue = queue
         from pycuda import gpuarray
         ## reikna

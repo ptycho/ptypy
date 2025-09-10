@@ -227,8 +227,12 @@ class _StochasticEngineCupy(_StochasticEngineSerial):
         Compute one iteration.
         """
         self.dID_list = list(self.di.S.keys())
-        error = {}
+
         for it in range(num):
+
+            reduced_error = np.zeros((3,))
+            reduced_error_count = 0
+            local_error = {}
 
             for iblock, dID in enumerate(self.dID_list):
 
@@ -330,10 +334,10 @@ class _StochasticEngineCupy(_StochasticEngineSerial):
                     if self._object_norm_is_global and self._pr_a == 0:
                         obn_max = cp.empty((1,), dtype=np.float32)
                         MAK.max_abs2(ob, obn_max)
-                        obn.fill(np.float32(0.), stream=self.queue)
+                        obn.fill(np.float32(0.))
                     else:
                         POK.ob_norm_local(addr, ob, obn)
-                        obn_max = cp.max(obn, stream=self.queue)
+                        obn_max = cp.max(obn)
                     if self.p.probe_update_start <= self.curiter:
                         POK.pr_update_local(
                             addr, pr, ob, ex, aux, obn, obn_max, a=self._pr_a, b=self._pr_b)
@@ -360,22 +364,42 @@ class _StochasticEngineCupy(_StochasticEngineSerial):
         self.queue.synchronize()
 
         for name, s in self.ob.S.items():
-            s.gpu.get_async(stream=self.qu_dtoh, ary=s.data)
+            #s.gpu.get_async(stream=self.qu_dtoh, ary=s.data)
+            cp.cuda.runtime.memcpyAsync(dst=s.data.ctypes.data,
+                            src=s.gpu.data.ptr,
+                            size=s.gpu.nbytes,
+                            kind=2,  # d2h
+                            stream=self.queue.ptr)
         for name, s in self.pr.S.items():
-            s.gpu.get_async(stream=self.qu_dtoh, ary=s.data)
+            #s.gpu.get_async(stream=self.qu_dtoh, ary=s.data)
+            cp.cuda.runtime.memcpyAsync(dst=s.data.ctypes.data,
+                            src=s.gpu.data.ptr,
+                            size=s.gpu.nbytes,
+                            kind=2,  # d2h
+                            stream=self.queue.ptr)
 
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()
             err_phot = prep.err_phot_gpu.get()
             err_exit = prep.err_exit_gpu.get()
-            errs = np.ascontiguousarray(
-                np.vstack([err_fourier, err_phot, err_exit]).T)
-            error.update(zip(prep.view_IDs, errs))
+            errs = np.ascontiguousarray(np.vstack([err_fourier, err_phot, err_exit]).T)
+            if self.p.record_local_error:
+                local_error.update(zip(prep.view_IDs, errs))
+            else:
+                reduced_error += errs.sum(axis=0)
+                reduced_error_count += errs.shape[0]
+
+        if self.p.record_local_error:
+            error = local_error
+        else:
+            # Gather errors across all MPI ranks
+            error = parallel.allreduce(reduced_error)
+            count = parallel.allreduce(reduced_error_count)
+            error /= count
 
         # wait for the async transfers
         self.qu_dtoh.synchronize()
 
-        self.error = error
         return error
 
     def position_update_local(self, prep, i):
@@ -503,7 +527,7 @@ class _StochasticEngineCupy(_StochasticEngineSerial):
         for name, s in self.ob.S.items():
             s.data = np.copy(s.data)
 
-        self.context.detach()
+        #self.context.detach()
         super().engine_finalize()
 
 

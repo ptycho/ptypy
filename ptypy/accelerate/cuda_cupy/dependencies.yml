@@ -11,7 +11,7 @@ dependencies:
   - mpi4py
   - pillow
   - pyfftw
-  - cupy
-  - cudatoolkit-dev
   - pip
   - compilers
+  - cupy
+  

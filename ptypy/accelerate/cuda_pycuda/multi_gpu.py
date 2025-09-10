@@ -5,7 +5,7 @@ and if that doesn't work, uses host/device copies with regular MPI.
 
 Findings:
 
-1) NCCL works with unit tests, but not in the engines. It seems to 
+1) NCCL works with unit tests, but not in the engines. It seems to
 add something to the existing pycuda Context or create a new one,
 as a later event recording on an exit wave transfer fails with
 'ivalid resource handle' Cuda Error. This error typically happens if for example
@@ -22,12 +22,14 @@ Note that this is before any allreduce call - straight after initialising.
   - OpenMPI in a conda install needs to have the environment variable
   --> if cuda support isn't enabled, the application simply crashes with a seg fault
 
-4) For NCCL peer-to-peer transfers, the EXCLUSIVE compute mode cannot be used. 
+4) For NCCL peer-to-peer transfers, the EXCLUSIVE compute mode cannot be used.
    It should be in DEFAULT mode.
+
+5) NCCL support has been dropped from PyCUDA module, but can be used with CuPy module instead
 
 """
 
-from pkg_resources import parse_version
+from packaging.version import parse
 import numpy as np
 from pycuda import gpuarray
 import pycuda.driver as cuda
@@ -36,24 +38,11 @@ from ptypy.utils.verbose import logger, log
 import os
 
 try:
-    from cupy.cuda import nccl
-    import cupy as cp
-except ImportError:
-    nccl = None
-
-try:
     import mpi4py
 except ImportError:
     mpi4py = None
 
 # properties to check which versions are available
-
-# use NCCL is it is available, and the user didn't override the
-# default selection with environment variables
-have_nccl = (nccl is not None) and \
-    (not 'PTYPY_USE_CUDAMPI' in os.environ) and \
-    (not 'PTYPY_USE_MPI' in os.environ) and \
-    ('PTYPY_USE_NCCL' in os.environ)
 
 # At the moment, we require:
 # the OpenMPI env var OMPI_MCA_opal_cuda_support to be set to true,
@@ -65,7 +54,7 @@ have_nccl = (nccl is not None) and \
 have_cuda_mpi = (mpi4py is not None) and \
     "OMPI_MCA_opal_cuda_support" in os.environ and \
     os.environ["OMPI_MCA_opal_cuda_support"] == "true" and \
-    parse_version(parse_version(mpi4py.__version__).base_version) >= parse_version("3.1.0") and \
+    parse(parse(mpi4py.__version__).base_version) >= parse("3.1.0") and \
     hasattr(gpuarray.GPUArray, '__cuda_array_interface__') and \
     not ('PTYPY_USE_MPI' in os.environ)
 
@@ -108,65 +97,10 @@ class MultiGpuCommunicatorCudaMpi(MultiGpuCommunicatorBase):
         if parallel.MPIenabled:
             comm = parallel.comm
             comm.Allreduce(parallel.MPI.IN_PLACE, arr)
-            
-    
-class MultiGpuCommunicatorNccl(MultiGpuCommunicatorBase):
-    
-    def __init__(self):
-        super().__init__()
-
-        # Check if GPUs are in default mode        
-        if cuda.Context.get_device().get_attributes()[cuda.device_attribute.COMPUTE_MODE] != cuda.compute_mode.DEFAULT:
-            raise RuntimeError("Compute mode must be default in order to use NCCL")
-        
-        # get a unique identifier for the NCCL communicator and 
-        # broadcast it to all MPI processes (assuming one device per process)
-        if self.rank == 0:
-            self.id = nccl.get_unique_id()
-        else:
-            self.id = None
-
-        self.id = parallel.bcast(self.id)
-
-        self.com = nccl.NcclCommunicator(self.ndev, self.id, self.rank)
-
-    def allReduceSum(self, arr):
-        """Call MPI.all_reduce in-place, with array on GPU"""
-
-        buf = int(arr.gpudata)
-        count, datatype = self.__get_NCCL_count_dtype(arr)
-        
-        # no stream support here for now - it fails in NCCL when 
-        # pycuda.Stream.handle is used for some unexplained reason
-        stream = cp.cuda.Stream.null.ptr
-       
-        self.com.allReduce(buf, buf, count, datatype, nccl.NCCL_SUM, stream)
-
-    def __get_NCCL_count_dtype(self, arr):
-            if arr.dtype == np.complex64:
-                return arr.size*2, nccl.NCCL_FLOAT32
-            elif arr.dtype == np.complex128:
-                return arr.size*2, nccl.NCCL_FLOAT64
-            elif arr.dtype == np.float32:
-                return arr.size, nccl.NCCL_FLOAT32
-            elif arr.dtype == np.float64:
-                return arr.size, nccl.NCCL_FLOAT64
-            else:
-                raise ValueError("This dtype is not supported by NCCL.")
 
 
 # pick the appropriate communicator depending on installed packages
-def get_multi_gpu_communicator(use_nccl=True, use_cuda_mpi=True):
-    if have_nccl and use_nccl:
-        try:
-            comm = MultiGpuCommunicatorNccl()
-            log(4, "Using NCCL communicator")
-            return comm
-        except RuntimeError:
-            pass
-        except AttributeError:
-            # see issue #323
-            pass
+def get_multi_gpu_communicator(use_cuda_mpi=True):
     if have_cuda_mpi and use_cuda_mpi:
         try:
             comm = MultiGpuCommunicatorCudaMpi()

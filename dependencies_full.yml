@@ -9,6 +9,7 @@ dependencies:
   - h5py
   - pyzmq
   - mpi4py
+  - packaging
   - pillow
   - pyfftw
   - pyyaml

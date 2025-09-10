@@ -1,6 +1,7 @@
 name: ptypy_pycuda
 channels:
   - conda-forge
+  - nvidia
 dependencies:
   - python
   - numpy
@@ -14,8 +15,7 @@ dependencies:
   - pyyaml
   - reikna
   - pycuda
-  - cudatoolkit-dev
+  - cuda-nvcc
+  - cuda-cudart-dev
   - pip
   - compilers
-  - pip:
-    - scikit-cuda

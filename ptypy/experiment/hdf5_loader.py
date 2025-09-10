@@ -81,6 +81,11 @@ class Hdf5Loader(PtyScan):
     type = float
     help = Multiplicative factor that converts motor positions to metres.
 
+    [positions.slow_index]
+    default = None
+    type = int
+    help = Index along the final dimension
+
     [positions.fast_key]
     default = None
     type = str
@@ -90,6 +95,11 @@ class Hdf5Loader(PtyScan):
     default = 1.0
     type = float
     help = Multiplicative factor that converts motor positions to metres.
+
+    [positions.fast_index]
+    default = None
+    type = int
+    help = Index along the final dimension
 
     [positions.bounding_box]
     default =
@@ -193,7 +203,7 @@ class Hdf5Loader(PtyScan):
     default =
     type = Param
     help = Parameters for the filtering of frames
-    doc = The shape of loaded data is assumed to hvae the same dimensionality as data.shape[:-2]
+    doc = The shape of loaded data is assumed to have the same dimensionality as data.shape[:-2]
 
     [framefilter.file]
     default = None
@@ -298,6 +308,24 @@ class Hdf5Loader(PtyScan):
     help = Switch for loading data from electron ptychography experiments.
     doc = If True, the energy provided in keV will be considered as electron energy
           and converted to electron wavelengths.
+
+    [frameorder]
+    default =
+    type = Param
+    help = Parameters for the re-ordering of frames
+    doc = The shape of loaded array of indices is matching the dimensionality of the loaded intensity
+
+    [frameorder.indices]
+    default = None
+    type = list, ndarray
+    help = This is the array or list with the re-ordered indices.
+
+    [nearfield_defocus]
+    default = None
+    type = float
+    help = Distance from sample to focus (for nearfield only)
+    doc = If set, magnification will be calculated automatically and applied to detector distance and pixelsize 
+
     """
 
     def __init__(self, pars=None, swmr=False, **kwargs):
@@ -356,6 +384,10 @@ class Hdf5Loader(PtyScan):
         if self.p.electron_data:
             self.meta.energy = u.m2keV(u.electron_wavelength(self.meta.energy))
 
+        # For nearfield data, manipulate distance and psize
+        if self.p.nearfield_defocus:
+            self._prepare_nearfield()
+            
         # it's much better to have this logic here than in load!
         if (self._ismapped and (self._scantype == 'arb')):
             log(3, "This scan looks to be a mapped arbitrary trajectory scan.")
@@ -413,12 +445,16 @@ class Hdf5Loader(PtyScan):
         self.fast_axis = self.fhandle_positions_fast[self.p.positions.fast_key]
         if self._is_spectro_scan and self.p.outer_index is not None:
             self.fast_axis = self.fast_axis[self.p.outer_index]
+        if self.p.positions.fast_index is not None:
+            self.fast_axis = self.fast_axis[:,self.p.positions.fast_index]
         self.positions_fast_shape = np.squeeze(self.fast_axis).shape if self.fast_axis.ndim > 2 else self.fast_axis.shape
 
         self.fhandle_positions_slow = h5.File(self.p.positions.file, 'r', swmr=self._is_swmr)
         self.slow_axis = self.fhandle_positions_slow[self.p.positions.slow_key]
         if self._is_spectro_scan and self.p.outer_index is not None:
             self.slow_axis = self.slow_axis[self.p.outer_index]
+        if self.p.positions.slow_index is not None:
+            self.slow_axis = self.slow_axis[:,self.p.positions.slow_index]
         self.positions_slow_shape = np.squeeze(self.slow_axis).shape if self.slow_axis.ndim > 2 else self.slow_axis.shape
 
         log(3, "The shape of the \n\tdiffraction intensities is: {}\n\tslow axis data:{}\n\tfast axis data:{}".format(self.data_shape,
@@ -564,6 +600,20 @@ class Hdf5Loader(PtyScan):
             assert self.pad.size == 4, "self.p.padding needs to of size 4"
             log(3, "Padding the detector frames by {}".format(self.p.padding))
 
+    def _prepare_nearfield(self):
+        """
+        Calculate magnification and modify distance and psize
+        """
+        defocus = self.p.nearfield_defocus
+        mag = self.meta.distance / defocus
+        dist_eff = (self.meta.distance - defocus) / mag
+        psize_eff = self.info.psize / mag
+        log(3, f"Nearfield: With defocus {defocus} m the magmification is {mag}")
+        log(3, f"Nearfield: The effective detector distance is {dist_eff}")
+        log(3, f"Nearfield: The effective pixel size is {psize_eff}")
+        self.meta.distance = dist_eff
+        self.info.psize = psize_eff
+            
     def _prepare_center(self):
         """
         define how data should be loaded (center, cropping)
@@ -595,6 +645,16 @@ class Hdf5Loader(PtyScan):
             self.info.auto_center = self.p.auto_center
             log(3, "center is %s, auto_center: %s" % (self.info.center, self.info.auto_center))
             log(3, "The loader will not do any cropping.")
+
+    def _reorder_preview_indices(self):
+        if self.p.frameorder.indices is None:
+            return
+        order = np.array(self.p.frameorder.indices, dtype=int)
+        if (order.max() > self.preview_indices.shape[-1]):
+            log(3, "Given frameorder does not match dimensionality of data, keeping the original order")
+            return
+        log(3, "Reordering indices")
+        self.preview_indices = self.preview_indices.T[order].T
 
     def load_unmapped_raster_scan(self, indices):
         intensities = {}
@@ -732,6 +792,7 @@ class Hdf5Loader(PtyScan):
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
                 if self.framefilter is not None:
                     self.preview_indices = self.preview_indices[:,self.framefilter[indices[1][::skip,::skip], indices[0][::skip,::skip]].flatten()]
+                self._reorder_preview_indices()
                 self.num_frames = len(self.preview_indices[0])
 
             else:
@@ -748,6 +809,7 @@ class Hdf5Loader(PtyScan):
                 self.preview_indices = indices[::skip]
                 if self.framefilter is not None:
                     self.preview_indices = self.preview_indices[self.framefilter[indices][::skip]]
+                self._reorder_preview_indices()
                 self.num_frames = len(self.preview_indices)
 
         elif ((len(positions_fast_shape)>1) and (len(positions_slow_shape)>1)) and data_shape[0] == np.prod(positions_fast_shape) == np.prod(positions_slow_shape):
@@ -776,6 +838,7 @@ class Hdf5Loader(PtyScan):
             self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()])
             if self.framefilter:
                 log(3, "Framefilter not supported for this case")
+            self._reorder_preview_indices()
             self.num_frames = len(self.preview_indices[0])
             self._ismapped = False
             self._scantype = 'raster'
@@ -809,6 +872,7 @@ class Hdf5Loader(PtyScan):
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
                 if self.framefilter:
                     log(3, "Framefilter not supported for this case")
+                self._reorder_preview_indices()
                 self.num_frames = len(self.preview_indices[0])
                 self._ismapped = True
                 self._scantype = 'raster'
@@ -840,6 +904,7 @@ class Hdf5Loader(PtyScan):
                 self.preview_indices = np.array([indices[1][::skip,::skip].flatten(), indices[0][::skip,::skip].flatten()], dtype=int)
                 if self.framefilter:
                     log(3, "Framefilter not supported for this case")
+                self._reorder_preview_indices()
                 self.num_frames = len(self.preview_indices[0])
                 self._ismapped = False
                 self._scantype = 'raster'
