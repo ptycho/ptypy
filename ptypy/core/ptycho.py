@@ -471,14 +471,19 @@ class Ptycho(Base):
         # Find run name
         self.runtime.run = self.paths.run(p.run)
 
-        # Benchmark
-        if self.p.io.report.benchmark == 'all':
-            self.benchmark = u.Param()
-            self.benchmark.data_load = 0
-            self.benchmark.engine_init = 0
-            self.benchmark.engine_prepare = 0
-            self.benchmark.engine_iterate = 0
-            self.benchmark.engine_finalize = 0
+        # Reporting
+        if self.p.io.report:
+            # Initialize report dict
+            self.report = {}
+
+            # Benchmark
+            if self.p.io.report.benchmark == 'all':
+                self.benchmark = u.Param()
+                self.benchmark.data_load = 0
+                self.benchmark.engine_init = 0
+                self.benchmark.engine_prepare = 0
+                self.benchmark.engine_iterate = 0
+                self.benchmark.engine_finalize = 0
 
     def init_communication(self):
         """
@@ -1205,7 +1210,6 @@ class Ptycho(Base):
             *just again saying there were X diffraction patterns of size N * M
         """
         logger.info(headerline('Ptycho final report', 'l', '='))
-        self.report = {}
         if self.p.io.report.metrics == 'all':
             self.report['metrics'] = u.reporting.calculate_metrics(self)
         if self.p.io.report.maps == 'all':
