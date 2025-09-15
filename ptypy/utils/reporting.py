@@ -10,6 +10,21 @@ from .math_utils import abs2
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 
+def calculate_average_step_size(ptycho, number_of_neighbours=3):
+    """
+    Calculates the average step size
+    """
+    ass = {}
+    for sname, sobj in ptycho.obj.S.items():
+        allcoords = np.array([v.coord for v in sobj.views])
+        distances = []
+        for v in sobj.views:
+            distxy = (allcoords - v.coord)
+            distr = np.sqrt(distxy[:,0]**2 + distxy[:,1]**2)
+            distances.append(np.sort(distr)[1:number_of_neighbours+1])
+        ass[sname] = np.array(distances).mean()
+    return ass
+
 def calculate_metrics(ptycho):
     print('metrics')
     ptycho.print_stats()
@@ -17,6 +32,8 @@ def calculate_metrics(ptycho):
     metrics = {}
     metrics['probe_size'] = measure_probe_size(ptycho)
 
+    ass = calculate_average_step_size(ptycho)
+    metrics["average_step_size"] = ass
     return metrics
 
 
