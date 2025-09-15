@@ -62,7 +62,8 @@ def map(ptycho, ID='fluence'):
 
 def measure_probe_size(ptycho):
     """
-    Measuring the size of the reconstructed probe
+    main function for measuring the size of the reconstructed probes
+    via different methods.
     """
 
     results = {}
@@ -74,9 +75,14 @@ def measure_probe_size(ptycho):
         results[sname] = {}
 
         probe_intensity = np.sum(abs2(probes), axis=0)
+
+        # measure FWHM of projected intensities
         fwhm_x,fwhm_y = size_estimate_FWHM(probe_intensity)
         results[sname]['FWHM_px'] = (fwhm_y, fwhm_x)
         results[sname]['FWHM_m'] = (fwhm_y*pixel_size[0], fwhm_x*pixel_size[1])
+
+        # measure probe size by 90% intensty criterion
+        # ToDo
 
     return results
 
@@ -98,3 +104,17 @@ def size_estimate_FWHM(probe_intensity):
     fwhm_y = abs(edges_y[0] - edges_y[-1]) # measured in pixels
 
     return fwhm_x,fwhm_y
+
+
+def size_estimate_90pecent_intensity(probe_intensity):
+    """
+    estimate the probe size by masking the hottest pixels
+    until 90% of the overall probe intensity is explained
+    """
+
+    threshold = 0.1 # actual function to be placed here be put here 
+    probe_mask = np.zeros_like(probe_intensity)
+    probe_mask[probe_intensity>=threshold] = 1
+    
+
+    return None
