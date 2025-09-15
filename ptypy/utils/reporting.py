@@ -86,7 +86,8 @@ def measure_probe_size(ptycho):
         results[sname]['FWHM_m'] = (fwhm_y*pixel_size[0], fwhm_x*pixel_size[1])
 
         # measure probe size by 90% intensty criterion
-        # ToDo
+        illumated_area = size_estimate_90pecent_intensity(probe_intensity)
+        results[sname]['illumated_area'] = illumated_area
 
     return results
 
@@ -116,12 +117,10 @@ def size_estimate_90pecent_intensity(probe_intensity):
     until 90% of the overall probe intensity is explained
     """
 
-    threshold = 0.1 # actual function to be placed here be put here 
+    threshold = find_threshold(probe_intensity, fraction=0.9)
     probe_mask = np.zeros_like(probe_intensity)
     probe_mask[probe_intensity>=threshold] = 1
-    
-
-    return None
+    return probe_mask
 
 def find_threshold(intensities, fraction=0.9):
     """
