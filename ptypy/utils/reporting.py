@@ -10,6 +10,21 @@ from .math_utils import abs2
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 
+def calculate_average_step_size(ptycho, number_of_neighbours=3):
+    """
+    Calculates the average step size
+    """
+    ass = {}
+    for sname, sobj in ptycho.obj.S.items():
+        allcoords = np.array([v.coord for v in sobj.views])
+        distances = []
+        for v in sobj.views:
+            distxy = (allcoords - v.coord)
+            distr = np.sqrt(distxy[:,0]**2 + distxy[:,1]**2)
+            distances.append(np.sort(distr)[1:number_of_neighbours+1])
+        ass[sname] = np.array(distances).mean()
+    return ass
+
 def calculate_metrics(ptycho):
     print('metrics')
     ptycho.print_stats()
@@ -17,13 +32,22 @@ def calculate_metrics(ptycho):
     metrics = {}
     metrics['probe_size'] = measure_probe_size(ptycho)
 
+    ass = calculate_average_step_size(ptycho)
+    metrics["average_step_size"] = ass
     return metrics
 
 
 def calculate_maps(ptycho):
-    print('maps')
-    ptycho.print_stats()
-    return {}
+    # Fluence map
+    fluence = map(ptycho, ID='fluence')
+    # Transmission map
+    transmission = map(ptycho, ID='transmission')
+    # Coverage map
+    coverage = map(ptycho, ID='coverage')
+
+    return {'fluence': fluence,
+            'transmission': transmission,
+            'coverage': coverage}
 
 
 def map(ptycho, ID='fluence'):
@@ -52,13 +76,13 @@ def map(ptycho, ID='fluence'):
                 continue
             for pid, pod in v.pods.items():
                 if ID == 'transmission':
-                    sobj[v] += abs2(pod.probe*pod.obj)
+                    sobj[v] += abs2(pod.probe*pod.object)
                 elif ID == 'fluence':
                     sobj[v] += abs2(pod.probe)
                 elif ID == 'coverage':
                     sobj[v] += np.ones_like(pod.probe.real)
-    return fmap
 
+    return {sname: sobj.data[0] for sname, sobj in fmap.S}
 
 def measure_probe_size(ptycho):
     """
