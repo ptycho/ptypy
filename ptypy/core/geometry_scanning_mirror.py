@@ -109,6 +109,8 @@ class ScanningMirrorFarfieldPropagator(object):
         """
         Parameters
         ----------
+
+
         geo_pars : Param or dict
             Parameter dictionary as in :py:attr:`DEFAULT`.
 
@@ -142,6 +144,8 @@ class ScanningMirrorFarfieldPropagator(object):
         self.FFTch = _FFTchooser(ffttype)
         self.fft, self.ifft = self.FFTch.assign_fft()
         self.update(geo_pars, **kwargs)
+
+        self.beam_shift = geo_pars.beam_shift
 
     def update(self, geo_pars=None, **kwargs):
         """
@@ -249,7 +253,7 @@ class ScanningMirrorFarfieldPropagator(object):
         phase_grad_2d = np.multiply.outer(phase_grad_i, phase_grad_j)
         return phase_grad_2d
 
-    def fw(self, W, shift):
+    def fw(self, W):
         """
         Computes forward propagated wavefront of input wavefront W.
 
@@ -275,7 +279,7 @@ class ScanningMirrorFarfieldPropagator(object):
             w = W
 
         # Apply phase gradient
-        w *= self.generate_phase_grad(shift, w.shape)
+        w *= self.generate_phase_grad(self.beam_shift, w.shape)
         w = self.post_fft * self.sc * self.fft(self.pre_fft * w)
 
         # Cropping again
@@ -284,7 +288,7 @@ class ScanningMirrorFarfieldPropagator(object):
         else:
             return w
 
-    def bw(self, W, shift):
+    def bw(self, W):
         """
         Computes backward propagated wavefront of input wavefront W.
 
@@ -292,11 +296,6 @@ class ScanningMirrorFarfieldPropagator(object):
         ----------
         W : numpy.ndarray
             The wave front to be backwards propagated.
-
-        shift : list
-            List containing two floats, shift_i and shift_j, which are the
-            number of pixels that the far field diffraction pattern is shifted
-            on the detector.
 
         Returns
         -------
@@ -313,7 +312,7 @@ class ScanningMirrorFarfieldPropagator(object):
         w = self.ifft(self.pre_ifft * w) * self.isc * self.post_ifft
 
         # Un-apply phase gradient
-        w /= self.generate_phase_grad(shift, w.shape)
+        w /= self.generate_phase_grad(self.beam_shift, w.shape)
 
         # Cropping again
         if (self.crop_pad != 0).any():

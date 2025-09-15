@@ -29,6 +29,7 @@ class ScanningMirrorGeometryTest(unittest.TestCase):
         g.psize = 24e-6
         g.shape = (16, 16)
         g.propagation = "farfield"
+        g.beam_shift = None
         G = geometry.Geo(owner=P, pars=g)
         return G
 
@@ -52,8 +53,8 @@ class ScanningMirrorGeometryTest(unittest.TestCase):
         shape = prop.sh
         w = np.random.random(shape) + 1j * np.random.random(shape)
 
-        farfield = prop.fw(w, [0, 0])
-        bw = prop.bw(farfield, [0, 0])
+        farfield = prop.fw(w)
+        bw = prop.bw(farfield)
 
         # asserts
         np.testing.assert_array_almost_equal(bw, w)
@@ -63,14 +64,16 @@ class ScanningMirrorGeometryTest(unittest.TestCase):
         Test that the propagating with shift = [0, 0] gives the same result as
         the basic propagator.
         """
+        # set the beam shift to [0, 0] to mimic no beam shft
+        prop.beam_shift = [0, 0]
 
         # Create random 2D array
         np.testing.assert_array_equal(prop.sh, prop_basic.sh)
         shape = prop.sh
         w = np.random.random(shape) + 1j * np.random.random(shape)
 
-        farfield = prop.fw(w.copy(), [0, 0])
-        bw = prop.bw(farfield.copy(), [0, 0])
+        farfield = prop.fw(w.copy())
+        bw = prop.bw(farfield.copy())
         farfield_basic = prop_basic.fw(w.copy())
         bw_basic = prop_basic.bw(farfield.copy())
 
@@ -81,17 +84,20 @@ class ScanningMirrorGeometryTest(unittest.TestCase):
     def _test_shifting_behaviour(self, prop):
         # Create random 2D array
         shape = prop.sh
+        w = np.random.random(shape) + 1j * np.random.random(shape)
+        #w = np.zeros(shape, dtype=complex); w[0, 1] = 64
         shift_i = int(np.random.rand() * (shape[0] - 1)) + 1
         shift_j = int(np.random.rand() * (shape[1] - 1)) + 1
         shift = np.array([shift_i, shift_j])
-        w = np.random.random(shape) + 1j * np.random.random(shape)
-        #w = np.zeros(shape, dtype=complex); w[0, 1] = 64
 
         # make shifted fourier transformed
-        farfield_no_shift = prop.fw(w.copy(), [0, 0])
+        prop.beam_shift = [0, 0]
+        farfield_no_shift = prop.fw(w.copy())
         farfield_rolled = np.roll(farfield_no_shift.copy(), shift, (0, 1))
-        farfield_shifted = prop.fw(w.copy(), shift)
-        bw = prop.bw(farfield_shifted.copy(), shift)
+
+        prop.beam_shift = shift
+        farfield_shifted = prop.fw(w.copy())
+        bw = prop.bw(farfield_shifted.copy())
 
         # asserts
         np.testing.assert_array_almost_equal(bw, w)
