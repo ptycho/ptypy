@@ -140,3 +140,29 @@ def size_estimate_90pecent_intensity(probe_intensity):
     
 
     return None
+
+def find_threshold(intensities, fraction=0.9):
+    """
+    Find the intensity threshold such that a specified fraction of the total intensity is below this threshold.
+
+    Parameters:
+    - intensities (numpy.ndarray): An array of pixel intensities.
+    - fraction (float): The fraction of total intensity to use as a cutoff (default is 0.9 for 90%).
+
+    Returns:
+    - float: The intensity threshold.
+    """
+    import numpy as np
+
+    # Flatten the array to 1D for processing and sort it
+    sorted_vals = np.sort(intensities.ravel())
+    # Compute the cumulative sum from the end to find the 90% cutoff
+    cumulative = np.cumsum(sorted_vals[::-1])
+    # Total intensity (sum of all pixel values)
+    total = cumulative[-1]
+    # Find the index where cumulative sum reaches fraction of total
+    inverted_index = np.searchsorted(cumulative, fraction * total)
+    # Reverse the index to get the correct position in the sorted array
+    cutoff_index = len(sorted_vals) - inverted_index - 1 if inverted_index < len(sorted_vals) else 0
+
+    return float(sorted_vals[cutoff_index])
