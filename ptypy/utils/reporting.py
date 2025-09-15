@@ -30,7 +30,7 @@ def calculate_maps(ptycho):
             'coverage': coverage}
 
 
-def map(ptycho, ID='fluence'):
+def map(ptycho, ID='fluence', mask=None):
     """
     Compute fluence or transmission map(s) for all object storages and modes
 
@@ -60,7 +60,10 @@ def map(ptycho, ID='fluence'):
                 elif ID == 'fluence':
                     sobj[v] += abs2(pod.probe)
                 elif ID == 'coverage':
-                    sobj[v] += np.ones_like(pod.probe.real)
+                    if mask is not None:
+                        sobj[v] += mask
+                    else:
+                        sobj[v] += np.ones_like(pod.probe.real)
 
     return {sname: sobj.data[0] for sname, sobj in fmap.S.items()}
 
