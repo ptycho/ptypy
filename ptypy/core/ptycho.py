@@ -1065,7 +1065,7 @@ class Ptycho(Base):
                 for ID, S in self.obj.storages.items():
                     content.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
 
-            if self.report is not None:
+            if self.p.io.report is not None:
                 content.report = self.report
 
             h5opt = io.h5options['UNSUPPORTED']
