@@ -36,7 +36,7 @@ FType = np.float64
 CType = np.complex128
 
 __all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'OPRModel', 'BlockScanModel',
-           'BlockVanilla', 'BlockFull', 'BlockOPRModel']
+           'BlockVanilla', 'BlockFull', 'BlockOPRModel', 'ScanningMirrorModel']
 
 class _LogTime(object):
 
@@ -1059,8 +1059,8 @@ class _Full(object):
         """
         probe_shape = common['shape']
         center = common['center']
-        psize = common['psize']        
-        
+        psize = common['psize']
+
         # Adjust geometry parameters for resampling
         self.resample = self.p.resample
         probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
@@ -1283,6 +1283,7 @@ defaults_tree['scan.BlockFull'].add_child(sample.sample_desc)
 Full.DEFAULT = defaults_tree['scan.Full'].make_default(99)
 
 from . import geometry_bragg
+from . import geometry_scanning_mirror
 
 defaults_tree['scan'].add_child(EvalDescriptor('Bragg3dModel'))
 defaults_tree['scan.Bragg3dModel'].add_child(illumination.illumination_desc, copy=True)
@@ -1703,3 +1704,196 @@ class ModelManager(object):
                 scan._initialize_exit(list(pod_ids))
 
         return new_data
+
+
+defaults_tree['scan'].add_child(EvalDescriptor('ScanningMirrorModel'))
+defaults_tree['scan.ScanningMirrorModel'].add_child(illumination.illumination_desc, copy=True)
+defaults_tree['scan.ScanningMirrorModel'].add_child(sample.sample_desc)
+
+@defaults_tree.parse_doc('scan.ScanningMirrorModel')
+class ScanningMirrorModel(Full):
+    """
+    Model for scanning mirror based scanning, where the incidence angle will
+    change during the scan.
+
+    Defaults:
+
+    [name]
+    default = ScanningMirrorModel
+    type = str
+    help =
+
+    """
+
+    def _initialize_geo(self, common):
+        """
+        Initialize the geometry/geometries.
+        """
+        probe_shape = common['shape']
+        center = common['center']
+        psize = common['psize']
+
+        # Adjust geometry parameters for resampling
+        self.resample = self.p.resample
+        probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
+        center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
+        psize = np.array(psize) / self.resample
+
+        # Extract necessary info from the received data package
+        get_keys = ['distance', 'center', 'energy', 'psize']
+        geo_pars = u.Param({key: common[key] for key in get_keys})
+        geo_pars.shape = probe_shape
+        geo_pars.center = center
+        geo_pars.psize = psize
+        geo_pars.resolution = self.p.resolution
+
+        # Add propagation info from this scan model
+        geo_pars.propagation = self.p.propagation
+        geo_pars.ffttype = self.p.ffttype
+
+        # The multispectral case will have multiple geometries
+        for ii, fac in enumerate(self.p.coherence.energies):
+            geoID = geometry.Geo._PREFIX + '%02d' % ii + self.label
+            g = geometry_scanning_mirror.Geo_ScanningMirror(self.ptycho, geoID, pars=geo_pars)
+            # now we fix the sample pixel size, This will make the frame size adapt
+            g.p.resolution_is_fix = True
+            # save old energy value
+            g.p.energy_orig = g.energy
+            # change energy
+            g.energy *= fac
+            # resampling
+            g.resample = self.resample
+            # append the geometry
+            self.geometries.append(g)
+
+        # Store frame shape
+        self.diff_shape = np.array(common.get('shape', self.geometries[0].shape))
+        self.probe_shape = probe_shape
+        self.object_shape = probe_shape
+        self.exit_shape = probe_shape
+        self.psize = self.geometries[0].psize
+
+        return
+
+    def _create_pods(self):
+        """
+        Create all new pods as specified in the new_positions,
+        new_diff_views and new_mask_views object attributes.
+        """
+        logger.info('\n' + headerline('Creating PODS', 'l'))
+        new_pods = []
+        new_probe_ids = {}
+        new_object_ids = {}
+
+        label = self.label
+
+        # Get a list of probe and object that already exist
+        existing_probes = list(self.ptycho.probe.storages.keys())
+        existing_objects = list(self.ptycho.obj.storages.keys())
+        logger.info('Found these probes : ' + ', '.join(existing_probes))
+        logger.info('Found these objects: ' + ', '.join(existing_objects))
+
+        object_id = 'S' + self.label
+        probe_id = 'S' + self.label
+
+        # Loop through diffraction patterns
+        for i in range(len(self.new_diff_views)):
+            dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
+
+            # For stochastic engines (e.g. ePIE) we only need one exit buffer
+            if self._single_exit_buffer_for_all_views:
+                index = 0
+            else:
+                index = dv.layer
+
+            # Object and probe position
+            pos_pr = u.expect2(0.0)
+            pos_obj = self.new_positions[i][:2] if 'empty' not in self.p.tags else 0.0
+            beam_shift = self.new_positions[i][2:4] if 'empty' not in self.p.tags else 0.0
+
+            # For multiwavelength reconstructions: loop here over
+            # geometries, and modify probe_id and object_id.
+            for ii, geometry in enumerate(self.geometries):
+                # Make new IDs and keep them in record
+                # sharing_rules is not aware of IDs with suffix
+
+                pdis = self.p.coherence.probe_dispersion
+
+                if pdis is None or str(pdis) == 'achromatic':
+                    gind = 0
+                else:
+                    gind = ii
+
+                probe_id_suf = probe_id + 'G%02d' % gind
+                if (probe_id_suf not in new_probe_ids.keys()
+                        and probe_id_suf not in existing_probes):
+                    new_probe_ids[probe_id_suf] = True
+
+                odis = self.p.coherence.object_dispersion
+
+                if odis is None or str(odis) == 'achromatic':
+                    gind = 0
+                else:
+                    gind = ii
+
+                object_id_suf = object_id + 'G%02d' % gind
+                if (object_id_suf not in new_object_ids.keys()
+                        and object_id_suf not in existing_objects):
+                    new_object_ids[object_id_suf] = True
+
+                # Loop through modes
+                for pm in range(self.p.coherence.num_probe_modes):
+                    for om in range(self.p.coherence.num_object_modes):
+                        # Make a unique layer index for exit view
+                        # The actual number does not matter due to the
+                        # layermap access
+                        exit_index = index * 10000 + pm * 100 + om
+
+                        # Create views
+                        # Please note that mostly references are passed,
+                        # i.e. the views do mostly not own the accessrule
+                        # contents
+                        pv = View(container=self.ptycho.probe,
+                                  accessrule={'shape': self.probe_shape,
+                                              'psize': geometry.resolution,
+                                              'coord': pos_pr,
+                                              'storageID': probe_id_suf,
+                                              'layer': pm,
+                                              'active': True})
+
+                        ov = View(container=self.ptycho.obj,
+                                  accessrule={'shape': self.object_shape,
+                                              'psize': geometry.resolution,
+                                              'coord': pos_obj,
+                                              'storageID': object_id_suf,
+                                              'layer': om,
+                                              'active': True})
+
+                        ev = View(container=self.ptycho.exit,
+                                  accessrule={'shape': self.exit_shape,
+                                              'psize': geometry.resolution,
+                                              'coord': pos_pr,
+                                              'storageID': (dv.storageID +
+                                                            'G%02d' % ii),
+                                              'layer': exit_index,
+                                              'active': dv.active})
+
+                        views = {'probe': pv,
+                                 'obj': ov,
+                                 'diff': dv,
+                                 'mask': mv,
+                                 'exit': ev}
+
+                        pod = POD(ptycho=self.ptycho,
+                                  ID=None,
+                                  views=views,
+                                  geometry=geometry)  # , meta=meta)
+
+                        pod.prop_args = [beam_shift]
+                        new_pods.append(pod)
+
+                        pod.probe_weight = 1.0
+                        pod.object_weight = 1.0
+
+        return new_pods, new_probe_ids, new_object_ids
+
