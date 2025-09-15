@@ -31,9 +31,7 @@ def calculate_metrics(ptycho):
 
     metrics = {}
     metrics['probe_size'] = measure_probe_size(ptycho)
-
-    ass = calculate_average_step_size(ptycho)
-    metrics["average_step_size"] = ass
+    metrics["average_step_size"] = calculate_average_step_size(ptycho)
     return metrics
 
 
@@ -82,7 +80,7 @@ def map(ptycho, ID='fluence'):
                 elif ID == 'coverage':
                     sobj[v] += np.ones_like(pod.probe.real)
 
-    return {sname: sobj.data[0] for sname, sobj in fmap.S}
+    return {sname: sobj.data[0] for sname, sobj in fmap.S.items()}
 
 def measure_probe_size(ptycho):
     """
