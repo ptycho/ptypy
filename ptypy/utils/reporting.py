@@ -10,25 +10,7 @@ from .math_utils import abs2
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 
-def calculate_average_step_size(ptycho, number_of_neighbours=3):
-    """
-    Calculates the average step size
-    """
-    ass = {}
-    for sname, sobj in ptycho.obj.S.items():
-        allcoords = np.array([v.coord for v in sobj.views])
-        distances = []
-        for v in sobj.views:
-            distxy = (allcoords - v.coord)
-            distr = np.sqrt(distxy[:,0]**2 + distxy[:,1]**2)
-            distances.append(np.sort(distr)[1:number_of_neighbours+1])
-        ass[sname] = np.array(distances).mean()
-    return ass
-
 def calculate_metrics(ptycho):
-    print('metrics')
-    ptycho.print_stats()
-
     metrics = {}
     metrics['probe_size'] = measure_probe_size(ptycho)
     metrics["average_step_size"] = calculate_average_step_size(ptycho)
@@ -166,3 +148,18 @@ def find_threshold(intensities, fraction=0.9):
     cutoff_index = len(sorted_vals) - inverted_index - 1 if inverted_index < len(sorted_vals) else 0
 
     return float(sorted_vals[cutoff_index])
+
+def calculate_average_step_size(ptycho, number_of_neighbours=3):
+    """
+    Calculates the average step size
+    """
+    ass = {}
+    for sname, sobj in ptycho.obj.S.items():
+        allcoords = np.array([v.coord for v in sobj.views])
+        distances = []
+        for v in sobj.views:
+            distxy = (allcoords - v.coord)
+            distr = np.sqrt(distxy[:,0]**2 + distxy[:,1]**2)
+            distances.append(np.sort(distr)[1:number_of_neighbours+1])
+        ass[sname] = np.array(distances).mean()
+    return ass
