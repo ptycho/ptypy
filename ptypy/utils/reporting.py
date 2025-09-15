@@ -21,9 +21,16 @@ def calculate_metrics(ptycho):
 
 
 def calculate_maps(ptycho):
-    print('maps')
-    ptycho.print_stats()
-    return {}
+    # Fluence map
+    fluence = map(ptycho, ID='fluence')
+    # Transmission map
+    transmission = map(ptycho, ID='transmission')
+    # Coverage map
+    coverage = map(ptycho, ID='coverage')
+
+    return {'fluence': fluence,
+            'transmission': transmission,
+            'coverage': coverage}
 
 
 def map(ptycho, ID='fluence'):
@@ -52,13 +59,13 @@ def map(ptycho, ID='fluence'):
                 continue
             for pid, pod in v.pods.items():
                 if ID == 'transmission':
-                    sobj[v] += abs2(pod.probe*pod.obj)
+                    sobj[v] += abs2(pod.probe*pod.object)
                 elif ID == 'fluence':
                     sobj[v] += abs2(pod.probe)
                 elif ID == 'coverage':
                     sobj[v] += np.ones_like(pod.probe.real)
-    return fmap
 
+    return {sname: sobj.data[0] for sname, sobj in fmap.S}
 
 def measure_probe_size(ptycho):
     """
