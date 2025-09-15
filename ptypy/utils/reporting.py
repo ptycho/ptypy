@@ -12,10 +12,33 @@ from scipy.interpolate import UnivariateSpline
 
 def calculate_metrics(ptycho):
     metrics = {}
+    
+    # Probe size
     metrics['probe_size'] = measure_probe_size(ptycho)
+
+    # Average step size
     metrics["average_step_size"] = calculate_average_step_size(ptycho)
+
+    # Coverage map using the illuminated area
+    metrics['area_overlap'] = calculate_area_overlap(ptycho, metrics['probe_size'])
+
     return metrics
 
+def calculate_area_overlap(ptycho, probe_size):
+
+    # Extract pre-computed probe mask
+    mask = {sname: c['illuminated_area'] for sname, c in probe_size.items()}
+
+    # Compute coverage map
+    cmap = map(ptycho, ID='coverage', mask=mask)
+
+    # Compute metric
+    metric = {}
+    for sname, cm in cmap.items():
+        cm1 = cm > 0.5
+        metric[sname] = (cm-cm1).sum() / cm.sum()
+
+    return metric
 
 def calculate_maps(ptycho):
     # Fluence map
@@ -38,6 +61,8 @@ def map(ptycho, ID='fluence', mask=None):
     ----------
     ptycho : The Ptycho object instance to draw information from.
     ID : one of 'fluence' (default), 'transmission' or 'coverage'
+    mask: a dictionary containing the thresholded mask of the probe for each probe storage
+         (used only if ID=='coverage')
     """
     if ID not in ['fluence', 'transmission', 'coverage']:
         raise NotImplementedError(f'Unknown map {ID}')
@@ -55,13 +80,14 @@ def map(ptycho, ID='fluence', mask=None):
             if not v.active:
                 continue
             for pid, pod in v.pods.items():
+                probe_storage = pod.pr_view.storage.ID
                 if ID == 'transmission':
                     sobj[v] += abs2(pod.probe*pod.object)
                 elif ID == 'fluence':
                     sobj[v] += abs2(pod.probe)
                 elif ID == 'coverage':
                     if mask is not None:
-                        sobj[v] += mask
+                        sobj[v] += mask[probe_storage]
                     else:
                         sobj[v] += np.ones_like(pod.probe.real)
 
@@ -89,8 +115,8 @@ def measure_probe_size(ptycho):
         results[sname]['FWHM_m'] = (fwhm_y*pixel_size[0], fwhm_x*pixel_size[1])
 
         # measure probe size by 90% intensty criterion
-        illumated_area = size_estimate_90pecent_intensity(probe_intensity)
-        results[sname]['illumated_area'] = illumated_area
+        illuminated_area = size_estimate_90pecent_intensity(probe_intensity)
+        results[sname]['illuminated_area'] = illuminated_area
 
     return results
 
