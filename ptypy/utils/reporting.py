@@ -6,13 +6,18 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: see LICENSE for details.
 """
-from .. import abs2
+from .math_utils import abs2
 import numpy as np
+from scipy.interpolate import UnivariateSpline
 
 def calculate_metrics(ptycho):
     print('metrics')
     ptycho.print_stats()
-    return {}
+
+    metrics = {}
+    metrics['probe_size'] = measure_probe_size(ptycho)
+
+    return metrics
 
 
 def calculate_maps(ptycho):
@@ -53,3 +58,43 @@ def map(ptycho, ID='fluence'):
                 elif ID == 'coverage':
                     sobj[v] += np.ones_like(pod.probe.real)
     return fmap
+
+
+def measure_probe_size(ptycho):
+    """
+    Measuring the size of the reconstructed probe
+    """
+
+    results = {}
+
+    # for each storage do:
+    for sname, sprobe in ptycho.probe.S.items():  
+        probes = sprobe.data
+        pixel_size = sprobe._psize
+        results[sname] = {}
+
+        probe_intensity = np.sum(abs2(probes), axis=0)
+        fwhm_x,fwhm_y = size_estimate_FWHM(probe_intensity)
+        results[sname]['FWHM_px'] = (fwhm_y, fwhm_x)
+        results[sname]['FWHM_m'] = (fwhm_y*pixel_size[0], fwhm_x*pixel_size[1])
+
+    return results
+
+def size_estimate_FWHM(probe_intensity):
+    """
+    estimate the probe size via a simple FWHM measurment
+    of the projected intensty profiles
+    """
+    projection_x = np.sum(probe_intensity, axis=0)
+    projection_y = np.sum(probe_intensity, axis=1)
+    Ny, Nx = np.shape(probe_intensity)
+
+    # spline interpolate the profiles and find all the I_max/2 crossings
+    edges_x = UnivariateSpline(np.linspace(0, Nx-1, Nx), projection_x-projection_x.max()/2).roots()
+    edges_y = UnivariateSpline(np.linspace(0, Ny-1, Ny), projection_y-projection_y.max()/2).roots()
+    
+    # the distance between the first and the last I_max/2 crossing is the FWHM
+    fwhm_x = abs(edges_x[0] - edges_x[-1]) # measured in pixels
+    fwhm_y = abs(edges_y[0] - edges_y[-1]) # measured in pixels
+
+    return fwhm_x,fwhm_y
