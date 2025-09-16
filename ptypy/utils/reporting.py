@@ -130,8 +130,8 @@ def measure_probe_size(ptycho, sname):
     # Extent in x and y
     sum_y = illuminated_area.sum(axis=0)
     sum_x = illuminated_area.sum(axis=1)
-    y_nz = np.nonzero(sum_y)[0]
-    x_nz = np.nonzero(sum_x)[0]
+    x_nz = np.nonzero(sum_y)[0]
+    y_nz = np.nonzero(sum_x)[0]
     wy, wx = (1 + y_nz[-1] - y_nz[0], 1 + x_nz[-1] - x_nz[0])
     results['90perI_width_px'] = (wy, wx)
     results['90perI_width_m'] = (wy*pixel_size[0], wx*pixel_size[1])
