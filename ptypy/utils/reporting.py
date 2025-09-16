@@ -34,8 +34,9 @@ def calculate_metrics(ptycho):
         metrics[sname]['area_overlap'] = calculate_area_overlap(ptycho, sname, metrics[sname]['probe_size'])
 
         # oversampling
-        metrics[sname]['oversampling_area'] = calculate_geometric_oversampling(metrics[sname]['probe_size']['90perI_width_px'], sprobe.shape )
-        metrics[sname]['oversampling_FWHM'] = calculate_geometric_oversampling(metrics[sname]['probe_size']['FWHM_px'], sprobe.shape )
+        oversampling = {'area': calculate_geometric_oversampling(metrics[sname]['probe_size']['90perI_width_px'], sprobe.shape[1:]),
+                       'FWHM': calculate_geometric_oversampling(metrics[sname]['probe_size']['FWHM_px'], sprobe.shape[1:])}
+        metrics[sname]['oversampling'] = oversampling
 
         # some maps
         metrics[sname]['maps'] = {}
