@@ -82,6 +82,22 @@ def map(ptycho, ID='fluence', mask=None):
 
     return {sname: sobj.data[0] for sname, sobj in fmap.S.items()}
 
+def calculate_geometric_oversampling(probe_size, probe_shape):
+    """
+    Calulate the oversampling based on the evaluated probe size.
+    Note that this likely underestimage the 
+
+    Parameters:
+    -----------
+    probe_size: evaluated probe dimensions (Y, X)
+    probe_shape: probe array shape (Y,X)
+
+    returns:
+    --------
+    oversampling (Y, X)
+    """
+    return probe_shape[0]/probe_size[0], probe_shape[1]/probe_size[1]
+
 def measure_probe_size(ptycho, sname):
     """
     main function for measuring the size of the reconstructed probes
