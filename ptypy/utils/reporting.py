@@ -213,9 +213,24 @@ def measure_field_of_view(ptycho, sname, probe_size):
     results['coverage_sqm'] = FOV_from_coverage_px * pixel_size[0] * pixel_size[1]
 
     # estimate from convex hull
-    #ToDo
+    hullcoords_m, hull_area_sqm = FOV_estimate_convex_hull(ptycho, sname)
+    results['convex_hull_coords_m'] = hullcoords_m
+    results['convex_hull_area_sqm'] = hull_area_sqm
+    results['convex_hull_area_px'] = hull_area_sqm / pixel_size[0] / pixel_size[1]
+
 
     return results
+
+def FOV_estimate_convex_hull(ptycho, sname, number_of_neighbours=3):
+    """
+    Estimating the field of view by calculating the convex hull of
+    the scan positions
+    """
+    allcoords_m = np.array([v.coord for v in ptycho.obj.S[sname].views])
+    hullcoords_m = convex_hull_graham(allcoords_m)
+    hull_area_sqm = PolyArea(x_pos=hullcoords_m[:,1], y_pos=hullcoords_m[:,0])
+
+    return hullcoords_m, hull_area_sqm
 
 
 def FOV_estimate_coverage(ptycho, probe_mask, sname):
@@ -311,4 +326,46 @@ def estimate_step_size_NN(ptycho, sname, number_of_neighbours=3):
     ass = np.array(distances).mean()
     return ass
 
+
+
+# a bunch of cunctions for the graham scan algorithm to find the complex hull
+# inspired from https://gist.github.com/arthur-e/5cf52962341310f438e96c1f3c3398b8
+
+def cmp(a, b):
+    return float(a > b) - float(a < b)
+
+def turn(p, q, r):
+    return cmp((q[..., 0] - p[..., 0])*(r[..., 1] - p[..., 1]) - (r[..., 0] - p[..., 0])*(q[..., 1] - p[..., 1]), 0)
+
+
+def reduce_keepleft(points):
+    left = []
+    for r in points:
+        while len(left) > 1 and turn(left[-2], left[-1], r) != 1:
+            left.pop()
+        if not len(left) or not np.allclose(left[-1], r, 1e-5, 1e-8, False):
+            left.append(r)
+    return left
+
+def sort(points):
+    for i in range(points.shape[-1]-1, -1, -1):
+        idx = np.argsort(points[:, i], kind="mergesort")
+        points = points[idx]
+    return points
+
+def stack(alist):
+    out = np.empty((len(alist), *alist[0].shape))
+    for i, r in enumerate(alist):
+        out[i] = r
+    return out
+
+def convex_hull_graham(points):
+    points = sort(points)
+    l = reduce_keepleft(points)
+    u = reduce_keepleft(points[::-1])
+    hull = l + u[1:-1]
+    return stack(hull)
+
+def PolyArea(x_pos,y_pos):
+    return 0.5*np.abs(np.dot(x_pos,np.roll(y_pos,1))-np.dot(y_pos,np.roll(x_pos,1)))
 
