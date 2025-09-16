@@ -33,13 +33,16 @@ def calculate_metrics(ptycho):
         # area overlap
         metrics[sname]['area_overlap'] = calculate_area_overlap(ptycho, sname, metrics[sname]['probe_size'])
 
+        # oversampling
+        metrics[sname]['oversampling_area'] = calculate_geometric_oversampling(metrics[sname]['probe_size']['90perI_width_px'], sprobe.shape )
+        metrics[sname]['oversampling_FWHM'] = calculate_geometric_oversampling(metrics[sname]['probe_size']['FWHM_px'], sprobe.shape )
+
         # some maps
         metrics[sname]['maps'] = {}
         for x in ['fluence', 'transmission', 'coverage']:
             metrics[sname]['maps'][x] = map(ptycho, ID=x)[sname]
 
     return metrics
-
 
 
 def map(ptycho, ID='fluence', mask=None):
@@ -115,11 +118,22 @@ def measure_probe_size(ptycho, sname):
     results['FWHM_px'] = (fwhm_y, fwhm_x)
     results['FWHM_m'] = (fwhm_y*pixel_size[0], fwhm_x*pixel_size[1])
 
-    # measure probe size by 90% intensty criterion
+    # measure probe area by 90% intensty criterion
     illuminated_area = size_estimate_90pecent_intensity(probe_intensity)
     results['90perI_image'] = illuminated_area
+
+    # Total area
     results['90perI_area_px'] = np.sum(illuminated_area)
     results['90perI_area_sqm'] = np.sum(illuminated_area)*pixel_size[0]*pixel_size[1]
+
+    # Extent in x and y
+    sum_y = illuminated_area.sum(axis=0)
+    sum_x = illuminated_area.sum(axis=1)
+    y_nz = np.nonzero(sum_y)[0]
+    x_nz = np.nonzero(sum_x)[0]
+    wy, wx = (1 + y_nz[-1] - y_nz[0], 1 + x_nz[-1] - x_nz[0])
+    results['90perI_width_px'] = (wy, wx)
+    results['90perI_width_m'] = (wy*pixel_size[0], wx*pixel_size[1])
 
     return results
 
