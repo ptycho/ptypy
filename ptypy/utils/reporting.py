@@ -269,12 +269,12 @@ def calculate_linear_overlap(ptycho, sname, metrics):
     results = {}
 
     # estimate from FWHM
-    linover_fwhm = 1 - metrics['average_step_size']['from_nearest_neighbors'] / metrics['probe_size']['FWHM_width_m']
+    linover_fwhm = 1 - metrics['average_step_size']['from_NN_m'] / metrics['probe_size']['FWHM_width_m']
     linover_fwhm[linover_fwhm<0] = 0
     results['from_FWHM'] = linover_fwhm
 
     # estimate from FWHM
-    linover_90perI = 1 - metrics['average_step_size']['from_nearest_neighbors'] / metrics['probe_size']['90perI_width_m']
+    linover_90perI = 1 - metrics['average_step_size']['from_NN_m'] / metrics['probe_size']['90perI_width_m']
     linover_90perI[linover_fwhm<0] = 0
     results['from_90perI'] = linover_90perI
 
@@ -316,7 +316,7 @@ def calculate_average_step_size(ptycho, sname, number_of_neighbours=3):
     ass = {}
 
     # from the n nearest neighbors.
-    ass['from_nearest_neighbors'] = estimate_step_size_NN(ptycho, sname, number_of_neighbours)
+    ass['from_NN_m'] = estimate_step_size_NN(ptycho, sname, number_of_neighbours)
     return ass
 
 
