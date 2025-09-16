@@ -13,6 +13,10 @@ from scipy.interpolate import UnivariateSpline
 def calculate_metrics(ptycho):
     metrics = {}
 
+
+    # ToDo: should actually go over all probe storages and all obj storages
+    #       in two for loops
+
     # for each storage do:
     for sname, sprobe in ptycho.probe.S.items():  
         metrics[sname] = {}
@@ -29,23 +33,13 @@ def calculate_metrics(ptycho):
         # area overlap
         metrics[sname]['area_overlap'] = calculate_area_overlap(ptycho, sname, metrics[sname]['probe_size'])
 
+        # some maps
+        metrics[sname]['maps'] = {}
+        for x in ['fluence', 'transmission', 'coverage']:
+            metrics[sname]['maps'][x] = map(ptycho, ID=x)[sname]
+
     return metrics
 
-
-def calculate_maps(ptycho):
-    ##
-    pass
-
-    # Fluence map
-    fluence = map(ptycho, ID='fluence')
-    # Transmission map
-    transmission = map(ptycho, ID='transmission')
-    # Coverage map
-    coverage = map(ptycho, ID='coverage')
-
-    return {'fluence': fluence,
-            'transmission': transmission,
-            'coverage': coverage}
 
 
 def map(ptycho, ID='fluence', mask=None):

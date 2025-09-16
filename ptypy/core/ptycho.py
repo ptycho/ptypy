@@ -282,15 +282,6 @@ class Ptycho(Base):
         [``'all'``]
     choices = ['all']
     userlevel = 2
-
-    [io.report.maps]
-    default = 'all'
-    type = str
-    help = Compute maps for the report
-    doc = Choose which maps to compute for the final report.
-        [``'all'``]
-    choices = ['all']
-    userlevel = 2
     
     [io.report.benchmark]
     default = None
@@ -1212,8 +1203,6 @@ class Ptycho(Base):
         logger.info(headerline('Ptycho final report', 'l', '='))
         if self.p.io.report.metrics == 'all':
             self.report['metrics'] = u.reporting.calculate_metrics(self)
-        if self.p.io.report.maps == 'all':
-            self.report['maps'] = u.reporting.calculate_maps(self)
             
     def _redistribute_data(self, div = 'rect', obj_storage=None):
         """
