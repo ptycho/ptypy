@@ -242,7 +242,7 @@ class ArrayUtilsTest(unittest.TestCase):
         probe[0] = au.interpolated_shift(probe[0], offset)
         np.testing.assert_array_almost_equal(probe, not_shifted_probe, decimal=8)
 
-    def test_clip_magnitudes_to_range(self):
+    def test_clip_object_to_range(self):
         data = np.ones((5, 5), dtype=COMPLEX_TYPE)
         data[2, 4] = 20.0 * np.exp(1j * np.pi / 2)
         data[3, 1] = 0.2 * np.exp(1j * np.pi / 3)

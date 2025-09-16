@@ -15,7 +15,7 @@ from ..accelerate.cuda_cupy.kernels import (FourierUpdateKernel,
     AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel,
     PropagationKernel)
 from ..accelerate.cuda_cupy.array_utils import (ArrayUtilsKernel,
-    GaussianSmoothingKernel, TransposeKernel, ClipMagnitudesKernel,
+    GaussianSmoothingKernel, TransposeKernel, ClipObjectKernel,
     MaxAbs2Kernel, MassCenterKernel, Abs2SumKernel, InterpolatedShiftKernel)
 from ..accelerate.cuda_cupy.mem_utils import make_pagelocked_paired_arrays as mppa
 from ..accelerate.cuda_cupy.mem_utils import GpuDataManager
@@ -82,7 +82,7 @@ class WASP_cupy(WASP_serial):
             self.ISK = InterpolatedShiftKernel(queue=self.queue)
 
         # Clip Magnitudes Kernel
-        self.CMK = ClipMagnitudesKernel(queue=self.queue)
+        self.CMK = ClipObjectKernel(queue=self.queue)
 
         super().engine_initialize()
         self.qu_htod = cp.cuda.Stream()

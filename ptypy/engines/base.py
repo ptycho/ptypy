@@ -58,6 +58,11 @@ class BaseEngine(object):
     help = Valid probe area as fraction of the probe frame
     doc = Defines a circular area centered on the probe frame, in which the probe is allowed to be nonzero.
 
+    [clip_object]
+    default = None
+    type = tuple
+    help = Clip object amplitude and phase (min mag, max mag) or (min mag, max mag, min phase, max phase). Disclaimer: so far only implemented for projectional and stochastic engines for CPU and cupy. 
+
     [probe_fourier_support]
     default = None
     type = float, None
@@ -198,6 +203,37 @@ class BaseEngine(object):
         support = self._probe_support.get(storage.ID)
         if support is not None:
             storage.data *= support
+
+    def clip_object(self, ob):
+        # Clip object (This call takes like one ms. Not time critical)
+        if self.p.clip_object is not None:
+                if len(self.p.clip_object) == 2:
+                    clip_min_mag, clip_max_mag = self.p.clip_object
+                    clip_min_phase, clip_max_phase = None, None
+                elif len(self.p.clip_object) == 4:    
+                    clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase = self.p.clip_object
+                else: 
+                    raise ValueError('clip_object must be a tuple of 2 or 4 elements')
+                    
+                # clip magnitudes
+                ampl_obj = np.abs(ob.data)
+                phase_obj = np.exp(1j * np.angle(ob.data))
+                if clip_max_mag is not None: 
+                    too_high = (ampl_obj > clip_max_mag)
+                    ob.data[too_high] = clip_max_mag * phase_obj[too_high]
+                if clip_min_mag is not None:
+                    too_low = (ampl_obj < clip_min_mag)
+                    ob.data[too_low] = clip_min_mag * phase_obj[too_low]
+
+                # clip phase
+                ampl_obj = np.abs(ob.data)
+                phase_obj = np.angle(ob.data)
+                if clip_max_phase is not None: 
+                    too_high = (phase_obj > clip_max_phase)
+                    ob.data[too_high] = ampl_obj[too_high] * np.exp(1j*clip_max_phase)
+                if clip_min_phase is not None:
+                    too_low = (phase_obj < clip_min_phase)
+                    ob.data[too_low] = ampl_obj[too_low] * np.exp(1j*clip_min_phase)
 
     def iterate(self, num=None):
         """

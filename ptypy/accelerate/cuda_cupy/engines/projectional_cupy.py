@@ -21,7 +21,7 @@ from ptypy.accelerate.base.engines import projectional_serial
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel,\
-    TransposeKernel, ClipMagnitudesKernel, MassCenterKernel, Abs2SumKernel,\
+    TransposeKernel, ClipObjectKernel, MassCenterKernel, Abs2SumKernel,\
     InterpolatedShiftKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..multi_gpu import get_multi_gpu_communicator
@@ -79,7 +79,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         self.FSK = {}
 
         # Clip Magnitudes Kernel
-        self.CMK = ClipMagnitudesKernel(queue=self.queue)
+        self.CMK = ClipObjectKernel(queue=self.queue)
 
         # initialise kernels for centring probe if required
         if self.p.probe_center_tol is not None:
@@ -555,8 +555,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         Clips magnitudes of object into given range.
         """
         if self.p.clip_object is not None:
-            clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase = self.p.clip_object
-            self.CMK.clip_magnitudes_to_range(ob, clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase)
+            self.CMK.clip_object_to_range(ob, self.p.clip_object)
 
 
     def engine_finalize(self):

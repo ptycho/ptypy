@@ -91,11 +91,6 @@ class _ProjectionEngine(PositionCorrectionEngine):
     help = Gaussian smoothing (pixel) of the current object prior to update
     doc = If None, smoothing is deactivated. This smoothing can be used to reduce the amplitude of spurious pixels in the outer, least constrained areas of the object.
 
-    [clip_object]
-    default = None
-    type = tuple
-    help = Clip object amplitude into this interval
-
     [probe_center_tol]
     default = None
     type = float
@@ -273,31 +268,6 @@ class _ProjectionEngine(PositionCorrectionEngine):
 
         return error_dct
 
-    def clip_object(self, ob):
-        # Clip object (This call takes like one ms. Not time critical)
-        if self.p.clip_object is not None:
-                clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase = self.p.clip_object
-                
-                # clip magnitudes
-                ampl_obj = np.abs(ob.data)
-                phase_obj = np.exp(1j * np.angle(ob.data))
-                if clip_max_mag is not None: 
-                    too_high = (ampl_obj > clip_max_mag)
-                    ob.data[too_high] = clip_max_mag * phase_obj[too_high]
-                if clip_min_mag is not None:
-                    too_low = (ampl_obj < clip_min_mag)
-                    ob.data[too_low] = clip_min_mag * phase_obj[too_low]
-
-                # clip phase
-                ampl_obj = np.abs(ob.data)
-                phase_obj = np.exp(1j * np.angle(ob.data))
-                if clip_max_phase is not None: 
-                    too_high = (phase_obj > clip_max_phase)
-                    ob.data[too_high] = ampl_obj[too_high] * np.exp(1j*clip_max_phase)
-                if clip_min_phase is not None:
-                    too_low = (phase_obj < clip_min_phase)
-                    ob.data[too_low] = ampl_obj[too_low] * np.exp(1j*clip_min_phase)
-                
 
     def overlap_update(self):
         """
