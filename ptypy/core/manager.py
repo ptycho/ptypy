@@ -242,6 +242,8 @@ class ScanModel(object):
         # Storage generation if not already existing
         if self.diff is None:
             # This scan is brand new so we create storages for it
+            if sh[-1] == 130:
+                pass
             self.diff = self.Cdiff.new_storage(shape=sh, psize=self.psize, padonly=True,
                                                layermap=None)
             old_diff_views = []
@@ -998,7 +1000,7 @@ class _Full(object):
                         and object_id_suf not in existing_objects):
                     new_object_ids[object_id_suf] = True
 
-                # Loop through modes
+                    # Loop through modes
                 for pm in range(self.p.coherence.num_probe_modes):
                     for om in range(self.p.coherence.num_object_modes):
                         # Make a unique layer index for exit view
@@ -1171,7 +1173,8 @@ class _Full(object):
 
             # pick storage from container
             s = self.ptycho.obj.S.get(oid)
-
+            if s.shape[-1] == 130:
+                pass
             if s is None or s.model_initialized:
                 continue
             else:
@@ -1726,54 +1729,64 @@ class ScanningMirrorModel(Full):
     """
 
     def _initialize_geo(self, common):
-        """
-        Initialize the geometry/geometries.
-        """
         probe_shape = common['shape']
         center = common['center']
         psize = common['psize']
 
         # Adjust geometry parameters for resampling
         self.resample = self.p.resample
-        probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
-        center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
-        psize = np.array(psize) / self.resample
+        self.probe_shape = tuple(
+            np.ceil(self.resample * np.array(probe_shape)).astype(int))
+        self.center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
+        self.psize = np.array(psize) / self.resample
 
+
+        self.distance = common["distance"]
+        self.energy = common["energy"]
+
+        g_dummy = self._create_single_geometry([0, 0])
+
+        # Store frame shape
+        self.diff_shape = np.array(common.get('shape', g_dummy.shape))
+        self.object_shape = self.probe_shape
+        self.exit_shape = self.probe_shape
+
+
+    def _create_single_geometry(self, beam_shift, geoID=None):
+        """
+        Creates a geometry object with the given parameters and beam_shift
+
+        Parameters
+        ----------
+        beam_shift : list
+            List containing two floats, shift_i and shift_j, which are the
+            number of pixels that the far field diffraction pattern is shifted
+            on the detector. The index order is the same as in the far field
+            detector image.
+
+        Returns
+        -------
+        The geometry object
+        """
         # Extract necessary info from the received data package
-        get_keys = ['distance', 'center', 'energy', 'psize']
-        geo_pars = u.Param({key: common[key] for key in get_keys})
-        geo_pars.shape = probe_shape
-        geo_pars.center = center
-        geo_pars.psize = psize
+        geo_pars = u.Param({'distance':self.distance, 'center':self.center, 'energy':self.energy, 'psize':self.psize})
+        geo_pars.shape = self.probe_shape
+        geo_pars.center = self.center
+        geo_pars.psize = self.psize
         geo_pars.resolution = self.p.resolution
 
         # Add propagation info from this scan model
         geo_pars.propagation = self.p.propagation
         geo_pars.ffttype = self.p.ffttype
+        geo_pars.beam_shift = beam_shift
 
-        # The multispectral case will have multiple geometries
-        for ii, fac in enumerate(self.p.coherence.energies):
-            geoID = geometry.Geo._PREFIX + '%02d' % ii + self.label
-            g = geometry_scanning_mirror.Geo_ScanningMirror(self.ptycho, geoID, pars=geo_pars)
-            # now we fix the sample pixel size, This will make the frame size adapt
-            g.p.resolution_is_fix = True
-            # save old energy value
-            g.p.energy_orig = g.energy
-            # change energy
-            g.energy *= fac
-            # resampling
-            g.resample = self.resample
-            # append the geometry
-            self.geometries.append(g)
+        g = geometry_scanning_mirror.Geo_ScanningMirror(self.ptycho, geoID, pars=geo_pars)
+        # now we fix the sample pixel size, This will make the frame size adapt
+        g.p.resolution_is_fix = True
+        # resampling
+        g.resample = self.resample
 
-        # Store frame shape
-        self.diff_shape = np.array(common.get('shape', self.geometries[0].shape))
-        self.probe_shape = probe_shape
-        self.object_shape = probe_shape
-        self.exit_shape = probe_shape
-        self.psize = self.geometries[0].psize
-
-        return
+        return g
 
     def _create_pods(self):
         """
@@ -1811,89 +1824,81 @@ class ScanningMirrorModel(Full):
             pos_obj = self.new_positions[i][:2] if 'empty' not in self.p.tags else 0.0
             beam_shift = self.new_positions[i][2:4] if 'empty' not in self.p.tags else 0.0
 
-            # For multiwavelength reconstructions: loop here over
-            # geometries, and modify probe_id and object_id.
-            for ii, geometry in enumerate(self.geometries):
-                # Make new IDs and keep them in record
-                # sharing_rules is not aware of IDs with suffix
 
-                pdis = self.p.coherence.probe_dispersion
+            ## if close enough geometry already exists:
+                # g = close enough geometry
+            ## else  create and append a geometry new ojbect
+            geoID = len(self.geometries)
+            g = self._create_single_geometry(beam_shift, geoID=geoID)
+            self.geometries.append(g)
+            geo_ID_string = g.ID[0] + g.ID[3:]
+            geo_ID_string = "G00"
 
-                if pdis is None or str(pdis) == 'achromatic':
-                    gind = 0
-                else:
-                    gind = ii
+            # Make new IDs and keep them in record
+            # sharing_rules is not aware of IDs with suffix
+            probe_id_suf = probe_id + geo_ID_string
+            if (probe_id_suf not in new_probe_ids.keys()
+                    and probe_id_suf not in existing_probes):
+                new_probe_ids[probe_id_suf] = True
 
-                probe_id_suf = probe_id + 'G%02d' % gind
-                if (probe_id_suf not in new_probe_ids.keys()
-                        and probe_id_suf not in existing_probes):
-                    new_probe_ids[probe_id_suf] = True
+            object_id_suf = object_id + geo_ID_string
+            if (object_id_suf not in new_object_ids.keys()
+                    and object_id_suf not in existing_objects):
+                new_object_ids[object_id_suf] = True
 
-                odis = self.p.coherence.object_dispersion
+            # Loop through modes
+            for pm in range(self.p.coherence.num_probe_modes):
+                for om in range(self.p.coherence.num_object_modes):
+                    # Make a unique layer index for exit view
+                    # The actual number does not matter due to the
+                    # layermap access
+                    exit_index = index * 10000 + pm * 100 + om
 
-                if odis is None or str(odis) == 'achromatic':
-                    gind = 0
-                else:
-                    gind = ii
+                    # Create views
+                    # Please note that mostly references are passed,
+                    # i.e. the views do mostly not own the accessrule
+                    # contents
 
-                object_id_suf = object_id + 'G%02d' % gind
-                if (object_id_suf not in new_object_ids.keys()
-                        and object_id_suf not in existing_objects):
-                    new_object_ids[object_id_suf] = True
+                    pv = View(container=self.ptycho.probe,
+                              accessrule={'shape': self.probe_shape,
+                                          'psize': g.resolution,
+                                          'coord': pos_pr,
+                                          'storageID': probe_id_suf,
+                                          'layer': pm,
+                                          'active': True})
 
-                # Loop through modes
-                for pm in range(self.p.coherence.num_probe_modes):
-                    for om in range(self.p.coherence.num_object_modes):
-                        # Make a unique layer index for exit view
-                        # The actual number does not matter due to the
-                        # layermap access
-                        exit_index = index * 10000 + pm * 100 + om
+                    ov = View(container=self.ptycho.obj,
+                              accessrule={'shape': self.object_shape,
+                                          'psize': g.resolution,
+                                          'coord': pos_obj,
+                                          'storageID': object_id_suf,
+                                          'layer': om,
+                                          'active': True})
 
-                        # Create views
-                        # Please note that mostly references are passed,
-                        # i.e. the views do mostly not own the accessrule
-                        # contents
-                        pv = View(container=self.ptycho.probe,
-                                  accessrule={'shape': self.probe_shape,
-                                              'psize': geometry.resolution,
-                                              'coord': pos_pr,
-                                              'storageID': probe_id_suf,
-                                              'layer': pm,
-                                              'active': True})
+                    ev = View(container=self.ptycho.exit,
+                              accessrule={'shape': self.exit_shape,
+                                          'psize': g.resolution,
+                                          'coord': pos_pr,
+                                          'storageID': (dv.storageID +
+                                                        geo_ID_string),
+                                          'layer': exit_index,
+                                          'active': dv.active})
 
-                        ov = View(container=self.ptycho.obj,
-                                  accessrule={'shape': self.object_shape,
-                                              'psize': geometry.resolution,
-                                              'coord': pos_obj,
-                                              'storageID': object_id_suf,
-                                              'layer': om,
-                                              'active': True})
+                    views = {'probe': pv,
+                             'obj': ov,
+                             'diff': dv,
+                             'mask': mv,
+                             'exit': ev}
 
-                        ev = View(container=self.ptycho.exit,
-                                  accessrule={'shape': self.exit_shape,
-                                              'psize': geometry.resolution,
-                                              'coord': pos_pr,
-                                              'storageID': (dv.storageID +
-                                                            'G%02d' % ii),
-                                              'layer': exit_index,
-                                              'active': dv.active})
+                    pod = POD(ptycho=self.ptycho,
+                              ID=None,
+                              views=views,
+                              geometry=g)  # , meta=meta)
 
-                        views = {'probe': pv,
-                                 'obj': ov,
-                                 'diff': dv,
-                                 'mask': mv,
-                                 'exit': ev}
+                    new_pods.append(pod)
 
-                        pod = POD(ptycho=self.ptycho,
-                                  ID=None,
-                                  views=views,
-                                  geometry=geometry)  # , meta=meta)
-
-                        pod.prop_args = [beam_shift]
-                        new_pods.append(pod)
-
-                        pod.probe_weight = 1.0
-                        pod.object_weight = 1.0
+                    pod.probe_weight = 1.0
+                    pod.object_weight = 1.0
 
         return new_pods, new_probe_ids, new_object_ids
 

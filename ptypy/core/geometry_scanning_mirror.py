@@ -231,7 +231,8 @@ class ScanningMirrorFarfieldPropagator(object):
         shift : list
             List containing two floats, shift_i and shift_j, which are the
             number of pixels that the far field diffraction pattern is shifted
-            on the detector.
+            on the detector. The index order is the same as in the far field
+            detector image.
 
         shape : tuple
             The shape of the array.

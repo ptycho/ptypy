@@ -111,7 +111,7 @@ class DMScanningMirror_Test(unittest.TestCase):
             'test/scanning_mirror_test_data/scanning_mirror_test_config.json')
         p.scans.scan00.data = u.Param()
         p.scans.scan00.data.name = 'ScanningMirrorMoonFlower'
-        p.scans.scan00.data.shift_pos_factor = 0.0  # 1e-6 / 0.1 * 0.1
+        p.scans.scan00.data.shift_pos_factor = 0.0
         p.scans.scan00.data.num_frames = 5
         p.scans.scan00.data.save = None
         p.scans.scan00.data.density = 0.01
@@ -143,10 +143,29 @@ class DMScanningMirror_Test(unittest.TestCase):
         p.engines.engine00.name = "DM"
         p.scans.scan00.data.pop('shift_pos_factor')
         P_basic = Ptycho(p, level=5)
-        obj_basic = P_basic.obj.storages['Sscan00G00'].data[0, :, :]
-        probe_basic = P_basic.probe.storages['Sscan00G00'].data[0, :, :]
+        for key, storage in P.obj.storages.items():
+            storage_basic = P_basic.obj.storages[key]
+            np.testing.assert_array_almost_equal(
+                storage_basic.origin, storage.origin)
+
+        for key, view in P.obj.views.items():
+            view_basic = P_basic.obj.views[key]
+            np.testing.assert_array_almost_equal(
+                view_basic.psize, view.psize)
+            np.testing.assert_array_almost_equal(
+                view_basic.coord, view.coord)
+            np.testing.assert_array_almost_equal(
+                view_basic.pcoord, view.pcoord)
+            np.testing.assert_array_almost_equal(
+                view_basic.dcoord, view.dcoord)
+            np.testing.assert_array_almost_equal(
+                view_basic.dlow, view.dlow)
+            np.testing.assert_array_almost_equal(
+                view_basic.dhigh, view.dhigh)
 
         # asserts
+        obj_basic = P_basic.obj.storages['Sscan00G00'].data[0, :, :]
+        probe_basic = P_basic.probe.storages['Sscan00G00'].data[0, :, :]
         np.testing.assert_array_almost_equal(obj, obj_basic, decimal=2)
         np.testing.assert_array_almost_equal(probe, probe_basic, decimal=2)
 

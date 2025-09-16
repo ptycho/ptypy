@@ -29,7 +29,6 @@ class ScanningMirrorMoonFlower(MoonFlowerScan):
         Parent pars are for the
         """
         super(ScanningMirrorMoonFlower, self).__init__(pars=pars, **kwargs)
-        self.geo = geometry_scanning_mirror.Geo_ScanningMirror(pars=self.meta)
         self.beam_shifts = self.pos * self.p.shift_pos_factor
 
 
@@ -44,10 +43,13 @@ class ScanningMirrorMoonFlower(MoonFlowerScan):
             logger.info("Generating data without poisson noise.")
 
         for k in indices:
-            prop_args = list(self.beam_shifts[k, :])
+            geo_pars = self.meta
+            geo_pars.beam_shift = [list(self.beam_shifts[k, :])]
+            geo = geometry_scanning_mirror.Geo_ScanningMirror(pars=geo_pars)
+
             intensity_j = u.abs2(self.geo.propagator.fw(
                 self.pr * self.obj[p[k][0]:p[k][0] + s[0],
-                                   p[k][1]:p[k][1] + s[1]], prop_args
+                                   p[k][1]:p[k][1] + s[1]]
             ))
 
             if self.p.psf > 0.:
@@ -62,11 +64,8 @@ class ScanningMirrorMoonFlower(MoonFlowerScan):
 
     def load_positions(self):
         positions = super(ScanningMirrorMoonFlower, self).load_positions()
-        print(positions.shape)
-        print(self.beam_shifts.shape)
         positions = np.hstack([
             positions,
             self.beam_shifts
         ])
-        print(positions.shape)
         return positions

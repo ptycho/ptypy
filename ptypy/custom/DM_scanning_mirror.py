@@ -58,8 +58,7 @@ def _projection_update_generalized(diff_view, a, b, c, pbound=None):
     for name, pod in diff_view.pods.items():
         if not pod.active:
             continue
-        prop_args = diff_view.pod.prop_args
-        f[name] = pod.fw((1-c) * pod.exit + c * pod.probe * pod.object, *prop_args)
+        f[name] = pod.fw((1-c) * pod.exit + c * pod.probe * pod.object)
         af2 += pod.downsample(u.abs2(f[name]))
 
     fmag = np.sqrt(np.abs(I))
@@ -82,9 +81,8 @@ def _projection_update_generalized(diff_view, a, b, c, pbound=None):
         if not pod.active:
             continue
 
-        prop_args = diff_view.pod.prop_args
         if fm is not None:
-            df = b * pod.bw(pod.upsample(fm) * f[name], *prop_args) + \
+            df = b * pod.bw(pod.upsample(fm) * f[name]) + \
                  a * pod.probe * pod.object - (a + b) * pod.exit
         else:
             df = (a + b*c) * (pod.probe * pod.object - pod.exit)
@@ -112,8 +110,7 @@ def _log_likelihood(diff_view):
     I = diff_view.data
     LL = np.zeros_like(I)
     for name, pod in diff_view.pods.items():
-        prop_args = pod.prop_args
-        LL += pod.downsample(u.abs2(pod.fw(pod.probe * pod.object, *prop_args)))
+        LL += pod.downsample(u.abs2(pod.fw(pod.probe * pod.object)))
     return np.sum(diff_view.pod.mask * (LL - I)**2 / (I + 1.)) / np.prod(LL.shape)
 
 
@@ -213,8 +210,7 @@ class ScanningMirrorGridSearch(GridSearchRefine):
         '''
         af2 = np.zeros_like(di_view.data)
         for name, pod in di_view.pods.items():
-            prop_args = pod.prop_args
-            af2 += pod.downsample(u.abs2(pod.fw(pod.probe * obj, *prop_args)))
+            af2 += pod.downsample(u.abs2(pod.fw(pod.probe * obj)))
         return (np.sum(di_view.pod.mask * (af2 - di_view.data) ** 2 / (
                     di_view.data + 1.)) / np.prod(af2.shape))
 
