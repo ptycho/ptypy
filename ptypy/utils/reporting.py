@@ -51,25 +51,25 @@ def calculate_metrics(ptycho):
         metrics[sname]['maps']['transmission'] = map(ptycho, ID='transmission')[sname]
         metrics[sname]['maps']['view_coverage'] = map(ptycho, ID='coverage')[sname]
 
-        # some basics
-        metrics[sname]['basics'] = measure_basics(ptycho, sname, metrics[sname])
+        # some flux on detectors
+        metrics[sname]['photons'] = measure_photons(ptycho, sname, metrics[sname])
 
     return metrics
 
-def measure_basics(ptycho, sname, metrics):
+def measure_photons(ptycho, sname, metrics):
     """
     some basic numbers that are usually to be mentioned in a publication
     """
-    basics = {}
+    results = {}
     # list of all scan positions
-    basics['scan_positions_m'] = np.array([v.coord for v in ptycho.obj.S[sname].views])
-    basics['number_of_scan_points'] = len(basics['scan_positions_m'])
+    scan_positions_m = np.array([v.coord for v in ptycho.obj.S[sname].views])
+    number_of_scan_points = len(scan_positions_m)
 
     # flux that made it to the detector detector
-    basics['total_detected_photons'] = np.sum(metrics['maps']['transmission'])
-    basics['average_detected_photons_per_scan_point'] = basics['total_detected_photons'] / basics['number_of_scan_points']  
+    results['total_detected_photons'] = np.sum(metrics['maps']['transmission'])
+    results['average_detected_photons_per_scan_point'] = results['total_detected_photons'] / number_of_scan_points  
 
-    return basics
+    return results
 
 def map(ptycho, ID='fluence', mask=None):
     """

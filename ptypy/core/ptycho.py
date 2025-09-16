@@ -466,7 +466,8 @@ class Ptycho(Base):
         if self.p.io.report:
             # Initialize report dict
             self.report = {}
-
+            # switch on the recording of positions
+            self.record_positions = True
             # Benchmark
             if self.p.io.report.benchmark == 'all':
                 self.benchmark = u.Param()
