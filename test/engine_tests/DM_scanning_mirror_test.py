@@ -74,7 +74,7 @@ class DMScanningMirror_Test(unittest.TestCase):
 
     def test_DM_scanning_mirror_position_refinement(self):
         engine_params = u.Param()
-        engine_params.name = 'DM_scanning_mirror'
+        engine_params.name = "DM"#'DM_scanning_mirror'
         engine_params.alpha =1
         engine_params.probe_update_start = 2
         engine_params.overlap_converge_factor = 0.05
@@ -86,9 +86,9 @@ class DMScanningMirror_Test(unittest.TestCase):
         engine_params.position_refinement = True
         _EngineTestRunner(engine_params, output_path=self.outpath)
 
-    def test_DM_scnning_mirror(self):
+    def test_DM_scanning_mirror(self):
         engine_params = u.Param()
-        engine_params.name = 'DM_scanning_mirror'
+        engine_params.name = "DM"#'DM_scanning_mirror'
         engine_params.alpha =1
         engine_params.probe_update_start = 2
         engine_params.overlap_converge_factor = 0.05
@@ -120,7 +120,7 @@ class DMScanningMirror_Test(unittest.TestCase):
         p.scans.scan00.data.psf = 0
         p.engines = u.Param()
         p.engines.engine00 = u.Param()
-        p.engines.engine00.name = "DM_scanning_mirror"
+        p.engines.engine00.name = "DM"#"DM_scanning_mirror"
         p.engines.engine00.numiter = 4
         p.engines.engine00.numiter_contiguous = 2
 

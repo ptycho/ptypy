@@ -15,7 +15,7 @@ from ..utils import parallel
 from .utils import projection_update_generalized, log_likelihood
 from . import register
 from .base import PositionCorrectionEngine
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, ScanningMirrorModel
 
 __all__ = ['DM', 'RAAR']
 
@@ -109,7 +109,7 @@ class _ProjectionEngine(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, ScanningMirrorModel]
 
     def __init__(self, ptycho_parent, pars=None):
         """
