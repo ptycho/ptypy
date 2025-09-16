@@ -29,19 +29,21 @@ def calculate_metrics(ptycho):
 
         # scanned vield of view
         metrics[sname]["field_of_view"] = measure_field_of_view(ptycho, sname, metrics[sname]['probe_size'])
+        metrics[sname]['field_of_view']['coverage_image'] = map(ptycho, ID='coverage', mask={sname: metrics[sname]['probe_size']['90perI_image']})[sname]
 
         # area overlap
-        metrics[sname]['area_overlap'] = calculate_area_overlap(ptycho, sname, metrics[sname]['probe_size'])
+        metrics[sname]['overlap'] = calculate_overlap(ptycho, sname, metrics[sname])
 
         # oversampling
         oversampling = {'area': calculate_geometric_oversampling(metrics[sname]['probe_size']['90perI_width_px'], sprobe.shape[1:]),
-                       'FWHM': calculate_geometric_oversampling(metrics[sname]['probe_size']['FWHM_px'], sprobe.shape[1:])}
+                        'FWHM': calculate_geometric_oversampling(metrics[sname]['probe_size']['FWHM_px'], sprobe.shape[1:])}
         metrics[sname]['oversampling'] = oversampling
 
         # some maps
         metrics[sname]['maps'] = {}
         for x in ['fluence', 'transmission', 'coverage']:
             metrics[sname]['maps'][x] = map(ptycho, ID=x)[sname]
+        
 
     return metrics
 
@@ -228,16 +230,47 @@ def FOV_estimate_coverage(ptycho, probe_mask, sname):
     #ToDo: add this to maps as well
 
 
-def calculate_area_overlap(ptycho, sname, probe_size):
+def calculate_overlap(ptycho, sname, metrics):
     """
-    main function for measuring the scanned field of view
-    via different methods.
+    calculating different froms ov overlap
+    """
+    results = {}
+    results['linear'] = calculate_linear_overlap(ptycho, sname, metrics)
+    results['area'] = calculate_area_overlap(ptycho, sname, metrics)
+    return results
+
+def calculate_linear_overlap(ptycho, sname, metrics):
+    """
+    calculating the linear overlap in different ways
+    """
+
+    results = {}
+
+    # estimate from FWHM
+    linover_fwhm = 1 - metrics['average_step_size']['from_nearest_neighbors'] / metrics['probe_size']['FWHM_m']
+    linover_fwhm[linover_fwhm<0] = 0
+    results['from_fwhm'] = linover_fwhm
+
+    # estimate from FWHM
+    linover_90perI = 1 - metrics['average_step_size']['from_nearest_neighbors'] / metrics['probe_size']['90perI_width_m']
+    linover_90perI[linover_fwhm<0] = 0
+    results['from_90perI'] = linover_90perI
+
+    # estimate from convex hull
+    #ToDo
+
+    return results
+
+
+def calculate_area_overlap(ptycho, sname, metrics):
+    """
+    calculating the area overlap in different ways
     """
 
     results = {}
 
     # estimate via the coverage map
-    area_overlap = estimate_area_overlap_via_coverage(ptycho, probe_size['90perI_image'], sname)
+    area_overlap = estimate_area_overlap_via_coverage(ptycho, metrics['probe_size']['90perI_image'], sname)
     results['from_coverage'] = area_overlap
 
     # estimate from convex hull
