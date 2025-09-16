@@ -51,7 +51,7 @@ jobs:
         miniforge-version: latest
     - name: Install ${{ matrix.conda-env }} dependencies
       run: |
-        sed -i 's/python/python=${{ matrix.python-version }}/' dependencies_${{ matrix.conda-env }}.yml
+        sed -i '/- python/d' dependencies_${{ matrix.conda-env }}.yml
         conda install -c conda-forge mpich
         conda env update --file dependencies_${{ matrix.conda-env }}.yml --name ptypy_env
         conda install -c conda-forge flake8 pytest pytest-cov
