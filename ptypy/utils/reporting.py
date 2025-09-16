@@ -12,23 +12,30 @@ from scipy.interpolate import UnivariateSpline
 
 def calculate_metrics(ptycho):
     metrics = {}
-    
-    # probe size
-    metrics['probe_size'] = measure_probe_size(ptycho)
 
-    # average step size
-    metrics["average_step_size"] = calculate_average_step_size(ptycho)
+    # for each storage do:
+    for sname, sprobe in ptycho.probe.S.items():  
+        metrics[sname] = {}
 
-    # scanned vield of view
-    metrics["field_of_view"] = measure_field_of_view(ptycho, metrics['probe_size'])
+        # probe size
+        metrics[sname]['probe_size'] = measure_probe_size(ptycho, sname)
 
-    # area overlap
-    metrics['area_overlap'] = calculate_area_overlap(ptycho, metrics['probe_size'])
+        # average step size
+        metrics[sname]["average_step_size"] = calculate_average_step_size(ptycho, sname)
+
+        # scanned vield of view
+        metrics[sname]["field_of_view"] = measure_field_of_view(ptycho, sname, metrics[sname]['probe_size'])
+
+        # area overlap
+        metrics[sname]['area_overlap'] = calculate_area_overlap(ptycho, sname, metrics[sname]['probe_size'])
 
     return metrics
 
 
 def calculate_maps(ptycho):
+    ##
+    pass
+
     # Fluence map
     fluence = map(ptycho, ID='fluence')
     # Transmission map
@@ -81,32 +88,28 @@ def map(ptycho, ID='fluence', mask=None):
 
     return {sname: sobj.data[0] for sname, sobj in fmap.S.items()}
 
-def measure_probe_size(ptycho):
+def measure_probe_size(ptycho, sname):
     """
     main function for measuring the size of the reconstructed probes
     via different methods.
     """
 
     results = {}
+    probes = ptycho.probe.S[sname].data
+    pixel_size = ptycho.probe.S[sname]._psize
 
-    # for each storage do:
-    for sname, sprobe in ptycho.probe.S.items():  
-        probes = sprobe.data
-        pixel_size = sprobe._psize
-        results[sname] = {}
+    probe_intensity = np.sum(abs2(probes), axis=0)
 
-        probe_intensity = np.sum(abs2(probes), axis=0)
+    # measure FWHM of projected intensities
+    fwhm_x,fwhm_y = size_estimate_FWHM(probe_intensity)
+    results['FWHM_px'] = (fwhm_y, fwhm_x)
+    results['FWHM_m'] = (fwhm_y*pixel_size[0], fwhm_x*pixel_size[1])
 
-        # measure FWHM of projected intensities
-        fwhm_x,fwhm_y = size_estimate_FWHM(probe_intensity)
-        results[sname]['FWHM_px'] = (fwhm_y, fwhm_x)
-        results[sname]['FWHM_m'] = (fwhm_y*pixel_size[0], fwhm_x*pixel_size[1])
-
-        # measure probe size by 90% intensty criterion
-        illuminated_area = size_estimate_90pecent_intensity(probe_intensity)
-        results[sname]['90perI_image'] = illuminated_area
-        results[sname]['90perI_area_px'] = np.sum(illuminated_area)
-        results[sname]['90perI_area_sqm'] = np.sum(illuminated_area)*pixel_size[0]*pixel_size[1]
+    # measure probe size by 90% intensty criterion
+    illuminated_area = size_estimate_90pecent_intensity(probe_intensity)
+    results['90perI_image'] = illuminated_area
+    results['90perI_area_px'] = np.sum(illuminated_area)
+    results['90perI_area_sqm'] = np.sum(illuminated_area)*pixel_size[0]*pixel_size[1]
 
     return results
 
@@ -168,25 +171,22 @@ def find_threshold(intensities, fraction=0.9):
     return float(sorted_vals[cutoff_index])
 
 
-def measure_field_of_view(ptycho, probe_size):
+def measure_field_of_view(ptycho, sname, probe_size):
     """
     main function for measuring the scanned field of view
     via different methods.
     """
 
     results = {}
-    # for each storage do:
-    for sname, sprobe in ptycho.probe.S.items():  
-        pixel_size = sprobe._psize
-        results[sname] = {}
+    pixel_size = ptycho.probe.S[sname]._psize
 
-        # estimate FOV from coverage map
-        FOV_from_coverage_px = FOV_estimate_coverage(ptycho, probe_size[sname]['90perI_image'], sname)
-        results[sname]['coverage_px'] = FOV_from_coverage_px
-        results[sname]['coverage_sqm'] =FOV_from_coverage_px * pixel_size[0] * pixel_size[1]
+    # estimate FOV from coverage map
+    FOV_from_coverage_px = FOV_estimate_coverage(ptycho, probe_size['90perI_image'], sname)
+    results['coverage_px'] = FOV_from_coverage_px
+    results['coverage_sqm'] = FOV_from_coverage_px * pixel_size[0] * pixel_size[1]
 
-        # estimate from convex hull
-        #ToDo
+    # estimate from convex hull
+    #ToDo
 
     return results
 
@@ -203,37 +203,54 @@ def FOV_estimate_coverage(ptycho, probe_mask, sname):
     #ToDo: add this to maps as well
 
 
-
-def calculate_average_step_size(ptycho, number_of_neighbours=3):
+def calculate_area_overlap(ptycho, sname, probe_size):
     """
-    Calculates the average step size
+    main function for measuring the scanned field of view
+    via different methods.
+    """
+
+    results = {}
+
+    # estimate via the coverage map
+    area_overlap = estimate_area_overlap_via_coverage(ptycho, probe_size['90perI_image'], sname)
+    results['from_coverage'] = area_overlap
+
+    # estimate from convex hull
+    #ToDo
+
+    return results
+
+
+def estimate_area_overlap_via_coverage(ptycho, probe_mask, sname):
+    cmap = map(ptycho, ID='coverage', mask={sname: probe_mask})
+    cm1 = cmap[sname] > 0.5
+    return (cmap[sname]-cm1).sum() / cmap[sname].sum()
+
+
+
+
+def calculate_average_step_size(ptycho, sname, number_of_neighbours=3):
+    """
+    Calculates the average step size is different ways:
     """
     ass = {}
-    for sname, sobj in ptycho.obj.S.items():
-        allcoords = np.array([v.coord for v in sobj.views])
-        distances = []
-        for v in sobj.views:
-            distxy = (allcoords - v.coord)
-            distr = np.sqrt(distxy[:,0]**2 + distxy[:,1]**2)
-            distances.append(np.sort(distr)[1:number_of_neighbours+1])
-        ass[sname] = np.array(distances).mean()
+
+    # from the n nearest neighbors.
+    ass['from_nearest_neighbors'] = estimate_step_size_NN(ptycho, sname, number_of_neighbours)
     return ass
 
 
+def estimate_step_size_NN(ptycho, sname, number_of_neighbours=3):
+    """
+    Estimating the average step size from nearest neighbors
+    """
+    allcoords = np.array([v.coord for v in ptycho.obj.S[sname].views])
+    distances = []
+    for v in ptycho.obj.S[sname].views:
+        distxy = (allcoords - v.coord)
+        distr = np.sqrt(distxy[:,0]**2 + distxy[:,1]**2)
+        distances.append(np.sort(distr)[1:number_of_neighbours+1])
+    ass = np.array(distances).mean()
+    return ass
 
 
-def calculate_area_overlap(ptycho, probe_size):
-
-    # Extract pre-computed probe mask
-    mask = {sname: c['90perI_image'] for sname, c in probe_size.items()}
-
-    # Compute coverage map
-    cmap = map(ptycho, ID='coverage', mask=mask)
-
-    # Compute metric
-    metric = {}
-    for sname, cm in cmap.items():
-        cm1 = cm > 0.5
-        metric[sname] = (cm-cm1).sum() / cm.sum()
-
-    return metric
