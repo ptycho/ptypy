@@ -590,7 +590,7 @@ class P06Scan_scanning_mirror(P06Scan):
             positions,
             center_of_mass
         ])
-        print(positions)
+
         return positions
 
     def load_center_of_mass(self):
