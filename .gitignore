@@ -29,7 +29,3 @@ ghostdriver*
 .ipynb_checkpoints
 .clang-format
 pip-wheel-metadata/
-/z
-/z_all_scans_input_for_astra
-/z_latest_ptyr
-/z_latest_scans
