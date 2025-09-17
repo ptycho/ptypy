@@ -14,13 +14,20 @@ sys.path.insert(0, str(Path(__file__).parent.resolve()))
 from _param_generator import generate_parameters_rst
 
 # Generate List of Parameters
-generate_parameters_rst("ptycho", outfile="ptycho.rst", title="Root/Ptycho (p)")
+#generate_parameters_rst("ptycho", outfile="ptycho.rst", title="Root/Ptycho (p)")
 generate_parameters_rst("io", outfile="io.rst", title="Input/Output (p.io)")
 generate_parameters_rst("scans", outfile="scans.rst", title="List of Scans (p.scans)")
 generate_parameters_rst("scan", outfile="scan.rst", title="Scan Definition (p.scans.scan_00)")
 generate_parameters_rst("scandata", outfile="scandata.rst", title="Scan Data Definition (p.scans.scan_00.data)")
 generate_parameters_rst("engines", outfile="engines.rst", title="List of Engines (p.engines)")
 generate_parameters_rst("engine", outfile="engine.rst", title="Engine Definition (p.engines.engine_00)")
+
+# Generate images for user guide
+from _userguide_generator import create_test_image
+create_test_image(outdir="./userguide/generated/", outfile="test.png")
+
+
+
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
