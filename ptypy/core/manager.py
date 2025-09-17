@@ -1798,8 +1798,6 @@ class ScanningMirrorModel(Full):
         new_probe_ids = {}
         new_object_ids = {}
 
-        label = self.label
-
         # Get a list of probe and object that already exist
         existing_probes = list(self.ptycho.probe.storages.keys())
         existing_objects = list(self.ptycho.obj.storages.keys())
@@ -1831,7 +1829,6 @@ class ScanningMirrorModel(Full):
             geoID = len(self.geometries)
             g = self._create_single_geometry(beam_shift, geoID=geoID)
             self.geometries.append(g)
-            geo_ID_string = g.ID[0] + g.ID[3:]
             geo_ID_string = "G00"
 
             # Make new IDs and keep them in record
