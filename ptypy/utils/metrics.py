@@ -7,7 +7,6 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: see LICENSE for details.
 """
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.fft import fftshift, ifftshift
 from scipy.ndimage import fourier_shift, gaussian_filter
@@ -15,7 +14,7 @@ from skimage.registration import phase_cross_correlation
 import warnings
 
 __all__ = ['nyquist', 'ringthickness', 'apodization', 'frc',
-            'fsc', 'imgregistration', 'fouriercorr_plot']
+            'fsc', 'imgregistration', 'compute_intersection']
             
 def frc(input1, input2, apod_width = 1, ringthick=1, threshold = 'onebit'):
     """
@@ -228,35 +227,6 @@ def _fouriercorrelation(input1, input2, apod_width = 1, ringthick=1, threshold =
 
     return FC, T, fn
 
-def fouriercorr_plot(FRC, T, fn, plot_name):
-    """
-    Routine to plot the FRC curves
-    
-    Parameters
-    ----------
-    FRC : array-like
-        1D array containing the FRC values
-    
-    T : array-like
-        1D array containing the 1-bit threshold
-    
-    fn : array-like
-        1D array containing the normalized frequencies    
-    """
-    
-    plt.figure()
-    plt.clf()
-    plt.plot(fn, FRC.real, "-b", label="FRC")
-    plt.plot(fn, T, "--r", label="1 bit threshold")
-    plt.legend()
-    plt.xlim(0, 1)
-    plt.ylim(0, 1.1)
-    plt.xlabel("Spatial frequency/Nyquist [normalized units]")
-    plt.ylabel("Magnitude [normalized units]")
-    plt.show()
-    plt.savefig(plot_name)
-    return None
-
 
 def nyquist(sh):
     """
@@ -425,14 +395,14 @@ def imgregistration(ref_img,mov_img,upsamp=1):
 
 def _hann_window(sh, width):
     """
-    Compute a 1D Hanning-like window of the size of the data.
+    Compute a tapered 1D Hanning-like window of the size of the data.
     
     Parameters
     ----------
     sh : int
         The length of the array
     width : int
-        The extension of the window
+        The extent of the window
     
     Returns
     -------
@@ -451,7 +421,7 @@ def _hann_window(sh, width):
         )
     ) / 2.0
     
-    #window[width:-width]=1
+    window[width:-width]=1
 
     return window
     
@@ -462,9 +432,6 @@ def _window2D(A, width):
     sh = A.shape
     window1D1 = _hann_window(sh[0], width)
     window1D2 = _hann_window(sh[1], width)
-    
-    window1D1[width:-width]=1
-    window1D2[width:-width]=1
 
     return np.outer(window1D1, window1D2)
     
@@ -477,10 +444,6 @@ def __window3D(A, width):
     window1D2 = _hann_window(sh[1], width)
     window1D3 = _hann_window(sh[2], width)
     
-    window1D1[width:-width]=1
-    window1D2[width:-width]=1
-    window1D3[width:-width]=1
-    
     result = [np.outer(window1D1, window1D2), np.outer(window1D1, window1D3)]
     return result
     
@@ -492,10 +455,6 @@ def _window3Dtransverse(A, width):
     window1D1 = _hann_window(sh[0], width)
     window1D2 = _hann_window(sh[1], width)
     window1D3 = _hann_window(sh[2], width)
-    
-    window1D1[width:-width]=1
-    window1D2[width:-width]=1
-    window1D3[width:-width]=1
     
     windowaxial = np.outer(window1D2, window1D3)
     windowsag = np.array([window1D1 for ii in range(sh[1])]).swapaxes(0, 1)
@@ -540,23 +499,27 @@ def _window3Dtransaxial(A, width):
 
 def compute_intersection(x,f1,f2):
     
-    '''
+    """
+    Function used to extract the resolution given the FRC/FSC and the threshold curve
     
-    Function used to extract resolution given FRC and the threshold curve
+    Parameters
+    ----------
+    f1 : ndarray
+        First curve (1-D set of values)
     
-    IN:
+    f2 : ndarray
+        Second curve (1-D set of values)
     
-    - f1: first curve (1-D set of values) [nparray]
+    x : ndarray 
+        x-axis (same size and shape as f1 and f2) 
     
-    - f2: second curve (1-D set of values) [nparray]
+    Returns
+    -------
     
-    - x: x axis (same size and shape as f1 anf f2)[nparray]
+    x : float
+        Associated with the intersection point
     
-    RETURNS:
-    
-    - x associated with the intersection point
-    
-    '''
+    """
     
     # --- CHECK INPUT PARAMETERS ---
     
