@@ -1714,7 +1714,7 @@ defaults_tree['scan.ScanningMirrorModel'].add_child(illumination.illumination_de
 defaults_tree['scan.ScanningMirrorModel'].add_child(sample.sample_desc)
 
 @defaults_tree.parse_doc('scan.ScanningMirrorModel')
-class ScanningMirrorModel(Full):
+class ScanningMirrorModel(BlockFull):
     """
     Model for scanning mirror based scanning, where the incidence angle will
     change during the scan.
