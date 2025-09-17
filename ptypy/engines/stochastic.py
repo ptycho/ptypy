@@ -108,8 +108,7 @@ class _StochasticEngine(PositionCorrectionEngine):
                 self.object_update(view, exit_wave)
 
                 # Clip object
-                if self.p.clip_object is not None: # if parameter is given
-                    self.clip_object(view.pod.ob_view.storage) # clipping after object_update to use the same logic as for projectional engines
+                self.clip_object(view.pod.ob_view.storage) # clipping after object_update to use the same logic as for projectional engines
 
                 # Probe update
                 self.probe_update(view, exit_wave)
