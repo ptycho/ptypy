@@ -31,10 +31,14 @@ class ScanningMirrorMoonFlower(MoonFlowerScan):
         super(ScanningMirrorMoonFlower, self).__init__(pars=pars, **kwargs)
         self.beam_shifts = self.pos * self.p.shift_pos_factor
 
+        self.shape = self.geo.shape
+        self.geo = None  # this object should not be referenced after this point.
+
+
 
     def load(self, indices):
         p = self.pixel
-        s = self.geo.shape
+        s = self.shape
         raw = {}
 
         if self.p.add_poisson_noise:
@@ -44,10 +48,10 @@ class ScanningMirrorMoonFlower(MoonFlowerScan):
 
         for k in indices:
             geo_pars = self.meta
-            geo_pars.beam_shift = [list(self.beam_shifts[k, :])]
+            geo_pars.beam_shift = list(self.beam_shifts[k, :])
             geo = geometry_scanning_mirror.Geo_ScanningMirror(pars=geo_pars)
 
-            intensity_j = u.abs2(self.geo.propagator.fw(
+            intensity_j = u.abs2(geo.propagator.fw(
                 self.pr * self.obj[p[k][0]:p[k][0] + s[0],
                                    p[k][1]:p[k][1] + s[1]]
             ))
