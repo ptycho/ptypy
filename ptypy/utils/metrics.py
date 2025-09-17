@@ -537,3 +537,59 @@ def _window3Dtransaxial(A, width):
     ).swapaxes(0, 1)
     
     return window
+
+def compute_intersection(x,f1,f2):
+    
+    '''
+    
+    Function used to extract resolution given FRC and the threshold curve
+    
+    IN:
+    
+    - f1: first curve (1-D set of values) [nparray]
+    
+    - f2: second curve (1-D set of values) [nparray]
+    
+    - x: x axis (same size and shape as f1 anf f2)[nparray]
+    
+    RETURNS:
+    
+    - x associated with the intersection point
+    
+    '''
+    
+    # --- CHECK INPUT PARAMETERS ---
+    
+    if not (isinstance(x,np.ndarray) and isinstance(f1,np.ndarray) and isinstance(f2,np.ndarray)):
+        
+        raise TypeError('Parameters must be np arrays')
+        
+    if not (x.ndim == 1 and f1.ndim==1 and f2.ndim==1):
+        
+        raise ValueError('Parameters must be 1-D arrays')
+        
+    # --------------------
+    
+    diff = f2 - f1
+    
+    # WHERE SIGN CHANGES
+    
+    idx = np.where(np.diff(np.sign(diff)))[0]
+    
+    crossings = []
+    
+    for i in idx:
+        
+        x1, x2 = x[i], x[i+1]
+        
+        d1, d2 = diff[i], diff[i+1]
+        
+        # INTERSECTION
+        
+        x_cross = x1 - d1 * (x2 -x1) / (d2-d1)
+        
+        crossings.append(x_cross)
+        
+    # RESOLUTION IS THE FIRST CROSSING
+    
+    return crossings[0] if crossings else None
