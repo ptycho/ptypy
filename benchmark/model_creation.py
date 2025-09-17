@@ -10,6 +10,66 @@ import sys
 # logger.setLevel(3)
 data_type = "single"
 
+class FastView(View):
+    def __init__(self, container, 
+                 ID=None, active=True, storageID=None, coord=None,
+                 psize=1.0,shape=None, layer=0):
+                # Prepare a dictionary for PODs (volatile!)
+        
+        super(View, self).__init__(container, ID, False)
+
+        self._pods = None 
+        r""" Potential volatile dictionary for all :any:`POD`\ s that 
+            connect to this view. Set by :any:`POD` """
+
+        # A single pod lookup (weak reference), set by POD instance.
+        self._pod = None
+
+        self.active = True
+        """ Active state. If False this view will be ignored when
+            resizing the data buffer of the associated :any:`Storage`."""
+
+        #: The :py:class:`Storage` instance that this view applies to by default.
+        self.storage = None
+
+        self.storageID = None
+        """ The storage ID that this view will be forward to if applied
+            to a :any:`Container`."""
+
+        #: The "layer" i.e. first axis index in Storage data buffer
+        self.dlayer = 0
+
+        self.active = active
+
+        self.storageID = storageID
+
+        # shape == None means "full frame"
+        self.shape = shape
+
+        # Look for storage, create one if necessary
+        s = self.owner.storages.get(self.storageID, None)
+        if s is None:
+            sh = (1,) + tuple(self.shape) if self.shape is not None else None
+            s = self.owner.new_storage(ID=self.storageID,
+                                       psize=psize,
+                                       origin=coord,
+                                       shape=sh)
+        self.storage = s
+
+
+        if self.shape is None:
+            self._set_full_frame(s)
+
+        # Information to access the slice within the storage buffer
+        self.psize = psize
+        self.coord = coord
+        self.layer = layer
+
+        # This ensures self-consistency (sets pixel coordinate and ROI)
+        if self.active:
+            self.storage.update_views(self)
+
+TheView = FastView
 class Ptycho(Base):
     def __init__(self, *args, data_type="single", **kwargs):
         super().__init__(*args, **kwargs)
@@ -61,8 +121,8 @@ for bindex in range(nframes // bsize):
 
     for k, index in enumerate(indices):
 
-        dv = View(Cdiff, storageID=diff.ID, shape=nsize, coord=0.0, psize=psize)  # maybe use index here
-        mv = View(Cmask, storageID=mask.ID, shape=nsize, coord=0.0, psize=psize)
+        dv = TheView(Cdiff, storageID=diff.ID, shape=None, coord=0.0, psize=psize)  # maybe use index here
+        mv = TheView(Cmask, storageID=mask.ID, shape=None, coord=0.0, psize=psize)
         active = k in indices_node
 
         dv.active = active
@@ -125,30 +185,29 @@ for bindex in range(nframes // bsize):
                 # Please note that mostly references are passed,
                 # i.e. the views do mostly not own the accessrule
                 # contents
-                pv = View(container=Cprb,
-                            accessrule={'shape': (nsize,nsize),
-                                        'psize': psize,
-                                        'coord': pos_pr,
-                                        'storageID': probe_id_suf,
-                                        'layer': pm,
-                                        'active': True})
+                pv = TheView(container=Cprb,
+                          shape = (nsize,nsize),
+                          psize = psize,
+                          coord = pos_pr,
+                          storageID = probe_id_suf,
+                          layer = pm,
+                          active = True)
 
-                ov = View(container=Cobj,
-                            accessrule={'shape': (nsize,nsize),
-                                        'psize': psize,
-                                        'coord': pos_obj,
-                                        'storageID': object_id_suf,
-                                        'layer': om,
-                                        'active': True})
+                ov = TheView(container=Cobj,
+                          shape = (nsize,nsize),
+                          psize = psize,
+                          coord = pos_obj,
+                          storageID = object_id_suf,
+                          layer = om,
+                          active = True)
 
-                ev = View(container=Cexit,
-                            accessrule={'shape': (nsize,nsize),
-                                        'psize': psize,
-                                        'coord': pos_pr,
-                                        'storageID': (dv.storageID +
-                                                    'G%02d' % gind),
-                                        'layer': exit_index,
-                                        'active': dv.active})
+                ev = TheView(container=Cexit,
+                          shape = (nsize,nsize),
+                          psize = psize,
+                          coord = pos_pr,
+                          storageID = (dv.storageID + 'G%02d' % gind),
+                          layer = exit_index,
+                          active = dv.active)
 
                 views = {'probe': pv,
                             'obj': ov,
@@ -187,7 +246,7 @@ output["nmodes"] = nprobemodes
 output["shape"] = nsize
 output["objsize"] = [int(sh) for sh in pod.ob_view.storage.shape]
 
-# print(output)
+print(output)
 
 if parallel.master:
     with open(f"./model_creation_{scale}.json", "w") as f:
