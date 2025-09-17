@@ -25,7 +25,8 @@ generate_parameters_rst("engine", outfile="engine.rst", title="Engine Definition
 # Generate images for user guide
 from _userguide_generator import create_test_image
 create_test_image(outdir="./userguide/generated/", outfile="test.png")
-
+from _userguide_generator import create_all_init_probe_figures
+create_all_init_probe_figures(outdir="./userguide/generated/")
 
 
 
