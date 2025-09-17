@@ -458,8 +458,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
             ############################
             # Compute next conjugates
-            # rho_h -= bt_rho * rho_grad
-            # pr_h -= bt_pr * pr_grad
+            # rho_h = bt_rho * rho_h - rho_grad
+            # pr_h = bt_pr * pr_h - pr_grad
             # NB: in the below need to do h/tmin
             # as did h*tmin when taking steps
             # (don't you just love containers?)
