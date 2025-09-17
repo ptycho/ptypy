@@ -9,13 +9,14 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 import time
+
 from .. import utils as u
 from ..utils.verbose import logger, log
 from ..utils import parallel
 from .utils import projection_update_generalized, log_likelihood
 from .base import PositionCorrectionEngine
 from . import register
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull, ScanningMirrorModel
 
 __all__ = ['EPIE', 'SDR']
 
@@ -305,7 +306,7 @@ class EPIEMixin:
     help = Calculate the object norm based on the global object instead of the local object
 
     """
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull, ScanningMirrorModel]
 
     def __init__(self, alpha, beta):
         # EPIE adjustment parameters
