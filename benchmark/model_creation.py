@@ -1,3 +1,4 @@
+
 from ptypy.core.classes import View, Storage, POD, Container, Base
 from ptypy.utils import parallel, expect2, logger
 from ptypy.core.xy import raster_scan
@@ -36,8 +37,8 @@ nprobemodes = 2
 # sh = (bsize,nsize,nsize)
 
 allpositions = raster_scan(nx =nx, ny = ny,
-                        dx = nsize//8,
-                        dy = nsize//8)
+                           dx = nsize//35,
+                           dy = nsize//35)
 
 for bindex in range(nframes // bsize):
 
