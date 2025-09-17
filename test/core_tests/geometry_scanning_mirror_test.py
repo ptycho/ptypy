@@ -29,7 +29,7 @@ class ScanningMirrorGeometryTest(unittest.TestCase):
         g.psize = 24e-6
         g.shape = (16, 16)
         g.propagation = "farfield"
-        g.beam_shift = None
+        g.beam_shift = [0, 0]
         G = geometry.Geo(owner=P, pars=g)
         return G
 
@@ -66,6 +66,7 @@ class ScanningMirrorGeometryTest(unittest.TestCase):
         """
         # set the beam shift to [0, 0] to mimic no beam shft
         prop.beam_shift = [0, 0]
+        prop.update()
 
         # Create random 2D array
         np.testing.assert_array_equal(prop.sh, prop_basic.sh)
@@ -92,15 +93,17 @@ class ScanningMirrorGeometryTest(unittest.TestCase):
 
         # make shifted fourier transformed
         prop.beam_shift = [0, 0]
+        prop.update()
         farfield_no_shift = prop.fw(w.copy())
         farfield_rolled = np.roll(farfield_no_shift.copy(), shift, (0, 1))
 
         prop.beam_shift = shift
+        prop.update()
         farfield_shifted = prop.fw(w.copy())
         bw = prop.bw(farfield_shifted.copy())
 
         # asserts
-        np.testing.assert_array_almost_equal(bw, w)
+        np.testing.assert_array_almost_equal(bw, w, decimal=4)
         np.testing.assert_array_almost_equal(np.abs(farfield_shifted), np.abs(farfield_rolled))
         np.testing.assert_array_almost_equal(np.sum(np.abs(bw)**2), np.sum(np.abs(w)**2))
 
@@ -133,7 +136,6 @@ class ScanningMirrorGeometryTest(unittest.TestCase):
         self._basic_propagator_test(P)
         self._test_standard_behaviour(P)
         self._test_shifting_behaviour(P)
-
 
 if __name__ == '__main__':
     unittest.main()

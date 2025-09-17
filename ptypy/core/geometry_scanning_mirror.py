@@ -143,9 +143,11 @@ class ScanningMirrorFarfieldPropagator(object):
             self.dtype = np.complex128
         self.FFTch = _FFTchooser(ffttype)
         self.fft, self.ifft = self.FFTch.assign_fft()
+        self.beam_shift = geo_pars.beam_shift
+
         self.update(geo_pars, **kwargs)
 
-        self.beam_shift = geo_pars.beam_shift
+
 
     def update(self, geo_pars=None, **kwargs):
         """
@@ -216,9 +218,18 @@ class ScanningMirrorFarfieldPropagator(object):
             -2.0 * np.pi * 1j * (X[0, 0]*V + Y[0, 0]*W) / lz
         ).astype(self.dtype)
 
+
+
         # Factors for inverse operation
         self.pre_ifft = self.post_fft.conj()
         self.post_ifft = self.pre_fft.conj()
+
+        # modify to take phase gradient into account
+        self.pre_fft *= self.generate_phase_grad(self.beam_shift, W.shape)
+        self.post_ifft /= self.generate_phase_grad(self.beam_shift, W.shape)
+
+
+
         self.sc, self.isc = self.FFTch.assign_scaling(self.sh)
 
     def generate_phase_grad(self, shift, shape):
@@ -280,7 +291,9 @@ class ScanningMirrorFarfieldPropagator(object):
             w = W
 
         # Apply phase gradient
-        w *= self.generate_phase_grad(self.beam_shift, w.shape)
+        # Now rolled into self.pre_fft
+        #w *= self.generate_phase_grad(self.beam_shift, w.shape)
+
         w = self.post_fft * self.sc * self.fft(self.pre_fft * w)
 
         # Cropping again
@@ -313,7 +326,8 @@ class ScanningMirrorFarfieldPropagator(object):
         w = self.ifft(self.pre_ifft * w) * self.isc * self.post_ifft
 
         # Un-apply phase gradient
-        w /= self.generate_phase_grad(self.beam_shift, w.shape)
+        # Now rolled into self.post_ifft
+        #w /= self.generate_phase_grad(self.beam_shift, w.shape)
 
         # Cropping again
         if (self.crop_pad != 0).any():
