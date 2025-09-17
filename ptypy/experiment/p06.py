@@ -617,6 +617,6 @@ class P06Scan_scanning_mirror(P06Scan):
         com['y'] = com['y'] - self.info.center[0]  # order of center is (y, x)
 
         # put the two arrays together
-        center_of_mass = -np.vstack((com['y'], com['x'])).T
+        center_of_mass = np.vstack((com['y'], com['x'])).T
 
         return center_of_mass
