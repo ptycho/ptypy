@@ -345,6 +345,9 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
         ob = self.ob
         ob_nrm = self.ob_nrm
 
+        # Store current object for subsequent unrwapping attempt
+        self.ob_buf << ob
+
         # Fill container
         if not parallel.master:
             ob.fill(0.0)
@@ -392,10 +395,17 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
             # Take the log to come back to refractive index formulation
             s.data[:] = -1j * np.log(s.data[:])
 
+            # Unwrap based on previous estimate
+            delta = self.ob_buf.storages[name].data.real - s.data.real
+            new_delta = (delta + np.pi) % (2*np.pi) - np.pi
+            s.data += (delta - new_delta)
+
             # A possible (but costly) sanity check would be as follows:
             # if all((np.abs(nrm)-np.abs(cfact))/np.abs(cfact) < 1.):
             #    logger.warning('object_inertia seem too high!')
             self.clip_object(s)
+
+        
 
     def probe_update(self):
         """
