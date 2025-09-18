@@ -7,6 +7,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: see LICENSE for details.
 """
+import copy
 
 import numpy as np
 import cupy as cp
@@ -106,7 +107,9 @@ class _ProjectionEngine_scanning_mirror_cupy(projectional_serial_scanning_mirror
 
 
             # TODO: needs to be adapted for broad bandwidth
-            geo = scan.geometries[0]
+            geo = copy.deepcopy(scan.geometries[0])
+            geo.pre_fft *= 0  # set to zero as it will be done outside kernel
+            geo.post_ifft *= 0  # set to zero as it will be done outside kernel
 
             # Get info to shape buffer arrays
             fpc = scan.max_frames_per_block
