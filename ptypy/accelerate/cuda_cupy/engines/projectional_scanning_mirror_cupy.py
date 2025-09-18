@@ -107,9 +107,7 @@ class _ProjectionEngine_scanning_mirror_cupy(projectional_serial_scanning_mirror
 
 
             # TODO: needs to be adapted for broad bandwidth
-            geo = copy.deepcopy(scan.geometries[0])
-            geo.pre_fft *= 0  # set to zero as it will be done outside kernel
-            geo.post_ifft *= 0  # set to zero as it will be done outside kernel
+            geo = scan.geometries[0]
 
             # Get info to shape buffer arrays
             fpc = scan.max_frames_per_block
@@ -152,7 +150,10 @@ class _ProjectionEngine_scanning_mirror_cupy(projectional_serial_scanning_mirror
             kern.TK = TransposeKernel(queue=self.queue)
 
             log(4, "Setting up PropagationKernel")
-            kern.PROP = PropagationKernel(aux, geo.propagator, self.queue, self.p.fft_lib)
+            aux_propagator = geo._get_propagator()
+            aux_propagator.pre_fft = np.ones_like(aux_propagator.pre_fft)  # set to 1 as it will be applied outside kernel
+            aux_propagator.post_ifft = np.ones_like(aux_propagator.pre_fft) # set to 1 as it will be applied outside kernel
+            kern.PROP = PropagationKernel(aux, aux_propagator, self.queue, self.p.fft_lib)
             kern.PROP.allocate()
             kern.resolution = geo.resolution[0]
 
