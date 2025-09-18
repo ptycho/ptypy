@@ -344,11 +344,13 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
         """
         ob = self.ob
         ob_nrm = self.ob_nrm
+        ob_buf = self.ob_buf
 
         # Fill container
         if not parallel.master:
             ob.fill(0.0)
             ob_nrm.fill(0.)
+            ob_buf.fill(0.)
         else:
             for name, s in self.ob.storages.items():
                 # The amplitude of the regularization term has to be scaled with the
@@ -357,40 +359,40 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
                 # array and therefore underestimate the strength of the probe terms.
                 cfact = self.p.object_inertia * self.mean_power
 
-                # For the next steps we need to work with the actual transmission function
-                s.data[:] = np.exp(1j * s.data[:])
-
-                if self.p.obj_smooth_std is not None:
-                    log(4, 'Smoothing object, average cfact is %.2f'
-                        % np.mean(cfact).real)
-                    smooth_mfs = [0,
-                                  self.p.obj_smooth_std,
-                                  self.p.obj_smooth_std]
-                    s.data[:] = cfact * u.c_gf(s.data, smooth_mfs)
-                else:
-                    s.data[:] = s.data * cfact
+                # if self.p.obj_smooth_std is not None:
+                #     log(4, 'Smoothing object, average cfact is %.2f'
+                #         % np.mean(cfact).real)
+                #     smooth_mfs = [0,
+                #                   self.p.obj_smooth_std,
+                #                   self.p.obj_smooth_std]
+                #     s.data[:] = cfact * u.c_gf(s.data, smooth_mfs)
+                # #else:
+                # #    s.data[:] = s.data * cfact
 
                 ob_nrm.storages[name].fill(cfact)
 
-        # DM update per node
+                # Seems to make sense (otherwise fill with 0)
+                ob_buf.storages[name].fill(cfact)
+
+        # Correction terms
         for name, pod in self.pods.items():
             if not pod.active:
                 continue
-            #print('### muh')
-            #print(self.curiter, 'abs(pod.object).max()', abs(pod.object).max())
-            pod.object += pod.probe.conj() * pod.exit * pod.object_weight
-            ob_nrm[pod.ob_view] += u.abs2(pod.probe) * pod.object_weight
+            self.ob_buf[pod.ob_view] += pod.probe.conj() * np.exp(-1j * pod.object.conj()) * pod.exit * pod.object_weight
+            ob_nrm[pod.ob_view] += u.abs2(pod.probe * np.exp(1j * pod.object)) * pod.object_weight
 
         # Distribute result with MPI
         for name, s in self.ob.storages.items():
             # Get the np arrays
             nrm = ob_nrm.storages[name].data
+            buf = ob_buf.storages[name].data
+
             parallel.allreduce(s.data)
             parallel.allreduce(nrm)
-            s.data /= nrm
-
-            # Take the log to come back to refractive index formulation
-            s.data[:] = -1j * np.log(s.data[:])
+            parallel.allreduce(buf)
+            buf /= nrm
+            s.data += buf
+            s.data -= 1.
 
             # A possible (but costly) sanity check would be as follows:
             # if all((np.abs(nrm)-np.abs(cfact))/np.abs(cfact) < 1.):
