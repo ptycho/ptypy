@@ -845,7 +845,176 @@ class _Vanilla(object):
 
         s.model_initialized = True
 
+# class _Partial(_Full):
+#     """
+#     Like full but with only probe modes.
+#     Great for GPU.
 
+#     [name]
+#     default = Full
+#     type = str
+#     help =
+#     doc =
+
+#     [coherence]
+#     default = 
+#     help = Coherence parameters
+#     doc = 
+#     type = Param
+#     userlevel = 
+#     lowlim = 0
+
+#     [coherence.num_probe_modes]
+#     default = 1
+#     help = Number of probe modes
+#     doc = 
+#     type = int
+#     userlevel = 0
+#     lowlim = 0
+#     """
+#     def _initialize_geo(self, common):
+#         """
+#         Initialize the geometry based on input data package
+#         Parameters.
+#         """
+#         probe_shape = common['shape']
+#         center = common['center']
+#         psize = common['psize']        
+        
+#         # Adjust geometry parameters for resampling
+#         self.resample = self.p.resample
+#         probe_shape = tuple(np.ceil(self.resample * np.array(probe_shape)).astype(int))
+#         center = tuple(np.ceil(self.resample * np.array(center)).astype(int))
+#         psize = np.array(psize) / self.resample
+
+#         # Collect geometry parameters
+#         get_keys = ['distance', 'center', 'energy', 'psize']
+#         geo_pars = u.Param({key: common[key] for key in get_keys})
+#         geo_pars.shape = probe_shape
+#         geo_pars.center = center
+#         geo_pars.propagation = self.p.propagation
+#         geo_pars.ffttype = self.p.ffttype
+#         geo_pars.psize = psize
+
+#         # make a Geo instance and fix resolution
+#         g = geometry.Geo(owner=self.ptycho, pars=geo_pars)
+#         g.p.resolution_is_fix = True
+#         g.resample = self.resample
+
+#         # save the geometry
+#         self.geometries = [g]
+
+#         # Store frame shapes
+#         self.diff_shape = np.array(common.get('shape', g.shape))
+#         self.probe_shape = probe_shape
+#         self.object_shape = probe_shape
+#         self.exit_shape = probe_shape
+#         self.psize = g.psize
+#         return
+
+#     def _create_pods(self):
+#         """
+#         Create all new pods as specified in the new_positions,
+#         new_diff_views and new_mask_views object attributes.
+#         """
+#         logger.info('\n' + headerline('Creating PODS', 'l'))
+#         new_pods = []
+#         new_probe_ids = {}
+#         new_object_ids = {}
+
+#         # One probe / object storage per scan.
+#         ID = 'S' + self.label
+
+#         # We need to return info on what storages are created
+#         if not ID in self.ptycho.probe.storages.keys():
+#             new_probe_ids[ID] = True
+#         if not ID in self.ptycho.obj.storages.keys():
+#             new_object_ids[ID] = True
+
+#         pv, ev, ov = None, None, None
+#         # Loop through diffraction patterns
+#         for i in range(len(self.new_diff_views)):
+#             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
+            
+#             # For stochastic engines (e.g. ePIE) we only need one exit buffer
+#             if self._single_exit_buffer_for_all_views:
+#                 index = 0
+#             else:
+#                 index = dv.layer
+
+#             # Object and probe position
+#             pos_pr = u.expect2(0.0)
+#             pos_obj = self.new_positions[i] if 'empty' not in self.p.tags else 0.0
+
+
+#             # Loop through modes
+#             for pm in range(self.p.coherence.num_probe_modes):
+#                 for om in range(self.p.coherence.num_object_modes):
+#                     # Make a unique layer index for exit view
+#                     # The actual number does not matter due to the
+#                     # layermap access
+#                     exit_index = index * 10000 + pm * 100 + om
+
+#                     # Create views
+#                     # Please note that mostly references are passed,
+#                     # i.e. the views do mostly not own the accessrule
+#                     # contents
+#                     if pv[ii] is None:
+#                         pv[ii] = View(container=self.ptycho.probe,
+#                                 accessrule={'shape': self.probe_shape,
+#                                             'psize': geometry.resolution,
+#                                             'coord': pos_pr,
+#                                             'storageID': probe_id_suf,
+#                                             'layer': pm,
+#                                             'active': True})
+#                     else:
+#                         pv[ii] = pv[ii].copy(update=False)
+#                         pv[ii].layer = pm
+
+#                     if ov[ii] is None:
+#                         ov[ii] = View(container=self.ptycho.obj,
+#                                 accessrule={'shape': self.object_shape,
+#                                             'psize': geometry.resolution,
+#                                             'coord': pos_obj,
+#                                             'storageID': object_id_suf,
+#                                             'layer': om,
+#                                             'active': True})
+#                     else:
+#                         ov[ii] = ov[ii].copy(update=False)
+#                         ov[ii].layer = om
+#                         ov[ii].coord = pos_obj
+
+#                     if ev[ii] is None:
+#                         ev[ii] = View(container=self.ptycho.exit,
+#                                 accessrule={'shape': self.exit_shape,
+#                                             'psize': geometry.resolution,
+#                                             'coord': pos_pr,
+#                                             'storageID': (dv.storageID +
+#                                                             'G%02d' % ii),
+#                                             'layer': exit_index,
+#                                             'active': dv.active})
+#                     else:
+#                         ev[ii] = ev[ii].copy(update=False)
+#                         ev[ii].layer = exit_index
+                        
+
+#                     views = {'probe': pv[ii],
+#                                 'obj': ov[ii],
+#                                 'diff': dv,
+#                                 'mask': mv,
+#                                 'exit': ev[ii]}
+
+#                     pod = POD(ptycho=self.ptycho,
+#                                 ID=None,
+#                                 views=views,
+#                                 geometry=geometry)  # , meta=meta)
+
+#                     new_pods.append(pod)
+#                     mode_index +=1
+#                     pod.probe_weight = 1.0
+#                     pod.object_weight = 1.0
+
+#         return new_pods, new_probe_ids, new_object_ids
 class _Full(object):
     """
     Manage a single scan model (sharing, coherence, propagation, ...)
@@ -1058,11 +1227,11 @@ class _Full(object):
                             ev[ii].layer = exit_index
                             
 
-                        views = {'probe': pv,
-                                 'obj': ov,
+                        views = {'probe': pv[ii],
+                                 'obj': ov[ii],
                                  'diff': dv,
                                  'mask': mv,
-                                 'exit': ev}
+                                 'exit': ev[ii]}
 
                         pod = POD(ptycho=self.ptycho,
                                   ID=None,
