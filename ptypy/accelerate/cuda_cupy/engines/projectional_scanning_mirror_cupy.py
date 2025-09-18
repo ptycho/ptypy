@@ -248,7 +248,7 @@ class _ProjectionEngine_scanning_mirror_cupy(projectional_serial_scanning_mirror
 
                 # setup pre_fft
                 for i, view in enumerate(block.views):
-                    kern.aux_pre_fft[i] = view.pod.geometry.propagator.pre_fft
+                    kern.aux_pre_fft[i] = cp.asarray(view.pod.geometry.propagator.pre_fft)
 
                 # compute log-likelihood
                 if self.p.compute_log_likelihood:
@@ -365,6 +365,10 @@ class _ProjectionEngine_scanning_mirror_cupy(projectional_serial_scanning_mirror
                 # Keep track of object boundaries
                 max_oby = ob.shape[-2] - aux.shape[-2] - 1
                 max_obx = ob.shape[-1] - aux.shape[-1] - 1
+                
+                # setup pre_fft
+                for i, view in enumerate(block.views):
+                    kern.aux_pre_fft[i] = cp.asarray(view.pod.geometry.propagator.pre_fft)
 
                 # We need to re-calculate the current error
                 PCK.build_aux(aux, addr, ob, pr)
