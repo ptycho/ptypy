@@ -255,10 +255,6 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                     self._object[i] = np.zeros_like(self.ob.S[oID].data, dtype=np.complex64)
                     self._probe[i]  = np.zeros_like(self.pr.S[pID].data, dtype=np.complex64)
                     self._exits[i]  = np.zeros_like(self.ex.S[eID].data, dtype=np.complex64)
-            # print(f'Initialized slices for label {label}:')
-            # print(f'  Object slice shape: {self._object[i].shape}')
-            # print(f'  Probe slice shape: {self._probe[i].shape}')
-            # print(f'  Exit slice shape: {self._exits[i].shape}')
             
             # Keep a list of view indices
             prep.rng = np.random.default_rng()
@@ -326,16 +322,10 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                 
                     # global aux buffer
                     aux = kern.aux
-                    print(f'FW_msk: {len(FW_msk)}')
-                    print(f'multi_slice: ob{len(self._object[:][i])}, pr{len(self._probe[:][i])}, ex{len(self._exits[:][i])}')
-                    ob_slices, pr_slices, exit_slices = POK.multislice_fw(aux, addr, self._object[:][i], self._probe[:][i], self._exits[:][i], FW_msk, it)
-            
-                    self._object[:][i] = ob_slices
-                    self._probe[:][i] = pr_slices
-                    
-                    ob[i] = self._object[-1][i]
-                    pr[i] = self._probe[-1][i]
-                    ex[i] = self._exits[-1][i]
+                    ob_slices, pr_slices, exit_slices = POK.multislice_fw(aux, addr, self._object, self._probe, self._exits, FW_msk, it, self.p.slice_start_iteration)
+
+                    print(pr.shape, ob.shape, ex.shape)
+                    pr,ob,ex = POK.last_slice_copy_to_ptypy(aux, addr, self._object[-1], self._probe[-1], pr, ob, ex, self._exits[-1], it, self.p.slice_start_iteration)
 
                     np.save('debug_ob.npy', ob)
                     np.save('debug_pr.npy', pr)
