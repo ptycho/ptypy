@@ -953,11 +953,19 @@ class _Full(object):
 
         object_id = 'S' + self.label
         probe_id = 'S' + self.label
+        last_diff_storage_ID ="" 
+
+        gmodes = len(self.geometries)
+        pv, ev, ov = [None]*gmodes, [None]*gmodes, [None]*gmodes
 
         # Loop through diffraction patterns
         for i in range(len(self.new_diff_views)):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
 
+            if dv.storageID != last_diff_storage_ID:
+                gmodes = len(self.geometries)
+                pv, ev, ov = [None]*gmodes, [None]*gmodes, [None]*gmodes
+            
             # For stochastic engines (e.g. ePIE) we only need one exit buffer
             if self._single_exit_buffer_for_all_views:
                 index = 0
@@ -968,6 +976,7 @@ class _Full(object):
             pos_pr = u.expect2(0.0)
             pos_obj = self.new_positions[i] if 'empty' not in self.p.tags else 0.0
 
+            mode_index = 0
             # For multiwavelength reconstructions: loop here over
             # geometries, and modify probe_id and object_id.
             for ii, geometry in enumerate(self.geometries):
@@ -1010,30 +1019,44 @@ class _Full(object):
                         # Please note that mostly references are passed,
                         # i.e. the views do mostly not own the accessrule
                         # contents
-                        pv = View(container=self.ptycho.probe,
-                                  accessrule={'shape': self.probe_shape,
-                                              'psize': geometry.resolution,
-                                              'coord': pos_pr,
-                                              'storageID': probe_id_suf,
-                                              'layer': pm,
-                                              'active': True})
+                        if pv[ii] is None:
+                            pv[ii] = View(container=self.ptycho.probe,
+                                    accessrule={'shape': self.probe_shape,
+                                                'psize': geometry.resolution,
+                                                'coord': pos_pr,
+                                                'storageID': probe_id_suf,
+                                                'layer': pm,
+                                                'active': True})
+                        else:
+                            pv[ii] = pv[ii].copy(update=False)
+                            pv[ii].layer = pm
 
-                        ov = View(container=self.ptycho.obj,
-                                  accessrule={'shape': self.object_shape,
-                                              'psize': geometry.resolution,
-                                              'coord': pos_obj,
-                                              'storageID': object_id_suf,
-                                              'layer': om,
-                                              'active': True})
+                        if ov[ii] is None:
+                            ov[ii] = View(container=self.ptycho.obj,
+                                    accessrule={'shape': self.object_shape,
+                                                'psize': geometry.resolution,
+                                                'coord': pos_obj,
+                                                'storageID': object_id_suf,
+                                                'layer': om,
+                                                'active': True})
+                        else:
+                            ov[ii] = ov[ii].copy(update=False)
+                            ov[ii].layer = om
+                            ov[ii].coord = pos_obj
 
-                        ev = View(container=self.ptycho.exit,
-                                  accessrule={'shape': self.exit_shape,
-                                              'psize': geometry.resolution,
-                                              'coord': pos_pr,
-                                              'storageID': (dv.storageID +
-                                                            'G%02d' % ii),
-                                              'layer': exit_index,
-                                              'active': dv.active})
+                        if ev[ii] is None:
+                            ev[ii] = View(container=self.ptycho.exit,
+                                    accessrule={'shape': self.exit_shape,
+                                                'psize': geometry.resolution,
+                                                'coord': pos_pr,
+                                                'storageID': (dv.storageID +
+                                                                'G%02d' % ii),
+                                                'layer': exit_index,
+                                                'active': dv.active})
+                        else:
+                            ev[ii] = ev[ii].copy(update=False)
+                            ev[ii].layer = exit_index
+                            
 
                         views = {'probe': pv,
                                  'obj': ov,
@@ -1047,7 +1070,7 @@ class _Full(object):
                                   geometry=geometry)  # , meta=meta)
 
                         new_pods.append(pod)
-
+                        mode_index +=1
                         pod.probe_weight = 1.0
                         pod.object_weight = 1.0
 
