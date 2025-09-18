@@ -348,7 +348,7 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
 
         # Fill container
         if not parallel.master:
-            ob.fill(0.0)
+            #ob.fill(0.0)
             ob_nrm.fill(0.)
             ob_buf.fill(0.)
         else:
@@ -378,11 +378,12 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
         for name, pod in self.pods.items():
             if not pod.active:
                 continue
-            self.ob_buf[pod.ob_view] += pod.probe.conj() * np.exp(-1j * pod.object.conj()) * pod.exit * pod.object_weight
-            ob_nrm[pod.ob_view] += u.abs2(pod.probe * np.exp(1j * pod.object)) * pod.object_weight
+            psi0 = pod.probe * np.exp(1j * pod.object)
+            self.ob_buf[pod.ob_view] += psi0.conj() * pod.exit * pod.object_weight
+            ob_nrm[pod.ob_view] += u.abs2(psi0) * pod.object_weight
 
         # Distribute result with MPI
-        for name, s in self.ob.storages.items():
+        for name, s in ob.storages.items():
             # Get the np arrays
             nrm = ob_nrm.storages[name].data
             buf = ob_buf.storages[name].data
