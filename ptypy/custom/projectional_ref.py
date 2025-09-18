@@ -356,6 +356,10 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
                 # This estimate assumes that the probe power is uniformly distributed through the
                 # array and therefore underestimate the strength of the probe terms.
                 cfact = self.p.object_inertia * self.mean_power
+
+                # For the next steps we need to work with the actual transmission function
+                s.data[:] = np.exp(1j * s.data[:])
+
                 if self.p.obj_smooth_std is not None:
                     log(4, 'Smoothing object, average cfact is %.2f'
                         % np.mean(cfact).real)
@@ -374,12 +378,8 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
                 continue
             #print('### muh')
             #print(self.curiter, 'abs(pod.object).max()', abs(pod.object).max())
-            pod.object += (1j * np.exp(1j * pod.object) * pod.probe).conj() * pod.exit * pod.object_weight
-            
-            #pod.object.real[pod.object.real <= -10] = -10
-            pod.object.imag[pod.object.imag <= -5] = -5
-
-            ob_nrm[pod.ob_view] += u.abs2(pod.probe * np.exp(1j * pod.object)) * pod.object_weight
+            pod.object += pod.probe.conj() * pod.exit * pod.object_weight
+            ob_nrm[pod.ob_view] += u.abs2(pod.probe) * pod.object_weight
 
         # Distribute result with MPI
         for name, s in self.ob.storages.items():
@@ -388,6 +388,9 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
             parallel.allreduce(s.data)
             parallel.allreduce(nrm)
             s.data /= nrm
+
+            # Take the log to come back to refractive index formulation
+            s.data[:] = -1j * np.log(s.data[:])
 
             # A possible (but costly) sanity check would be as follows:
             # if all((np.abs(nrm)-np.abs(cfact))/np.abs(cfact) < 1.):
