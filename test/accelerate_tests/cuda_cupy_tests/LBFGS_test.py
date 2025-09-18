@@ -23,7 +23,7 @@ class LBFGSCupyTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.outpath)
 
-    def check_engine_output(self, output, plotting=False, debug=False):
+    def check_engine_output(self, output, plotting=False, debug=False, tol=0.1):
         P_LBFGS_serial, P_LBFGS_cupy = output
         numiter = len(P_LBFGS_serial.runtime["iter_info"])
         LL_LBFGS_serial = np.array([P_LBFGS_serial.runtime["iter_info"][i]["error"][1] for i in range(numiter)])
@@ -68,9 +68,9 @@ class LBFGSCupyTest(unittest.TestCase):
         RMSE_ob = (np.mean(np.abs(OBJ_LBFGS_cupy - OBJ_LBFGS_serial)**2))
         RMSE_pr = (np.mean(np.abs(PRB_LBFGS_cupy - PRB_LBFGS_serial)**2))
         # RMSE_LL = (np.mean(np.abs(LL_LBFGS_cupy - LL_LBFGS_serial)**2))
-        np.testing.assert_allclose(RMSE_ob, 0.0, atol=1e-1,
+        np.testing.assert_allclose(RMSE_ob, 0.0, atol=tol,
                                     err_msg="The object arrays are not matching as expected")
-        np.testing.assert_allclose(RMSE_pr, 0.0, atol=1e-1,
+        np.testing.assert_allclose(RMSE_pr, 0.0, atol=tol,
                                     err_msg="The probe arrays are not matching as expected")
         # np.testing.assert_allclose(RMSE_LL, 0.0, atol=1e-7,
                                     # err_msg="The log-likelihood errors are not matching as expected")
