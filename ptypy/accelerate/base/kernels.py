@@ -441,6 +441,7 @@ class AuxiliaryWaveKernel(BaseKernel):
             aux[ind, :, :] = tmp
         return
 
+
     def build_exit(self, b_aux, addr, ob, pr, ex, alpha=1):
         self.make_exit(b_aux, addr, ob, pr, ex, 1.0, -alpha, alpha-1)
 
@@ -720,6 +721,90 @@ class PoUpdateKernel(BaseKernel):
         is_zero = np.isclose(dnm, 0)
         arr[:] = np.where(is_zero, nmr, nmr / dnm)
 
+    
+    def multislice_fw(self, b_aux, addr, ob_slices, pr_slices, exit_slices, fw_propagators, curiter, slice_update_iter):
+        """
+        Multislice forward kernel implementation for ThreePIE serial engine.
+        
+        This method performs the propagation between slices using kernel-based operations, with address-based serial processing for the current view.
+
+        Args:
+            i: Index of the current view
+            b_aux: Auxiliary buffer array
+            addr: Address array for serial processing
+            pr:  input pr
+            ob: the first slice of the object
+            ob_slices: List of exit wave arrays for each slice
+            fw_propagators: List of near-field forward propagators between slices
+            curiter: Current iteration number
+            slice_update_iter: Iteration numbers to start updating slices
+        """
+        aux = b_aux
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = b_aux.shape[-2:]
+        num_slices = len(ob_slices)
+        
+        for slice_idx in range(num_slices - 1):
+            for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+                ob_slice = ob_slices[slice_idx][obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] 
+                pr_slice = pr_slices[slice_idx][prc[0], :, :]
+                
+                if curiter >= slice_update_iter[slice_idx]:
+                    exit_slices[slice_idx][prc[0], :, :] = pr_slice * ob_slice
+                else:
+                    exit_slices[slice_idx][prc[0], :, :] = pr_slice * 1.
+
+                pr_slices[slice_idx+1][prc[0], :, :] = fw_propagators[slice_idx](exit_slices[slice_idx][prc[0], :, :])
+                
+        return ob_slices, pr_slices, exit_slices
+
+
+    def last_slice_copy_to_ptypy(self, b_aux, addr, ob_last, pr_last, exit_last, pr, ob, ex, curiter, slice_update_iter):
+        """
+        Generate the last exit wave, probe, and object slice for ptypy from the multislice slices.
+        """
+        sh = addr.shape
+        nmodes = sh[1]
+        # stopper
+        maxz = sh[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * nmodes]
+        flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+            if curiter >= slice_update_iter[-1]:
+               exit_last[prc[0], :, :] = pr_last[prc[0], :, :] * ob_last[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
+            else:
+               exit_last[prc[0], :, :] = pr_last[prc[0], :, :] * 1.
+
+        pr = pr_last[prc[0], :, :]
+        ob = ob_last[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
+        ex = exit_last[prc[0], :, :]
+        print(pr.shape, ob.shape, ex.shape)
+        
+        return ob, pr, ex
+
+    def multislice_bw(self, b_aux, addr, ob_update, pr_update, exit_update, ob_slices, pr_slices, exit_slices, bw_propagators, curiter, slice_update_iter):
+        aux = b_aux
+        ex = []
+        sh = addr.shape
+        flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
+        rows, cols = b_aux.shape[-2:]
+        num_slices = len(ob_slices)
+        
+        # Backward pass through slices (num_slices-2 to 0) for probe propagation
+        for slice_idx in range(num_slices - 2, -1, -1):
+            if curiter >= self.number_of_slices[slice_idx]:
+                # Backwards propagation of the probe
+                pr_slices[slice_idx] = \
+                    bw_propagators[slice_idx](pr_slices[slice_idx + 1])
+            else:
+                pr_slices[slice_idx] = \
+                    bw_propagators[slice_idx](pr_slices[slice_idx + 1])
+        
+        return ob_slices, pr_slices, exit_slices
 
 class PositionCorrectionKernel(BaseKernel):
     from ptypy.accelerate.base import address_manglers
