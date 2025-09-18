@@ -360,7 +360,7 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
                 # array and therefore underestimate the strength of the probe terms.
                 cfact = self.p.object_inertia * self.mean_power
 
-                self.ob_buf.storage[name].data[:] = u.c_gf(s.data, [0, 1.5, 1.5])
+                self.ob_buf.storages[name].data[:] = u.c_gf(s.data, [0, 1.5, 1.5])
 
                 # For the next steps we need to work with the actual transmission function
                 s.data[:] = np.exp(1j * s.data[:])
