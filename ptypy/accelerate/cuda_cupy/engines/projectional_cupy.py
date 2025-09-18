@@ -552,7 +552,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
 
     def clip_object(self, ob):
         """
-        Clips magnitudes of object into given range.
+        Clips object magnitude and phase into given range.
         """
         if self.p.clip_object is not None:
             self.CMK.clip_object_to_range(ob, self.p.clip_object)

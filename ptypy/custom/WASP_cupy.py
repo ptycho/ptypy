@@ -42,6 +42,8 @@ class WASP_cupy(WASP_serial):
     help =
     doc =
 
+    
+    
     [fft_lib]
     default = reikna
     type = str
@@ -403,10 +405,10 @@ class WASP_cupy(WASP_serial):
 
     def clip_object(self, ob):
         """
-        Clips magnitudes of object into given range.
+        Clips object magnitude and phase into given range.
         """
-        cmin, cmax = self.p.clip_object
-        self.CMK.clip_magnitudes_to_range(ob, cmin, cmax)
+        if self.p.clip_object is not None:
+            self.CMK.clip_object_to_range(ob, self.p.clip_object)
 
     def position_update(self):
         """
