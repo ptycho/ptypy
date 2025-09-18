@@ -17,7 +17,7 @@ from ptypy.utils.verbose import log
 from ptypy.utils import parallel
 from ptypy.engines import register
 from ptypy.engines.projectional import DMMixin, RAARMixin
-from ptypy.accelerate.base.engines import projectional_serial
+from ptypy.accelerate.base.engines import projectional_serial_scanning_mirror
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel
 from ..kernels import PropagationKernel, RealSupportKernel, FourierSupportKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel,\
@@ -26,10 +26,10 @@ from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel,\
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..multi_gpu import get_multi_gpu_communicator
 
-__all__ = ['DM_cupy', 'RAAR_cupy']
+__all__ = ['DM_scanning_mirror_cupy']
 
 
-class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
+class _ProjectionEngine_scanning_mirror_cupy(projectional_serial_scanning_mirror._ProjectionEngine_scanning_mirror_serial):
 
     """
     Defaults:
@@ -127,6 +127,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
                 log(1,"Cannot fit memory into device, if possible reduce frames per block or nr. of modes. Exiting...")
                 raise SystemExit("ptypy has been exited.")
             kern.aux = cp.asarray(aux)
+            kern.aux_pre_fft = cp.zeros(aux.shape, dtype=np.complex64)
 
             # setup kernels, one for each SCAN.
             log(4, "Setting up FourierUpdateKernel")
@@ -217,7 +218,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             reduced_error_count = 0
             local_error = {}
 
-            for dID in self.di.S.keys():
+            for dID, block in self.di.S.items():
 
                 # find probe, object and exit ID in dependence of dID
                 prep = self.diff_info[dID]
@@ -245,9 +246,14 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
                 pr = self.pr.S[pID].gpu
                 ex = self.ex.S[eID].gpu
 
+                # setup pre_fft
+                for i, view in enumerate(block.views):
+                    kern.aux_pre_fft[i] = view.pod.geometry.propagator.pre_fft
+
                 # compute log-likelihood
                 if self.p.compute_log_likelihood:
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
+                    aux *= kern.aux_pre_fft
                     PROP.fw(aux, aux)
                     FUK.log_likelihood(aux, addr, mag, ma, err_phot)
 
@@ -255,6 +261,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
                 #AWK.build_aux(aux, addr, ob, pr, ex, alpha=self.p.alpha)
                 AWK.make_aux(aux, addr, ob, pr, ex,
                              c_po=self._c, c_e=1-self._c)
+                aux *= kern.aux_pre_fft
 
                 # forward FFT
                 PROP.fw(aux, aux)
@@ -266,6 +273,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
 
                 # backward FFT
                 PROP.bw(aux, aux)
+                aux *= cp.conjugate(kern.aux_pre_fft)
 
                      # build exit wave
                 #AWK.build_exit(aux, addr, ob, pr, ex, alpha=self.p.alpha)
@@ -333,7 +341,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
             Iterates through all positions and refines them by a given algorithm.
             """
             log(4, "----------- START POS REF -------------")
-            for dID in self.di.S.keys():
+            for dID, block in self.di.S.items():
 
                 prep = self.diff_info[dID]
                 pID, oID, eID = prep.poe_IDs
@@ -360,6 +368,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
 
                 # We need to re-calculate the current error
                 PCK.build_aux(aux, addr, ob, pr)
+                aux *= kern.aux_pre_fft
                 PROP.fw(aux, aux)
                 if self.p.position_refinement.metric == "fourier":
                     PCK.fourier_error(aux, addr, mag, ma, ma_sum)
@@ -378,6 +387,7 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
                 for i in range(PCK.mangler.nshifts):
                     PCK.mangler.get_address(i, addr, mangled_addr, max_oby, max_obx)
                     PCK.build_aux(aux, mangled_addr, ob, pr)
+                    aux *= kern.aux_pre_fft
                     PROP.fw(aux, aux)
                     if self.p.position_refinement.metric == "fourier":
                         PCK.fourier_error(aux, mangled_addr, mag, ma, ma_sum)
@@ -599,8 +609,8 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         super().engine_finalize(benchmark=False)
 
 
-@register(name="DM_cupy_nostream")
-class DM_cupy(_ProjectionEngine_cupy, DMMixin):
+@register()
+class DM_scanning_mirror_cupy(_ProjectionEngine_scanning_mirror_cupy, DMMixin):
     """
     A full-fledged Difference Map engine accelerated with pycuda.
 
@@ -615,26 +625,6 @@ class DM_cupy(_ProjectionEngine_cupy, DMMixin):
     """
 
     def __init__(self, ptycho_parent, pars=None):
-        _ProjectionEngine_cupy.__init__(self, ptycho_parent, pars)
+        _ProjectionEngine_scanning_mirror_cupy.__init__(self, ptycho_parent, pars)
         DMMixin.__init__(self, self.p.alpha)
         ptycho_parent.citations.add_article(**self.article)
-
-
-@register(name="RAAR_cupy_nostream")
-class RAAR_cupy(_ProjectionEngine_cupy, RAARMixin):
-    """
-    A RAAR engine in accelerated with pycuda.
-
-    Defaults:
-
-    [name]
-    default = RAAR_pycuda
-    type = str
-    help =
-    doc =
-
-    """
-
-    def __init__(self, ptycho_parent, pars=None):
-        _ProjectionEngine_cupy.__init__(self, ptycho_parent, pars)
-        RAARMixin.__init__(self, self.p.beta)
