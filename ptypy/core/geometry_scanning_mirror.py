@@ -218,8 +218,6 @@ class ScanningMirrorFarfieldPropagator(object):
             -2.0 * np.pi * 1j * (X[0, 0]*V + Y[0, 0]*W) / lz
         ).astype(self.dtype)
 
-
-
         # Factors for inverse operation
         self.pre_ifft = self.post_fft.conj()
         self.post_ifft = self.pre_fft.conj()
