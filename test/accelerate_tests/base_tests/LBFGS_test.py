@@ -14,6 +14,7 @@ from ptypy.custom import LBFGS, LBFGS_serial
 import tempfile
 import shutil
 import numpy as np
+import pytest
 
 class LBFGSSerialTest(unittest.TestCase):
 
