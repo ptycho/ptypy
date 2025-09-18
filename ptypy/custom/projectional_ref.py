@@ -346,7 +346,7 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
         ob_nrm = self.ob_nrm
 
         # Store current object for subsequent unrwapping attempt
-        self.ob_buf << ob
+        # self.ob_buf << ob
 
         # Fill container
         if not parallel.master:
@@ -359,6 +359,8 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
                 # This estimate assumes that the probe power is uniformly distributed through the
                 # array and therefore underestimate the strength of the probe terms.
                 cfact = self.p.object_inertia * self.mean_power
+
+                self.ob_buf.storage[name].data[:] = u.c_gf(s.data, [1.5, 1.5])
 
                 # For the next steps we need to work with the actual transmission function
                 s.data[:] = np.exp(1j * s.data[:])
@@ -373,6 +375,7 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
                 else:
                     s.data[:] = s.data * cfact
 
+    
                 ob_nrm.storages[name].fill(cfact)
 
         # DM update per node
