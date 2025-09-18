@@ -392,8 +392,9 @@ class _ProjectionEngine_ref(PositionCorrectionEngine):
             parallel.allreduce(nrm)
             parallel.allreduce(buf)
             buf /= nrm
+            buf -= 1.
+            buf *= -1j
             s.data += buf
-            s.data -= 1.
 
             # A possible (but costly) sanity check would be as follows:
             # if all((np.abs(nrm)-np.abs(cfact))/np.abs(cfact) < 1.):
