@@ -244,15 +244,17 @@ class ArrayUtilsTest(unittest.TestCase):
 
     def test_clip_object_to_range(self):
         data = np.ones((5, 5), dtype=COMPLEX_TYPE)
-        data[2, 4] = 20.0 * np.exp(1j * np.pi / 2)
+        data[2, 4] = 20.0 * np.exp(1j * -np.pi / 2)
         data[3, 1] = 0.2 * np.exp(1j * np.pi / 3)
 
-        clip_min = 0.5
-        clip_max = 2.0
+        clip_min_mag = 0.5
+        clip_max_mag = 2.0
+        clip_min_phase = -np.pi / 4
+        clip_max_phase = np.pi / 4
         expected_out = np.ones_like(data)
-        expected_out[2, 4] = 2.0 * np.exp(1j * np.pi / 2)
+        expected_out[2, 4] = 2.0 * np.exp(1j * -np.pi / 2)
         expected_out[3, 1] = 0.5 * np.exp(1j * np.pi / 3)
-        au.clip_complex_magnitudes_to_range(data, clip_min, clip_max)
+        au.clip_object_to_range(data, clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase)
         np.testing.assert_array_almost_equal(data, expected_out, decimal=7)  # floating point precision I guess...
 
     def test_crop_pad_1(self):

@@ -410,9 +410,9 @@ class ArrayUtilsTest(CupyCudaTest):
         B = B.astype(np.complex64)
         B_gpu = cp.asarray(B)
 
-        au.clip_complex_magnitudes_to_range(B, 0.2,0.8)
+        au.clip_object_to_range(B, 0.2,0.8, -np.pi/4, np.pi/4)
         CMK = gau.ClipObjectKernel()
-        CMK.clip_object_to_range(B_gpu, 0.2, 0.8)
+        CMK.clip_object_to_range(B_gpu, (0.2, 0.8, -np.pi/4, np.pi/4))
 
         np.testing.assert_allclose(B_gpu.get(), B, rtol=1e-6, atol=1e-6,
             err_msg="The magnitudes of the array have not been clipped as expected")
