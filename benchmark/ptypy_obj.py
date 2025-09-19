@@ -156,4 +156,5 @@ for i in range(N):
     t0=time.time()
     for b in range(chunk):
         h = Base(B, BeOwner=False)
-    print(h.ID, B.calc_mem_usage(), time.time()-t0)
+    dt=time.time()-t0
+    print(h.ID, B.calc_mem_usage(), dt)
