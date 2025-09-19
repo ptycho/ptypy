@@ -15,14 +15,14 @@ class Base(object):
     __slots__ = ['ID','numID','owner','_pool','_recs','_record']
     _fields = [('ID','<S16'),
                ('active', 'b1'),
-                # ('dlayer', '<i8'),
-                # ('layer', '<i8'), 
-                # ('dhigh', '(5,)i8'),
-                # ('dlow', '(5,)i8'),
-                # ('shape', '(5,)i8'),
-                # ('dcoord', '(5,)i8'),
-                # ('psize', '(5,)f8'),
-                # ('coord', '(5,)f8'),
+                ('dlayer', '<i8'),
+                ('layer', '<i8'), 
+                ('dhigh', '(5,)i8'),
+                ('dlow', '(5,)i8'),
+                ('shape', '(5,)i8'),
+                ('dcoord', '(5,)i8'),
+                ('psize', '(5,)f8'),
+                ('coord', '(5,)f8'),
                 ('sp', '(5,)f8')]
     
     def __init__(self, owner=None, ID=None, BeOwner=True):
