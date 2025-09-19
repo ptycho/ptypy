@@ -102,15 +102,15 @@ class Base(object):
         obj.ID = nID
         idx = len(d)
         obj.numID = idx
-        recs = self._recs[prefix]
-        l = len(recs)
-        if idx >= l:
-            nl = l + 8192 if idx > 10000 else 2*l
-            recs = np.resize(recs,(nl,))
-            self._recs[prefix] = recs
-        rec = recs[idx] 
-        obj._record = rec
-        rec['ID'] = nID
+        # recs = self._recs[prefix]
+        # l = len(recs)
+        # if idx >= l:
+        #     nl = l + 8192 if idx > 10000 else 2*l
+        #     recs = np.resize(recs,(nl,))
+        #     self._recs[prefix] = recs
+        # rec = recs[idx] 
+        # obj._record = rec
+        # rec['ID'] = nID
         
         return
         
