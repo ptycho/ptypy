@@ -32,18 +32,18 @@ FROM mpi AS pycuda
 ARG CUDAVERSION
 COPY ./ptypy/accelerate/cuda_pycuda/dependencies.yml ./dependencies.yml
 COPY ./cufft/dependencies.yml ./dependencies_cufft.yml
-RUN mamba install cuda-version=${CUDAVERSION} && \
-    mamba env update -n base -f dependencies.yml && \
-    mamba env update -n base -f dependencies_cufft.yml
+RUN mamba env update -n base -f dependencies.yml && \
+    mamba env update -n base -f dependencies_cufft.yml && \
+    mamba install cuda-version=${CUDAVERSION}
 
 # Pull from MPI build and install accelerate/cupy dependencies
 FROM mpi AS cupy
 ARG CUDAVERSION
 COPY ./ptypy/accelerate/cuda_cupy/dependencies.yml ./dependencies.yml
 COPY ./cufft/dependencies.yml ./dependencies_cufft.yml
-RUN mamba install cuda-version=${CUDAVERSION} && \
-    mamba env update -n base -f dependencies.yml && \
-    mamba env update -n base -f dependencies_cufft.yml
+RUN mamba env update -n base -f dependencies.yml && \
+    mamba env update -n base -f dependencies_cufft.yml && \
+    mamba install cuda-version=${CUDAVERSION}
 
 # Pull from platform specific image and install ptypy 
 FROM ${PLATFORM} AS build
