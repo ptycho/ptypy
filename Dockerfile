@@ -8,27 +8,27 @@ ARG PLATFORM=cupy
 ARG CUDAVERSION=12.4
 
 # Pull from mambaforge and install XML and ssh
-FROM condaforge/mambaforge as base
+FROM condaforge/mambaforge AS base
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y libxml2 ssh
 
 # Pull from base image and install OpenMPI/MPICH
-FROM base as mpi
+FROM base AS mpi
 ARG MPI
 RUN mamba install -n base -c conda-forge ${MPI}
 
 # Pull from MPI build install core dependencies
-FROM base as core
+FROM base AS core
 COPY ./dependencies_core.yml ./dependencies.yml
 RUN mamba env update -n base -f dependencies.yml
 
 # Pull from MPI build and install full dependencies
-FROM mpi as full
+FROM mpi AS full
 COPY ./dependencies_full.yml ./dependencies.yml
 RUN mamba env update -n base -f dependencies.yml
 
 # Pull from MPI build and install accelerate/pycuda dependencies
-FROM mpi as pycuda
+FROM mpi AS pycuda
 ARG CUDAVERSION
 COPY ./ptypy/accelerate/cuda_pycuda/dependencies.yml ./dependencies.yml
 COPY ./cufft/dependencies.yml ./dependencies_cufft.yml
@@ -37,7 +37,7 @@ RUN mamba install cuda-version=${CUDAVERSION} && \
     mamba env update -n base -f dependencies_cufft.yml
 
 # Pull from MPI build and install accelerate/cupy dependencies
-FROM mpi as cupy
+FROM mpi AS cupy
 ARG CUDAVERSION
 COPY ./ptypy/accelerate/cuda_cupy/dependencies.yml ./dependencies.yml
 COPY ./cufft/dependencies.yml ./dependencies_cufft.yml
@@ -46,7 +46,7 @@ RUN mamba install cuda-version=${CUDAVERSION} && \
     mamba env update -n base -f dependencies_cufft.yml
 
 # Pull from platform specific image and install ptypy 
-FROM ${PLATFORM} as build
+FROM ${PLATFORM} AS build
 COPY pyproject.toml ./
 COPY ./templates ./templates
 COPY ./benchmark ./benchmark
@@ -55,19 +55,19 @@ COPY ./ptypy ./ptypy
 RUN pip install .
 
 # For core/full build, no post processing needed
-FROM build as core-post
-FROM build as full-post
+FROM build AS core-post
+FROM build AS full-post
 
 # For pycuda build, install filtered cufft
-FROM build as pycuda-post
+FROM build AS pycuda-post
 RUN pip install ./cufft
 
 # For pycuda build, install filtered cufft
-FROM build as cupy-post
+FROM build AS cupy-post
 RUN pip install ./cufft
 
 # Platform specific runtime container
-FROM ${PLATFORM}-post as runtime
+FROM ${PLATFORM}-post AS runtime
 
 # Run PtyPy run script as entrypoint
 ENTRYPOINT ["ptypy.cli"]
