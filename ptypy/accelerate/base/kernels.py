@@ -382,7 +382,6 @@ class GradientDescentKernel(BaseKernel):
         aux[:] = (aux.reshape(ish[0] // nmodes, nmodes, ish[1], ish[2]) * tmp[:, np.newaxis, :, :]).reshape(ish)
         return
 
-
 class AuxiliaryWaveKernel(BaseKernel):
 
     def __init__(self):
@@ -729,7 +728,6 @@ class PoUpdateKernel(BaseKernel):
         This method performs the propagation between slices using kernel-based operations, with address-based serial processing for the current view.
 
         Args:
-            i: Index of the current view
             b_aux: Auxiliary buffer array
             addr: Address array for serial processing
             pr:  input pr
@@ -747,6 +745,7 @@ class PoUpdateKernel(BaseKernel):
         
         for slice_idx in range(num_slices - 1):
             for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+                
                 ob_slice = ob_slices[slice_idx][obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] 
                 pr_slice = pr_slices[slice_idx][prc[0], :, :]
                 
@@ -754,7 +753,7 @@ class PoUpdateKernel(BaseKernel):
                     exit_slices[slice_idx][prc[0], :, :] = pr_slice * ob_slice
                 else:
                     exit_slices[slice_idx][prc[0], :, :] = pr_slice * 1.
-
+            
                 pr_slices[slice_idx+1][prc[0], :, :] = fw_propagators[slice_idx](exit_slices[slice_idx][prc[0], :, :])
                 
         return ob_slices, pr_slices, exit_slices
@@ -773,20 +772,64 @@ class PoUpdateKernel(BaseKernel):
         aux = b_aux[:maxz * nmodes]
         flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
         rows, cols = ex.shape[-2:]
+        
+        ex = []
         for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
             if curiter >= slice_update_iter[-1]:
                exit_last[prc[0], :, :] = pr_last[prc[0], :, :] * ob_last[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
             else:
                exit_last[prc[0], :, :] = pr_last[prc[0], :, :] * 1.
 
-        pr = pr_last[prc[0], :, :]
-        ob = ob_last[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
-        ex = exit_last[prc[0], :, :]
-        print(pr.shape, ob.shape, ex.shape)
+            ex.append(exit_last[prc[0], :, :])
+
+        pr = np.array(pr_last)
+        ob = np.array(ob_last)
+        ex = np.array(ex)
         
         return ob, pr, ex
 
-    def multislice_bw(self, b_aux, addr, ob_update, pr_update, exit_update, ob_slices, pr_slices, exit_slices, bw_propagators, curiter, slice_update_iter):
+    def ptypy_copy_to_last_slice(self, b_aux, addr, pr_last, ob_last, pr, ob, ex, curiter, slice_update_iter):
+        """
+        Generate the last exit wave, probe, and object slice for ptypy from the multislice slices.
+        """
+        sh = addr.shape
+        nmodes = sh[1]
+        # stopper
+        maxz = sh[0]
+
+        # batch buffers
+        aux = b_aux[:maxz * nmodes]
+        flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
+        rows, cols = ex.shape[-2:]
+        
+        if curiter >= slice_update_iter[-1]:
+            for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+                if curiter >= slice_update_iter[-1]:
+                    ob_last[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
+                    
+                    pr_last[prc[0], :, :] = pr[prc[0], :, :]
+                    
+                else:
+                    pr_last[prc[0], :, :] = ex[prc[0], :, :] * 1.
+        
+        return ob_last, pr_last
+
+    def multislice_bw(self, b_aux, addr, ob_slices, pr_slices, exit_slices, ob, pr, ex, bw_propagators, curiter, slice_update_iter):
+        """
+        Multislice forward kernel implementation for ThreePIE serial engine.
+        
+        This method performs back propagation between slices using kernel-based operations, with address-based serial processing for the current view.
+
+        Args:
+            b_aux: Auxiliary buffer array
+            addr: Address array for serial processing
+            pr:  input pr
+            ob: the first slice of the object
+            ob_slices: List of exit wave arrays for each slice
+            fw_propagators: List of near-field forward propagators between slices
+            curiter: Current iteration number
+            slice_update_iter: Iteration numbers to start updating slices
+        """
         aux = b_aux
         ex = []
         sh = addr.shape
@@ -796,15 +839,20 @@ class PoUpdateKernel(BaseKernel):
         
         # Backward pass through slices (num_slices-2 to 0) for probe propagation
         for slice_idx in range(num_slices - 2, -1, -1):
-            if curiter >= self.number_of_slices[slice_idx]:
-                # Backwards propagation of the probe
-                pr_slices[slice_idx] = \
-                    bw_propagators[slice_idx](pr_slices[slice_idx + 1])
-            else:
-                pr_slices[slice_idx] = \
-                    bw_propagators[slice_idx](pr_slices[slice_idx + 1])
-        
-        return ob_slices, pr_slices, exit_slices
+            for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+                if curiter >= slice_update_iter[slice_idx]:
+                    # ex = bw_propagators[slice_idx]( pr_slices[slice_idx + 1][prc[0], :, :] )
+                    # pr = pr_slices[slice_idx][prc[0], :, :]
+                    # ob = ob_slices[slice_idx][obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
+                    
+                    ob_slices[slice_idx][obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
+                    
+                    pr_slices[slice_idx][prc[0], :, :] = pr[prc[0], :, :]
+                else:
+                    pr_slices[slice_idx][prc[0], :, :] = \
+                    bw_propagators[slice_idx](pr_slices[slice_idx + 1][prc[0], :, :])
+
+        return ob_slices, pr_slices, exit_slices#, ex, pr, ob
 
 class PositionCorrectionKernel(BaseKernel):
     from ptypy.accelerate.base import address_manglers
