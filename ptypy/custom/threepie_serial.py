@@ -7,6 +7,7 @@ This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: see LICENSE for details.
 """
+import h5py
 import numpy as np
 import time
 
@@ -96,7 +97,7 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
 
     def engine_initialize(self):
         """
-        Prepare for reconstruction. (Copied from _ProjectionEngine_serial)
+        Prepare for reconstruction. 
         """
         super().engine_initialize()
         self._reset_benchmarks()
@@ -322,14 +323,17 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                 
                     # global aux buffer
                     aux = kern.aux
-                    ob_slices, pr_slices, exit_slices = POK.multislice_fw(aux, addr, self._object, self._probe, self._exits, FW_msk, it, self.p.slice_start_iteration)
+                    self._object, self._probe, self._exits = POK.multislice_fw(aux, addr, self._object, self._probe, self._exits, FW_msk, it, self.p.slice_start_iteration)
 
-                    print(pr.shape, ob.shape, ex.shape)
-                    pr,ob,ex = POK.last_slice_copy_to_ptypy(aux, addr, self._object[-1], self._probe[-1], pr, ob, ex, self._exits[-1], it, self.p.slice_start_iteration)
-
-                    np.save('debug_ob.npy', ob)
-                    np.save('debug_pr.npy', pr)
-                    np.save('debug_ex.npy', ex)
+                    # print(f'{self._object[-1].shape}, {self._probe[-1].shape}, {self._exits[-1].shape}')
+                    
+                    ob, pr, ex = POK.last_slice_copy_to_ptypy(aux, addr, ob_last = self._object[-1], pr_last = self._probe[-1], exit_last = self._exits[-1], pr = pr, ob = ob, ex = ex, curiter = it, slice_update_iter = self.p.slice_start_iteration)
+                    
+                    # print(f'After prshape: {pr.shape}, ob.shape: {ob.shape}, ex.shape: {ex.shape}')
+                    # with h5py.File('/home/litang/multislice/debug.h5', 'w') as f:
+                    #     f.create_dataset('pr', data=pr)
+                    #     f.create_dataset('ob', data=ob)
+                    #     f.create_dataset('ex', data=ex)
                     
                     # position update
                     self.position_update_local(prep,i)
@@ -359,6 +363,44 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                     aux[:] = BW(aux)
                     self.benchmark.D_iProp += time.time() - t1
 
+                    ## compute log-likelihood
+                    if self.p.compute_log_likelihood:
+                        t1 = time.time()
+                        aux[:] = FW(aux)
+                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                        self.benchmark.F_LLerror += time.time() - t1
+                    
+                    # print(f'Before prshape: {pr.shape}, ob.shape: {ob.shape}, ex.shape: {ex.shape}')
+
+                    # print(f'Before prshape: self._probe[-1].shape: {self._probe[-1].shape}, self._object[-1].shape: {self._object[-1].shape}, self._exits[-1].shape: {np.array(self._exits[-1]).shape}')
+                    
+                    self._object[-1], self._probe[-1] = POK.ptypy_copy_to_last_slice(aux, addr, self._probe[-1], self._object[-1], pr, ob, ex, it, self.p.slice_start_iteration)
+
+                    # print(f'After ptypy_copy_to_last_slice: _object {np.array(self._object[-1]).shape}, _probe: {np.array(self._probe[-1]).shape}, ex.shape: {np.array(ex).shape}')
+
+                    
+                    # # object update
+                    # t1 = time.time()
+                    # POK.pr_norm_local(addr, pr, prn)
+                    # POK.ob_update_local(addr, ob, pr, ex, aux, prn, a=self._ob_a, b=self._ob_b)
+                    # self.benchmark.object_update += time.time() - t1
+                    # self.benchmark.calls_object += 1
+
+                    # # probe update
+                    # t1 = time.time()
+                    # if self._object_norm_is_global and self._pr_a == 0:
+                    #     obn_max = au.max_abs2(ob)
+                    #     obn[:] = 0
+                    # else:
+                    #     POK.ob_norm_local(addr, ob, obn)
+                    #     obn_max = obn.max()
+                    # if self.p.probe_update_start <= self.curiter:
+                    #     POK.pr_update_local(addr, pr, ob, ex, aux, obn, obn_max, a=self._pr_a, b=self._pr_b)
+                    # self.benchmark.probe_update += time.time() - t1
+                    # self.benchmark.calls_probe += 1
+                    
+                    self._object, self._probe, self._exits = POK.multislice_bw(aux, addr, self._object, self._probe, self._exits, ob, pr, ex, BW_msk, it, self.p.slice_start_iteration)
+ 
                     ## build exit wave
                     t1 = time.time()
                     AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._b, c_po=self._a, c_e=-(self._a+self._b))
@@ -373,39 +415,12 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
                     self.benchmark.A_Build_aux += time.time() - t1
 
-                    # object update
-                    t1 = time.time()
-                    POK.pr_norm_local(addr, pr, prn)
-                    POK.ob_update_local(addr, ob, pr, ex, aux, prn, a=self._ob_a, b=self._ob_b)
-                    self.benchmark.object_update += time.time() - t1
-                    self.benchmark.calls_object += 1
 
-                    # probe update
-                    t1 = time.time()
-                    if self._object_norm_is_global and self._pr_a == 0:
-                        obn_max = au.max_abs2(ob)
-                        obn[:] = 0
-                    else:
-                        POK.ob_norm_local(addr, ob, obn)
-                        obn_max = obn.max()
-                    if self.p.probe_update_start <= self.curiter:
-                        POK.pr_update_local(addr, pr, ob, ex, aux, obn, obn_max, a=self._pr_a, b=self._pr_b)
-                    self.benchmark.probe_update += time.time() - t1
-                    self.benchmark.calls_probe += 1
-
-                    ## compute log-likelihood
-                    if self.p.compute_log_likelihood:
-                        t1 = time.time()
-                        aux[:] = FW(aux)
-                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
-                        self.benchmark.F_LLerror += time.time() - t1
-                        
                     # update errors
                 errs = np.ascontiguousarray(np.vstack([np.hstack(prep.err_fourier),
                                                        np.hstack(prep.err_phot),
                                                        np.hstack(prep.err_exit)]).T)
                 error_dct.update(zip(prep.view_IDs, errs))
-
             # Re-center the probe
             self.center_probe()
 
@@ -486,8 +501,8 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
         slices_info = Param()
         slices_info.number_of_slices = self.p.number_of_slices
         slices_info.slice_thickness = self.p.slice_thickness
-        slices_info.objects = {ob.ID: {ID: S._to_dict() for ID, S in ob.storages.items()}
-                               for ob in self._object}
+
+        slices_info.objects = {ob.ID: {ID: S._to_dict() for ID, S in ob.storages.items()} for ob in self._object}
         slices_info.slice_start_iteration = self.p.slice_start_iteration
 
         header = {'description': 'multi-slices result details.'}
@@ -497,34 +512,5 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
         logger.info(f'Saving to {self.p.fslices}')
         io.h5write(self.p.fslices, header=header, content=slices_info)
         io.h5options['UNSUPPORTED'] = h5opt
-
-        # Benchmarks (adapted from WASP_serial)
-        if parallel.master and self.benchmark.calls_fourier:
-            print("----- BENCHMARKS ----")
-            acc = 0.
-            for name in sorted(self.benchmark.keys()):
-                t = self.benchmark[name]
-                if name[0] in 'ABCDEFGHI':
-                    print('%20s : %1.3f ms per iteration' % (name, t / self.benchmark.calls_fourier * 1000))
-                    acc += t
-                elif str(name) == 'object_update':
-                    print('%20s : %1.3f ms per call. %d calls' % (
-                        name, t / self.benchmark.calls_object * 1000, self.benchmark.calls_object))
-
-            print('%20s : %1.3f ms per iteration. %d calls' % (
-                'Fourier_total', acc / self.benchmark.calls_fourier * 1000, self.benchmark.calls_fourier))
-
-        self._reset_benchmarks()
-
-        # Position refinement finalization
-        if self.do_position_refinement:
-            for label, d in self.di.storages.items():
-                prep = self.diff_info[d.ID]
-                res = self.kernels[prep.label].resolution
-                for i,view in enumerate(d.views):
-                    for j,(pname, pod) in enumerate(view.pods.items()):
-                        delta = (prep.original_addr[i][j][1][1:] - prep.addr[i][j][1][1:]) * res
-                        pod.ob_view.coord += delta
-                        pod.ob_view.storage.update_views(pod.ob_view)
 
         return super().engine_finalize()
