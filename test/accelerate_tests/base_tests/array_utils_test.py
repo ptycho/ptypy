@@ -252,8 +252,8 @@ class ArrayUtilsTest(unittest.TestCase):
         clip_min_phase = -np.pi / 4
         clip_max_phase = np.pi / 4
         expected_out = np.ones_like(data)
-        expected_out[2, 4] = 2.0 * np.exp(1j * -np.pi / 2)
-        expected_out[3, 1] = 0.5 * np.exp(1j * np.pi / 3)
+        expected_out[2, 4] = 2.0 * np.exp(1j * -np.pi / 4)
+        expected_out[3, 1] = 0.5 * np.exp(1j * np.pi / 4)
         au.clip_object_to_range(data, clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase)
         np.testing.assert_array_almost_equal(data, expected_out, decimal=7)  # floating point precision I guess...
 
