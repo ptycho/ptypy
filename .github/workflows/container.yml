@@ -11,6 +11,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        platform: [full, cupy]
+        mpi: [openmpi, mpich]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -30,7 +34,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}_cupy_openmpi
+          images: ghcr.io/${{ github.repository }}_${{ matrix.platform }}_${{ matrix.mpi }}
           tags: |
             type=raw,value=v0.9.0
 
