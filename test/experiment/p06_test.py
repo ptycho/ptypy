@@ -117,6 +117,15 @@ def test_load(scan_00039_parameters):
     assert len(positions) == len(indices)
     assert len(weights) == len(indices)
 
+    # Test exception raised if no frames were selected.
+    with pytest.raises(IOError):
+        p.scans.scan00.data.position_bounds = [[1, -1], [1, -1]]
+        p06scan = P06Scan(p.scans.scan00.data)
+
+    p.scans.scan00.data.position_bounds = [[None, None], [None, None]]  # no valid positions
+    p06scan = P06Scan(p.scans.scan00.data)
+    #raw, positions, weights = p06scan.load(indices)
+
 
 
 

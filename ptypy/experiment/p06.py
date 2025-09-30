@@ -229,10 +229,22 @@ class P06Scan(PtyScan):
         self.all_positions = self.load_positions()
         self.all_selected_inds = self.filter_by_position(self.all_positions)
         self.num_frames = len(self.all_selected_inds)
+        if self.num_frames == 0:
+            raise IOError(
+                f"Aborting, because no frames were selected. Check position bounds: {self.info.position_bounds}"
+            )
         logger.info(f"Set num_frames to {self.num_frames} for PtyPy")
 
     def filter_by_position(self, all_positions):
         # Apply position bounds filtering if specified
+
+        # Set Nones to inf
+        for axis in range(len(self.info.position_bounds)):
+            for ind in range(len(self.info.position_bounds[axis])):
+                if self.info.position_bounds[axis][ind] is None:
+                    # Set to negative inf if ind is 0
+                    self.info.position_bounds[axis][ind] = np.inf * np.sign(2 * ind - 1)
+
         if self.info.position_bounds:
             (xmin, xmax), (ymin, ymax) = self.info.position_bounds
             in_box = np.logical_and.reduce([
