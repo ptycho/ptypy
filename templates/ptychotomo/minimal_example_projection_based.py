@@ -10,8 +10,27 @@ import random
 
 import astra
 import numpy as np
+import scipy.ndimage as ndimage
 import tempfile
 tmpdir = tempfile.gettempdir()
+
+np.random.seed(99)
+
+# For creating example
+def sample_volume(N):
+    vol = np.zeros((N,N,N))
+    xx,yy,zz = np.meshgrid(np.arange(N)-N/2, np.arange(N)-N/2,np.arange(N)-N/2)
+    m = lambda r,dx,dy,dz: np.sqrt((xx+dx)**2 + (yy+dy)**2 + (zz+dz)**2) < r
+    vol[m(N//6,0,0,0)] = 1
+    vol[m(N//8,N//9,N//9,N//9)] = 2
+    vol[m(N//12,N//12,0,0)] = 5
+    vol[m(N//12,0,N//8,0)] = 5
+    return ndimage.gaussian_filter(vol,1)
+
+def refractive_index_map(Nx):
+    beta = np.log(sample_volume(Nx)+20)-np.log(20)
+    delta = 0.05 * sample_volume(Nx)
+    return delta + 1j * beta
 
 
 ### PTYCHO PARAMETERS
@@ -45,7 +64,7 @@ n_frames = 76
 angles = np.linspace(0, np.pi, n_angles, endpoint=True)
 pgeom = astra.create_proj_geom("parallel3d", 1.0, 1.0, view_shape, view_shape, angles)
 vgeom = astra.create_vol_geom(view_shape, view_shape, view_shape)
-rmap = tu.refractive_index_map(view_shape)
+rmap = refractive_index_map(view_shape)
 proj_real_id, proj_real = astra.create_sino3d_gpu(rmap.real, pgeom, vgeom)
 proj_imag_id, proj_imag = astra.create_sino3d_gpu(rmap.imag, pgeom, vgeom)
 proj = np.moveaxis(proj_real + 1j * proj_imag, 1,0)
@@ -109,6 +128,10 @@ p.scans.sim.illumination.propagation = u.Param()
 p.scans.sim.illumination.propagation.focussed = None
 p.scans.sim.illumination.propagation.parallel = 0.03
 p.scans.sim.illumination.propagation.spot_size = None
+
+p.scans.sim.illumination.diversity = u.Param()
+p.scans.sim.illumination.diversity.power = 1
+p.scans.sim.illumination.diversity.noise = None
 
 p.scans.sim.sample = u.Param()
 p.scans.sim.sample.diversity = u.Param()

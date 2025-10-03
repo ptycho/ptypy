@@ -1360,60 +1360,59 @@ class BlockFull3D(BlockFull):
                         and object_id_suf not in existing_objects):
                     new_object_ids[object_id_suf] = True
 
-                # Loop through modes
-                for pm in range(self.p.coherence.num_probe_modes):
-                    # Make a unique layer index for exit view
-                    # The actual number does not matter due to the
-                    # layermap access
-                    exit_index = index * 10000 + pm * 100 + extra_val
+                # Make a unique layer index for exit view
+                # The actual number does not matter due to the
+                # layermap access
+                exit_index = index
+                probe_index = int(extra_val * 1000)
 
-                    # Create views
-                    # Please note that mostly references are passed,
-                    # i.e. the views do mostly not own the accessrule
-                    # contents
-                    pv = View(container=self.ptycho.probe,
-                                accessrule={'shape': self.probe_shape,
-                                            'psize': geometry.resolution,
-                                            'coord': pos_pr,
-                                            'storageID': probe_id_suf,
-                                            'layer': pm,
-                                            'active': True,
-                                            'extra': extra_dict})
+                # Create views
+                # Please note that mostly references are passed,
+                # i.e. the views do mostly not own the accessrule
+                # contents
+                pv = View(container=self.ptycho.probe,
+                            accessrule={'shape': self.probe_shape,
+                                        'psize': geometry.resolution,
+                                        'coord': pos_pr,
+                                        'storageID': probe_id_suf,
+                                        'layer': probe_index,
+                                        'active': True,
+                                        'extra': extra_dict})
 
-                    ov = View(container=self.ptycho.obj,
-                                accessrule={'shape': self.object_shape,
-                                            'psize': geometry.resolution,
-                                            'coord': pos_obj,
-                                            'storageID': object_id_suf,
-                                            'layer': extra_ind,
-                                            'active': True,
-                                            'extra': extra_dict})
+                ov = View(container=self.ptycho.obj,
+                            accessrule={'shape': self.object_shape,
+                                        'psize': geometry.resolution,
+                                        'coord': pos_obj,
+                                        'storageID': object_id_suf,
+                                        'layer': 1,
+                                        'active': True,
+                                        'extra': extra_dict})
 
-                    ev = View(container=self.ptycho.exit,
-                                accessrule={'shape': self.exit_shape,
-                                            'psize': geometry.resolution,
-                                            'coord': pos_pr,
-                                            'storageID': (dv.storageID +
-                                                        'G%02d' % ii),
-                                            'layer': exit_index,
-                                            'active': dv.active,
-                                            'extra': extra_dict})
+                ev = View(container=self.ptycho.exit,
+                            accessrule={'shape': self.exit_shape,
+                                        'psize': geometry.resolution,
+                                        'coord': pos_pr,
+                                        'storageID': (dv.storageID +
+                                                    'G%02d' % ii),
+                                        'layer': exit_index,
+                                        'active': dv.active,
+                                        'extra': extra_dict})
 
-                    views = {'probe': pv,
-                             'obj': ov,
-                             'diff': dv,
-                             'mask': mv,
-                             'exit': ev}
+                views = {'probe': pv,
+                            'obj': ov,
+                            'diff': dv,
+                            'mask': mv,
+                            'exit': ev}
 
-                    pod = POD(ptycho=self.ptycho,
-                                ID=None,
-                                views=views,
-                                geometry=geometry)  # , meta=meta)
+                pod = POD(ptycho=self.ptycho,
+                            ID=None,
+                            views=views,
+                            geometry=geometry)  # , meta=meta)
 
-                    new_pods.append(pod)
+                new_pods.append(pod)
 
-                    pod.probe_weight = 1.0
-                    pod.object_weight = 1.0
+                pod.probe_weight = 1.0
+                pod.object_weight = 1.0
 
         return new_pods, new_probe_ids, new_object_ids    
 

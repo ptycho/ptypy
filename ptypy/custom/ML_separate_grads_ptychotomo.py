@@ -383,6 +383,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
         when new data arrives.
         """
         self.ML_model.prepare()
+        for name, s in self.pr.storages.items():
+            s.data *= len(s.data)
 
     def get_indexes_of_active_views(self):
         """
