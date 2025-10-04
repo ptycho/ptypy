@@ -198,7 +198,6 @@ class P06Scan(PtyScan):
     type = str
     help = Normalization channel, like alba2/1 for example
     doc =
-
     """
     # Lookup table for motor units.
     UNITS = {
@@ -393,9 +392,7 @@ class P06Scan(PtyScan):
 
         # This may or may not be needed.
         self.frames_per_scan = {}
-
         return positions
-
 
     def auto_center(self):
         # center of the diffraction patterns is not explicitly given
@@ -478,7 +475,11 @@ class P06Scan(PtyScan):
 
         all_selected_inds : list
             Selcted indices from the stack of all recorded frames, including
-            filtered out frames.
+            filtered out frames.    [sub_pixel_beam_shift_active]
+    default = True
+    type = str
+    help = activates
+    doc =
 
         Returns
         -------
@@ -529,7 +530,6 @@ class P06Scan(PtyScan):
         pad_args : tuple
             A 2x2 tuple containing arguments to be passed to np.pad
         """
-
         i_lower = detector_center_pixel[0] - crop_shape[0] // 2
         j_lower = detector_center_pixel[1] - crop_shape[1] // 2
         i_upper = i_lower + crop_shape[0]
@@ -646,6 +646,14 @@ class P06Scan(PtyScan):
 class P06Scan_scanning_mirror(P06Scan):
     """
     This class loads scanning mirror data at the P06 beamline.
+
+    Defaults:
+
+    [sub_pixel_beam_shift_active]
+    default = True
+    type = bool
+    help = If true, sub pixel beam shifts will be active. If False, the shifts will be set to 0. This will not speed anything up, as all computation will still occur.
+    doc =
     """
 
     def __init__(self, pars=None, **kwargs):
@@ -663,7 +671,6 @@ class P06Scan_scanning_mirror(P06Scan):
 
         self.info.full_mask = self.full_mask
         self.info.loaded_center_of_mass = self.all_positions[:, 2:]  # center of mass before dynamic cropping
-
 
     def load_positions(self):
         positions = super(P06Scan_scanning_mirror, self).load_positions()
@@ -688,10 +695,6 @@ class P06Scan_scanning_mirror(P06Scan):
         nan_mask = np.logical_not(np.isnan(com['x']))
         com['x'] = com['x'][nan_mask]  # necessary for cmesh
         com['y'] = com['y'][nan_mask]  # necessary for cmesh
-
-        # subtract cropping center  # phasing this out
-        #com['x'] = com['x'] - self.info.center[1]  # order of center is (y, x)
-        #com['y'] = com['y'] - self.info.center[0]  # order of center is (y, x)
 
         # put the two arrays together
         center_of_mass = np.vstack((com['y'], com['x'])).T
@@ -718,7 +721,11 @@ class P06Scan_scanning_mirror(P06Scan):
         center_pixels = np.round(centers_of_mass).astype(int)
         # trim center of mass to be relative to center pixel.
         center_remainder = centers_of_mass - center_pixels
-        pod_positions = np.hstack([all_positions, center_remainder])
+        if self.info.sub_pixel_beam_shift_active:
+            pod_positions = np.hstack([all_positions, center_remainder])
+        else:
+            # set remainder shifts to 0 if not active.
+            pod_positions = np.hstack([all_positions, np.zeros_like(center_remainder)])
 
         for i_file, valid_indices in per_file_inds.items():
               # which frames in the file should be loaded
@@ -740,12 +747,9 @@ class P06Scan_scanning_mirror(P06Scan):
                     masks = [self.full_mask] * len(frames)
 
             # Put frames in raw dictionary
-            # First, determine the index of the kept frames in the reduced
-            # filtered frame stack
             for i_if, i_c in enumerate(valid_indices["i_consecutive"]):
                 raw[i_c] = frames[i_if]
                 weights[i_c] = masks[i_if]  # np.ones(self.info.shape)
                 positions[i_c] = pod_positions[self.all_selected_inds[i_c]]
-
 
         return raw, positions, weights
