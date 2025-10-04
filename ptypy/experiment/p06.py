@@ -112,7 +112,7 @@ class P06Scan(PtyScan):
     [tmp_center]
     default = None
     type = int, list, tuple
-    help = x-axis upper limit
+    help =
     doc =
 
     [position_bounds]
@@ -225,15 +225,30 @@ class P06Scan(PtyScan):
         self.p.update(kwargs)
         super(P06Scan, self).__init__(self.p)
 
-        # CRITICAL: Pre-calculate filtered frame count during initialization
         self.all_positions = self.load_positions()
         self.all_selected_inds = self.filter_by_position(self.all_positions)
         self.num_frames = len(self.all_selected_inds)
+        self.frames_per_file, ni, nj = self.determine_data_shape()
+        self.detector_shape = (ni, nj)
+
+
         if self.num_frames == 0:
             raise IOError(
                 f"Aborting, because no frames were selected. Check position bounds: {self.info.position_bounds}"
             )
         logger.info(f"Set num_frames to {self.num_frames} for PtyPy")
+
+        if not self.info.cropOnLoad:
+            # supporting non cropped data requires to allow center to not be in the middle of the frame.
+            raise ValueError("cropOnLoad = False is not yet supported")
+
+        if self.info.center is None:
+            self.info.center = self.auto_center()
+
+        # center is not the center of mass on the detector, however, it is used like that in all our config files and scripts, so it is kept for now.
+        # The following is a workaround.
+        self.detector_center = self.info.center  # center used to determine where to crop the raw data
+        self.info.center = (self.info.shape[0] // 2, self.info.shape[1] // 2)
 
     def filter_by_position(self, all_positions):
         # Apply position bounds filtering if specified
@@ -381,84 +396,31 @@ class P06Scan(PtyScan):
 
         return positions
 
+
+    def auto_center(self):
+        # center of the diffraction patterns is not explicitly given
+        frame = self.get_first_frame()
+        center = u.scripts.mass_center(frame * self.load_weight(ignore_crop=True))
+        center = [int(x) for x in center]
+        logger.info(
+            f'Estimated the center of the (first) diffraction pattern to be {center}')
+
+        return center
+
     def load(self, indices, disable_frame_filtering=False):
         """
         Loads data from P06 beamtime.
 
         Parameters
         ----------
-        indices : list
+        indices : numpy.ndarray
             The frame indices (in the filtered frame stack) to be loaded.
 
         """
         logger.info(
             f"loading frames in index range ({indices[0]} - {indices[-1]})")
-        raw, weights, positions = {}, {}, {}
 
-        detector_directory = os.path.join(
-            self.info.scan_path_raw, self.info.detector
-        )
-        detector_file_list = sorted([
-            os.path.join(detector_directory, x) for x in os.listdir(detector_directory) if not ('master' in x)
-        ])
-        n_files = len(detector_file_list)
-        with h5py.File(detector_file_list[0], 'r') as fp:
-            frames = fp['entry/data/data'][:, :5, :5]
-            frames_per_file = len(frames)
-
-        # crop on load is requested, but the actual indices to crop are not yet defined
-        if self.info.cropOnLoad and self.info.cropOnLoad_y_lower == None:
-
-            # center of the diffraction patterns is not explicitly given
-            if self.info.center == None:
-                # requires to load the first frame and to find the center of mass there
-                with h5py.File(detector_file_list[0], 'r') as fp:
-                    frame = fp['entry/data/data'][0]
-                # and to mask the hot pixels ... sadly this will have double with self.load_weight
-                mask = np.ones_like(frame)
-                if self.info.detector == 'pilatus_1m_01':
-                    mask[np.where(frame < 0)] = 0
-                if self.info.detector == 'eiger_4m_01':
-                    mask[np.where(frame == 2 ** 32 - 1)] = 0
-                    mask[np.where(frame == 2 ** 16 - 1)] = 0
-                if self.info.maskfile:
-                    if self.info.maskfile.endswith('.h5'):
-                        mask2 = self.load_mask_h5()
-                    else:
-                        mask2 = self.load_mask_tiff()
-                    mask = mask * mask2
-                # now find the center of mass can be estimated using the ptypy internal function and make it integers
-                self.info.center = u.scripts.mass_center(frame * mask)
-                self.info.center = [int(x) for x in self.info.center]
-                logger.info(
-                    f'Estimated the center of the (first) diffraction pattern to be {self.info.center}')
-
-            # the center of the full frames is (now) known, and thus the indices for the cropping can be defined
-            cy, cx = self.info.center
-            dy, dx = self.info.shape
-            logger.info(
-                f'Found the center of the full frames at {self.info.center}')
-            logger.info(
-                f'Will crop all diffraction patterns on load to a size of {self.info.shape}')
-            self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(
-                cy) - dy // 2, int(cx) - dy // 2
-            self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower + dy, self.info.cropOnLoad_x_lower + dx
-
-            # the (temporary) center needs to be redefined for the cropped frames
-            tmp_center_y, tmp_center_x = dy // 2, dx // 2
-
-            # if the lower crop indices are negative, set them zero
-            if self.info.cropOnLoad_y_lower < 0:
-                tmp_center_y += self.info.cropOnLoad_y_lower
-                self.info.cropOnLoad_y_lower = 0
-            if self.info.cropOnLoad_x_lower < 0:
-                tmp_center_x += self.info.cropOnLoad_x_lower
-                self.info.cropOnLoad_x_lower = 0
-                # no need to have something similar for too large upper indices due to the way python slices arrays
-
-            # now fix the new center
-            self.info.tmp_center = (tmp_center_y, tmp_center_x)
-            self.info.center = (dy // 2, dx // 2)
+        detector_file_list = self.get_file_list()
 
         # set the photon energy
         path_options = ['scan/data/energy']
@@ -469,36 +431,25 @@ class P06Scan(PtyScan):
         else:
             self.meta.energy = self.info.energy
 
+        per_file_inds = self.create_per_file_inds(indices, self.frames_per_file, self.all_selected_inds)
+        raw, positions, weights = self.loading_loop(per_file_inds, detector_file_list)
+        return raw, positions, weights
 
-
-        # filter indices according to position_bounds
-        all_positions = self.all_positions
-        all_selected_inds = self.all_selected_inds
-
-        # Filter to keep only indices that are selected
-        i_consecutive = indices
-        i_scan = all_selected_inds[i_consecutive]
-        if not is_type(i_scan, np.ndarray):
-            i_scan = [i_scan]
-
-        # To avoid opening and closing the file for each frame, list valid indices for each file
-        per_file_inds = {i: {"i_scan":[], "i_consecutive":[], "i_in_file":[]} for i in range(n_files)}
-        for i_c in i_consecutive:
-            i_s = all_selected_inds[i_c]
-            i_file, i_in_file = divmod(i_s, frames_per_file)
-            per_file_inds[i_file]["i_scan"].append(i_s)
-            per_file_inds[i_file]["i_consecutive"].append(i_c)
-            per_file_inds[i_file]["i_in_file"].append(i_in_file)
-
+    def loading_loop(self, per_file_inds, detector_file_list):
         # actually loading the detector frames
+        raw, weights, positions = {}, {}, {}
+        _, ni, nj = self.determine_data_shape()
+        detector_shape = (ni, nj)
+
+        slice_i, slice_j, pad_args = self.crop_pad_params(self.detector_center, detector_shape, self.info.shape)
         for i_file, valid_indices in per_file_inds.items():
-            i_in_file = valid_indices["i_in_file"]
+            # i_file: which file
+            i_in_file = valid_indices["i_in_file"]  # which frames in the file should be loaded
+
             with h5py.File(detector_file_list[i_file], 'r') as fp:
                 # load only a cropped bit of the full frames
                 if self.info.cropOnLoad:
-                    frames = fp['entry/data/data'][i_in_file,
-                            self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper,
-                            self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                    frames = fp['entry/data/data'][i_in_file, slice_i, slice_j]
                 # load the full raw frames
                 else:
                     frames = fp['entry/data/data' % self.info.detector][i_in_file]
@@ -507,36 +458,169 @@ class P06Scan(PtyScan):
             # First, determine the index of the kept frames in the reduced
             # filtered frame stack
             for i, i_c in enumerate(valid_indices["i_consecutive"]):
-                raw[i_c] = self.pad_to_size(frames[i], -1)
-                positions[i_c] = all_positions[all_selected_inds[i_c]]
+                raw[i_c] = np.pad(frames[i], pad_args, mode='constant', constant_values=-1)
+                positions[i_c] = self.all_positions[self.all_selected_inds[i_c]]
                 weights[i_c] = np.ones(self.info.shape)
-
-        logger.info(
-            f"Loaded {len(raw)} frames. The rest was filtered out.")
 
         return raw, positions, weights
 
-    def load_weight(self):
+    def create_per_file_inds(self, i_consecutive, frames_per_file, all_selected_inds):
+        """
+        Utility function to link together file indices, scan indices, and consecutive indices.
+
+        Parameters
+        ----------
+        i_consecutive : list
+            Indices in the stack of valid frames. I.e. i_consecutive can
+            contain any integer from 0 to the number of valid frames.
+
+        frames_per_file : int
+            The number of frames per file.
+
+        all_selected_inds : list
+            Selcted indices from the stack of all recorded frames, including
+            filtered out frames.
+
+        Returns
+        -------
+        per_file_inds : dict
+            Dictionary of indices linking together file indices, scan indices, and consecutive indices.
+        """
+        # To avoid opening and closing the file for each frame, list valid indices for each file
+        #per_file_inds = {i: {"i_scan":[], "i_consecutive":[], "i_in_file":[]} for i in range(n_files)}
+        per_file_inds = {}
+        for i_c in i_consecutive:
+            i_s = all_selected_inds[i_c]
+            i_file, i_in_file = divmod(i_s, frames_per_file)
+            if i_file not in per_file_inds:
+                per_file_inds[i_file] = {"i_scan": [i_s], "i_consecutive": [i_c], "i_in_file": [i_in_file]}
+            else:
+                per_file_inds[i_file]["i_scan"].append(i_s)
+                per_file_inds[i_file]["i_consecutive"].append(i_c)
+                per_file_inds[i_file]["i_in_file"].append(i_in_file)
+
+        return per_file_inds
+
+    @staticmethod
+    def crop_pad_params(detector_center_pixel, detector_shape, crop_shape):
+        """
+        Calculates cropping and padding parameters arguments to make the
+        cropped frame the right shape, while also keeping the center pixel in
+        the center of the padded image.
+
+        Parameters
+        ----------
+        detector_center_pixel : tuple
+            A pair of integers
+
+        detector_shape : tuple
+            A pair of integers
+
+        crop_shape : tuple
+            A pair of integers
+
+        Returns
+        -------
+        slice_i : slice
+            The slice for the first image dimension.
+
+        slice_j : slice
+            The slice for the second image dimension.
+
+        pad_args : tuple
+            A 2x2 tuple containing arguments to be passed to np.pad
+        """
+
+        i_lower = detector_center_pixel[0] - crop_shape[0] // 2
+        j_lower = detector_center_pixel[1] - crop_shape[1] // 2
+        i_upper = i_lower + crop_shape[0]
+        j_upper = j_lower + crop_shape[1]
+
+        i_low_pad = 0
+        i_up_pad = 0
+        j_low_pad = 0
+        j_up_pad = 0
+
+        if i_lower < 0:
+            i_low_pad = -i_lower
+            i_lower = 0
+        if j_lower < 0:
+            j_low_pad = -j_lower
+            j_lower = 0
+        if i_upper > detector_shape[0]:
+            i_up_pad = i_upper - detector_shape[0]
+            i_upper = detector_shape[0]
+        if j_upper > detector_shape[1]:
+            j_up_pad = j_upper - detector_shape[1]
+            j_upper = detector_shape[1]
+
+        slice_i = slice(i_lower, i_upper)
+        slice_j = slice(j_lower, j_upper)
+        pad_args = ((i_low_pad, i_up_pad), (j_low_pad, j_up_pad))
+        return slice_i, slice_j, pad_args
+
+    def get_file_list(self):
+        detector_directory = os.path.join(
+            self.info.scan_path_raw, self.info.detector
+        )
+        detector_file_list = sorted([
+            os.path.join(detector_directory, x) for x in os.listdir(detector_directory) if not ('master' in x)
+        ])
+        return detector_file_list
+
+    def determine_data_shape(self):
+        """
+        Check the first frame to determine data shape.
+
+        Returns
+        -------
+        frames_per_file : int
+        ni : int
+        nj : int
+        """
+        detector_file_list = self.get_file_list()
+        with h5py.File(detector_file_list[0], 'r') as handle:
+            frames_per_file, ni, nj = handle['entry/data/data'].shape
+
+        return frames_per_file, ni, nj
+
+    def get_first_frame(self):
+        """
+        Load and return the first frame.
+
+        Returns
+        -------
+        numpy.ndarray
+            The first frame
+        """
+        detector_file_list = self.get_file_list()
+        with h5py.File(detector_file_list[0], 'r') as handle:
+            frame0 = handle['entry/data/data'][0, :, :]
+
+        return frame0
+
+    def load_weight(self, ignore_crop=False):
         """
         Provides the mask used for every single diffraction pattern of the whole scan.
         """
-        # load the first non-masked frame
-        for i in itertools.count():
-            raw, _, _ = self.load(indices=(i,), disable_frame_filtering=True)
-            print(i, raw)
-            if i in raw:
-                data = raw[i]
-                break
+        frame0 = self.get_first_frame()
+        if self.info.cropOnLoad and not ignore_crop:
+            slice_i, slice_j, pad_args = self.crop_pad_params(self.detector_center, frame0.shape, self.info.shape)
+            frame0 = frame0[slice_i, slice_j]  # crop
+        else:
+            slice_i = slice(None, None)
+            slice_j = slice(None, None)
+            pad_args = ((0, 0), (0, 0))
+        mask = np.ones_like(frame0)
 
-        mask = np.ones_like(data)
-        if self.info.detector == 'pilatus':
-            mask[np.where(data < 0)] = 0
+        if 'pilatus' in self.info.detector:
+            mask[np.where(frame0 < 0)] = 0
         if 'eiger' in self.info.detector:
-            bit_depth = int(''.join(filter(str.isdigit, str(data.dtype))))
+            bit_depth = int(''.join(filter(str.isdigit, str(frame0.dtype))))
             logger.info(f"found bit depth of {bit_depth} in the eiger frames")
             logger.info(f"    -> masking all pixels with values of {2**(bit_depth) -1} and above")
-            mask[np.where(data < 0)] = 0
-            mask[np.where(data >= ((2**bit_depth)-1))] = 0
+            mask[np.where(frame0 < 0)] = 0
+            mask[np.where(frame0 >= ((2**bit_depth)-1))] = 0
 
         logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
                     (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
@@ -547,32 +631,16 @@ class P06Scan(PtyScan):
             else:
                 mask2 = self.load_mask_tiff()
 
-            if self.info.cropOnLoad:
-                mask2 = mask2[
-                        self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper,
-                        self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
-                mask2 = self.pad_to_size(mask2, 0)
-
             logger.info(
                 "loaded additional mask, %u x %u, sum %u, so %u masked pixels" %
                 (mask2.shape + (np.sum(mask2),
                                 np.prod(mask2.shape) - np.sum(mask2))))
-            mask = mask * mask2
+            mask = mask * mask2[slice_i, slice_j]
             logger.info("total mask, %u x %u, sum %u, so %u masked pixels" %
                         (mask.shape + (np.sum(mask),
                                        np.prod(mask.shape) - np.sum(mask))))
+        mask = np.pad(mask, pad_args)
         return mask
-
-    def pad_to_size(self, frame, value):
-        ny, nx = np.shape(frame)
-        cy, cx = self.info.tmp_center
-        dy, dx = self.info.shape
-        ry, rx = dy//2 , dx//2
-        pad_xl   = rx - cx
-        pad_xu   = rx + cx - nx
-        pad_yl   = ry - cy
-        pad_yu   = ry + cy - ny
-        return np.pad(frame, [[pad_yl,pad_yu],[pad_xl,pad_xu]], mode='constant', constant_values=[value])
 
 
 @register()
@@ -587,10 +655,13 @@ class P06Scan_scanning_mirror(P06Scan):
             self.p.update(pars)
         self.p.update(kwargs)
 
+        if self.p.center is None:
+            raise ValueError("center may not be None for P06Scan_scanning_mirror")
+            # Center will be assigned automatically during call to super(P06Scan_scanning_mirror, self).__init__(self.p), however, for scanning mirror data, this is invalid.
+
         super(P06Scan_scanning_mirror, self).__init__(self.p)
 
-        if self.info.center is None:
-            raise ValueError("center may not be None for P06Scan_scanning_mirror")
+
 
     def load_positions(self):
         positions = super(P06Scan_scanning_mirror, self).load_positions()
@@ -608,14 +679,6 @@ class P06Scan_scanning_mirror(P06Scan):
     def load_center_of_mass(self):
         positions_path = self.info.positions_path
         com = {}  # center of mass
-
-        # fake center of mass data
-        # positions = super(P06Scan_scanning_mirror, self).load_positions()
-        # print(positions_path)
-        # with h5py.File(positions_path, 'a') as f:
-        #     f.create_dataset(name=f'detectors/{self.info.detector}/centre_of_mass/x', data=positions[:, 0]*0.5)
-        #     f.create_dataset(name=f'detectors/{self.info.detector}/centre_of_mass/y', data=positions[:, 1]*0.5)
-        # asdasd
 
         with h5py.File(positions_path, 'r') as f:
             com['x'] = np.array(f[f'detectors/{self.info.detector}/centre_of_mass/x'][:])  # unit assumed to be pixels

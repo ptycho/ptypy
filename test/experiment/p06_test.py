@@ -112,6 +112,7 @@ def test_load(scan_00039_parameters):
     p = scan_00039_parameters
     p06scan = P06Scan(p.scans.scan00.data)
     indices = np.arange(15)
+    p06scan.initialize()
     raw, positions, weights = p06scan.load(indices)
     assert len(raw) == len(indices)
     assert len(positions) == len(indices)
@@ -126,6 +127,54 @@ def test_load(scan_00039_parameters):
     p06scan = P06Scan(p.scans.scan00.data)
     #raw, positions, weights = p06scan.load(indices)
 
+
+@pytest.mark.parametrize(
+    "detector_shape, crop_shape, detector_center",
+    [
+        ((11, 10), (3, 4), (5, 5)),
+        ((11, 10), (5, 4), (4.7, 5.3)),
+        ((11, 10), (9, 9), (1.7, 7.3)),
+        ((11, 10), (9, 9), (7.7, 1.3)),
+    ]
+)
+def test_get_crop_pad_params(detector_shape, crop_shape, detector_center):
+    CENTER_VAL = 1
+    detector_center_pixel = tuple(int(np.round(c)) for c in detector_center)
+    full_image = np.zeros(detector_shape, dtype=int)
+    full_image[detector_center_pixel] = CENTER_VAL
+
+    slice_i, slice_j, pad_args = P06Scan.crop_pad_params(detector_center_pixel,
+                                                     detector_shape,
+                                                     crop_shape)
+
+    cropped_image = full_image[slice_i, slice_j]
+    padded_image = np.pad(cropped_image, pad_args, mode='constant',
+                          constant_values=-1)
+    padded_image_center_value = padded_image[
+        crop_shape[0] // 2, crop_shape[1] // 2]
+
+    assert padded_image.shape == crop_shape
+    assert padded_image_center_value == CENTER_VAL
+
+
+def test_load_scanning_mirror(scan_00039_parameters):
+    p = scan_00039_parameters
+    p06scan = P06Scan_scanning_mirror(p.scans.scan00.data)
+    indices = np.arange(15)
+    p06scan.initialize()
+    raw, positions, weights = p06scan.load(indices)
+    assert len(raw) == len(indices)
+    assert len(positions) == len(indices)
+    assert len(weights) == len(indices)
+
+    # Test exception raised if no frames were selected.
+    with pytest.raises(IOError):
+        p.scans.scan00.data.position_bounds = [[1, -1], [1, -1]]
+        p06scan = P06Scan(p.scans.scan00.data)
+
+    p.scans.scan00.data.position_bounds = [[None, None], [None, None]]  # no valid positions
+    p06scan = P06Scan(p.scans.scan00.data)
+    #raw, positions, weights = p06scan.load(indices)
 
 
 
