@@ -242,8 +242,6 @@ class ScanModel(object):
         # Storage generation if not already existing
         if self.diff is None:
             # This scan is brand new so we create storages for it
-            if sh[-1] == 130:
-                pass
             self.diff = self.Cdiff.new_storage(shape=sh, psize=self.psize, padonly=True,
                                                layermap=None)
             old_diff_views = []

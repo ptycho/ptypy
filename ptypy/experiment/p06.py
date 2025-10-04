@@ -438,10 +438,8 @@ class P06Scan(PtyScan):
     def loading_loop(self, per_file_inds, detector_file_list):
         # actually loading the detector frames
         raw, weights, positions = {}, {}, {}
-        _, ni, nj = self.determine_data_shape()
-        detector_shape = (ni, nj)
 
-        slice_i, slice_j, pad_args = self.crop_pad_params(self.detector_center, detector_shape, self.info.shape)
+        slice_i, slice_j, pad_args = self.crop_pad_params(self.detector_center, self.detector_shape, self.info.shape)
         for i_file, valid_indices in per_file_inds.items():
             # i_file: which file
             i_in_file = valid_indices["i_in_file"]  # which frames in the file should be loaded
@@ -464,7 +462,8 @@ class P06Scan(PtyScan):
 
         return raw, positions, weights
 
-    def create_per_file_inds(self, i_consecutive, frames_per_file, all_selected_inds):
+    @staticmethod
+    def create_per_file_inds(i_consecutive, frames_per_file, all_selected_inds):
         """
         Utility function to link together file indices, scan indices, and consecutive indices.
 
@@ -660,7 +659,10 @@ class P06Scan_scanning_mirror(P06Scan):
             # Center will be assigned automatically during call to super(P06Scan_scanning_mirror, self).__init__(self.p), however, for scanning mirror data, this is invalid.
 
         super(P06Scan_scanning_mirror, self).__init__(self.p)
+        self.full_mask = self.load_weight(ignore_crop=True).astype(bool)
 
+        self.info.full_mask = self.full_mask
+        self.info.loaded_center_of_mass = self.all_positions[:, 2:]  # center of mass before dynamic cropping
 
 
     def load_positions(self):
@@ -687,11 +689,63 @@ class P06Scan_scanning_mirror(P06Scan):
         com['x'] = com['x'][nan_mask]  # necessary for cmesh
         com['y'] = com['y'][nan_mask]  # necessary for cmesh
 
-        # subtract cropping center
-        com['x'] = com['x'] - self.info.center[1]  # order of center is (y, x)
-        com['y'] = com['y'] - self.info.center[0]  # order of center is (y, x)
+        # subtract cropping center  # phasing this out
+        #com['x'] = com['x'] - self.info.center[1]  # order of center is (y, x)
+        #com['y'] = com['y'] - self.info.center[0]  # order of center is (y, x)
 
         # put the two arrays together
         center_of_mass = np.vstack((com['y'], com['x'])).T
 
         return center_of_mass
+
+    def loading_loop(self, per_file_inds, detector_file_list):
+        """
+        Modified loading loop that to allow dynamic cropping
+
+        Parameters
+        ----------
+        per_file_inds
+        detector_file_list
+
+        Returns
+        -------
+            raw, positions, weights
+        """
+        # actually loading the detector frames
+        raw, weights, positions = {}, {}, {}
+        all_positions = self.all_positions[:, :2]  # only the actual posiitons
+        centers_of_mass = self.all_positions[:, 2:]
+        center_pixels = np.round(centers_of_mass).astype(int)
+        # trim center of mass to be relative to center pixel.
+        center_remainder = centers_of_mass - center_pixels
+        pod_positions = np.hstack([all_positions, center_remainder])
+
+        for i_file, valid_indices in per_file_inds.items():
+              # which frames in the file should be loaded
+            with h5py.File(detector_file_list[i_file], 'r') as fp:
+                # load only a cropped bit of the full frames
+                if self.info.cropOnLoad:
+                    frames = np.zeros((self.frames_per_file, *self.info.shape))
+                    masks = np.zeros((self.frames_per_file, *self.info.shape), dtype=bool)
+                    for i_if, i_s in zip(valid_indices["i_in_file"], valid_indices["i_scan"]):
+                        slice_i, slice_j, pad_args = self.crop_pad_params(center_pixels[i_s], self.detector_shape, self.info.shape)
+                        frame = fp['entry/data/data'][i_if, slice_i, slice_j]
+                        frames[i_if] = np.pad(frame, pad_args, mode='constant', constant_values=-1)
+                        masks[i_if] = np.pad(self.full_mask[slice_i, slice_j], pad_args, mode='constant', constant_values=False)
+
+                # load the full raw frames
+                else:
+                    i_in_file = valid_indices["i_in_file"]
+                    frames = fp['entry/data/data' % self.info.detector][i_in_file]
+                    masks = [self.full_mask] * len(frames)
+
+            # Put frames in raw dictionary
+            # First, determine the index of the kept frames in the reduced
+            # filtered frame stack
+            for i_if, i_c in enumerate(valid_indices["i_consecutive"]):
+                raw[i_c] = frames[i_if]
+                weights[i_c] = masks[i_if]  # np.ones(self.info.shape)
+                positions[i_c] = pod_positions[self.all_selected_inds[i_c]]
+
+
+        return raw, positions, weights

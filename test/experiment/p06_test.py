@@ -176,5 +176,27 @@ def test_load_scanning_mirror(scan_00039_parameters):
     p06scan = P06Scan(p.scans.scan00.data)
     #raw, positions, weights = p06scan.load(indices)
 
+@pytest.mark.parametrize(
+    "frames_per_file, n_selected, n_total, i_consecutive",
+    [
+        (10, 10, 10, None),  # 1 file, select all
+        (999, 10, 10, None),
+        (10, 7, 10, None),  # 1 file, select some
+        (10, 70, 100, None),  # 10 files, select some
+        (10, 0, 20, None),  # select none
+        (500, 15, 1681, np.arange(15)),  # problem case
+    ]
+)
+def test_create_per_file_inds(frames_per_file, n_selected, n_total, i_consecutive):
+    if i_consecutive is None:
+        i_consecutive = np.arange(n_selected)
+    mask = np.hstack([np.ones((n_selected, )), np.ones((n_total-n_selected, ))])
+    np.random.shuffle(mask)
+    selected_inds = np.nonzero(mask)[0]
+    per_file_inds = P06Scan.create_per_file_inds(list(i_consecutive), frames_per_file, list(selected_inds))
 
+    for i_file, valid_inds in per_file_inds.items():
+        assert np.max(valid_inds["i_in_file"]) < frames_per_file
+        assert np.max(valid_inds["i_in_file"]) < len(valid_inds["i_scan"])
+        assert np.max(valid_inds["i_in_file"]) < len(valid_inds["i_consecutive"])
 
