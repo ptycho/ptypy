@@ -31,8 +31,8 @@ __all__ = ['MLPtychoTomo']
 
 
 class PtypyTomoWrapper:
-    def __init__(self, obj, vol):
-        self._setup_projector(obj, vol)
+    def __init__(self, obj, vol, shifts=None):
+        self._setup_projector(obj, vol, shifts)
 
     def get_indexes_of_active_views(self, obj):
         """
@@ -44,8 +44,7 @@ class PtypyTomoWrapper:
                 ind_active_views.append(ind)
         return ind_active_views
 
-    def _setup_projector(self, obj, vol):
-
+    def _setup_projector(self, obj, vol, shifts=None):
         list_view_to_proj_vectors = []
         all_angles = []
 
@@ -53,10 +52,14 @@ class PtypyTomoWrapper:
         for i, (k,v) in enumerate([(i,v) for i,v in obj.views.items()]):
             y = v.dcoord[0] - v.storage.center[0]
             x = v.dcoord[1] - v.storage.center[1]
+            if shifts is not None:
+                y -= shifts[i][1]
+                x -= shifts[i][0]
             list_view_to_proj_vectors.append((y, x))
             all_angles.append(v.extra['val'])
 
         view_to_proj_vectors = np.array(list_view_to_proj_vectors)
+        print(view_to_proj_vectors)
 
         self.projector = AstraViewBased(
             vol=vol,
@@ -136,7 +139,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
     [shifts]
     default = None
-    type = str
+    type = ndarray
     help = Tomography angle shifts
     doc = Path to the tomography angle shifts (if provided).
 
@@ -360,6 +363,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.tomo_wrapper = PtypyTomoWrapper(
             obj=self.ptycho.obj,
             vol=self.rho.storages['S_rho'].data,
+            shifts=self.p.shifts
         )
 
         # Initialise ML noise model
@@ -538,7 +542,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # Saving volumes when running simulated problem (saves to npy)
                 np.save('vol_200iters_'+sid, self.rho.storages['S_rho'].data)
             # Saving probe when running simulated problem
-                np.save('probe_200iters_'+sid, self.pr.storages['SsimG00'].data)
+                np.save('probe_200iters_'+sid, self.pr.storages['Sscan_00G00'].data)
             # Saving volumes when running real data (saves to cmap)
             #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it200_"+sid+".cmap", "w") as f:
             #        f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
