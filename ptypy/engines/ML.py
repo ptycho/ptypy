@@ -20,7 +20,7 @@ from ..utils import parallel
 from .utils import Cnorm2, Cdot
 from . import register
 from .base import BaseEngine, PositionCorrectionEngine
-from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull
+from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull, BlockFull3D
 
 
 __all__ = ['ML']
@@ -124,7 +124,7 @@ class ML(PositionCorrectionEngine):
 
     """
 
-    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull]
+    SUPPORTED_MODELS = [Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull, BlockFull3D]
 
     def __init__(self, ptycho_parent, pars=None):
         """
@@ -227,6 +227,9 @@ class ML(PositionCorrectionEngine):
         # - for name,s in self.ob_viewcover.S.items():
         # -    s.fill(s.get_view_coverage())
         self.ML_model.prepare()
+        for name, s in self.pr.storages.items():
+            print(name, len(s.data))
+            s.data *= len(s.data)
 
     def engine_iterate(self, num=1):
         """

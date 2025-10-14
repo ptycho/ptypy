@@ -1384,7 +1384,7 @@ class BlockFull3D(BlockFull):
                                         'psize': geometry.resolution,
                                         'coord': pos_obj,
                                         'storageID': object_id_suf,
-                                        'layer': 1,
+                                        'layer': probe_index,
                                         'active': True,
                                         'extra': extra_dict})
 

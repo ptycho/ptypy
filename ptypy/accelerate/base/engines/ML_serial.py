@@ -152,6 +152,8 @@ class ML_serial(ML):
                 prep.ma = self.ma.S[d.ID].data
 
         self.ML_model.prepare()
+        # for name, s in self.pr.storages.items():
+        #     s.data *= len(s.data)
 
     def _get_smooth_gradient(self, data, sigma):
         if self.p.smooth_gradient_method == "convolution":
