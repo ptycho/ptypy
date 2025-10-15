@@ -260,7 +260,7 @@ class P06Scan(PtyScan):
                     self.info.position_bounds[axis][ind] = np.inf * np.sign(2 * ind - 1)
 
         if self.info.position_bounds:
-            (xmin, xmax), (ymin, ymax) = self.info.position_bounds
+            (ymin, ymax), (xmin, xmax) = self.info.position_bounds
             in_box = np.logical_and.reduce([
                 all_positions[:, 0] >= ymin,
                 all_positions[:, 0] <= ymax,
