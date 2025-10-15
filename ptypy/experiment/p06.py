@@ -747,7 +747,7 @@ class P06Scan_scanning_mirror(P06Scan):
                     masks = [self.full_mask] * len(frames)
 
             # Put frames in raw dictionary
-            for i_if, i_c in enumerate(valid_indices["i_consecutive"]):
+            for i_if, i_c in zip(valid_indices["i_in_file"], valid_indices["i_consecutive"]):
                 raw[i_c] = frames[i_if]
                 weights[i_c] = masks[i_if]  # np.ones(self.info.shape)
                 positions[i_c] = pod_positions[self.all_selected_inds[i_c]]
