@@ -328,7 +328,7 @@ class WASP_serial(WASP):
                 self.benchmark.wasp_averaging += time.time() - t1
                 self.benchmark.calls_wasp_averaging += 1
 
-                self.clip_object(ob)
+                self.clip_object(self.ob.S[oID]) 
 
             # Re-center the probe
             self.center_probe()

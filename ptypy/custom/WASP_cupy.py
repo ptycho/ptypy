@@ -42,8 +42,16 @@ class WASP_cupy(WASP_serial):
     help =
     doc =
 
-    
-    
+    [probe_update_cuda_atomics]
+    default = False
+    type = bool
+    help = For GPU, use the atomics version for probe update kernel
+
+    [object_update_cuda_atomics]
+    default = True
+    type = bool
+    help = For GPU, use the atomics version for object update kernel
+
     [fft_lib]
     default = reikna
     type = str
