@@ -540,7 +540,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # Saving volumes when running simulated problem (saves to npy)
                 np.save('vol_200iters_'+sid, self.rho.storages['S_rho'].data)
             # Saving probe when running simulated problem
-                np.save('probe_200iters_'+sid, self.pr.storages['Sscan_00G00'].data)
+            #    np.save('probe_200iters_'+sid, self.pr.storages['Sscan_00G00'].data)
             # Saving volumes when running real data (saves to cmap)
             #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it200_"+sid+".cmap", "w") as f:
             #        f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
