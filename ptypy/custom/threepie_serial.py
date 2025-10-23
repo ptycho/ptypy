@@ -299,7 +299,6 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                 # references for ob, pr
                 ob = self.ob.S[oID].data
                 pr = self.pr.S[pID].data
-                self.pr.S[pID].data = np.random.rand(*self.pr.S[pID].data.shape).astype(self.pr.S[pID].data.dtype)
                 # print(f"DEBUG: {ob.shape}, {pr.shape}")
                 
                 # shuffle view order
@@ -328,13 +327,7 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
 
                     
                     ob, pr, ex = POK.last_slice_copy_to_ptypy(aux, addr, ob_last = self._object[-1], pr_last = self._probe[-1], exit_last = self._exits[-1], pr = pr, ob = ob, ex = ex, curiter = it, slice_update_iter = self.p.slice_start_iteration)
-                    
-                    # print(f'After prshape: {pr.shape}, ob.shape: {ob.shape}, ex.shape: {ex.shape}')
-                    # with h5py.File('/home/litang/multislice/debug.h5', 'w') as f:
-                    #     f.create_dataset('pr', data=pr)
-                    #     f.create_dataset('ob', data=ob)
-                    #     f.create_dataset('ex', data=ex)
-                    
+
                     # position update
                     self.position_update_local(prep,i)
 
@@ -362,33 +355,7 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                     t1 = time.time()
                     aux[:] = BW(aux)
                     self.benchmark.D_iProp += time.time() - t1
-                    
 
-                    self._object[-1], self._probe[-1] = POK.ptypy_copy_to_last_slice(aux, addr, self._probe[-1], self._object[-1], pr, ob, ex, it, self.p.slice_start_iteration)
-
-
-                    # # object update
-                    # t1 = time.time()
-                    # POK.pr_norm_local(addr, pr, prn)
-                    # POK.ob_update_local(addr, ob, pr, ex, aux, prn, a=self._ob_a, b=self._ob_b)
-                    # self.benchmark.object_update += time.time() - t1
-                    # self.benchmark.calls_object += 1
-
-                    # # probe update
-                    # t1 = time.time()
-                    # if self._object_norm_is_global and self._pr_a == 0:
-                    #     obn_max = au.max_abs2(ob)
-                    #     obn[:] = 0
-                    # else:
-                    #     POK.ob_norm_local(addr, ob, obn)
-                    #     obn_max = obn.max()
-                    # if self.p.probe_update_start <= self.curiter:
-                    #     POK.pr_update_local(addr, pr, ob, ex, aux, obn, obn_max, a=self._pr_a, b=self._pr_b)
-                    # self.benchmark.probe_update += time.time() - t1
-                    # self.benchmark.calls_probe += 1
-                    
-                    self._object, self._probe, self._exits = POK.multislice_bw(aux, addr, self._object, self._probe, self._exits, ob, pr, ex, BW_msk, it, self.p.slice_start_iteration)
- 
                     ## build exit wave
                     t1 = time.time()
                     AWK.make_exit(aux, addr, ob, pr, ex, c_a=self._b, c_po=self._a, c_e=-(self._a+self._b))
@@ -403,12 +370,37 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
                     self.benchmark.A_Build_aux += time.time() - t1
 
-                ## compute log-likelihood
-                if self.p.compute_log_likelihood:
-                    t1 = time.time()
-                    aux[:] = FW(aux)
-                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)
-                    self.benchmark.F_LLerror += time.time() - t1
+                    if self.curiter >= self.p.slice_start_iteration[-1]:
+                        # object update
+                        t1 = time.time()
+                        POK.pr_norm_local(addr, pr, prn)
+                        POK.ob_update_local(addr, ob, pr, ex, aux, prn, a=self._ob_a, b=self._ob_b)
+                        self.benchmark.object_update += time.time() - t1
+                        self.benchmark.calls_object += 1
+
+                        # probe update
+                        t1 = time.time()
+                        if self._object_norm_is_global and self._pr_a == 0:
+                            obn_max = au.max_abs2(ob)
+                            obn[:] = 0
+                        else:
+                            POK.ob_norm_local(addr, ob, obn)
+                            obn_max = obn.max()
+                        if self.p.probe_update_start <= self.curiter:
+                            POK.pr_update_local(addr, pr, ob, ex, aux, obn, obn_max, a=self._pr_a, b=self._pr_b)
+                        self.benchmark.probe_update += time.time() - t1
+                        self.benchmark.calls_probe += 1
+
+                        self._object[-1], self._probe[-1] = POK.ptypy_copy_to_last_slice(aux, addr, self._probe[-1], self._object[-1], pr, ob, ex, it, self.p.slice_start_iteration)
+
+                    self._object, self._probe, self._exits,ob,pr,ex = POK.multislice_bw(aux, addr, self._object, self._probe, self._exits, ob, obn, pr, prn, ex, BW_msk, it, self.p.slice_start_iteration,self._ob_a,self._ob_b,self._pr_a,self._pr_b,self._object_norm_is_global)
+
+                    ## compute log-likelihood
+                    if self.p.compute_log_likelihood:
+                        t1 = time.time()
+                        aux[:] = FW(aux)
+                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                        self.benchmark.F_LLerror += time.time() - t1
 
                     # update errors
                 errs = np.ascontiguousarray(np.vstack([np.hstack(prep.err_fourier),
