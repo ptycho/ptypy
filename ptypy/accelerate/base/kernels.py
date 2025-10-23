@@ -730,9 +730,9 @@ class PoUpdateKernel(BaseKernel):
         Args:
             b_aux: Auxiliary buffer array
             addr: Address array for serial processing
-            pr:  input pr
-            ob: the first slice of the object
-            ob_slices: List of exit wave arrays for each slice
+            pr_slices: List of probe arrays for each slice
+            exit_slices: List of exit wave arrays for each slice
+            ob_slices: List of object arrays for each slice
             fw_propagators: List of near-field forward propagators between slices
             curiter: Current iteration number
             slice_update_iter: Iteration numbers to start updating slices
@@ -814,7 +814,7 @@ class PoUpdateKernel(BaseKernel):
         
         return ob_last, pr_last
 
-    def multislice_bw(self, b_aux, addr, ob_slices, pr_slices, exit_slices, ob, pr, ex, bw_propagators, curiter, slice_update_iter):
+    def multislice_bw(self, b_aux, addr, ob_slices, pr_slices, exit_slices, ob, obn, pr, prn, ex, bw_propagators, curiter, slice_update_iter, ob_alpha, ob_beta, pr_alpha, pr_beta, _object_norm_is_global):
         """
         Multislice forward kernel implementation for ThreePIE serial engine.
         
@@ -829,9 +829,13 @@ class PoUpdateKernel(BaseKernel):
             fw_propagators: List of near-field forward propagators between slices
             curiter: Current iteration number
             slice_update_iter: Iteration numbers to start updating slices
+            ob_alpha: object update alpha parameter
+            ob_beta: object update beta parameter
+            pr_alpha: probe update alpha parameter
+            pr_beta: probe update beta parameter
+            _object_norm_is_global: flag for global object normalization
         """
         aux = b_aux
-        ex = []
         sh = addr.shape
         flat_addr = addr.reshape(sh[0] * sh[1], sh[2], sh[3])
         rows, cols = b_aux.shape[-2:]
@@ -839,20 +843,34 @@ class PoUpdateKernel(BaseKernel):
         
         # Backward pass through slices (num_slices-2 to 0) for probe propagation
         for slice_idx in range(num_slices - 2, -1, -1):
-            for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-                if curiter >= slice_update_iter[slice_idx]:
-                    # ex = bw_propagators[slice_idx]( pr_slices[slice_idx + 1][prc[0], :, :] )
-                    # pr = pr_slices[slice_idx][prc[0], :, :]
-                    # ob = ob_slices[slice_idx][obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
-                    
-                    ob_slices[slice_idx][obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
-                    
-                    pr_slices[slice_idx][prc[0], :, :] = pr[prc[0], :, :]
+            if curiter >= slice_update_iter[slice_idx]:
+                for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+                    ex[prc[0], :, :] = bw_propagators[slice_idx]( pr_slices[slice_idx + 1][prc[0], :, :] )
+                    pr[prc[0], :, :] = pr_slices[slice_idx][prc[0], :, :]
+                    ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] = ob_slices[slice_idx][obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
+                #print(ob.shape, obn.shape, pr.shape, prn.shape, ex.shape,exit_slices[slice_idx].shape)
+                # object update
+                self.pr_norm_local(addr, pr, prn)
+                self.ob_update_local(addr, ob, pr, exit_slices[slice_idx], aux, prn, a=ob_alpha, b=ob_beta)
+                #self.ob_update(addr, ob, obn, pr, exit_slices[slice_idx])    
+                
+                # probe update
+                if _object_norm_is_global and pr_alpha == 0:
+                        obn_max = au.max_abs2(ob) # questions about au cp
+                        obn[:] = 0
                 else:
-                    pr_slices[slice_idx][prc[0], :, :] = \
-                    bw_propagators[slice_idx](pr_slices[slice_idx + 1][prc[0], :, :])
+                    self.ob_norm_local(addr, ob, obn)
+                    obn_max = obn.max()
+                self.pr_update_local(addr, pr, ob, exit_slices[slice_idx], aux, obn, obn_max, a=pr_alpha, b=pr_beta)
+                #self.pr_update(addr, pr, prn, ob, exit_slices[slice_idx]) 
+                for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+                    ob_slices[slice_idx][obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
+                    pr_slices[slice_idx][prc[0], :, :] = pr[prc[0], :, :]  
+            else:
+                for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
+                    pr_slices[slice_idx][prc[0], :, :] = bw_propagators[slice_idx](pr_slices[slice_idx + 1][prc[0], :, :])
 
-        return ob_slices, pr_slices, exit_slices#, ex, pr, ob
+        return ob_slices, pr_slices, exit_slices, ex, pr, ob
 
 class PositionCorrectionKernel(BaseKernel):
     from ptypy.accelerate.base import address_manglers
