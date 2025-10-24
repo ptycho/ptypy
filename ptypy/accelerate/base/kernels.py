@@ -791,6 +791,11 @@ class PoUpdateKernel(BaseKernel):
     def ptypy_copy_to_last_slice(self, b_aux, addr, pr_last, ob_last, pr, ob, ex, curiter, slice_update_iter):
         """
         Generate the last exit wave, probe, and object slice for ptypy from the multislice slices.
+
+        Parameters
+        ----------
+        b_aux :
+            Shape is (n_modes, ny, nx) (Okt 23rd)
         """
         sh = addr.shape
         nmodes = sh[1]
@@ -803,10 +808,19 @@ class PoUpdateKernel(BaseKernel):
         rows, cols = ex.shape[-2:]
         
         if curiter >= slice_update_iter[-1]:
+            # obc = object corner?
             for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
                 if curiter >= slice_update_iter[-1]:
+                    self._exits[-1] = aux[ind]
+                    self.object_update(view,
+                                       {pod.ID: self._exits[-1][pod.pr_view]
+                                        for name, pod in view.pods.items()})
+                    self.probe_update(view,
+                                      {pod.ID: self._exits[-1][pod.pr_view] for
+                                       name, pod in view.pods.items()})
+
+
                     ob_last[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols] = ob[obc[0], obc[1]:obc[1] + rows, obc[2]:obc[2] + cols]
-                    
                     pr_last[prc[0], :, :] = pr[prc[0], :, :]
                     
                 else:
