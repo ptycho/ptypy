@@ -299,6 +299,7 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                 # references for ob, pr
                 ob = self.ob.S[oID].data
                 pr = self.pr.S[pID].data
+                self.pr.S[pID].data = np.random.rand(*self.pr.S[pID].data.shape).astype(self.pr.S[pID].data.dtype)
                 # print(f"DEBUG: {ob.shape}, {pr.shape}")
                 
                 # shuffle view order
@@ -325,7 +326,6 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                     aux = kern.aux
                     self._object, self._probe, self._exits = POK.multislice_fw(aux, addr, self._object, self._probe, self._exits, FW_msk, it, self.p.slice_start_iteration)
 
-                    # print(f'{self._object[-1].shape}, {self._probe[-1].shape}, {self._exits[-1].shape}')
                     
                     ob, pr, ex = POK.last_slice_copy_to_ptypy(aux, addr, ob_last = self._object[-1], pr_last = self._probe[-1], exit_last = self._exits[-1], pr = pr, ob = ob, ex = ex, curiter = it, slice_update_iter = self.p.slice_start_iteration)
                     
@@ -362,23 +362,11 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                     t1 = time.time()
                     aux[:] = BW(aux)
                     self.benchmark.D_iProp += time.time() - t1
-
-                    ## compute log-likelihood
-                    if self.p.compute_log_likelihood:
-                        t1 = time.time()
-                        aux[:] = FW(aux)
-                        FUK.log_likelihood(aux, addr, mag, ma, err_phot)
-                        self.benchmark.F_LLerror += time.time() - t1
                     
-                    # print(f'Before prshape: {pr.shape}, ob.shape: {ob.shape}, ex.shape: {ex.shape}')
 
-                    # print(f'Before prshape: self._probe[-1].shape: {self._probe[-1].shape}, self._object[-1].shape: {self._object[-1].shape}, self._exits[-1].shape: {np.array(self._exits[-1]).shape}')
-                    
                     self._object[-1], self._probe[-1] = POK.ptypy_copy_to_last_slice(aux, addr, self._probe[-1], self._object[-1], pr, ob, ex, it, self.p.slice_start_iteration)
 
-                    # print(f'After ptypy_copy_to_last_slice: _object {np.array(self._object[-1]).shape}, _probe: {np.array(self._probe[-1]).shape}, ex.shape: {np.array(ex).shape}')
 
-                    
                     # # object update
                     # t1 = time.time()
                     # POK.pr_norm_local(addr, pr, prn)
@@ -415,6 +403,12 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                     AWK.build_aux_no_ex(aux, addr, ob, pr)
                     self.benchmark.A_Build_aux += time.time() - t1
 
+                ## compute log-likelihood
+                if self.p.compute_log_likelihood:
+                    t1 = time.time()
+                    aux[:] = FW(aux)
+                    FUK.log_likelihood(aux, addr, mag, ma, err_phot)
+                    self.benchmark.F_LLerror += time.time() - t1
 
                     # update errors
                 errs = np.ascontiguousarray(np.vstack([np.hstack(prep.err_fourier),
