@@ -12,7 +12,7 @@ This file is part of the PTYPY package.
     :license: see LICENSE for details.
 """
 import numpy as np
-import time
+import time, sys
 import h5py
 import subprocess
 from .. import utils as u
@@ -53,13 +53,12 @@ class PtypyTomoWrapper:
             y = v.dcoord[0] - v.storage.center[0]
             x = v.dcoord[1] - v.storage.center[1]
             if shifts is not None:
-                y -= shifts[i][1]
-                x -= shifts[i][0]
+                y -= (shifts[i][0] - v.storage.center[0])
+                x -= (shifts[i][1] - v.storage.center[1])
             list_view_to_proj_vectors.append((y, x))
             all_angles.append(v.extra['val'])
 
         view_to_proj_vectors = np.array(list_view_to_proj_vectors)
-        print(view_to_proj_vectors)
 
         self.projector = AstraViewBased(
             vol=vol,
@@ -90,7 +89,7 @@ class PtypyTomoWrapper:
         for ID, s in output.storages.items():
             s.data[:] = output_proj_array
 
-    def backward(self, proj_array, ind, output):
+    def backward(self, proj_array, ind, output, iter=1):
         """
         Computes the backward projection, so a 3d array having
         same shape as volume, and places it in the container
@@ -106,7 +105,7 @@ class PtypyTomoWrapper:
         self.projector.ind_of_views = ind
 
         # Does not currently work with multiple storages
-        output_vol = self.projector.backward()
+        output_vol = self.projector.backward(iter)
         for ID, s in output.storages.items():
             s.data[:] = output_vol
 
@@ -179,6 +178,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
     lowlim = 0.0
     help = StdDev for initial volume blur
     doc = Standard deviation for the initial volume Gaussian blur.
+
+    [object_mask]
+    default = None
+    type = ndarray
+    help = Binary mask array (True is valid, False is invalid)
 
     [floating_intensities]
     default = False
@@ -342,6 +346,17 @@ class MLPtychoTomo(PositionCorrectionEngine):
             rho_real = gaussian_filter(rho_real, sigma=self.p.init_vol_blur_sigma)
             rho_imag = gaussian_filter(rho_imag, sigma=self.p.init_vol_blur_sigma)
 
+        # Regularise the initial volume
+        Nz,Ny,Nx = rho_real.shape
+        xx,yy,zz = np.meshgrid(np.arange(Nx)-Nx//2, np.arange(Ny)-Ny//2, np.arange(Nz)-Nz//2)
+        rr = np.sqrt(xx**2 + 1**2 + zz**2)
+        mask1 = rr < 150
+        mask2 = np.zeros_like(mask1, dtype=bool)
+        mask2[70:-70] = True
+        mask = mask1 & mask2
+        rho_imag[~mask] = 0
+        rho_real[~mask] = 0
+            
         # Initialise volume rho as container
         self.rho = Container()
         self.rho.new_storage(ID="_rho", shape=(3*(self.view_shape,)))
@@ -366,6 +381,30 @@ class MLPtychoTomo(PositionCorrectionEngine):
             shifts=self.p.shifts
         )
 
+        # Mask
+        storage_key = next(iter(self.ptycho.obj.S))
+        if self.p.object_mask is not None:
+            mask = self.p.object_mask
+            self.ptycho.obj.S[storage_key].data[0].real = mask
+        
+        # Get 2D fluence maps
+        # coverage2d = self.ptycho.obj.S[storage_key].get_view_coverage().real
+        # np.save(f"/dls/tmp/iat69393/coverage_{u.parallel.rank}.npy", coverage2d)
+        # for i,pod in self.ptycho.pods.items():
+        #     if pod.active:
+        #         self.projected_rho[pod.ex_view] = u.abs2(pod.probe)
+
+        # # Back project to get 3D coverage map
+        # storage_key = next(iter(self.projected_rho.S))
+        # self.tomo_wrapper.backward(
+        #     proj_array=np.moveaxis(self.projected_rho.S[storage_key].data, 1, 0),
+        #     ind=self.get_indexes_of_active_views(),
+        #     output=self.rho_grad_new
+        # )
+        # self.rho_grad_new.allreduce()
+        # vol_weights = self.rho_grad_new.S["S_rho"].data
+        # np.save("/dls/tmp/iat69393/vol_prep.npy", self.rho_grad_new.S["S_rho"].data)
+        
         # Initialise ML noise model
         self._initialize_model()
 
@@ -534,13 +573,13 @@ class MLPtychoTomo(PositionCorrectionEngine):
             self.pr += self.pr_h
 
             # FIXME: move saving volumes to run script
-            if parallel.master and self.curiter == 199: # curiter starts at zero
+            if parallel.master and ((self.curiter % 10) == 0): # curiter starts at zero
             # Get SLURM Job ID
                 sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
             # Saving volumes when running simulated problem (saves to npy)
-                np.save('vol_200iters_'+sid, self.rho.storages['S_rho'].data)
+                np.save('/dls/tmp/iat69393/vol_'+sid+"_"+str(self.curiter), self.rho.storages['S_rho'].data)
             # Saving probe when running simulated problem
-                np.save('probe_200iters_'+sid, self.pr.storages['Sscan_00G00'].data)
+                np.save('/dls/tmp/iat69393/probe_'+sid+"_"+str(self.curiter), self.pr.storages[list(self.pr.S.keys())[0]].data)
             # Saving volumes when running real data (saves to cmap)
             #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it200_"+sid+".cmap", "w") as f:
             #        f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
@@ -755,6 +794,10 @@ class GaussianModel(BaseModel):
             ind=self.get_indexes_of_active_views(),
             output=self.projected_rho
         )
+        debug = False
+        #np.save(f"/dls/tmp/iat69393/forward_indices_{u.parallel.rank}.npy", np.array(self.get_indexes_of_active_views()))
+        if u.parallel.master and debug:
+             np.save(f"/dls/tmp/iat69393/projected_rho_before.npy", self.projected_rho.S["S0000G00"].data)
 
         # Outer loop: through diffraction patterns
         for dname, diff_view in self.di.views.items():
@@ -772,6 +815,10 @@ class GaussianModel(BaseModel):
             for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
+                if u.parallel.master and (dname == "V0000") and debug:
+                    np.save("/dls/tmp/iat69393/exp_rho.npy", np.exp(1j * self.projected_rho[pod.ex_view]))
+                    np.save("/dls/tmp/iat69393/probe.npy", pod.probe)
+                    np.save("/dls/tmp/iat69393/mask.npy", pod.object.real)
                 f[name] = pod.fw(pod.probe * np.exp(1j * self.projected_rho[pod.ex_view]))
                 Imodel += pod.downsample(u.abs2(f[name]))
 
@@ -781,6 +828,9 @@ class GaussianModel(BaseModel):
                                                 / (w * Imodel**2).sum())
                 Imodel *= self.float_intens_coeff[dname]
 
+            if u.parallel.master and (dname == "V0000") and debug:
+                np.save("/dls/tmp/iat69393/diff_model.npy", np.double(Imodel))
+                np.save("/dls/tmp/iat69393/diff_data.npy", np.double(I))
             DI = np.double(Imodel) - I
 
             # Second pod loop: gradients computation
@@ -789,15 +839,32 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
+                if u.parallel.master and (dname == "V0000") and debug:
+                    np.save("/dls/tmp/iat69393/xi.npy", xi)
                 expobj = np.exp(1j * self.projected_rho[pod.ex_view])
+                if u.parallel.master and (dname == "V0000") and debug:
+                    np.save("/dls/tmp/iat69393/expobj.npy", expobj)
+                    np.save("/dls/tmp/iat69393/pr_grad_1.npy", self.pr_grad[pod.pr_view])
                 self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
+                if u.parallel.master and (dname == "V0000") and debug:
+                    np.save("/dls/tmp/iat69393/pr_grad_2.npy", self.pr_grad[pod.pr_view])
                 prod_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.tot_power
-                self.projected_rho[pod.ex_view] = prod_xi_psi_conj
+                if u.parallel.master and (dname == "V0000") and debug:
+                    np.save("/dls/tmp/iat69393/ob_grad_1.npy", self.projected_rho[pod.ex_view])
+                    np.save("/dls/tmp/iat69393/prod_xi_psi.npy", prod_xi_psi_conj)
+                self.projected_rho[pod.ex_view] = prod_xi_psi_conj * pod.object.real
+                if u.parallel.master and (dname == "V0000") and debug:
+                    np.save("/dls/tmp/iat69393/ob_grad_2.npy", self.projected_rho[pod.ex_view])
 
+            if debug:
+                sys.exit(0)
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
             LL += LLL
 
+#        if u.parallel.master:
+#            np.save(f"/dls/tmp/iat69393/projected_rho_after.npy", self.projected_rho.S["S0000G00"].data)
+            
         # Back project volume
         storage_key = next(iter(self.projected_rho.S)) #list(self.prods_container.S)[0]
         self.tomo_wrapper.backward(

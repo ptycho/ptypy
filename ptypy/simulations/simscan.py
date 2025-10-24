@@ -486,6 +486,8 @@ class SimScan3D(PtyScan):
         # Create 'raw' ressource buffers. We will let the master node keep them
         # as memary may be short (Not that this is the most efficient type)
         logger.debug('Gathering data at master node.')
+        for i,v in self.diff.items():
+            print(u.parallel.rank, i, v.max(), v.dtype)
         self.diff = u.parallel.gather_dict(self.diff)
         self.mask = u.parallel.gather_dict(self.mask)
         self.pos = u.parallel.gather_dict(self.pos)

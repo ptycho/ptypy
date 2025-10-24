@@ -1385,7 +1385,7 @@ class BlockFull3D(BlockFull):
                                         'coord': pos_obj,
                                         'storageID': object_id_suf,
                                         'layer': 1,
-                                        'active': True,
+                                        'active': 1,
                                         'extra': extra_dict})
 
                 ev = View(container=self.ptycho.exit,
