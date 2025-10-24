@@ -455,7 +455,7 @@ class P06Scan(PtyScan):
             for i, i_c in enumerate(valid_indices["i_consecutive"]):
                 raw[i_c] = np.pad(frames[i], pad_args, mode='constant', constant_values=-1)
                 positions[i_c] = self.all_positions[self.all_selected_inds[i_c]]
-                weights[i_c] = np.ones(self.info.shape)
+                # weights[i_c] = np.ones(self.info.shape) Leaving weights empty should apply the global mask.
 
         return raw, positions, weights
 
@@ -749,7 +749,7 @@ class P06Scan_scanning_mirror(P06Scan):
             # Put frames in raw dictionary
             for i_if, i_c in zip(valid_indices["i_in_file"], valid_indices["i_consecutive"]):
                 raw[i_c] = frames[i_if]
-                weights[i_c] = masks[i_if]  # np.ones(self.info.shape)
+                weights[i_c] = masks[i_if]
                 positions[i_c] = pod_positions[self.all_selected_inds[i_c]]
 
         return raw, positions, weights
