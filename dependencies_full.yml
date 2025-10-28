@@ -1,0 +1,17 @@
+name: ptypy_full
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - numpy
+  - scipy
+  - matplotlib
+  - h5py
+  - pyzmq
+  - mpi4py
+  - packaging
+  - pillow
+  - pyfftw
+  - pyyaml
+  - pip
+

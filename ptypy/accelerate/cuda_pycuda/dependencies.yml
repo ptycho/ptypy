@@ -1,0 +1,21 @@
+name: ptypy_pycuda
+channels:
+  - conda-forge
+  - nvidia
+dependencies:
+  - python
+  - numpy
+  - scipy
+  - matplotlib
+  - h5py
+  - pyzmq
+  - mpi4py
+  - pillow
+  - pyfftw
+  - pyyaml
+  - reikna
+  - pycuda
+  - cuda-nvcc
+  - cuda-cudart-dev
+  - pip
+  - compilers

@@ -5,9 +5,9 @@ This module contains experimental DM engines for 3d Bragg ptycho.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
-from .DM import DM
+from .projectional import DM
 from . import register
 from ..core.manager import Bragg3dModel
 from ..utils import parallel
@@ -167,7 +167,7 @@ class DM_3dBragg(DM):
                 r = np.sqrt((x_ - xcenter)**2 + (y_ - ycenter)**2)
                 scaling = np.min(geo.resolution)
                 r /= scaling
-                r = r.astype(np.int)
+                r = r.astype(int)
                 tbin = np.bincount(r.ravel(), arr.ravel())
                 nr = np.bincount(r.ravel())
                 s = np.arange(len(tbin)) * scaling

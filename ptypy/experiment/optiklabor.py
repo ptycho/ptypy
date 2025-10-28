@@ -134,7 +134,7 @@ class FliSpecScanMultexp(PtyScan):
         exposures =[]
         for j in range(self.nexp):
             darks,meta = u.image_read(self.info.dark_dir + '/ccd*_%02d.raw' % j)
-            dark_imgs.append(np.array(darks,dtype=np.float).mean(0))
+            dark_imgs.append(np.array(darks,dtype=float).mean(0))
             exposures.append(meta[0][self.exp_string])
 
         # save in common dict/Param
@@ -186,20 +186,20 @@ class FliSpecScanMultexp(PtyScan):
 
         return data, weights
 
-if __name__ == '__main__':
-    u.verbose.set_level(3)
-    RS = RawScan(p,num_frames=50,roi=512 )
-    RS.initialize()
-    RS.report()
-    print('loading data')
-    msg = True
-    for i in range(200):
-        if msg is False:
-            break
-        time.sleep(1)
-        msg = RS.auto(10)
-        logger.info(u.verbose.report(msg), extra={'allprocesses': True})
-        u.parallel.barrier()
+# if __name__ == '__main__':
+#     u.verbose.set_level(3)
+#     RS = RawScan(p,num_frames=50,roi=512 )
+#     RS.initialize()
+#     RS.report()
+#     print('loading data')
+#     msg = True
+#     for i in range(200):
+#         if msg is False:
+#             break
+#         time.sleep(1)
+#         msg = RS.auto(10)
+#         logger.info(u.verbose.report(msg), extra={'allprocesses': True})
+#         u.parallel.barrier()
 
     #RS.report()
     #%RS.load_raw([0,1,2])

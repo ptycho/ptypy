@@ -7,6 +7,9 @@ import ptypy.utils as u
 import numpy as np
 from ptypy.core import geometry
 from ptypy.core import Base as theBase
+from ptypy.core.geometry import BasicNearfieldPropagator
+from ptypy.core.geometry import BasicFarfieldPropagator
+
 
 # subclass for dictionary access
 Base = type('Base',(theBase,),{})
@@ -48,7 +51,6 @@ class GeometryTest(unittest.TestCase):
         g.shape = 256
         g.propagation = "nearfield"
         G = geometry.Geo(owner=P, pars=g)
-#         print G.resolution
         return G
 
     def test_geometry_near_field_init(self):
@@ -57,6 +59,52 @@ class GeometryTest(unittest.TestCase):
     def test_geometry_nearfield_resolution(self):
         G = self.set_up_nearfield()
         assert (np.round(G.resolution*1e7) == [1.00, 1.00]).all(), "geometry resolution incorrect for the nearfield"
+
+    def _basic_propagator_test(self, prop):
+
+        # Create random 2D array
+        S = (128,128)
+        A = np.random.random(S) + 1j * np.random.random(S)
+
+        # FFT and IFFT
+        B = prop.fft(A)
+        C = prop.ifft(B)
+
+        # asserts
+        assert (A.strides == B.strides), "FFT(x) has changed the strides of x, using {:s}".format(prop.FFTch.ffttype)
+        assert (B.strides == C.strides), "IFFT(x) has changed the strides of x, using {:s}".format(prop.FFTch.ffttype)
+        np.testing.assert_allclose(A,C, err_msg="IFFT(FFT(x) did not return the same as x, using {:s}".format(prop.FFTch.ffttype))
+
+    def test_basic_nearfield_propagator_fftw(self):
+        G = self.set_up_nearfield()
+        P = BasicNearfieldPropagator(G.p,ffttype="fftw")
+        self. _basic_propagator_test(P)
+
+    def test_basic_nearfield_propagator_numpy(self):
+        G = self.set_up_nearfield()
+        P = BasicNearfieldPropagator(G.p,ffttype="numpy")
+        self. _basic_propagator_test(P)
+
+    def test_basic_nearfield_propagator_scipy(self):
+        G = self.set_up_nearfield()
+        P = BasicNearfieldPropagator(G.p,ffttype="scipy")
+        self. _basic_propagator_test(P)
+
+    def test_basic_farfield_propagator_fftw(self):
+        G = self.set_up_farfield()
+        P = BasicFarfieldPropagator(G.p,ffttype="fftw")
+        self. _basic_propagator_test(P)
+
+    def test_basic_farfield_propagator_numpy(self):
+        G = self.set_up_farfield()
+        P = BasicFarfieldPropagator(G.p,ffttype="numpy")
+        self. _basic_propagator_test(P)
+
+    def test_basic_farfield_propagator_scipy(self):
+        G = self.set_up_farfield()
+        P = BasicFarfieldPropagator(G.p,ffttype="scipy")
+        self. _basic_propagator_test(P)
+    
 
 
 if __name__ == '__main__':

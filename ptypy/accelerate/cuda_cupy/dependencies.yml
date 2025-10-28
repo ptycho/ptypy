@@ -1,0 +1,17 @@
+name: ptypy_cupy
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - numpy
+  - scipy
+  - matplotlib
+  - h5py
+  - pyzmq
+  - mpi4py
+  - pillow
+  - pyfftw
+  - pip
+  - compilers
+  - cupy
+  

@@ -115,8 +115,14 @@ div.related ul li a {
 }
 
 div.sphinxsidebar {
-
     width: {{ theme_sidebarwidth|toint - 20 }}px;
 }
 
 
+pre {
+    background-color: #f8f8f8;
+}
+
+.highlight .hll {
+    display: unset;
+}

@@ -5,7 +5,7 @@ This module generates the scan patterns.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import numpy as np
 import warnings
@@ -86,11 +86,11 @@ def from_pars(xypars=None):
         return None
     elif str(xypars) == xypars:
         if xypars in TEMPLATES.keys():
-            return from_pars(TEMPLATES[sam])
+            return from_pars(TEMPLATES[xypars])
         else:
             raise RuntimeError(
                 'Template string `%s` for pattern creation is not understood'
-                % sam)
+                % xypars)
     elif type(xypars) in [np.ndarray, list]:
         return np.array(xypars)
     else:
@@ -152,7 +152,7 @@ def _complete(extent, steps, spacing):
     elif steps is None:
         e = u.expect2(extent)
         s = u.expect2(spacing)
-        l = (e / s).astype(np.int)
+        l = (e / s).astype(int)
     elif spacing is None:
         e = u.expect2(extent)
         l = u.expect2(steps)

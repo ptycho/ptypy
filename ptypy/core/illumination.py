@@ -7,7 +7,7 @@ This module generates the probe.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 
 """
 import numpy as np
@@ -130,6 +130,7 @@ illumination_desc.from_string(r"""
     	 - *<template>* : one of the templates inillumination module
     	
     	In script, you may pass a numpy.ndarray here directly as the model. It is considered as incoming wavefront and will be propagated according to `propagation` with an optional `aperture` applied before.
+    choices = ['recon','stxm',None]
     userlevel = 0
 
     [photons]
@@ -253,7 +254,7 @@ def aperture(A, grids=None, pars=None, **kwargs):
     if p.form is not None:
         off = u.expect2(p.offset)
         cgrid = grids[0].astype(complex) + 1j*grids[1]
-        cgrid -= np.complex(off[0], off[1])
+        cgrid -= complex(off[0], off[1])
         cgrid *= np.exp(1j * p.rotate)
         grids[0] = cgrid.real / psize[0]
         grids[1] = cgrid.imag / psize[1]
@@ -376,6 +377,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
             'Attempt to load layer `%s` of probe storage with ID `%s` from `%s`'
             % (str(layer), str(ID), p.recon.rfile))
         model = u.load_from_ptyr(p.recon.rfile, 'probe', ID, layer)
+        p.photons = None
         # This could be more sophisticated,
         # i.e. matching the real space grids etc.
     elif str(p.model) == 'stxm':
@@ -594,42 +596,42 @@ DEFAULT_old = u.Param(
 )
 
 
-if __name__ == '__main__':
-    energy = 6.
-    shape = 512
-    resolution = 8e-8
-    p = u.Param()
-    p.aperture = u.Param()
-    p.aperture.form = 'circ'
-    p.aperture.diffuser = (10.0, 5, 0.1, 20.0)
-    p.aperture.size = 100e-6
-    # (int) Edge width of aperture in pixel to suppress aliasing
-    p.aperture.edge = 2
-    p.aperture.central_stop = 0.3
-    p.aperture.offset = 0.
-    # (float) rotate aperture by this value
-    p.aperture.rotate = 0.
-    # Parameters for propagation after aperture plane
-    p.propagation = u.Param()
-    # (float) Parallel propagation distance
-    p.propagation.parallel = 0.015
-    # (float) Propagation distance from aperture to focus
-    p.propagation.focussed = 0.1
-    # (float) Focal spot diameter
-    p.propagation.spot_size = None
-    # (float) antialiasing factor
-    p.propagation.antialiasing = None
-    # (str) User-defined probe (if type is None)
-    p.probe = None
-    # (int, float, None) Number of photons in the incident illumination
-    p.photons = None
-    # (float) Noise added on top add the end of initialisation
-    p.noise = None
+# if __name__ == '__main__':
+#     energy = 6.
+#     shape = 512
+#     resolution = 8e-8
+#     p = u.Param()
+#     p.aperture = u.Param()
+#     p.aperture.form = 'circ'
+#     p.aperture.diffuser = (10.0, 5, 0.1, 20.0)
+#     p.aperture.size = 100e-6
+#     # (int) Edge width of aperture in pixel to suppress aliasing
+#     p.aperture.edge = 2
+#     p.aperture.central_stop = 0.3
+#     p.aperture.offset = 0.
+#     # (float) rotate aperture by this value
+#     p.aperture.rotate = 0.
+#     # Parameters for propagation after aperture plane
+#     p.propagation = u.Param()
+#     # (float) Parallel propagation distance
+#     p.propagation.parallel = 0.015
+#     # (float) Propagation distance from aperture to focus
+#     p.propagation.focussed = 0.1
+#     # (float) Focal spot diameter
+#     p.propagation.spot_size = None
+#     # (float) antialiasing factor
+#     p.propagation.antialiasing = None
+#     # (str) User-defined probe (if type is None)
+#     p.probe = None
+#     # (int, float, None) Number of photons in the incident illumination
+#     p.photons = None
+#     # (float) Noise added on top add the end of initialisation
+#     p.noise = None
 
-    probe = from_pars_no_storage(pars=p,
-                                 energy=energy,
-                                 shape=shape,
-                                 resolution=resolution)
+#     probe = from_pars_no_storage(pars=p,
+#                                  energy=energy,
+#                                  shape=shape,
+#                                  resolution=resolution)
 
-    from matplotlib import pyplot as plt
-    plt.imshow(u.imsave(abs(probe[0])))
+#     from matplotlib import pyplot as plt
+#     plt.imshow(u.imsave(abs(probe[0])))

@@ -14,7 +14,7 @@ Currently available:
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 from importlib import import_module
 from .. import defaults_tree
@@ -49,6 +49,7 @@ def _register_PtyScan_class(cls, name=None):
     return cls
 
 
+
 ptyscan_modules = [('.hdf5_loader', 'Hdf5Loader'),
                    ('.cSAXS', 'cSAXSScan'),
                    ('.savu', 'Savu'),
@@ -76,5 +77,4 @@ for module, obj in ptyscan_modules:
         pass
     else:
         globals()[obj] = lib.__dict__[obj]
-
 

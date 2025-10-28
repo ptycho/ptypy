@@ -15,7 +15,7 @@ holds a collection of datascans and feeds the data as required.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import numpy as np
 import os
@@ -114,6 +114,7 @@ class PtyScan(object):
     default = data
     help = Determines what will be loaded in parallel
     doc = Choose from ``None``, ``'data'``, ``'common'``, ``'all'``
+    choices = ['data', 'common', 'all']
 
     [rebin]
     type = int
@@ -122,7 +123,7 @@ class PtyScan(object):
     doc = Rebinning factor for the raw data frames. ``'None'`` or ``1`` both mean *no binning*
     userlevel = 1
     lowlim = 1
-    uplim = 8
+    uplim = 32
 
     [orientation]
     type = int, tuple, list
@@ -139,6 +140,7 @@ class PtyScan(object):
        <newline>
        Alternatively, a 3-tuple of booleans may be provided ``(do_transpose, 
        do_flipud, do_fliplr)``
+    choices = [0, 1, 2, 3, 4, 5, 6, 7]
     userlevel = 1
 
     [min_frames]
@@ -797,7 +799,7 @@ class PtyScan(object):
             rebin = self.rebin
             if rebin <= 1:
                 pass
-            elif (rebin in range(2, 6)
+            elif (rebin in range(2, 32+1)
                   and (((sh / float(rebin)) % 1) == 0.0).all()):
                 mask = w > 0
                 d = u.rebin_2d(d, rebin)
@@ -984,7 +986,7 @@ class PtyScan(object):
 
         # (re)distribute position information - every node should now be
         # aware of all positions
-        parallel.bcast_dict(pos)
+        pos = parallel.bcast_dict(pos)
 
         # Prepare data across nodes
         data, weights = self.correct(raw, weights, self.common)
@@ -1419,7 +1421,7 @@ class PtydScan(PtyScan):
         parallel.barrier()
         self._ch_frame_ind = parallel.bcast(self._ch_frame_ind)
         parallel.barrier()
-        parallel.bcast_dict(self._checked)
+        self._checked = parallel.bcast_dict(self._checked)
 
         # Get the coordinates in the chunks
         coords = self._ch_frame_ind[indices]
@@ -1524,10 +1526,10 @@ class MoonFlowerScan(PtyScan):
         geo = geometry.Geo(pars=self.meta)
 
         # Derive scan pattern
-        if p.model is 'raster':
+        if p.model == 'raster':
             pos = u.Param()
             pos.spacing = geo.resolution * geo.shape * p.density
-            pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+            pos.steps = int(np.round(np.sqrt(self.num_frames))) + 1
             pos.extent = pos.steps * pos.spacing
             pos.model = p.model
             self.num_frames = pos.steps**2
@@ -1536,7 +1538,7 @@ class MoonFlowerScan(PtyScan):
         else:
             pos = u.Param()
             pos.spacing = geo.resolution * geo.shape * p.density
-            pos.steps = np.int(np.round(np.sqrt(self.num_frames) + 1))
+            pos.steps = int(np.round(np.sqrt(self.num_frames) + 1))
             pos.extent = pos.steps * pos.spacing
             pos.model = p.model
             pos.count = self.num_frames
@@ -1664,7 +1666,7 @@ class QuickScan(PtyScan):
         # Derive scan pattern
         pos = u.Param()
         pos.spacing = geo.resolution * geo.shape * p.density
-        pos.steps = np.int(np.round(np.sqrt(self.num_frames))) + 1
+        pos.steps = int(np.round(np.sqrt(self.num_frames))) + 1
         pos.extent = pos.steps * pos.spacing
         pos.model = 'round'
         pos.count = self.num_frames

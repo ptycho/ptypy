@@ -12,8 +12,6 @@ dist/
 doc/_img/*.png
 tutorial/*.png
 ghostdriver*
-doc/version.py
-ptypy/version.py
 .idea/
 .cache/
 .vscode/
@@ -28,3 +26,6 @@ ptypy/version.py
 /env
 *.egg-info
 .DS_Store
+.ipynb_checkpoints
+.clang-format
+pip-wheel-metadata/

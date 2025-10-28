@@ -26,24 +26,25 @@ Please ensure you satisfy most of PEP8_ recommendations. We are not dogmatic abo
 Testing
 ^^^^^^^
 
-Not much testing exists at the time of writing this document, but we are aware that this is something that should change. If you want to contribute code, it would be very good practice to also submit related tests.
+All tests are in the (``/test/``) folder and our CI pipeline runs these test for every commit (?). Please note that tests that require GPUs are disabled for the CI pipeline. Make sure to supply tests for new code or drastic changes to the existing code base. Smaller commits or bug fixes don't require an extra test.
 
 Branches
 ^^^^^^^^
 
+We are following the Gitflow https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow development model where a development branch (``dev``) is merged into the master branch for every release. Individual features are developed on topic branches from the development branch and squash-merged back into it when the feature is mature
+
 The important permanent branches are:
- - ``master``: the current cutting-edge but functional package.
- - ``stable``: the latest release, recommended for production use.
- - ``target``: target for a next release. This branch should stay up-to-date with ``master``, and contain planned updates that will break compatibility with the current version.
- - other thematic and temporary branches will appear and disappear as new ideas are tried out and merged in.
+ - ``master``: (protected) the current release plus bugfixes / hotpatches.
+ - ``dev``: (protected) current branch for all developments. Features are branched this branch and merged back into it upon completion.
 
 
 Development cycle
 ^^^^^^^^^^^^^^^^^
 
-There has been only two releases of the code up to now, so what we can tell about the *normal development cycle* for |ptypy| is rather limited. However the plan is as follows:
- - Normal development usually happens on thematic branches. These branches are merged back to master when it is clear that (1) the feature is sufficiently debugged and tested and (2) no current functionality will break.
- - At regular interval admins will decide to freeze the development for a new stable release. During this period, development will be allowed only on feature branches but master will accept only bug fixes. Once the stable release is done, development will continue.
+|ptypy| does not follow a rigid release schedule. Releases are prepared for major event or when a set of features have reached maturity.
+
+ - Normal development usually happens on thematic branches from the ``dev`` branch. These branches are merged back to ``dev`` when it is clear that (1) the feature is sufficiently debugged and tested and (2) no current functionality will break.
+ - For a release the dev branch will be merged back into master and that merge tagged as a release.
 
 
 3. Pull requests
@@ -51,16 +52,9 @@ There has been only two releases of the code up to now, so what we can tell abou
 
 Most likely you are a member of the |ptypy| team, which give you access to the full repository, but no right to commit changes. The proper way of doing this is *pull requests*. You can read about how this is done on github's `pull requests tutorial`_.
 
-Pull requests can be made against one of the feature branches, or against ``target`` or ``master``. In the latter cases, if your changes are deemed a bit too substantial, the first thing we will do is create a feature branch for your commits, and we will let it live for a little while, making sure that it is all fine. We will then merge it onto ``master`` (or ``target``).
+Pull requests shall be made against one of the feature branches, or against ``dev`` or ``master``. For PRs against master we will only accept bugifxes or smaller changes. Every other PR should be made against ``dev``. Your PR will be reviewed and discussed anmongst the core developer team. The more you touch core libraries, the more scrutiny your PR will face. However, we created two folders in the main source folder where you have mmore freedom to try out things. For example, if you want to provide a new reconstruction engine, place it into the ``custom/`` folder. A new ``PtyScan`` subclass that prepares data from your experiment is best placed in the ``experiment/`` folder.
 
-In principle bug fixes can be requested on the ``stable`` branch. 
-
-3. Direct commits
------------------
-
-If you are one of our power-users (or power-developers), you can be given rights to commit directly to |ptypy|. This makes things much simpler of course, but with great power comes great responsibility.
-
-To make sure that things are done cleanly, we encourage all the core developers to create thematic remote branches instead of committing always onto master. Merging these thematic branches will be done as a collective decision during one of the regular admin meetings.
+If you develop a new feature on a topic branch, it is your responsibility to keep it current with dev branch to avoid merge conflicts. 
 
 
 .. |ptypy| replace:: PtyPy

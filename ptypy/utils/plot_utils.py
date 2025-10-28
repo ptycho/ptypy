@@ -4,7 +4,7 @@ Plotting utilities.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import numpy as np
 import time
@@ -128,12 +128,15 @@ except ImportError:
                     print(message)
                 time.sleep(timeout)
 
+# BD: With version 9.1.0 of PIL, _MODE_CONV has been removed,
+#     see here: https://github.com/python-pillow/Pillow/pull/6057
+#     can't see a reason why this is still needed, therefore commenting it out
 # FIXME: Is this still needed?
 # Fix tif import problem
-Image._MODE_CONV['I;16'] = (Image._ENDIAN + 'u2', None)
+#Image._MODE_CONV['I;16'] = (Image._ENDIAN + 'u2', None)
 
 # Grayscale + alpha should also work
-Image._MODE_CONV['LA'] = (Image._ENDIAN + 'u1', 2)
+#Image._MODE_CONV['LA'] = (Image._ENDIAN + 'u1', 2)
 
 
 def complex2hsv(cin, vmin=0., vmax=None):
@@ -176,7 +179,7 @@ def complex2hsv(cin, vmin=0., vmax=None):
     else:
         assert vmin < vmax
         v = (v.clip(vmin, vmax)-vmin)/(vmax-vmin)
-    
+
     return np.asarray((h, s, v))
 
 
@@ -285,7 +288,7 @@ HSV_to_P1A = hsv2complex
 
 
 def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
-    """
+    r"""
     Take array `a` and transform to `PIL.Image` object that may be used
     by `pyplot.imshow` for example. Also save image buffer directly
     without the sometimes unnecessary Gui-frame and overhead.
@@ -342,7 +345,7 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
     uses a matplotlib colormap with name 'gray'
     """
     if str(cmap) == cmap:
-        cmap = mpl.cm.get_cmap(cmap)
+        cmap = mpl.colormaps[cmap]
 
     if a.dtype.kind == 'c':
         i = complex2rgb(a, vmin=vmin, vmax=vmax)
@@ -357,9 +360,9 @@ def imsave(a, filename=None, vmin=None, vmax=None, cmap=None):
             vmin, vmax = 0.9 * vmin, 1.1 * vmax
         im = Image.fromarray((255*(a.clip(vmin,vmax)-vmin)/(vmax-vmin)).astype('uint8'))
         if cmap is not None:
-            r = im.point(lambda x: cmap(x/255.0)[0] * 255)
-            g = im.point(lambda x: cmap(x/255.0)[1] * 255)
-            b = im.point(lambda x: cmap(x/255.0)[2] * 255)
+            r = im.point(lambda x: int(cmap(x/255.0)[0] * 255))
+            g = im.point(lambda x: int(cmap(x/255.0)[1] * 255))
+            b = im.point(lambda x: int(cmap(x/255.0)[2] * 255))
             im = Image.merge("RGB", (r, g, b))
 
     if filename is not None:
@@ -376,7 +379,7 @@ def imload(filename):
 # Removing it due to DeprecationWarning in Matplotlib
 # DeprecationWarning: Passing raw data via parameters data and lut to register_cmap() is deprecated since 3.3 and will become an error two minor releases later. Instead use: register_cmap(cmap=LinearSegmentedColormap(name, data, lut))
 # Franz map
-# mpl.cm.register_cmap(name='franzmap', data={'red':   ((0.000,   0,    0),
+# mpl.colormaps.register_cmap(name='franzmap', data={'red':   ((0.000,   0,    0),
 #                                                       (0.350,   0,    0),
 #                                                       (0.660,   1,    1),
 #                                                       (0.890,   1,    1),
@@ -412,8 +415,12 @@ franzmap_cm = {'red':   ((0.000,   0,    0),
                                                       (0.340,   1,    1),
                                                       (0.650,   0,    0),
                                                       (1.000,   0,    0))}
-                                                      
-mpl.cm.register_cmap(cmap=LinearSegmentedColormap(name='franzmap', segmentdata=franzmap_cm, N=256))
+
+_lscm = LinearSegmentedColormap(name='franzmap', segmentdata=franzmap_cm, N=256)
+try:
+    mpl.colormaps.register(cmap=_lscm)
+except AttributeError:
+    matplotlib.cm.register_cmap(cmap=_lscm)
 
 def franzmap():
     """\
@@ -423,7 +430,7 @@ def franzmap():
     im = mpl.pyplot.gci()
 
     if im is not None:
-        im.set_cmap(matplotlib.cm.get_cmap('franzmap'))
+        im.set_cmap(mpl.colormaps['franzmap'])
     mpl.pyplot.draw_if_interactive()
 
 
@@ -460,7 +467,7 @@ def rmphaseramp(a, weight=None, return_phaseramp=False):
     useweight = True
     if weight is None:
         useweight = False
-    elif weight == 'abs':
+    elif isinstance(weight,str) and weight == 'abs':
         weight = np.abs(a)
 
     ph = np.exp(1j*np.angle(a))
@@ -588,51 +595,50 @@ def plot_storage(S, fignum=100, modulus='linear', slices=(slice(1), slice(None),
     plt.draw()
     return fig
 
-
 class PtyAxis(object):
     """
     Plot environment for matplotlib to allow for a Image plot with color axis,
     potentially of a potentially complex array.
-    
+
     Please note that this class may undergo changes or become obsolete altogether.
     """
     def __init__(self, ax=None, data=None, channel='r', cmap=None, fontsize=8, **kwargs):
         """
-        
+
         Parameters
         ----------
-        
+
         ax : pyplot.axis
             An axis in matplotlib figure. If ``None`` a figure with a single
             axis will be created.
-            
+
         data : numpy.ndarray
-            The (complex) twodimensional data to be displayed. 
-            
+            The (complex) twodimensional data to be displayed.
+
         channel : str
             Choose
-            
+
             - ``'a'`` to plot absolute/modulus value of the data,
             - ``'p'`` to plot phase value of the data,
             - ``'a'`` to plot real value of the data,
             - ``'a'`` to plot imaginary value of the data,
-            - ``'a'`` to plot a composite image where phase channel maps to hue and 
+            - ``'a'`` to plot a composite image where phase channel maps to hue and
               modulus channel maps to brightness of the color.
-              
-        cmap : str 
+
+        cmap : str
             String representation of one of matplotlibs colormaps.
-            
+
         fontsize : int
             Base font size of labels, etc.
-            
+
         Keyword Arguments
         -----------------
         vmin, vmax : float
             Minimum and maximum value for colormap scaling
-            
+
         rmramp : bool
             Remove phase ramp if ``True``, default is ``False``
-            
+
         """
         if ax is None:
             fig = plt.figure()
@@ -677,10 +683,10 @@ class PtyAxis(object):
 
     def set_cmap(self, cmap, update=True):
         try:
-            self.cmap = mpl.cm.get_cmap(cmap)
+            self.cmap = mpl.colormaps[cmap]
         except:
             logger.debug("Colormap `%s` not found. Using `gray`" % str(cmap))
-            self.cmap = mpl.cm.get_cmap('gray')
+            self.cmap = mpl.colormaps['gray']
         if update:
             self._update()
             self._update_colorscale()
@@ -817,7 +823,7 @@ class PtyAxis(object):
 
         if self.channel == 'c':
             self.cax.xaxis.set_major_locator(mpl.ticker.FixedLocator([0,np.pi, 2*np.pi]))
-            self.cax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(['0', '$\pi$', '2$\pi$']))
+            self.cax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(['0', r'$\pi$', r'2$\pi$']))
             self.cax.set_xlabel('phase [rad]', fontsize=self.fontsize+2)
             self.cax.xaxis.set_label_position("top")
 

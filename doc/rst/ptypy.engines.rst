@@ -4,10 +4,10 @@ ptypy.engines package
 Submodules
 ----------
    
-ptypy.engines.DM module
------------------------
+ptypy.engines.projectional module
+---------------------------------
 
-.. automodule:: ptypy.engines.DM
+.. automodule:: ptypy.engines.projectional
     :members:
     :undoc-members:
     :show-inheritance:
@@ -17,6 +17,14 @@ ptypy.engines.ML module
 -----------------------
 
 .. automodule:: ptypy.engines.ML
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ptypy.engines.stochastic module
+-------------------------------
+
+.. automodule:: ptypy.engines.stochastic
     :members:
     :undoc-members:
     :show-inheritance:

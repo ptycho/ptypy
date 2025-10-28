@@ -1,0 +1,14 @@
+name: ptypy_cufft
+channels:
+  - conda-forge
+  - nvidia
+dependencies:
+  - python
+  - cmake>=3.8.0
+  - pybind11
+  - compilers
+  - cuda-nvcc
+  - cuda-cudart-dev
+  - libcufft-dev
+  - libcufft-static
+  - pip

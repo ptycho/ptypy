@@ -10,7 +10,7 @@ in your acquisition.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import numpy as np
 from scipy import ndimage as ndi
@@ -109,20 +109,20 @@ class Detector(object):
 
     def _make_mask(self):
         gaps = expect2(self.gaps)
-        module = np.ones(self.shape).astype(np.bool)
+        module = np.ones(self.shape).astype(bool)
         start = module.copy()
         for i in range(self.modules[0]-1):
-            gap = np.zeros((gaps[0],module.shape[1])).astype(np.bool)
+            gap = np.zeros((gaps[0],module.shape[1])).astype(bool)
             start = np.concatenate([start,np.concatenate([gap,module],axis=0)],axis=0)
         module = start.copy()
         for i in range(self.modules[1]-1):
-            gap = np.zeros((module.shape[0],gaps[1])).astype(np.bool)
+            gap = np.zeros((module.shape[0],gaps[1])).astype(bool)
             start = np.concatenate([start,np.concatenate([gap,module],axis=1)],axis=1)
         self._mask = start
 
     def _get_mask(self,sh):
         msh =  expect2(sh[-2:])
-        mask = np.zeros(msh).astype(np.bool)
+        mask = np.zeros(msh).astype(bool)
         offset = msh//2 - expect2(self.center)
         mask = fill2D(mask,self._mask,-offset)
         return np.resize(mask,sh)
@@ -272,4 +272,4 @@ if __name__ == "__main__":
     plt.imshow(A)
     plt.figure()
 
-    plt.imshow(log10(D.expose(I[1])[0]+1))
+    plt.imshow(np.log10(D.expose(I[1])[0]+1))

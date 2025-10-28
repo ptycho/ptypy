@@ -7,7 +7,7 @@ Provides the server and a basic client to interact with it.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 
 import zmq
@@ -83,7 +83,7 @@ class NumpyEncoder(json.JSONEncoder):
 NE = NumpyEncoder()
 
 # This is the string to match against when decoding
-NPYARRAYmatch = re.compile("NPYARRAY\[([0-9]{3})\]")
+NPYARRAYmatch = re.compile(r"NPYARRAY\[([0-9]{3})\]")
 
 
 def numpy_replace(obj, arraylist):

@@ -6,22 +6,21 @@ by all engines.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import numpy as np
 import time
 from .. import utils as u
 from ..utils import parallel
 from ..utils.verbose import logger, headerline, log
-from ..utils.descriptor import EvalDescriptor
-from .posref import AnnealingRefine
-import gc
+from .posref import AnnealingRefine, GridSearchRefine
 
 __all__ = ['BaseEngine', 'Base3dBraggEngine', 'DEFAULT_iter_info', 'PositionCorrectionEngine']
 
 DEFAULT_iter_info = u.Param(
     iteration=0,
     iterations=0,
+    numiter=0,
     engine='None',
     duration=0.,
     error=np.zeros((3,))
@@ -43,6 +42,7 @@ class BaseEngine(object):
     type = int
     lowlim = 1
     help = Total number of iterations
+    doc = For on-the-fly (live) processing, the reconstruction engine will iterate at least this many times after all data has been loaded.
 
     [numiter_contiguous]
     default = 1
@@ -64,6 +64,12 @@ class BaseEngine(object):
     lowlim = 0.0
     help = Valid probe area in frequency domain as fraction of the probe frame
     doc = Defines a circular area centered on the probe frame (in frequency domain), in which the probe is allowed to be nonzero.
+
+    [record_local_error]
+    default = False
+    type = bool
+    help = If True, save the local map of errors into the runtime dictionary.
+    userlevel = 2
 
     """
 
@@ -111,7 +117,7 @@ class BaseEngine(object):
         """
         logger.info('\n' +
                     headerline('Starting %s-algorithm.'
-                               % str(type(self).__name__), 'l', '=') + '\n')
+                               % (self.p.name), 'l', '=') + '\n')
         logger.info('Parameter set:')
         logger.info(u.verbose.report(self.p, noheader=True).strip())
         logger.info(headerline('', 'l', '='))
@@ -134,6 +140,17 @@ class BaseEngine(object):
         self._probe_fourier_support = {}
         # Call engine specific initialization
         # TODO: Maybe child classes should be calling this?
+
+        # # Make sure all the pods are supported
+        # for label_, pod_ in self.pods.items():
+        #     if not pod_.model.__class__ in self.SUPPORTED_MODELS:
+        #         raise Exception('Model %s not supported by engine' % pod_.model.__class__)
+
+        # Make sure all scan models are supported
+        for model in self.ptycho.model.scans.values():
+            if not model.__class__ in self.SUPPORTED_MODELS:
+                raise Exception('Model %s not supported by engine %s' % (model.__class__,self.p.name))
+
         self.engine_initialize()
 
     def prepare(self):
@@ -141,11 +158,6 @@ class BaseEngine(object):
         Last-minute preparation before iterating.
         """
         self.finished = False
-
-        # Make sure all the pods are supported
-        for label_, pod_ in self.pods.items():
-            if not pod_.model.__class__ in self.SUPPORTED_MODELS:
-                raise Exception('Model %s not supported by engine' % pod_.model.__class__)
 
         # Calculate probe support
         # an individual support for each storage is calculated in saved
@@ -177,15 +189,15 @@ class BaseEngine(object):
             for s in self.pr.storages.values():
                 self.support_contraint(s)
 
-        # Real space
-        support = self._probe_support.get(storage.ID)
-        if support is not None:
-            storage.data *= support
-
         # Fourier space
         support = self._probe_fourier_support.get(storage.ID)
         if support is not None:
             storage.data[:] = np.fft.ifft2(support * np.fft.fft2(storage.data))
+
+        # Real space
+        support = self._probe_support.get(storage.ID)
+        if support is not None:
+            storage.data *= support
 
     def iterate(self, num=None):
         """
@@ -225,7 +237,7 @@ class BaseEngine(object):
 
             logger.warning("""Engine %s did not increase iteration counter
             `self.curiter` internally. Accessing this attribute in that
-            engine is inaccurate""" % self.__class__.__name__)
+            engine is inaccurate""" % self.p.name)
 
             self.curiter += niter_contiguous
 
@@ -233,7 +245,7 @@ class BaseEngine(object):
 
             logger.error("""Engine %s increased iteration counter
             `self.curiter` by %d instead of %d. This may lead to
-            unexpected behaviour""" % (self.__class__.__name__,
+            unexpected behaviour""" % (self.p.name,
             self.curiter-it, niter_contiguous))
 
         else:
@@ -250,21 +262,29 @@ class BaseEngine(object):
         parallel.barrier()
 
     def _fill_runtime(self):
-        local_error = u.parallel.gather_dict(self.error)
-        if local_error:
-            error = np.array(list(local_error.values())).mean(0)
+        local_error = None
+        if isinstance(self.error, np.ndarray) and (len(self.error)== 3):
+            error = self.error
+        elif isinstance(self.error, dict):
+            local_error = u.parallel.gather_dict(self.error)
+            if local_error:
+                error = np.array(list(local_error.values())).mean(0)
+            else:
+                error = np.zeros((3,))
         else:
-            error = np.zeros((1,))
+            logger.error("Reconstruction error should be dictionary or ndarray of shape (3,)")
         info = dict(
             iteration=self.curiter,
             iterations=self.alliter,
-            engine=type(self).__name__,
+            numiter=self.numiter,
+            engine=self.p.name,
             duration=time.time() - self.t,
             error=error
         )
 
         self.ptycho.runtime.iter_info.append(info)
-        self.ptycho.runtime.error_local = local_error
+        if self.p.record_local_error and (local_error is not None):
+            self.ptycho.runtime.error_local = local_error
 
     def finalize(self):
         """
@@ -316,6 +336,11 @@ class PositionCorrectionEngine(BaseEngine):
     type = Param, bool
     help = If True refine scan positions
 
+    [position_refinement.method]
+    default = Annealing
+    type = str
+    help = Annealing or GridSearch
+
     [position_refinement.start]
     default = None
     type = int
@@ -343,6 +368,11 @@ class PositionCorrectionEngine(BaseEngine):
     type = float
     help = Distance from original position per random shift [m]
 
+    [position_refinement.amplitude_decay]
+    default = True
+    type = bool
+    help = After each interation, multiply amplitude by factor (stop - iteration) / (stop - start)
+
     [position_refinement.max_shift]
     default = 0.000002
     type = float
@@ -352,12 +382,18 @@ class PositionCorrectionEngine(BaseEngine):
     default = "fourier"
     type = str
     help = Error metric, can choose between "fourier" and "photon"
+    choices = ["fourier", "photon"]
     
     [position_refinement.record]
     default = False
     type = bool
     help = record movement of positions
     """
+
+    POSREF_ENGINES = {
+        "Annealing": AnnealingRefine,
+        "GridSearch": GridSearchRefine
+    }
 
     def __init__(self, ptycho_parent, pars):
         """
@@ -387,18 +423,23 @@ class PositionCorrectionEngine(BaseEngine):
         if (self.p.position_refinement.start is None) and (self.p.position_refinement.stop is None):
             self.do_position_refinement = False
         else:
+            for label, scan in self.ptycho.model.scans.items():
+                if self.p.position_refinement.amplitude < scan.geometries[0].resolution[0]:
+                    self.do_position_refinement = False
+                    log(3,"Failed to initialise position refinement, search amplitude is smaller than the resolution")
+                    return
             self.do_position_refinement = True
-            log(3, "Initialising position refinement")
+            log(3, "Initialising position refinement (%s)" %self.p.position_refinement.method)
             
             # Enlarge object arrays, 
             # This can be skipped though if the boundary is less important
             for name, s in self.ob.storages.items():
-                s.padding = int(self.p.position_refinement.max_shift // np.max(s.psize))
-                s.reformat()
+               s.padding = int(self.p.position_refinement.max_shift // np.max(s.psize))
+               s.reformat()
 
-            # this could be some kind of dictionary lookup if we want to add more
-            self.position_refinement = AnnealingRefine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
-            log(3, "Position refinement initialised")
+            # Choose position refinement engine from dictionary
+            PosrefEngine = self.POSREF_ENGINES[self.p.position_refinement.method]
+            self.position_refinement = PosrefEngine(self.p.position_refinement, self.ob, metric=self.p.position_refinement.metric)
             self.ptycho.citations.add_article(**self.position_refinement.citation_dictionary)
             if self.p.position_refinement.stop is None:
                 self.p.position_refinement.stop = self.p.numiter
@@ -409,7 +450,7 @@ class PositionCorrectionEngine(BaseEngine):
         """
         Position refinement update.
         """
-        if self.do_position_refinement is False:
+        if not self.do_position_refinement:
             return
         do_update_pos = (self.p.position_refinement.stop > self.curiter >= self.p.position_refinement.start)
         do_update_pos &= (self.curiter % self.p.position_refinement.interval) == 0
@@ -438,6 +479,8 @@ class PositionCorrectionEngine(BaseEngine):
         """
         if self.do_position_refinement is False:
             return
+        if self.p.position_refinement.record is False:
+            return
 
         # Gather all new positions from each node
         coords = {}
@@ -452,6 +495,8 @@ class PositionCorrectionEngine(BaseEngine):
                 for v in S.views:
                     if v.pod.pr_view.layer == 0:
                         v.coord = coords[v.ID]
+
+        self.ptycho.record_positions = True
 
 
 class Base3dBraggEngine(BaseEngine):

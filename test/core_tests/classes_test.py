@@ -28,7 +28,7 @@ tests.
 
 This file is part of the PTYPY package.
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 
 # Modules
@@ -98,7 +98,7 @@ class TestDefaultParameters(unittest.TestCase):
         self.assertEqual(c.GEO_PREFIX, 'G',
                          'Default prefix changed.')
 
-        self.assertEqual(c.MEGAPIXEL_LIMIT, 50,
+        self.assertEqual(c.MEGAPIXEL_LIMIT, 100,
                          'Default MEGAPIXEL_LIMIT changed.')
 
 
@@ -1308,7 +1308,7 @@ class TestView(unittest.TestCase):
         self.assertTrue(
             np.array_equal(
                 self.basic_view_dpt.psize,
-                np.ones(2, dtype=np.float)
+                np.ones(2, dtype=float)
             ),
             'Assigning of instance attribute psize failed.'
         )
@@ -1316,7 +1316,7 @@ class TestView(unittest.TestCase):
         self.assertTrue(
             np.array_equal(
                 self.basic_view_dpt.shape,
-                np.ones(2, dtype=np.int)
+                np.ones(2, dtype=int)
             ),
             'Assigning of instance attribute psize failed.'
         )

@@ -5,7 +5,7 @@ Scan loading recipe for the I13 beamline, Diamond.
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 
 import h5py as h5
@@ -214,18 +214,18 @@ class DiamondNexus(PtyScan):
 
 
         if None not in [INPUT_FILE, ENERGY_KEY]:
-            self.p.energy = np.float(h5.File(INPUT_FILE, 'r')[ENERGY_KEY][()] * self.ENERGY_MULTIPLIER)
+            self.p.energy = float(h5.File(INPUT_FILE, 'r')[ENERGY_KEY][()].item() * self.ENERGY_MULTIPLIER)
             self.meta.energy  = self.p.energy
             log(3, "loading energy={} from file".format(self.p.energy))
 
 
         if None not in [INPUT_FILE, DISTANCE_KEY]:
-            self.p.distance = h5.File(INPUT_FILE, 'r')[DISTANCE_KEY][()]
+            self.p.distance = h5.File(INPUT_FILE, 'r')[DISTANCE_KEY][()].item()
             self.meta.distance = self.p.distance
             log(3, "loading distance={} from file".format(self.p.distance))
         
         if None not in [INPUT_FILE, PIXEL_SIZE_KEY]:
-            self.p.psize = h5.File(INPUT_FILE, 'r')[PIXEL_SIZE_KEY][()]
+            self.p.psize = h5.File(INPUT_FILE, 'r')[PIXEL_SIZE_KEY][()].item()
             self.meta.psize = self.p.psize
             log(3, "loading psize={} from file".format(self.p.psize))
 
@@ -257,16 +257,16 @@ class DiamondNexus(PtyScan):
             log(3, "The loader will not do any cropping.")
 
         # it's much better to have this logic here than in load!
-        if (self._ismapped and (self._scantype is 'arb')):
+        if (self._ismapped and (self._scantype == 'arb')):
             # easy peasy
             log(3, "This scan looks to be a mapped arbitrary trajectory scan.")
             self.load = self.load_mapped_and_arbitrary_scan
 
-        if (self._ismapped and (self._scantype is 'raster')):
+        if (self._ismapped and (self._scantype == 'raster')):
             log(3, "This scan looks to be a mapped raster scan.")
             self.load = self.loaded_mapped_and_raster_scan
 
-        if (self._scantype is 'raster') and not self._ismapped:
+        if (self._scantype == 'raster') and not self._ismapped:
             log(3, "This scan looks to be an unmapped raster scan.")
             self.load = self.load_unmapped_raster_scan
 
@@ -349,7 +349,7 @@ class DiamondNexus(PtyScan):
             else:
                 mask = self.mask[self.frame_slices].squeeze()
         else:
-            mask = np.ones_like(intensity, dtype=np.int)
+            mask = np.ones_like(intensity, dtype=int)
         return mask, intensity
 
 

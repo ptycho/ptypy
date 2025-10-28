@@ -10,7 +10,7 @@ parameters with subparameters (children).
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 
 import ast
@@ -853,7 +853,8 @@ class EvalDescriptor(ArgParseDescriptor):
                 (type(pars).__name__ == 'tuple' and 'list' in self.type) or \
                 (type(pars).__name__ == 'list' and 'tuple' in self.type) or \
                 (type(pars).__name__ == 'int' and 'float' in self.type) or \
-                (type(pars).__name__[:5] == 'float' and 'float' in self.type):
+                (type(pars).__name__[:5] == 'float' and 'float' in self.type) or \
+                (type(pars).__name__ == 'longdouble' and 'float' in self.type):
             yield {'d': self, 'path': path, 'status': 'ok', 'info': ''}
         else:
             yield {'d': self, 'path': path, 'status': 'wrongtype', 'info': type(pars).__name__}
@@ -1193,9 +1194,13 @@ class EvalDescriptor(ArgParseDescriptor):
             for ret in self._walk(depth=99, ignore_wildcards=False):
                 d = ret['d']
                 # user level
-                if d.userlevel > user_level: continue
+                if d.userlevel is None:
+                    continue
+                if d.userlevel > user_level: 
+                    continue
                 # skip the root, handled above
-                if d.root is d: continue
+                if d.root is d: 
+                    continue
                 # handle line breaks already in the help/doc strings
                 hlp = '# ' + d.help.replace('\n', '\n# ')
                 doc = '# ' + d.doc.replace('\n', '\n# ')
@@ -1214,7 +1219,7 @@ class EvalDescriptor(ArgParseDescriptor):
                 # not Param: actual default value
                 else:
                     val = str(d.default)
-                    if 'str' in d.type and not d.default is None:
+                    if 'str' in d.type and d.default is not None:
                         val = "'" + val + "'"
                     line = base + '.' + ret['path'] + ' = ' + val
                     fp.write(line)

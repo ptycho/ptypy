@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "PtyPy"
+authors = [
+  { name="Bjoern Enders", email="benders@lbl.gov"},
+  { name="Pierre Thibault", email="pthibault@units.it" },
+  { name="Benedikt Daurer", email="benedikt.daurer@diamond.ac.uk" },
+]
+description = "Ptychography Reconstruction for Python"
+readme = "README.rst"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: Other/Proprietary License",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development",
+    "Operating System :: POSIX :: Linux"
+]
+dynamic = ["version"]
+dependencies = [
+  "numpy",
+  "scipy",
+  "h5py",
+]
+
+[project.optional-dependencies]
+full = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "pyyaml"]
+cupy-cuda11x = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "cupy-cuda11x"]
+cupy-cuda12x = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "cupy-cuda12x"]
+
+[project.scripts]
+"ptypy.plot" = "ptypy.cli.plotter:ptypy_plot"
+"ptypy.inspect" = "ptypy.cli.inspect:ptypy_inspect"
+"ptypy.plotclient" = "ptypy.cli.plotclient:ptypy_plotclient"
+"ptypy.new" = "ptypy.cli.new_param_tree:ptypy_new"
+"ptypy.csv2cp" = "ptypy.cli.default_params:ptypy_csv2cp"
+"ptypy.run" = "ptypy.cli.run_script:ptypy_run"
+"ptypy.cli" = "ptypy.cli.command_line_interface:ptypy_run"
+
+[project.urls]
+"Homepage" = "https://github.com/ptycho/ptypy"
+"Bug Tracker" = "https://github.com/ptycho/ptypy/issues"
+"Documentation" = "https://ptycho.github.io/ptypy"
+
+[tool.pytest.ini_options]
+testpaths = [
+  "test/core_tests",
+  "test/engine_tests",
+  "test/io_tests",
+  "test/ptyscan_tests",
+  "test/template_tests",
+  "test/util_tests",
+  "test/accelerate_tests/base_tests"
+]
+
+# this is all BETA according to setuptools
+[tool.setuptools.dynamic]
+version = {attr = "ptypy.version.version"}
+
+[tool.setuptools.package-dir]
+ptypy = "ptypy"
+
+#[tool.setuptools.packages.find]
+#where = ["ptypy"]
+
+[tool.setuptools.package-data]
+ptypy = ["resources/*",]
+"ptypy.accelerate.cuda_common" = ["*.cu", "*.cuh"]

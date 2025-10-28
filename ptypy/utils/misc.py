@@ -5,7 +5,7 @@ Miscellaneous utility functions with little dependencies from other modules
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
-    :license: GPLv2, see LICENSE for details.
+    :license: see LICENSE for details.
 """
 import os
 import numpy as np
@@ -14,8 +14,9 @@ from collections import OrderedDict
 from collections import namedtuple
 
 __all__ = ['str2int', 'str2range', 'complex_overload', 'expect2',
-           'expect3', 'keV2m', 'keV2nm', 'nm2keV', 'clean_path',
-           'unique_path', 'Table', 'all_subclasses', 'expectN', 'isstr']
+           'expect3', 'keV2m', 'keV2nm', 'nm2keV', 'm2keV', 'clean_path',
+           'unique_path', 'Table', 'all_subclasses', 'expectN', 'isstr',
+           'electron_wavelength']
 
 
 def all_subclasses(cls, names=False):
@@ -139,7 +140,7 @@ def isstr(s):
     if sys.version_info[0] == 3:
         string_types = str,
     else:
-        string_types = basestring,
+        string_types = basestring, # noqa: F821
     
     return isinstance(s, string_types)
     
@@ -232,6 +233,14 @@ def nm2keV(nm):
 
     return keV
 
+def m2keV(m):
+    """\
+    Convert wavelength in meters to photon energy in keV.
+    """
+    keV = keV2m(1.)/m
+
+    return keV
+
 def expect2(a):
     """\
     Generates 1d numpy array with 2 entries generated from multiple inputs
@@ -290,7 +299,7 @@ def expectN(a, N):
         raise ValueError('N must be 2 or 3')
 
 def complex_overload(func):
-    """\
+    r"""\
     Overloads function specified only for floats in the following manner
 
     .. math::
@@ -330,3 +339,25 @@ def clean_path(filename):
         os.makedirs(base)
     return filename
 
+
+def electron_wavelength(electron_energy):
+    r"""
+    Calculate electron wavelength based on energy in keV:
+
+    .. math::
+        \lambda = hc /  \sqrt{E * (2moc^2 + E)}
+
+    Parameters
+    ----------
+    electron_energy : float
+        in units of keV
+
+    Returns
+    -------
+    wavelength : float
+        in units of meter
+    """
+    hc = 12.398 # keV-Angstroms
+    moc2 = 511 # keV
+    wavelength = hc / np.sqrt(electron_energy * (2 * moc2 + electron_energy)) * 1e-10
+    return wavelength

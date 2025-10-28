@@ -1,5 +1,6 @@
 import sys
 import io
+from importlib.resources import files
 import contextlib
 import os
 
@@ -9,13 +10,12 @@ scripts = ['minimal_script.py',
            'simupod.py',
            'ownengine.py',
            'subclassptyscan.py']
+_ptypy_dir = files('ptypy')
 
 if len(sys.argv) == 1:
-    import pkg_resources
-
     for script in scripts:
-        scr = pkg_resources.resource_filename('ptypy', tutorial_dir+script)
-        if not os.path.exists(scr):
+        scr = _ptypy_dir / (tutorial_dir + script)
+        if not scr.exists():
             print('Using backup tutorial for %s' % script)
             scr = '../tutorial/'+script
         #subprocess.call(['python',sys.argv[0]+' '+scr]) # doesn't work
@@ -50,13 +50,13 @@ fig_path = '_script2rst'+os.sep
 frst.write("""
 .. note::
    This tutorial was generated from the python source
-   :file:`[ptypy_root]/tutorial/%(fname)s` using :file:`ptypy/doc/%(this)s`. 
+   :file:`[ptypy_root]/tutorial/%(fname)s` using :file:`ptypy/doc/%(this)s`.
    You are encouraged to modify the parameters and rerun the tutorial with::
-   
+
      $ python [ptypy_root]/tutorial/%(fname)s
 
 """ % {'fname': os.path.split(script_name)[-1], 'this': sys.argv[0]})
- 
+
 was_comment = True
 
 while True:
@@ -86,7 +86,7 @@ while True:
             frst.write('   '+line2[1:].strip()+'\n')
         frst.write('\n')
         continue
-        
+
     if line.startswith('"""'):
         frst.write('.. parsed-literal::\n\n')
         while True:
@@ -95,11 +95,11 @@ while True:
                 break
             frst.write('   ' + line2)
         continue
-    
+
     decorator = False
     indent = False
     for key in indent_keys:
-        if line.startswith(key): 
+        if line.startswith(key):
             indent = True
             break
 
@@ -125,30 +125,34 @@ while True:
             pt = fpy.tell()
         exec(func+'\n')
         continue
-        
+
     wline = line.strip()
     if not wline:
         frst.write('\n')
         continue
-    
+
     with stdoutIO() as sout:
         exec(wline)
         out = sout.getvalue()
         sout.buf = ''
 
     if len(wline) > 0:
-        if line.startswith('# '):
+        if line.startswith('#'):  # This was '# ' before, but pycharm eats trailing whitespaces so the marker
             wline = line[2:]
             was_comment = True
-            frst.write(wline)
+            if not wline:
+                # just in case there is an empty line on purpose
+                frst.write('\n')
+            else:
+                frst.write(wline)
         else:
             wline = '   >>> '+wline
             if was_comment:
                 wline = '\n::\n\n'+wline
                 was_comment = False
-                
+
             frst.write(wline+'\n')
-        
+
         #print out
         if out.strip():
             print(out)
@@ -156,5 +160,5 @@ while True:
                 frst.write(' '*3+l+'\n')
             out = ''
 
-    
+
 

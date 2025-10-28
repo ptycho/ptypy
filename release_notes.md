@@ -1,7 +1,230 @@
+# PtyPy 0.9 release notes
+
+We're excited to bring you a new release in preparation for the [PtyPy workshop 2025](https://www.synchrotron-soleil.fr/en/events/ptypy-2025)
+held at SOLEIL. This release provides a new pre-conditioner for the ML engine and a few bug fixes.
+
+## ML with wavefield pre-conditioner
+
+We have added a new pre-conditioner to the ML engines, which seems to significantly improve probe retrieval
+and overall convergence. It can be enabled by setting the following parameters
+
+```
+p.engines.engine.name = "ML"
+p.engines.engine.wavefield_precond = True
+p.engines.engine.wavefield_delta_object = 0.1
+p.engines.engine.wavefield_delta_probe = 0.1
+```
+
+where ```wavefield_delta_object``` and ```wavefield_delta_probe``` are regularisation parameters to avoid
+division by zero. 
+
+## Other changes
+
+We have dropped support for Python <= 3.8 and adopted Numpy >= 2.0.
+We have also fixed an issue with the filtered_fft build and made small improvements to the custom WASP engine.
+
+
+# PtyPy 0.8 release notes
+
+We're excited to bring you a new release, with new engines, CuPy support and
+other improvements.
+
+## GPU acceleration
+
+An alternative CUDA implementation based on [`cupy`](https://cupy.dev/) 
+has been implemented, providing the same feature as the `PyCuda` based
+engine. 
+It can be imported using
+```python
+import ptypy
+ptypy.load_gpu_engines('cupy')
+```
+which will load engines such as ```DM_cupy```, ```RAAR_cupy```, ```ML_cupy```, ```EPIE_cupy``` and ```SDR_cupy```.
+
+
+## Engine updates
+
+* New WASP algorithm including GPU acceleration, available as custom engines by importing the module from ```ptypy.custom``` (thanks to Timothy Poon)
+* Experimental implementation of the ThreePIE algorithm (multislice) which is available as custom engine by importing the module
+  ```ptypy.custom.threepIE``` and using the engine as ```ThreePIE``` (thanks to Yiran Lu and Maik Kahnt)
+* We provide templates for both algorithms, we are working on additional documentation
+
+## Additional build changes
+
+* Added Euclidean noise model to core ML engine (thanks to Jari Fowkes)
+* New saving mode "used_params" that will save parameters used during reconstruction into the output .ptyr file
+* Introducing core functions ```copy_state``` and ```restore_data``` which allow for more efficient parameter sweeps
+
+## Breaking change
+Removed NCCL support from pycuda engines to avoid dependency on CuPy. The new CuPy engines have been implemented with NCCL support. 
+
+
+# PtyPy 0.7.1 release notes
+
+Patch release.
+
+*  Bug fix in Numpy FFT propagator - enforcing C-contiguous arrays
+*  You can now choose the CPU FFT type with parameter `p.scans.<scan_00>.ffttype={'scipy','numpy','fftw'}`
+
+
+# PtyPy 0.7 release notes
+
+This release is focused on improving the usability of PtyPy in Jupyter notebooks in preparation for the first 
+PtyPy workshop held at the Diamond Light Source in January 2023. The workshop features extensive interactive 
+[tutorials](https://ptycho.github.io/tutorials) delivered using Jupyter notebooks. 
+
+## Build changes
+
+We added the following features
+
+* convenience functions to read parameters from JSON/YAML files 
+  (`ptypy.utils.param_from_json` and `ptypy.utils.param_from_yaml`)
+* plotting utilites `ptypy.utils.plot_client.figure_from_ptycho` and 
+  `ptypy.utils.plot_client.figure_from_ptyr` that can be useful in Jupyter notebooks
+* non-threaded interactive plotting for Jupyter notebooks using `p.io.autoplot.threaded=False`
+
+
+# PtyPy 0.6 release notes
+
+Public release of ptypy! After having to use a private repository
+for many years, we finally have a license agreement that allows
+PtyPy to go public. 
+
+## Build changes
+
+In accordance with PEP 621, we are moving away 
+from `setup.py` for the main build of PtyPy and
+adopt the new community standard for building
+packages with `pyproject.toml`.
+
+
+# PtyPy 0.5 release notes
+
+We're excited to bring you a new release, with new engines, GPU accelerations and
+many smaller improvements.
+
+## Engine Updates
+
+### New abstraction layer for most engines, new engines.
+
+ * generalised projectional engine with derived engines DM, RAAR
+ * generalised stochastic engine with derived engines EPIE, SDR
+ 
+Engines that are based on global projections now all derive from a generalized
+base engine that is able to express most common projection algorithms with 4 scalar parameters.
+DM and RAAR are two such derived classes. Similarly, algorithms based on a stochastic
+sequence of local projections (SDR, EPIE) now inherit from a common base engine. 
+
+### GPU acceleration
+
+ * GPU-acceleration for all major engines DM, ML, EPIE, SDR, RAAR
+ * accelerated engines needs to be imported **explicitly** with 
+   ```python
+   import ptypy
+   ptypy.load_gpu_engines('cuda')
+   ```
+ 
+We accelerated three engines (projectional, stochastic and ML) using
+the [`PyCUDA`](https://documen.tician.de/pycuda/) and 
+[`Reikna`](http://reikna.publicfields.net/en/latest/) library and a whole
+collection of custom kernels. 
+
+All GPU engines leverage a "streaming" model which means that the 
+primary locations of all objects are on the host (CPU) memory.
+Diffraction data arrays and all other arrys that scale linearly with 
+the number of shifts/positons are segmented into blocks (of frames).
+The idea is that these blocks are moved on and off the device (GPU) during
+engine iteration if the GPU does not have enough memory to store all
+blocks. The number of frames per block can
+be adjusted with the new top-level
+[`frames_per_block`](https://ptycho.github.io/ptypy/rst/parameters.html#ptycho.frames_per_block)
+parameter. This parameter has little influence for smaller problem size,
+but needs to be adjusted if your GPU has too little memory to fit even
+a single block. 
+
+Each engine iteration will cycle through all blocks, DM needs to even cycle 
+once for each projection. We therefore recommend to make the block size small 
+enough such that at least a couple of blocks fit on the GPU to hide the latency of 
+data transfers. For best 
+performance, we employ a mirror scheme such that each cycle reverses the 
+block order and reduces the host to device copies (and vice versa) to the
+absolute minimum.
+
+GPU engines work in parallel when each MPI rank takes one GPU. For sending
+data between ranks, PtyPy will perform a host copy first in most cases or
+use whatever the underlying MPI implementations does for CUDA-aware MPI
+(only tested for OpenMPI). Unfortunately, this mapping of one rank per 
+GPU will leave CPU cores idle if there are more cores on the system than GPUs. 
+
+Within a node, PtyPy can use nccl (requires a CuPy install 
+and setting `PTYPY_USE_NCCL=1`) for passing data between ranks/GPUs.
+
+
+## Breaking changes
+
+### Ptyscan classes (experiment) need to be imported explicitly
+
+Most derived PtyScan classes (all those in the `/experiment` folder) now need
+to be imported explicitly. We took this step to separate the user space
+more clearly from the base package and to avoid dependency creep from
+user-introduced code. At the beginning of your script, you now 
+need to import your module explicitly or use one of the helper 
+functions.
+
+```python
+import ptypy
+ptypy.load_ptyscan_module(module='')
+ptypy.load_all_ptyscan_modules()
+```
+
+Any PtyScan derived class in these modules that is decorated 
+with the `ptypy.experiment.register()` function will now be included 
+in the parameter tree and selectable by name.
+
+If you prefer the old way of importing ptypy "fully loaded", just use
+```python
+import ptypy
+ptypy.load_all()
+```
+which attempts to load all optional PtyScan classes and all engines.
+
+
+## Other updates
+
+ 1. Code for `utils.parallel.bcast_dict` and `gather_dict` has been simplified and
+    should be backwards compatible.
+ 2. The `fourier_power_bound` that was previously calculated internally from
+    the `fourier_relax_factor` can now be set explicitly and we recommend that from
+    now on. The recommended value for the`fourier_power_bound` is 0.25 for Poisson statistics
+    (see supplementary of [`this paper`](https://www.pnas.org/doi/10.1073/pnas.0905846107#supplementary-materials))
+ 3. Position correction now supports an alternate search scheme, i.e. along a fixed grid.
+    This scheme is more accurate than a stochastic search and the overhead incurred
+    for this brute force search is acceptable for GPU engines.
+ 4. We switched to a pip install within a conda environment as the main supported way of installation
+ 
+## Roadmap
+
+ * Automatic adjustment of the block sizes.
+ * Improve scaling behavior across multiple nodes and high frame counts.
+ * Better support for live processing (on a continuous detector data stream).
+ * More tests.
+ * Branch cleaning.
+ 
+## Contributors
+
+Thanks to the efforts at the Diamond Light Source that made this
+update possible.
+
+ * Aaron Parsons
+ * Bjoern Enders
+ * Benedikt Daurer
+ * Joerg Lotze
+ 
+
 # PtyPy 0.4 release notes
 
 After quite some work we announce ptypy 0.4. Apart from including all the fixes and improvements from 0.3.0 to 0.3.1, it includes two bigger changes
- 1. Ptypy has now been converted to python 3 and will be **python 3 only** in future. The python 2 version will not be actively maintained anymore, we keep a branch for it for a while but we don't expect to put in many fixes and certainly not anny new features. Team work by Julio, Alex, Bjoern and Aaron.
+ 1. Ptypy has now been converted to python 3 and will be **python 3 only** in future. The python 2 version will not be actively maintained anymore, we keep a branch for it for a while but we don't expect to put in many fixes and certainly not any new features. Team work by Julio, Alex, Bjoern and Aaron.
  *Please note: all branches that haven’t been converted to python 3 by the end of 2019 will most likely be removed during 2020.* Please rebase your effort on version 0.4. If you need help rebasing your efforts, please let us know soon.
  2. Position correction is now supported in most engines. It has been implemented by Wilhelm Eschen following the annealing approach introduced by A.M. Maiden et al. (Ultramicroscopy, Volume 120, 2012, Pages 64-72). Bjoern, Benedikt and Aaron helped refine and test it.
 
