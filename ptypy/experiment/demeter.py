@@ -76,6 +76,12 @@ class Demeter_Jun2022_simple(PtyScan):
     help = step size in the y direction in m
     doc =
 
+    [mask_std_percentile]
+    default = 100.0
+    type = float
+    help = Calculate bad-pixel mask based on thresholding the per-pixel standard dev. of the data
+    doc = Pixels with standard dev. larger than the percentile provide are masked as bad
+
     """
  
     def load_positions(self):
@@ -115,7 +121,6 @@ class Demeter_Jun2022_simple(PtyScan):
         dark_frames = np.array([np.array(Image.open(self.info.folder_dark+x)) for x in fnames_dark])
         dark = np.mean(dark_frames, axis=0)
 
-
         def find_index(fname):
             return int(fname.split('_')[-1].split('.')[0])
 
@@ -124,7 +129,12 @@ class Demeter_Jun2022_simple(PtyScan):
         for ind in indices:
             raw[ind] = np.array(Image.open(self.info.folder_diff+fnames_diff[ind]))-dark
             raw[ind][raw[ind]<0] = 0
- 
+
+        std_dev = np.std(np.array([raw[i] for i in indices]), axis=0)
+        mask = ~(std_dev > np.percentile(std_dev, self.info.mask_std_percentile))
+        for ind in indices:
+            weights[ind] = mask
+            
         return raw, positions, weights
  
     def load_weight(self):
@@ -132,10 +142,9 @@ class Demeter_Jun2022_simple(PtyScan):
         Provides the mask used for every diffraction pattern in the whole scan
         This mask will have the shape of the first frame.
         """
- 
-        r, w, p = self.load(indices=(0,))
-        data = r[0]
-        mask = np.ones_like(data)
+
+        r, p, w = self.load(indices=(0,))
+        mask = w[0]
         
         return mask
 
