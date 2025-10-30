@@ -11,9 +11,9 @@ logger = u.verbose.logger
  
 import numpy as np
 try:
-                import hdf5plugin
+    import hdf5plugin
 except ImportError:
-                logger.warning('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
+    logger.warning('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
 import h5py
 from  PIL import Image
 import os
@@ -82,8 +82,23 @@ class Demeter_Jun2022_simple(PtyScan):
     help = Calculate bad-pixel mask based on thresholding the per-pixel standard dev. of the data
     doc = Pixels with standard dev. larger than the percentile provide are masked as bad
 
+    [blacklist]
+    default = None
+    type = list
+    help = List of indices to be excluded
+
     """
- 
+
+    def __init__(self, pars=None, **kwargs):
+        """
+        demeter data loader
+        """
+        self.p = self.DEFAULT.copy(99)
+        self.p.update(pars, in_place_depth=99)
+
+        super(Demeter_Jun2022_simple, self).__init__(self.p, **kwargs)
+
+
     def load_positions(self):
         """
         Provides the relative sample positions inside the scan.
@@ -106,6 +121,8 @@ class Demeter_Jun2022_simple(PtyScan):
         x, y = np.array(x), np.array(y)
 
         positions = np.vstack((y, x)).T
+        if self.info.blacklist is not None:
+            positions = np.delete(positions, np.array(self.info.blacklist), axis=0)
         return positions
  
     def load(self, indices):
@@ -125,7 +142,7 @@ class Demeter_Jun2022_simple(PtyScan):
             return int(fname.split('_')[-1].split('.')[0])
 
         fnames_diff = sorted(os.listdir(self.info.folder_diff), key=find_index)
-
+        
         for ind in indices:
             raw[ind] = np.array(Image.open(self.info.folder_diff+fnames_diff[ind]))-dark
             raw[ind][raw[ind]<0] = 0
