@@ -59,7 +59,7 @@ class PtypyTomoWrapper:
             all_angles.append(v.extra['val'])
 
         view_to_proj_vectors = np.array(list_view_to_proj_vectors)
-        print(view_to_proj_vectors)
+        #print(view_to_proj_vectors)
 
         self.projector = AstraViewBased(
             vol=vol,
