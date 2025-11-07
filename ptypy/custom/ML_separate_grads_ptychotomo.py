@@ -24,7 +24,6 @@ from ..engines.base import BaseEngine, PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, BlockFull3D, GradFull, BlockGradFull
 from ..utils.tomo import AstraViewBased
 from scipy.ndimage.filters import gaussian_filter
-from scipy.ndimage import shift
 from ptypy.core import View, Container, Storage, Base
 
 __all__ = ['MLPtychoTomo']
@@ -50,11 +49,11 @@ class PtypyTomoWrapper:
 
         # For all blocks
         for i, (k,v) in enumerate([(i,v) for i,v in obj.views.items()]):
-            y = v.dcoord[0] - v.storage.center[0]
-            x = v.dcoord[1] - v.storage.center[1]
+            y = v.dcoord[0] - v.storage.data.shape[-2]/2 
+            x = v.dcoord[1] - v.storage.data.shape[-1]/2 
             if shifts is not None:
-                y -= (shifts[i][0] - v.storage.center[0])
-                x -= (shifts[i][1] - v.storage.center[1])
+                y += shifts[i][1]
+                x += shifts[i][0]
             list_view_to_proj_vectors.append((y, x))
             all_angles.append(v.extra['val'])
 
@@ -354,8 +353,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         mask2 = np.zeros_like(mask1, dtype=bool)
         mask2[70:-70] = True
         mask = mask1 & mask2
-        rho_imag[~mask] = 0
-        rho_real[~mask] = 0
+        self.mask = gaussian_filter(mask.astype(float), 10)
             
         # Initialise volume rho as container
         self.rho = Container()
@@ -453,8 +451,18 @@ class MLPtychoTomo(PositionCorrectionEngine):
             ########################
             t1 = time.time()
 
+            # Constraints
+            rho_s = self.rho.storages['S_rho']
+            rho_s.data.real[rho_s.data.real > 0] = 0
+            rho_s.data.imag[rho_s.data.imag < 0] = 0
+            rho_s.data *= self.mask
+
             # volume and probe gradient, volume regularizer, LL
             error_dct = self.ML_model.new_grad()
+            # Ignore gradient outside of mask
+            # self.rho_grad_new.S["S_rho"].data[(rho_s.data.real > 0) & ()] = 0
+            # self.rho_grad_new.S["S_rho"].data[(rho_s.data.imag < 0) & ()] = 0            
+            self.rho_grad_new.S["S_rho"].data *= self.mask
             new_rho_grad, new_pr_grad = self.rho_grad_new, self.pr_grad_new
 
             tg += time.time() - t1
@@ -795,8 +803,9 @@ class GaussianModel(BaseModel):
             output=self.projected_rho
         )
         debug = False
+        debug2 = False
         #np.save(f"/dls/tmp/iat69393/forward_indices_{u.parallel.rank}.npy", np.array(self.get_indexes_of_active_views()))
-        if u.parallel.master and debug:
+        if u.parallel.master and debug2:
              np.save(f"/dls/tmp/iat69393/projected_rho_before.npy", self.projected_rho.S["S0000G00"].data)
 
         # Outer loop: through diffraction patterns
@@ -852,9 +861,21 @@ class GaussianModel(BaseModel):
                 if u.parallel.master and (dname == "V0000") and debug:
                     np.save("/dls/tmp/iat69393/ob_grad_1.npy", self.projected_rho[pod.ex_view])
                     np.save("/dls/tmp/iat69393/prod_xi_psi.npy", prod_xi_psi_conj)
-                self.projected_rho[pod.ex_view] = prod_xi_psi_conj * pod.object.real
+                self.projected_rho[pod.ex_view] = prod_xi_psi_conj #* pod.object.real
                 if u.parallel.master and (dname == "V0000") and debug:
                     np.save("/dls/tmp/iat69393/ob_grad_2.npy", self.projected_rho[pod.ex_view])
+                # Shifts
+                # grad_y, grad_x = np.gradient(pod.probe)
+                # delta_psi_x = expobj * grad_x #u.shift_interp(pod.probe, [0,-1])
+                # delta_psi_y = expobj * grad_y #u.shift_interp(pod.probe, [-1,0])
+                # if u.parallel.master and (dname == "V0000") and debug2:
+                #     np.save("/dls/tmp/iat69393/probe_not_shifted_.npy", pod.probe)
+                #     np.save("/dls/tmp/iat69393/delta_psi_x.npy", delta_psi_x)
+                #     np.save("/dls/tmp/iat69393/delta_psi_y.npy", delta_psi_y)
+                # alpha_x = -np.real(xi * (delta_psi_x).conj()).sum() / u.abs2(delta_psi_x).sum()
+                # alpha_y = -np.real(xi * (delta_psi_y).conj()).sum() / u.abs2(delta_psi_y).sum()
+                #print(name, pod.ex_view.layer, pod.ex_view.dlayer, alpha_x, alpha_y)
+                
 
             if debug:
                 sys.exit(0)
