@@ -50,11 +50,11 @@ class PtypyTomoWrapper:
 
         # For all blocks
         for i, (k,v) in enumerate([(i,v) for i,v in obj.views.items()]):
-            y = v.dcoord[0] - v.storage.center[0]
-            x = v.dcoord[1] - v.storage.center[1]
+            y = v.dcoord[0] - v.storage.data.shape[-2]/2 
+            x = v.dcoord[1] - v.storage.data.shape[-1]/2 
             if shifts is not None:
-                y -= shifts[i][1]
-                x -= shifts[i][0]
+                y += shifts[i][1]
+                x += shifts[i][0]
             list_view_to_proj_vectors.append((y, x))
             all_angles.append(v.extra['val'])
 
