@@ -24,6 +24,7 @@ from ..engines.base import BaseEngine, PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, BlockFull3D, GradFull, BlockGradFull
 from ..utils.tomo import AstraViewBased
 from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage import shift
 from ptypy.core import View, Container, Storage, Base
 
 __all__ = ['MLPtychoTomo']
@@ -331,6 +332,14 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.omega = self.ex
         self.projected_rho = self.ex.copy(self.ex.ID + '_proj_rho', fill=0.)
 
+        # Shifts
+        # storage_key = next(iter(self.projected_rho.S))
+        # nviews = self.projected_rho.S[storage_key].data.shape[0]
+        nviews = len(self.ptycho.obj.views)
+        self.alpha_nom = np.zeros(shape=(nviews, 2), dtype=float)
+        self.alpha_denom = np.ones(shape=(nviews, 2), dtype=float)
+        self.delta_shift = np.zeros(shape=(nviews, 2), dtype=float)
+
         if self.p.init_vol_zero and self.p.vol_size:
             rho_real = np.zeros(self.p.vol_size, dtype=np.complex64)
             rho_imag = np.zeros(self.p.vol_size, dtype=np.complex64)
@@ -455,14 +464,14 @@ class MLPtychoTomo(PositionCorrectionEngine):
             rho_s = self.rho.storages['S_rho']
             rho_s.data.real[rho_s.data.real > 0] = 0
             rho_s.data.imag[rho_s.data.imag < 0] = 0
-            rho_s.data *= self.mask
+            rho_s.data.real *= self.mask
 
             # volume and probe gradient, volume regularizer, LL
             error_dct = self.ML_model.new_grad()
             # Ignore gradient outside of mask
             # self.rho_grad_new.S["S_rho"].data[(rho_s.data.real > 0) & ()] = 0
             # self.rho_grad_new.S["S_rho"].data[(rho_s.data.imag < 0) & ()] = 0            
-            self.rho_grad_new.S["S_rho"].data *= self.mask
+            self.rho_grad_new.S["S_rho"].data.real *= self.mask
             new_rho_grad, new_pr_grad = self.rho_grad_new, self.pr_grad_new
 
             tg += time.time() - t1
@@ -580,6 +589,12 @@ class MLPtychoTomo(PositionCorrectionEngine):
             self.rho += self.rho_h
             self.pr += self.pr_h
 
+            # Position correction
+            self.position_update()
+
+            # Shift correction
+            #self.shift_correction()
+
             # FIXME: move saving volumes to run script
             if parallel.master and ((self.curiter % 10) == 0): # curiter starts at zero
             # Get SLURM Job ID
@@ -595,15 +610,46 @@ class MLPtychoTomo(PositionCorrectionEngine):
             #        f["data"] = -np.real(self.rho)[100:-100,100:-100,100:-100]
             # FIXME: end move saving volumes to run script
 
-            # Position correction
-            self.position_update()
-
             # increase iteration counter
             self.curiter +=1
 
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
+
+    def shift_correction(self):
+
+        self.tomo_wrapper.forward(
+            vol=self.rho.storages['S_rho'].data,
+            ind=[],
+            output=self.projected_rho
+        )
+
+
+    def position_update(self):
+
+        step = 1
+        nangles = len(np.unique(self.tomo_wrapper.projector._angles))
+        alphay = self.alpha_nom[:,0].reshape((nangles,-1)).sum(axis=1) / self.alpha_denom[:,0].reshape((nangles,-1)).sum(axis=1)
+        alphax = self.alpha_nom[:,1].reshape((nangles,-1)).sum(axis=1) / self.alpha_denom[:,1].reshape((nangles,-1)).sum(axis=1)
+        # alphay /= np.abs(alphay).max()
+        # alphax /= np.abs(alphax).max()
+        dy = self.delta_shift[:,0].reshape((nangles,-1))
+        dx = self.delta_shift[:,1].reshape((nangles,-1))
+        # np.save(f"/dls/tmp/iat69393/delta_x_{self.curiter}.npy", step*alphax)
+        # np.save(f"/dls/tmp/iat69393/delta_y_{self.curiter}.npy", step*alphay)
+
+        for i in range(nangles):
+            dx[i][:] = step * alphax[i]
+            dy[i][:] = step * alphay[i]
+            # probe_key = list(self.pr.S.keys())[0]
+            # self.pr.S[probe_key].data[i] = shift(self.pr.S[probe_key].data[i], (-step*alphay[i], -step*alphax[i]))
+        self.delta_shift = -np.array([dy.flat, dx.flat]).T
+
+        # print(self.delta_shift)
+        # print(self.tomo_wrapper.projector._view_to_proj_vectors.shape, self.delta_shift.shape)
+        self.tomo_wrapper.projector._view_to_proj_vectors += self.delta_shift
+        self.tomo_wrapper.projector._create_vector_for_proj_geom()
 
     def engine_finalize(self):
         """
@@ -646,6 +692,9 @@ class BaseModel(object):
         self.ex = self.engine.ex
         self.coverage = self.engine.coverage
         self.projected_rho = self.engine.projected_rho
+        self.alpha_nom = self.engine.alpha_nom
+        self.alpha_denom = self.engine.alpha_denom
+        self.delta_shift = self.engine.delta_shift
 
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
@@ -865,15 +914,17 @@ class GaussianModel(BaseModel):
                 if u.parallel.master and (dname == "V0000") and debug:
                     np.save("/dls/tmp/iat69393/ob_grad_2.npy", self.projected_rho[pod.ex_view])
                 # Shifts
-                # grad_y, grad_x = np.gradient(pod.probe)
-                # delta_psi_x = expobj * grad_x #u.shift_interp(pod.probe, [0,-1])
-                # delta_psi_y = expobj * grad_y #u.shift_interp(pod.probe, [-1,0])
-                # if u.parallel.master and (dname == "V0000") and debug2:
-                #     np.save("/dls/tmp/iat69393/probe_not_shifted_.npy", pod.probe)
-                #     np.save("/dls/tmp/iat69393/delta_psi_x.npy", delta_psi_x)
-                #     np.save("/dls/tmp/iat69393/delta_psi_y.npy", delta_psi_y)
-                # alpha_x = -np.real(xi * (delta_psi_x).conj()).sum() / u.abs2(delta_psi_x).sum()
-                # alpha_y = -np.real(xi * (delta_psi_y).conj()).sum() / u.abs2(delta_psi_y).sum()
+                grad_y, grad_x = np.gradient(pod.probe)
+                delta_psi_x = expobj * grad_x 
+                delta_psi_y = expobj * grad_y 
+                if u.parallel.master and (dname == "V0000") and debug2:
+                    np.save("/dls/tmp/iat69393/probe_not_shifted_.npy", pod.probe)
+                    np.save("/dls/tmp/iat69393/delta_psi_x.npy", delta_psi_x)
+                    np.save("/dls/tmp/iat69393/delta_psi_y.npy", delta_psi_y)
+                self.alpha_nom[pod.ex_view.layer,1] = -np.real(xi * (delta_psi_x).conj()).sum()
+                self.alpha_nom[pod.ex_view.layer,0] = -np.real(xi * (delta_psi_y).conj()).sum()
+                self.alpha_denom[pod.ex_view.layer,1] = u.abs2(delta_psi_x).sum()
+                self.alpha_denom[pod.ex_view.layer,0] = u.abs2(delta_psi_y).sum()
                 #print(name, pod.ex_view.layer, pod.ex_view.dlayer, alpha_x, alpha_y)
                 
 
@@ -885,7 +936,13 @@ class GaussianModel(BaseModel):
 
 #        if u.parallel.master:
 #            np.save(f"/dls/tmp/iat69393/projected_rho_after.npy", self.projected_rho.S["S0000G00"].data)
-            
+
+        # Shifts
+        self.alpha_nom = u.parallel.allreduce(self.alpha_nom)
+        self.alpha_denom = u.parallel.allreduce(self.alpha_denom)
+
+        #self.position_update()
+
         # Back project volume
         storage_key = next(iter(self.projected_rho.S)) #list(self.prods_container.S)[0]
         self.tomo_wrapper.backward(
@@ -912,6 +969,28 @@ class GaussianModel(BaseModel):
 
 
         return error_dct
+
+    def position_update(self):
+
+        step = 10
+        nangles = len(np.unique(self.tomo_wrapper.projector._angles))
+        alphay = self.alpha_nom[:,0].reshape((nangles,-1)).sum(axis=1) / self.alpha_denom[:,0].reshape((nangles,-1)).sum(axis=1)
+        alphax = self.alpha_nom[:,1].reshape((nangles,-1)).sum(axis=1) / self.alpha_denom[:,1].reshape((nangles,-1)).sum(axis=1)
+        alphay /= alphay.max()
+        alphax /= alphax.max()
+        dy = self.delta_shift[:,0].reshape((nangles,-1))
+        dx = self.delta_shift[:,1].reshape((nangles,-1))
+        # np.save(f"/dls/tmp/iat69393/delta_x_{self.curiter}.npy", dx)
+        # np.save(f"/dls/tmp/iat69393/delta_y_{self.curiter}.npy", dy)
+        for i in range(nangles):
+            dx[i][:] = step * alphax[i]
+            dy[i][:] = step * alphay[i]
+        self.delta_shift = np.array([dy.flat, dx.flat]).T
+
+        print(self.delta_shift)
+        # print(self.tomo_wrapper.projector._view_to_proj_vectors.shape, self.delta_shift.shape)
+        self.tomo_wrapper.projector._view_to_proj_vectors += self.delta_shift
+        self.tomo_wrapper.projector._create_vector_for_proj_geom()
 
     def poly_line_coeffs_rho(self, rho_h):
         """
