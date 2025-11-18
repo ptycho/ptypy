@@ -1,0 +1,1 @@
+{"host": "cs05r-sc-hop01-02.diamond.ac.uk", "nprocs": 1, "nruns": 10, "benchmark": {"data_load": 33.44356952793896, "engine_init": 0.43941209907643497, "engine_prepare": 3.9622172659728676, "engine_iterate": 350.66329174267594, "engine_finalize": 0.004027884919196367}}
