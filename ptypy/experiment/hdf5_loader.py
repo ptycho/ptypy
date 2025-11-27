@@ -588,7 +588,7 @@ class Hdf5Loader(PtyScan):
 
         if None not in [self.p.recorded_psize.file, self.p.recorded_psize.key]:
             with h5.File(self.p.recorded_psize.file, 'r', swmr=self._is_swmr) as f:
-                self.p.psize = float(f[self.p.recorded_psize.key][()].item()[0] * self.p.recorded_psize.multiplier)
+                self.p.psize = float(f[self.p.recorded_psize.key][0].item() * self.p.recorded_psize.multiplier)
             self.info.psize = self.p.psize
             log(3, "loading psize={} from file".format(self.p.psize))
 
