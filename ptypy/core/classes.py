@@ -84,6 +84,11 @@ GEO_PREFIX = 'G'
 MEGAPIXEL_LIMIT = 100
 
 
+RECORD_SIZE = 8
+if "PTYPY_RECORDS_SIZE" in os.environ:
+    RECORD_SIZE = int(os.environ["PTYPY_RECORDS_SIZE"])
+
+
 class Base(object):
 
     _CHILD_PREFIX = 'ID'
@@ -145,7 +150,9 @@ class Base(object):
 
         if self._pool.get(prefix) is None:
             self._pool[prefix] = OrderedDict()
-            self._recs[prefix] = np.zeros((8,), dtype=obj.__class__._fields)
+
+            # TODO: check with Benedikt
+            self._recs[prefix] = np.zeros((int(RECORD_SIZE),),dtype=obj.__class__._fields)
             
         d = self._pool[prefix]
         # Check if ID is already taken and assign a new one
@@ -185,6 +192,9 @@ class Base(object):
             # therefore need to update all previous pointers
             for v in self._pool[prefix].values():
                 v._record = self._recs[prefix][v.numID]
+
+            # TODO: check with Benedikt whether this line is needed
+            #self._recs[prefix] = np.pad(recs, (0,nl-l))
         obj._record = self._recs[prefix][idx]
         self._recs[prefix][idx]['ID'] = nID
         
