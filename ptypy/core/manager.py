@@ -585,8 +585,8 @@ class BlockScanModel(ScanModel):
                 dv = View(self.Cdiff, accessrule=AR_diff)  # maybe use index here
                 mv = View(self.Cmask, accessrule=AR_mask)
             else:
-                dv = dv.copy()
-                mv = mv.copy()
+                dv = dv.copy(update=False, rec_copy=True)
+                mv = mv.copy(update=False, rec_copy=True)
 
             maybe_data = data.get(index)
             active = maybe_data is not None
@@ -606,9 +606,8 @@ class BlockScanModel(ScanModel):
                 dv.data[:] = maybe_data
                 mv.data[:] = weights.get(index, np.ones_like(maybe_data))
 
-                # positions
+        # positions
         positions = chunk.positions
-
         ## warning message for empty postions?
 
         # Update maximum nr. of frames in a block

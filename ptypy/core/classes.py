@@ -33,7 +33,7 @@ This file is part of the PTYPY package.
 
 """
 import numpy as np
-import weakref, os, sys
+import weakref, os
 from collections import OrderedDict
 
 try:
@@ -89,7 +89,7 @@ class Base(object):
     _CHILD_PREFIX = 'ID'
     _PREFIX = BASE_PREFIX
     
-    __slots__ = ['ID','numID','owner','_pool','_recs','_record', '_idx']
+    __slots__ = ['ID','numID','owner','_pool','_recs','_record']
     _fields = [('ID','<S8')]
     
     def __init__(self, owner=None, ID=None, BeOwner=True):
@@ -120,8 +120,7 @@ class Base(object):
         if isinstance(owner,Base):
             owner._new_ptypy_object(obj=self)
         else:
-            self._pre = None
-            self._idx = None
+            self._record = None
             logger.debug(
                 'Failed registering instance of %s with ID %s to object %s'
                 % (type(self), self.ID, owner))
@@ -146,7 +145,7 @@ class Base(object):
 
         if self._pool.get(prefix) is None:
             self._pool[prefix] = OrderedDict()
-            self._recs[prefix] = np.zeros((8,),dtype=obj.__class__._fields)
+            self._recs[prefix] = dict()
             
         d = self._pool[prefix]
         # Check if ID is already taken and assign a new one
@@ -175,16 +174,17 @@ class Base(object):
             
         d[nID] = obj
         obj.ID = nID
-        idx = len(d)
+        idx = len(d) - 1
         obj.numID = idx
-        l = len(self._recs[prefix])
-        if idx >= l:
-            nl = l + 8192 if idx > 10000 else 2*l
-            self._recs[prefix].resize((nl,), refcheck=False)
-        obj._record = self._recs[prefix]
-        obj._idx = idx
+        # l = len(self._recs[prefix])
+        # if idx >= l:
+        #     nl = l + 8192 if idx > 10000 else 2*l
+        #     #self._recs[prefix].resize((nl,), refcheck=False)
+        #     #self._recs[prefix] = np.pad(recs, (0,nl-l))
+        self._recs[prefix][idx] = np.zeros((1,),dtype=obj.__class__._fields)[0]
+        obj._record = self._recs[prefix][idx]
         self._recs[prefix][idx]['ID'] = nID
-
+        
         return
         
     @staticmethod
@@ -1286,10 +1286,10 @@ class View(Base):
         else:
             return first + '\n ACTIVE : slice = %s' % str(self.slice)
 
-    def copy(self,ID=None, update = True):
+    def copy(self,ID=None, update = True, rec_copy = True):
         nView = View(self.owner, ID)
-        nView._record = self._record.copy()
-        nView._idx = self._idx
+        if rec_copy:
+            nView._record = self._record.copy()
         nView._ndim = self._ndim
         nView.storage = self.storage
         nView.storageID = self.storageID
@@ -1299,27 +1299,27 @@ class View(Base):
         
     @property
     def active(self):
-        return self._record[self._idx]['active'] 
+        return self._record['active'] 
         
     @active.setter
     def active(self, v):
-        self._record[self._idx]['active'] = v
+        self._record['active'] = v
         
     @property
     def dlayer(self):
-        return self._record[self._idx]['dlayer']
+        return self._record['dlayer']
         
     @dlayer.setter
     def dlayer(self, v):
-        self._record[self._idx]['dlayer'] = v
+        self._record['dlayer'] = v
         
     @property
     def layer(self):
-        return self._record[self._idx]['layer']
+        return self._record['layer']
         
     @layer.setter
     def layer(self, v):
-        self._record[self._idx]['layer'] = v
+        self._record['layer'] = v
 
     @property
     def ndim(self):
@@ -1385,7 +1385,7 @@ class View(Base):
         Two dimensional shape of View.
         """
 
-        sh = self._record[self._idx]['shape']
+        sh = self._record['shape']
         return None if (sh==0).all() else sh[:self._ndim]
 
     @shape.setter
@@ -1394,63 +1394,63 @@ class View(Base):
         Set two dimensional shape of View.
         """
         if v is None:
-            self._record[self._idx]['shape'][:] = 0
+            self._record['shape'][:] = 0
         elif np.isscalar(v):
             sh = (int(v),) * self.owner.ndim
             self._ndim = len(sh)
-            self._record[self._idx]['shape'][:len(sh)] = sh
+            self._record['shape'][:len(sh)] = sh
         else:
             self._ndim = len(v)
-            self._record[self._idx]['shape'][:len(v)] = v
+            self._record['shape'][:len(v)] = v
 
     @property
     def dlow(self):
         """
         Low side of the View's data range.
         """
-        return self._record[self._idx]['dlow'][:self._ndim]
+        return self._record['dlow'][:self._ndim]
 
     @dlow.setter
     def dlow(self, v):
         """
         Set low side of the View's data range.
         """
-        self._record[self._idx]['dlow'][:self._ndim] = v
+        self._record['dlow'][:self._ndim] = v
 
     @property
     def dhigh(self):
         """
         High side of the View's data range.
         """
-        return self._record[self._idx]['dhigh'][:self._ndim]
+        return self._record['dhigh'][:self._ndim]
 
     @dhigh.setter
     def dhigh(self, v):
         """
         Set high side of the View's data range.
         """
-        self._record[self._idx]['dhigh'][:self._ndim] = v
+        self._record['dhigh'][:self._ndim] = v
 
     @property
     def dcoord(self):
         """
         Center coordinate (index) in data buffer.
         """
-        return self._record[self._idx]['dcoord'][:self._ndim]
+        return self._record['dcoord'][:self._ndim]
 
     @dcoord.setter
     def dcoord(self, v):
         """
         Set high side of the View's data range.
         """
-        self._record[self._idx]['dcoord'][:self._ndim] = v
+        self._record['dcoord'][:self._ndim] = v
 
     @property
     def psize(self):
         """
         Pixel size of the View.
         """
-        ps = self._record[self._idx]['psize'][:self._ndim]
+        ps = self._record['psize'][:self._ndim]
         return ps if (ps > 0.).all() else None
 
     @psize.setter
@@ -1459,16 +1459,16 @@ class View(Base):
         Set pixel size.
         """
         if v is None:
-            self._record[self._idx]['psize'][:] = 0.
+            self._record['psize'][:] = 0.
         else:
-            self._record[self._idx]['psize'][:self._ndim] = u.expectN(v, self._ndim)
+            self._record['psize'][:self._ndim] = u.expectN(v, self._ndim)
 
     @property
     def coord(self):
         """
         The View's physical coordinate (meters)
         """
-        return self._record[self._idx]['coord'][:self._ndim]
+        return self._record['coord'][:self._ndim]
 
     @coord.setter
     def coord(self, v):
@@ -1476,11 +1476,11 @@ class View(Base):
         Set the View's physical coordinate (meters)
         """
         if v is None:
-            self._record[self._idx]['coord'][:] = 0.
+            self._record['coord'][:] = 0.
         elif type(v) is not np.ndarray:
-            self._record[self._idx]['coord'][:self._ndim] = u.expectN(v, self._ndim)
+            self._record['coord'][:self._ndim] = u.expectN(v, self._ndim)
         else:
-            self._record[self._idx]['coord'][:self._ndim] = v
+            self._record['coord'][:self._ndim] = v
 
     @property
     def sp(self):
@@ -1488,7 +1488,7 @@ class View(Base):
         The subpixel difference (meters) between physical coordinate
         and data coordinate.
         """
-        return self._record[self._idx]['sp'][:self._ndim]
+        return self._record['sp'][:self._ndim]
 
     @sp.setter
     def sp(self, v):
@@ -1497,11 +1497,11 @@ class View(Base):
         and data coordinate.
         """
         if v is None:
-            self._record[self._idx]['sp'][:] = 0.
+            self._record['sp'][:] = 0.
         elif type(v) is not np.ndarray:
-            self._record[self._idx]['sp'][:self._ndim] = u.expectN(v, self._ndim)
+            self._record['sp'][:self._ndim] = u.expectN(v, self._ndim)
         else:
-            self._record[self._idx]['sp'][:self._ndim] = v
+            self._record['sp'][:self._ndim] = v
 
     @property
     def pcoord(self):
