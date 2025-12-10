@@ -84,11 +84,6 @@ GEO_PREFIX = 'G'
 MEGAPIXEL_LIMIT = 100
 
 
-RECORD_SIZE = 8
-if "PTYPY_RECORDS_SIZE" in os.environ:
-    RECORD_SIZE = int(os.environ["PTYPY_RECORDS_SIZE"])
-
-
 class Base(object):
 
     _CHILD_PREFIX = 'ID'
@@ -150,7 +145,7 @@ class Base(object):
 
         if self._pool.get(prefix) is None:
             self._pool[prefix] = OrderedDict()
-            self._recs[prefix] = np.zeros((int(RECORD_SIZE),),dtype=obj.__class__._fields)
+            self._recs[prefix] = dict()
             
         d = self._pool[prefix]
         # Check if ID is already taken and assign a new one
@@ -179,13 +174,14 @@ class Base(object):
             
         d[nID] = obj
         obj.ID = nID
-        idx = len(d)
+        idx = len(d) - 1
         obj.numID = idx
-        l = len(self._recs[prefix])
-        if idx >= l:
-            nl = l + 8192 if idx > 10000 else 2*l
-            #self._recs[prefix].resize((nl,), refcheck=True)
-            self._recs[prefix] = np.pad(recs, (0,nl-l))
+        # l = len(self._recs[prefix])
+        # if idx >= l:
+        #     nl = l + 8192 if idx > 10000 else 2*l
+        #     #self._recs[prefix].resize((nl,), refcheck=False)
+        #     #self._recs[prefix] = np.pad(recs, (0,nl-l))
+        self._recs[prefix][idx] = np.zeros((1,),dtype=obj.__class__._fields)[0]
         obj._record = self._recs[prefix][idx]
         self._recs[prefix][idx]['ID'] = nID
         
@@ -1290,9 +1286,10 @@ class View(Base):
         else:
             return first + '\n ACTIVE : slice = %s' % str(self.slice)
 
-    def copy(self,ID=None, update = True):
+    def copy(self,ID=None, update = True, rec_copy = True):
         nView = View(self.owner, ID)
-        nView._record = self._record.copy()
+        if rec_copy:
+            nView._record = self._record.copy()
         nView._ndim = self._ndim
         nView.storage = self.storage
         nView.storageID = self.storageID
