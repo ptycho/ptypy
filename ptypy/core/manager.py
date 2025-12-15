@@ -585,8 +585,8 @@ class BlockScanModel(ScanModel):
                 dv = View(self.Cdiff, accessrule=AR_diff)  # maybe use index here
                 mv = View(self.Cmask, accessrule=AR_mask)
             else:
-                dv = dv.copy(update=False, rec_copy=True)
-                mv = mv.copy(update=False, rec_copy=True)
+                dv = dv.copy(update=False)
+                mv = mv.copy(update=False)
 
             maybe_data = data.get(index)
             active = maybe_data is not None
