@@ -14,6 +14,7 @@ This file is part of the PTYPY package.
 import numpy as np
 import cupy as cp
 import cupyx
+import os
 
 from ptypy.engines import register
 from ptypy.accelerate.base.engines.ML_serial import ML_serial, BaseModelSerial
@@ -34,6 +35,11 @@ __all__ = ['ML_cupy']
 # can be used to limit the number of blocks, simulating that they don't fit
 MAX_BLOCKS = 99999
 # MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
+
+# Limit the amount of device memory that will be estimated as being available
+max_device_occupancy = 0.9
+if "PTYPY_DEVICE_OCCUPANCY" in os.environ:
+    max_device_occupancy = float(PTYPY_DEVICE_OCCUPANCY)
 
 
 @register()
@@ -162,7 +168,7 @@ class ML_cupy(ML_serial):
         mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
 
         # leave 200MB room for safety
-        fit = int(mem - 200 * 1024 * 1024) // blk
+        fit = int(max_device_occupancy * mem - 200 * 1024 * 1024) // blk
         if not fit:
             log(1, "Cannot fit memory into device, if possible reduce frames per block. Exiting...")
             raise SystemExit("ptypy has been exited.")
