@@ -145,7 +145,7 @@ class Base(object):
 
         if self._pool.get(prefix) is None:
             self._pool[prefix] = OrderedDict()
-            self._recs[prefix] = dict()
+            self._recs[prefix] = np.zeros((8,), dtype=obj.__class__._fields)
             
         d = self._pool[prefix]
         # Check if ID is already taken and assign a new one
@@ -174,14 +174,17 @@ class Base(object):
             
         d[nID] = obj
         obj.ID = nID
-        idx = len(d) - 1
+        idx = len(d)
         obj.numID = idx
-        # l = len(self._recs[prefix])
-        # if idx >= l:
-        #     nl = l + 8192 if idx > 10000 else 2*l
-        #     #self._recs[prefix].resize((nl,), refcheck=False)
-        #     #self._recs[prefix] = np.pad(recs, (0,nl-l))
-        self._recs[prefix][idx] = np.zeros((1,),dtype=obj.__class__._fields)[0]
+        l = len(self._recs[prefix])
+        if idx >= l:
+            nl = l + 8192 if idx > 10000 else 2*l
+            self._recs[prefix].resize((nl,), refcheck=False)
+            # after .resize() all previous references to the records
+            # array are not guaranteed to point to correct memory
+            # therefore need to update all previous pointers
+            for v in self._pool[prefix].values():
+                v._record = self._recs[prefix][v.numID]
         obj._record = self._recs[prefix][idx]
         self._recs[prefix][idx]['ID'] = nID
         
@@ -1286,10 +1289,9 @@ class View(Base):
         else:
             return first + '\n ACTIVE : slice = %s' % str(self.slice)
 
-    def copy(self,ID=None, update = True, rec_copy = True):
+    def copy(self,ID=None, update = True):
         nView = View(self.owner, ID)
-        if rec_copy:
-            nView._record = self._record.copy()
+        nView._record[...][()] = self._record.copy()[...]
         nView._ndim = self._ndim
         nView.storage = self.storage
         nView.storageID = self.storageID
