@@ -36,10 +36,10 @@ __all__ = ['ML_cupy']
 MAX_BLOCKS = 99999
 # MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
 
-# Limit the amount of device memory that will be estimated as being available
-max_device_occupancy = 0.9
-if "PTYPY_DEVICE_OCCUPANCY" in os.environ:
-    max_device_occupancy = float(PTYPY_DEVICE_OCCUPANCY)
+# Estimate the device memory safety margin as fraction of total device memory
+device_memory_fractional_safety_margin = 0.025
+if "PTYPY_DEVICE_MEM_SAFETY" in os.environ:
+    device_memory_fractional_safety_margin = float(PTYPY_DEVICE_MEM_SAFETY)
 
 
 @register()
@@ -166,9 +166,11 @@ class ML_cupy(ML_serial):
         # as both will be used for allocations
         mempool = cp.get_default_memory_pool()
         mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
+        tot = cp.cuda.runtime.memGetInfo()[1]
+        safety_margin = device_memory_fractional_safety_margin * tot
 
-        # leave 200MB room for safety
-        fit = int(max_device_occupancy * mem - 200 * 1024 * 1024) // blk
+        # leave room for safety
+        fit = int(mem - safety_margin) // blk
         if not fit:
             log(1, "Cannot fit memory into device, if possible reduce frames per block. Exiting...")
             raise SystemExit("ptypy has been exited.")
