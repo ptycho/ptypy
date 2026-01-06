@@ -38,12 +38,8 @@ MAX_BLOCKS = 99999
 
 # Estimate the device memory safety margin as fraction of total device memory
 device_memory_fractional_safety_margin = 0.025
-# Limit the amount of device memory that will be estimated as being available
-max_device_occupancy = 0.9
-
 if "PTYPY_DEVICE_MEM_SAFETY" in os.environ:
-    device_memory_fractional_safety_margin = float(os.environ["PTYPY_DEVICE_MEM_SAFETY"])
-    max_device_occupancy = float(PTYPY_DEVICE_OCCUPANCY)
+    device_memory_fractional_safety_margin = float(PTYPY_DEVICE_MEM_SAFETY)
 
 
 @register()
@@ -171,14 +167,10 @@ class ML_cupy(ML_serial):
         mempool = cp.get_default_memory_pool()
         mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
         tot = cp.cuda.runtime.memGetInfo()[1]
-        safety_margin = max(device_memory_fractional_safety_margin * tot, 400 * 1024 * 1024)
+        safety_margin = device_memory_fractional_safety_margin * tot
 
-        # from dev
-        # fit = int(mem - safety_margin) // blk
-
-        # from ptychotomo branch, TODO: needs checking with Benedikt
-        # leave 200MB room for safety
-        fit = int(max_device_occupancy * mem - 200 * 1024 * 1024) // blk
+        # leave room for safety
+        fit = int(mem - safety_margin) // blk
         if not fit:
             log(1, "Cannot fit memory into device, if possible reduce frames per block. Exiting...")
             raise SystemExit("ptypy has been exited.")
