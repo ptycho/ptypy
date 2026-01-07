@@ -39,7 +39,7 @@ MAX_BLOCKS = 99999
 # Estimate the device memory safety margin as fraction of total device memory
 device_memory_fractional_safety_margin = 0.025
 if "PTYPY_DEVICE_MEM_SAFETY" in os.environ:
-    device_memory_fractional_safety_margin = float(PTYPY_DEVICE_MEM_SAFETY)
+    device_memory_fractional_safety_margin = float(os.environ["PTYPY_DEVICE_MEM_SAFETY"])
 
 
 @register()
