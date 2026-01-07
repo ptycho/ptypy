@@ -36,7 +36,7 @@ FType = np.float64
 CType = np.complex128
 
 __all__ = ['ModelManager', 'ScanModel', 'Full', 'Vanilla', 'Bragg3dModel', 'OPRModel', 'BlockScanModel',
-           'BlockVanilla', 'BlockFull', 'BlockOPRModel']
+           'BlockVanilla', 'BlockFull', 'BlockOPRModel', 'BlockFull3D']
 
 class _LogTime(object):
 
@@ -109,6 +109,26 @@ class ScanModel(object):
     help = Resampling fraction of the image frames w.r.t. diffraction frames
     doc = A resampling of 2 means that the image frame is to be sampled (in the detector plane) twice
           as densely as the raw diffraction data.
+
+    [extra]
+    default = 
+    type = Param
+    help =  Extra access rule
+
+    [projections]
+    default = 
+    type = list
+    help =
+
+    [tomo_angles]
+    default = 
+    type = int
+    help = Number of tomographic angles
+
+    [n_frames_per_angle]
+    default = 
+    type = int
+    help = Number of frames per angle
     """
     _PREFIX = MODEL_PREFIX
 
@@ -168,6 +188,7 @@ class ScanModel(object):
 
         # By default we create a new exit buffer for each view
         self._single_exit_buffer_for_all_views = False
+
 
     @classmethod
     def makePtyScan(cls, pars):
@@ -298,6 +319,7 @@ class ScanModel(object):
             AR_mask.layer = index
             AR_diff.active = active
             AR_mask.active = active
+            AR_diff.extra = dct['extra']
 
             # check here: is there already a view to this layer? Is it active?
             try:
@@ -548,6 +570,7 @@ class BlockScanModel(ScanModel):
         else:
             common = dp['common']
             chunk = dp['chunk']
+            iterable = dp['iterable']
 
         # Generalized shape which works for 2d and 3d cases
         sh = (max(len(chunk.indices_node),1),) + tuple(self.diff_shape)
@@ -579,9 +602,17 @@ class BlockScanModel(ScanModel):
         weights = chunk['weights']
 
         # First pass: create or update views and reformat corresponding storage
-        for index in chunk['indices']:
+        for i, index in enumerate(chunk['indices']):
+            # When storing angles, this is a single angle
+            extra_val = iterable[i]['extra']['val']
+            extra_global_ind = iterable[i]['extra']['ind']
+            extra_dict = {
+                'val': extra_val, 
+                'ind': extra_global_ind,
+                }
 
             if dv is None:
+                AR_diff.extra = extra_dict
                 dv = View(self.Cdiff, accessrule=AR_diff)  # maybe use index here
                 mv = View(self.Cmask, accessrule=AR_mask)
             else:
@@ -595,6 +626,7 @@ class BlockScanModel(ScanModel):
             mv.active = active
             dv.layer = index
             mv.layer = index
+            dv.extra = extra_dict
 
             diff_views.append(dv)
             mask_views.append(mv)
@@ -1098,7 +1130,6 @@ class _Full(object):
     type = None, float
     userlevel = 0
     lowlim = 0
-
     """
 
     def _create_pods(self):
@@ -1129,6 +1160,7 @@ class _Full(object):
         # Loop through diffraction patterns
         for i in range(len(self.new_diff_views)):
             dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
+            extra_dict = dv.extra
 
             if dv.storageID != last_diff_storage_ID:
                 gmodes = len(self.geometries)
@@ -1194,7 +1226,8 @@ class _Full(object):
                                                 'coord': pos_pr,
                                                 'storageID': probe_id_suf,
                                                 'layer': pm,
-                                                'active': True})
+                                                'active': True,
+                                                'extra': extra_dict})
                         else:
                             pv[ii] = pv[ii].copy(update=False)
                             pv[ii].layer = pm
@@ -1206,7 +1239,8 @@ class _Full(object):
                                                 'coord': pos_obj,
                                                 'storageID': object_id_suf,
                                                 'layer': om,
-                                                'active': True})
+                                                'active': True,
+                                                'extra': extra_dict})
                         else:
                             ov[ii] = ov[ii].copy(update=False)
                             ov[ii].layer = om
@@ -1220,12 +1254,12 @@ class _Full(object):
                                                 'storageID': (dv.storageID +
                                                                 'G%02d' % ii),
                                                 'layer': exit_index,
-                                                'active': dv.active})
+                                                'active': dv.active,
+                                                'extra': extra_dict})
                         else:
                             ev[ii] = ev[ii].copy(update=False)
                             ev[ii].layer = exit_index
                             
-
                         views = {'probe': pv[ii],
                                  'obj': ov[ii],
                                  'diff': dv,
@@ -1443,6 +1477,134 @@ class Full(_Full, ScanModel):
 @defaults_tree.parse_doc('scan.BlockFull')
 class BlockFull(_Full, BlockScanModel):
     pass
+
+@defaults_tree.parse_doc('scan.BlockFull3D')
+class BlockFull3D(BlockFull):
+
+    def _create_pods(self):
+        """
+        Create all new pods as specified in the new_positions,
+        new_diff_views and new_mask_views object attributes.
+        """
+        logger.info('\n' + "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+        logger.info('\n' + headerline('Creating PODS', 'l'))
+        new_pods = []
+        new_probe_ids = {}
+        new_object_ids = {}
+
+        label = self.label
+
+        # Get a list of probe and object that already exist
+        existing_probes = list(self.ptycho.probe.storages.keys())
+        existing_objects = list(self.ptycho.obj.storages.keys())
+        logger.info('Found these probes : ' + ', '.join(existing_probes))
+        logger.info('Found these objects: ' + ', '.join(existing_objects))
+
+        object_id = 'S' + self.label
+        probe_id = 'S' + self.label
+
+        # Loop through diffraction patterns
+        for i in range(len(self.new_diff_views)):
+            dv, mv = self.new_diff_views.pop(0), self.new_mask_views.pop(0)
+            extra_dict = dv.extra
+            extra_val = extra_dict['val']
+            extra_ind = extra_dict['ind']
+
+            # For stochastic engines (e.g. ePIE) we only need one exit buffer
+            if self._single_exit_buffer_for_all_views:
+                index = 0
+            else:
+                index = dv.layer
+
+            # Object and probe position
+            pos_pr = u.expect2(0.0)
+            pos_obj = self.new_positions[i] if 'empty' not in self.p.tags else 0.0
+
+            # For multiwavelength reconstructions: loop here over
+            # geometries, and modify probe_id and object_id.
+            for ii, geometry in enumerate(self.geometries):
+                # Make new IDs and keep them in record
+                # sharing_rules is not aware of IDs with suffix
+
+                pdis = self.p.coherence.probe_dispersion
+
+                if pdis is None or str(pdis) == 'achromatic':
+                    gind = 0
+                else:
+                    gind = ii
+
+                probe_id_suf = probe_id + 'G%02d' % gind
+                if (probe_id_suf not in new_probe_ids.keys()
+                        and probe_id_suf not in existing_probes):
+                    new_probe_ids[probe_id_suf] = True
+
+                odis = self.p.coherence.object_dispersion
+
+                if odis is None or str(odis) == 'achromatic':
+                    gind = 0
+                else:
+                    gind = ii
+
+                object_id_suf = object_id + 'G%02d' % gind
+                if (object_id_suf not in new_object_ids.keys()
+                        and object_id_suf not in existing_objects):
+                    new_object_ids[object_id_suf] = True
+
+                # Make a unique layer index for exit view
+                # The actual number does not matter due to the
+                # layermap access
+                exit_index = index
+                probe_index = int(extra_val * 1000)
+
+                # Create views
+                # Please note that mostly references are passed,
+                # i.e. the views do mostly not own the accessrule
+                # contents
+                pv = View(container=self.ptycho.probe,
+                            accessrule={'shape': self.probe_shape,
+                                        'psize': geometry.resolution,
+                                        'coord': pos_pr,
+                                        'storageID': probe_id_suf,
+                                        'layer': probe_index,
+                                        'active': True,
+                                        'extra': extra_dict})
+
+                ov = View(container=self.ptycho.obj,
+                            accessrule={'shape': self.object_shape,
+                                        'psize': geometry.resolution,
+                                        'coord': pos_obj,
+                                        'storageID': object_id_suf,
+                                        'layer': 1,
+                                        'active': True,
+                                        'extra': extra_dict})
+
+                ev = View(container=self.ptycho.exit,
+                            accessrule={'shape': self.exit_shape,
+                                        'psize': geometry.resolution,
+                                        'coord': pos_pr,
+                                        'storageID': (dv.storageID +
+                                                    'G%02d' % ii),
+                                        'layer': exit_index,
+                                        'active': dv.active,
+                                        'extra': extra_dict})
+
+                views = {'probe': pv,
+                            'obj': ov,
+                            'diff': dv,
+                            'mask': mv,
+                            'exit': ev}
+
+                pod = POD(ptycho=self.ptycho,
+                            ID=None,
+                            views=views,
+                            geometry=geometry)  # , meta=meta)
+
+                new_pods.append(pod)
+
+                pod.probe_weight = 1.0
+                pod.object_weight = 1.0
+
+        return new_pods, new_probe_ids, new_object_ids    
 
 @defaults_tree.parse_doc('scan.OPRModel')
 class OPRModel(_OPRModel, Full):

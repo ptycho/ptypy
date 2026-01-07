@@ -232,6 +232,23 @@ class PtyScan(object):
     default = False
     type = bool
     help = Decides whether the scan should have poisson noise or not
+
+    [extra]
+    default = 
+    type = Param
+    help =  Extra access rule
+
+    [extra.vals]
+    default = 
+    type = array
+    help = For example, tomographic angles
+    doc = Values to use as access rule, e.g., tomographic angles.
+
+    [extra.ind]
+    default = 
+    type = array
+    help = indices for extra.vals
+    doc = Indices for extra.vals, must be ints (and the arrays must have same length).
     """
 
     WAIT = WAIT
@@ -836,7 +853,9 @@ class PtyScan(object):
         chunk.indices_node = indices.node
         chunk.num = self.chunknum
         chunk.data = data
-        
+        chunk.extra_vals = self.info.extra.vals
+        chunk.extra_ind = self.info.extra.ind
+
         # chunk now always has weights
         chunk.weights = weights
         
@@ -932,9 +951,18 @@ class PtyScan(object):
         # The "iterable" part
         iterables = []
         for pos, index in zip(chunk.positions, chunk.indices):
-            frame = {'index': index,
-                     'data': chunk.data.get(index),
-                     'position': pos}
+            extra_val = None
+            extra_ind = None
+            if isinstance(chunk.extra_vals, np.ndarray):
+                # When storing angles, this is a single angle
+                extra_val = chunk.extra_vals[index]
+                extra_ind = chunk.extra_ind[index]
+            frame = {
+                'index': index,
+                'data': chunk.data.get(index),
+                'position': pos,
+                'extra': {'val': extra_val, 'ind': extra_ind}
+            }
 
             if frame['data'] is None:
                 frame['mask'] = None
