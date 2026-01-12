@@ -538,7 +538,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # Get SLURM Job ID
                 sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
             # Saving volumes every 100 iterations when running simulated problem (saves to npy)
-                np.save('vol_200iters_it'+str(self.curiter+1)+'_'+sid, self.rho.storages['S_rho'].data)
+                np.save('vol_it'+str(self.curiter+1)+'_'+sid, self.rho.storages['S_rho'].data)
             # Saving probe when running simulated problem
             #    np.save('probe_200iters_'+sid, self.pr.storages['Sscan_00G00'].data)
             # Saving volumes when running real data (saves to cmap)
