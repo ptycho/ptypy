@@ -1,4 +1,4 @@
-"""  Implementation of PtyScan subclasses to hold nanomax scan data. The
+"""  Implementation of PtyScan subclasses to hold CoSAXS scan data. The
      beamline is developing, as is the data format. """
 
 from ..core.data import PtyScan
@@ -15,14 +15,14 @@ import h5py
 import os.path
 
 @register()
-class NanomaxStepscanNov2018(PtyScan):
+class CoSAXSStepscanNov2018(PtyScan):
     """
     Starting a fresh class here.
 
     Defaults:
 
     [name]
-    default = NanomaxStepscanNov2018
+    default = CoSAXSStepscanNov2018
     type = str
     help =
 
@@ -194,7 +194,7 @@ class NanomaxStepscanNov2018(PtyScan):
         return mask
 
 @register()
-class NanomaxFlyscanMay2019(PtyScan):
+class CoSAXSFlyscanMay2019(PtyScan):
     """
     Starting a fresh subclass here, this class is mainly a cleanup
     plus I0 normalization.
@@ -202,7 +202,7 @@ class NanomaxFlyscanMay2019(PtyScan):
     Defaults:
 
     [name]
-    default = NanomaxFlyscanMay2019
+    default = CoSAXSFlyscanMay2019
     type = str
     help =
 
@@ -397,14 +397,14 @@ class NanomaxFlyscanMay2019(PtyScan):
         return mask
 
 @register()
-class NanomaxStepscanSep2019(PtyScan):
+class CoSAXSStepscanSep2019(PtyScan):
     """
-    This class loads data written with the nanomax pirate system
+    This class loads data written with the cosaxs pirate system
 
     Defaults:
 
     [name]
-    default = NanomaxStepscanSep2019
+    default = CoSAXSStepscanSep2019
     type = str
     help =
 
@@ -569,7 +569,7 @@ class NanomaxStepscanSep2019(PtyScan):
         y -= np.min(y)
 
         # put the two arrays together and express in [m]
-        positions = -np.vstack((y, x)).T * 1e-6
+        positions = -np.vstack((y, x)).T * 1e-3
         return positions
 
 
@@ -614,14 +614,14 @@ class NanomaxStepscanSep2019(PtyScan):
 
 
 @register()
-class NanomaxFlyscanDec2019(NanomaxFlyscanMay2019):
+class CoSAXSFlyscanDec2019(CoSAXSFlyscanMay2019):
     """
-    Flyscan class for nanomax contrast acquisitions.
+    Flyscan class for CoSAXS contrast acquisitions.
 
     Defaults:
 
     [name]
-    default = NanomaxFlyscanDec2019
+    default = CoSAXSFlyscanDec2019
     type = str
     help =
 
@@ -719,16 +719,16 @@ class NanomaxFlyscanDec2019(NanomaxFlyscanMay2019):
         return mask
 
 @register()
-class NanomaxContrast(NanomaxStepscanSep2019):
+class CoSAXSContrast(CoSAXSStepscanSep2019):
     """
-    This class loads data written with the nanomax pirate system,
+    This class loads data written with the CoSAXS pirate system,
     in a slightly matured state. Step and fly scan have the same
     format.
 
     Defaults:
 
     [name]
-    default = NanomaxContrast
+    default = CoSAXSContrast
     type = str
     help =
 

@@ -254,7 +254,7 @@ def init_storage(storage, sample_pars=None, energy=None):
     elif str(p.model) == 'stxm':
         logger.info(prefix + 'STXM initialization using diffraction data.')
         trans, dpc_row, dpc_col = u.stxm_analysis(s)
-        model = trans * np.exp(1j * u.phase_from_dpc(dpc_row, dpc_col))
+        model = trans * np.exp(1j * u.phase_from_dpc(dpc_row, -dpc_col))
     else:
         raise ValueError(
             prefix + 'Value to `model` key not understood in object creation.')
