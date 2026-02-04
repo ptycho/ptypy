@@ -24,9 +24,8 @@ This file is part of the PTYPY package.
 """
 import numpy as np
 
+__all__ = ['radial_power_spectrum', 'frc', 'fsc', 'frc_threshold', 'compute_intersection']
 
-__all__ = ['nyquist', 'ringthickness', 'apodization', 'frc',
-            'fsc', 'imgregistration', 'compute_intersection']
 
 def fourier_ring_sum(f_input, ringthick=1, pixel_size=1.0):
     """
