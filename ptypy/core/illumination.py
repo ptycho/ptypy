@@ -411,7 +411,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
             # Ok this is nearfield
             curve = 1.0
 
-        model = pod.bw(curve * np.sqrt(alldiff))
+        model = pod.bw(curve * np.sqrt(alldiff).astype(np.complex128))
     else:
         raise ValueError(
             prefix + 'Value to `model` key not understood in probe creation')
