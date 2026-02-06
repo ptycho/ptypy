@@ -5,69 +5,92 @@ ARG MPI=openmpi
 ARG PLATFORM=cupy
 
 # Select CUDA version
-ARG CUDAVERSION=12.4
+ARG CUDAVERSION=12.8
 
 # Pull from mambaforge and install XML and ssh
-FROM condaforge/mambaforge as base
+FROM condaforge/mambaforge AS base
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y libxml2 ssh
 
 # Pull from base image and install OpenMPI/MPICH
-FROM base as mpi
+FROM base AS mpi
 ARG MPI
 RUN mamba install -n base -c conda-forge ${MPI}
 
-# Pull from MPI build install core dependencies
-FROM base as core
-COPY ./dependencies_core.yml ./dependencies.yml
-RUN mamba env update -n base -f dependencies.yml
+# Pull from MPI build and install core dependencies
+FROM base AS core
+RUN mamba install -n base -y -c conda-forge \
+    python numpy scipy h5py pip
 
 # Pull from MPI build and install full dependencies
-FROM mpi as full
-COPY ./dependencies_full.yml ./dependencies.yml
-RUN mamba env update -n base -f dependencies.yml
+FROM mpi AS full
+ARG MPI
+RUN mamba install -n base -y -c conda-forge \
+    python numpy scipy matplotlib h5py \ 
+    pyzmq mpi4py[build=*${MPI}*] packaging \
+    pillow pyfftw pyyaml pip
 
 # Pull from MPI build and install accelerate/pycuda dependencies
-FROM mpi as pycuda
-ARG CUDAVERSION
-COPY ./ptypy/accelerate/cuda_pycuda/dependencies.yml ./dependencies.yml
-COPY ./cufft/dependencies.yml ./dependencies_cufft.yml
-RUN mamba install cuda-version=${CUDAVERSION} && \
-    mamba env update -n base -f dependencies.yml && \
-    mamba env update -n base -f dependencies_cufft.yml
+FROM mpi AS pycuda
+ARG CUDAVERSION MPI
+RUN mamba install -n base -y -c conda-forge -c nvidia \
+    python numpy scipy matplotlib h5py pyzmq mpi4py[build=*${MPI}*] \
+    pillow pyfftw pyyaml compilers pip \
+    reikna pycuda cuda-nvcc cuda-cudart-dev cuda-version=${CUDAVERSION}
 
 # Pull from MPI build and install accelerate/cupy dependencies
-FROM mpi as cupy
-ARG CUDAVERSION
-COPY ./ptypy/accelerate/cuda_cupy/dependencies.yml ./dependencies.yml
-COPY ./cufft/dependencies.yml ./dependencies_cufft.yml
-RUN mamba install cuda-version=${CUDAVERSION} && \
-    mamba env update -n base -f dependencies.yml && \
-    mamba env update -n base -f dependencies_cufft.yml
+FROM mpi AS cupy
+ARG CUDAVERSION MPI
+RUN mamba install -n base -y -c conda-forge \
+    python numpy scipy matplotlib h5py pyzmq mpi4py[build=*${MPI}*] \
+    pillow pyfftw pyyaml compilers pip \
+    cupy cuda-version=${CUDAVERSION}
+RUN mamba clean -y -a
 
 # Pull from platform specific image and install ptypy 
-FROM ${PLATFORM} as build
+FROM ${PLATFORM} AS build
 COPY pyproject.toml ./
 COPY ./templates ./templates
 COPY ./benchmark ./benchmark
-COPY ./cufft ./cufft
 COPY ./ptypy ./ptypy
 RUN pip install .
 
-# For core/full build, no post processing needed
-FROM build as core-post
-FROM build as full-post
+# For core build, clean up conda env
+FROM build AS core-post
+RUN mamba clean -y -a
+
+# For full build, clean up conda env
+FROM build AS full-post
+RUN mamba clean -y -a
 
 # For pycuda build, install filtered cufft
-FROM build as pycuda-post
+FROM build AS pycuda-post
+ARG CUDAVERSION
+RUN mamba install -n base -y -c conda-forge -c nvidia \
+    python cmake>=3.8.0 pybind11 compilers \
+    cuda-nvcc cuda-cudart-dev libcufft-dev libcufft-static cuda-version=${CUDAVERSION}
+COPY ./cufft ./cufft
 RUN pip install ./cufft
+RUN mamba remove -n base -y \
+    cmake pybind11 cuda-nvcc cuda-cudart-dev libcufft-dev libcufft-static
+RUN mamba clean -y -a
 
-# For pycuda build, install filtered cufft
-FROM build as cupy-post
+# For cupy build, install filtered cufft
+FROM build AS cupy-post
+ARG CUDAVERSION
+RUN mamba install -n base -y -c conda-forge -c nvidia \
+    python cmake>=3.8.0 pybind11 compilers \
+    cuda-nvcc cuda-cudart-dev libcufft-dev libcufft-static cuda-version=${CUDAVERSION}
+COPY ./cufft ./cufft
 RUN pip install ./cufft
+RUN mamba remove -n base -y \
+    cmake pybind11 libcufft-dev libcufft-static
+RUN mamba clean -y -a
 
 # Platform specific runtime container
-FROM ${PLATFORM}-post as runtime
+FROM ${PLATFORM}-post AS runtime
+RUN useradd --user-group ptypy-user
+USER ptypy-user
 
 # Run PtyPy run script as entrypoint
 ENTRYPOINT ["ptypy.cli"]
