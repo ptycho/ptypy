@@ -490,6 +490,12 @@ class NanomaxStepscanSep2019(PtyScan):
     type = int
     help = by how many triggers are the positions and diffraction patterns offset
     doc =
+
+    [only_load_first_N]
+    default = None
+    type = int
+    help = load only the first N diffraction patterns
+    doc =
     """
 
     def load_positions(self):
@@ -570,6 +576,11 @@ class NanomaxStepscanSep2019(PtyScan):
 
         # put the two arrays together and express in [m]
         positions = -np.vstack((y, x)).T * 1e-6
+
+        # only load the first N images:
+        if self.info.only_load_first_N != None:
+            positions = positions[:self.info.only_load_first_N]
+
         return positions
 
 
@@ -811,6 +822,44 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         pad_yu   = ry + cy - ny 
         return np.pad(frame, [[pad_yl,pad_yu],[pad_xl,pad_xu]], mode='constant', constant_values=[value])
 
+    def calc_mask(self, diffraction_pattern, log=False):
+        """
+        Calculates the mask for a given diffraction pattern
+        """
+        
+        data = diffraction_pattern
+        mask = np.ones_like(data)
+        if self.info.detector == 'pilatus':
+            mask[np.where(data < 0)] = 0
+        if ('eiger' in self.info.detector) or('selun' in self.info.detector) :
+            bit_depth = int(''.join(filter(str.isdigit, str(data.dtype))))
+            if log: logger.info(f"found bit depth of {bit_depth} in the eiger frames")
+            if log: logger.info(f"    -> masking all pixels with values of {2**(bit_depth) -1} and above")
+            mask[np.where(data < 0)] = 0
+            mask[np.where(data >= ((2**bit_depth)-1))] = 0
+        if log: logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
+                            (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
+
+        if self.info.maskfile:
+            if self.info.maskfile.endswith('.h5'):
+                mask2 = self.load_mask_h5()
+            else:
+                mask2 = self.load_mask_tiff()
+
+            if self.info.cropOnLoad:
+                mask2 = mask2[self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, 
+                                self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                mask2 = self.pad_to_size(mask2, 0)
+
+            if log: logger.info("loaded additional mask, %u x %u, sum %u, so %u masked pixels" %
+                                (mask2.shape + (np.sum(mask2), np.prod(mask2.shape)-np.sum(mask2))))
+            mask = mask * mask2
+            if log:logger.info("total mask, %u x %u, sum %u, so %u masked pixels" %
+                               (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
+
+        return mask
+
+
     def load(self, indices):
         raw, weights, positions = {}, {}, {}
 
@@ -905,47 +954,29 @@ class NanomaxContrast(NanomaxStepscanSep2019):
                     raw[ind] = np.round(raw[ind] / self.normdata[ind]).astype(raw[ind].dtype)
                     raw[ind][msk] = 2**32-1
 
+
+        # calculate a seperate mask for each diffraction pattern
+        for ind in raw.keys():
+            if ind==0:
+                weights[ind] = self.calc_mask(raw[ind], True)
+            else:
+                weights[ind] = self.calc_mask(raw[ind])
+
         return raw, positions, weights
 
 
     def load_weight(self):
         """
-        Provides the mask for the whole scan, the shape of the first 
-        frame.
+        Provides the ONE mask for the WHOLE scan, 
+        the shape of the first frame.
         """
         
-        r, w, p = self.load(indices=(0,))
-        data = r[0]
-        mask = np.ones_like(data)
-        if self.info.detector == 'pilatus':
-            mask[np.where(data < 0)] = 0
-        if ('eiger' in self.info.detector) or('selun' in self.info.detector) :
-            bit_depth = int(''.join(filter(str.isdigit, str(data.dtype))))
-            logger.info(f"found bit depth of {bit_depth} in the eiger frames")
-            logger.info(f"    -> masking all pixels with values of {2**(bit_depth) -1} and above")
-            mask[np.where(data < 0)] = 0
-            mask[np.where(data >= ((2**bit_depth)-1))] = 0
-        logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
-                    (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
-
-        if self.info.maskfile:
-            if self.info.maskfile.endswith('.h5'):
-                mask2 = self.load_mask_h5()
-            else:
-                mask2 = self.load_mask_tiff()
-
-            if self.info.cropOnLoad:
-                mask2 = mask2[self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, 
-                                self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
-                mask2 = self.pad_to_size(mask2, 0)
-
-            logger.info("loaded additional mask, %u x %u, sum %u, so %u masked pixels" %
-                        (mask2.shape + (np.sum(mask2), np.prod(mask2.shape)-np.sum(mask2))))
-            mask = mask * mask2
-            logger.info("total mask, %u x %u, sum %u, so %u masked pixels" %
-                    (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
-
-        return mask
+        pass
+        
+        #r, w, p = self.load(indices=(0,))
+        #data = r[0]
+        #mask = self.calc_mask(data)
+        #return mask
 
 
 
