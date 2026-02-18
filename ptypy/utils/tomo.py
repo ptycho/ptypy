@@ -29,7 +29,7 @@ class AstraViewBased:
         block_size              size of chunk (a sub-part or equal to n_views)
         angles                  1D array of angles (same length as n_views)
         shifts                  2D array of x and y shifts, having shape: n_views x 2 (with 2 being x and y)
-        view_to_proj_vectors    2D array of vectors, computed as differences between the center of views and 
+        view_to_proj_vectors    2D array of vectors, computed as differences between the center of views and
                                 the center of projections (same length as n_views)
 
         Does the following:
@@ -288,7 +288,27 @@ class AstraViewBased:
             out = _vol
         else:
             raise ValueError(
-                "The parameter 'out' provided as input to forward "
+                "The parameter 'out' provided as input to backward "
+                "should be of type np.ndarray."
+                )
+        return out
+
+    def backward_real(self, iter=1, out=None):
+        """
+        Computes backward projection real part, based on _proj_array (this must have
+        been defined). Places output in "out" if provided.
+        """
+        astra.algorithm.run(self.backward_alg_id_real, iter)
+
+        _vol = astra.data3d.get(self._vol_id_real)
+
+        if isinstance(out, np.ndarray):
+            out[:] = _vol
+        elif out is None:
+            out = _vol
+        else:
+            raise ValueError(
+                "The parameter 'out' provided as input to backward_real "
                 "should be of type np.ndarray."
                 )
         return out
