@@ -45,9 +45,11 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
         self.ex_data = None
 
     def engine_initialize(self):
+        log(3, "Cupy Stream engine: initialise")
         super().engine_initialize()
         self.qu_htod = cp.cuda.Stream()
         self.qu_dtoh = cp.cuda.Stream()
+        log(3, "Cupy Stream engine: initialise done")
 
     def _setup_kernels(self):
         

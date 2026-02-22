@@ -68,8 +68,11 @@ class _ProjectionEngine_cupy(projectional_serial._ProjectionEngine_serial):
         Prepare for reconstruction.
         """
         # Context, Multi GPU communicator and Stream (needs to be in this order)
+        log(3, "Cupy engine: initialise")
         self.queue = get_context(new_queue=False)
+        log(3, "Cupy engine: after context")
         self.multigpu = get_multi_gpu_communicator()
+        log(3, "Cupy engine: after multi gpu")
 
         # Gaussian Smoothing Kernel
         self.GSK = GaussianSmoothingKernel(queue=self.queue)

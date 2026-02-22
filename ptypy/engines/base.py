@@ -128,6 +128,8 @@ class BaseEngine(object):
         else:
             self.alliter = 0
 
+        logger.info("Init base engine")
+            
         # Common attributes for all reconstructions
         self.di = self.ptycho.diff
         self.ob = self.ptycho.obj
@@ -150,7 +152,7 @@ class BaseEngine(object):
         for model in self.ptycho.model.scans.values():
             if not model.__class__ in self.SUPPORTED_MODELS:
                 raise Exception('Model %s not supported by engine %s' % (model.__class__,self.p.name))
-
+        logger.info("Init base engine done")
         self.engine_initialize()
 
     def prepare(self):
