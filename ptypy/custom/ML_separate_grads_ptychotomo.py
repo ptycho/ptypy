@@ -534,7 +534,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             self.pr += self.pr_h
 
             # FIXME: move saving volumes to run script
-            if parallel.master and (self.curiter+1) % 100 == 0: # curiter starts at zero
+            if parallel.master and (self.curiter+1) % 1000 == 0: # curiter starts at zero
             # Get SLURM Job ID
                 sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
             # Saving volumes every 100 iterations when running simulated problem (saves to npy)
