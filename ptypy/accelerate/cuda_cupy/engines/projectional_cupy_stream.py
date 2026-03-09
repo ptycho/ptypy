@@ -20,6 +20,8 @@ import cupyx
 from ptypy.accelerate.cuda_cupy import log_device_memory_stats
 from ptypy.utils.verbose import log
 from ptypy.utils import parallel
+from ptypy.accelerate.base.mem_utils import (max_fpb_from_scans,
+calculate_safe_fpb)
 from ptypy.engines import register
 from ptypy.engines.projectional import DMMixin, RAARMixin
 from . import projectional_cupy
@@ -31,6 +33,8 @@ EX_MA_BLOCKS_RATIO = 2
 # can be used to limit the number of blocks, simulating that they don't fit
 MAX_BLOCKS = 99999
 # MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
+# the number of blocks to have with a safe value of frames_per_block
+NUM_BLK_SAFE_FPB = 3
 
 __all__ = ['DM_cupy_stream', 'RAAR_cupy_stream']
 
@@ -50,7 +54,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
         self.qu_dtoh = cp.cuda.Stream()
 
     def _setup_kernels(self):
-        
+
         super()._setup_kernels()
         ex_mem = 0
         mag_mem = 0
@@ -58,18 +62,28 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
             ex_mem = max(kern.aux.nbytes, ex_mem)
             mag_mem = max(kern.FUK.gpu.fdev.nbytes, mag_mem)
         ma_mem = mag_mem
-        
+
         blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
-        
+
         # We need to add the free memory from the pool to the free device memory,
         # as both will be used for allocations
         mempool = cp.get_default_memory_pool()
         mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
-        
+
         # leave 200MB room for safety
-        fit = int(mem - 200 * 1024 * 1024) // blk
+        avail_mem = max(int(mem - 200 * 1024 * 1024), 0)
+        fit =  avail_mem // blk
         if not fit:
             log(1, "Cannot fit memory into device, if possible reduce frames per block. Exiting...")
+            # max_fpb is None if there is a GradFull in the scan models
+            # as 'frames_per_block' is irrelevant
+            max_fpb = max_fpb_from_scans(self.ptycho.model.scans)
+            if max_fpb is not None:
+                per_frame = blk / max_fpb
+                safe_fpb = calculate_safe_fpb(avail_mem, per_frame, NUM_BLK_SAFE_FPB)
+                log(1,f"Your current 'frames_per_block' is {max_fpb}.")
+                log(1,f"With current reconstruction parameters and computing resources, you can try setting 'frames_per_block' to {safe_fpb}.")
+                log(1,f"This would divide your reonstruction into {NUM_BLK_SAFE_FPB} blocks.")
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
@@ -322,7 +336,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
                 # Update positions
                 if do_update_pos:
                     """
-                    Iterates through all positions and refines them by a given algorithm. 
+                    Iterates through all positions and refines them by a given algorithm.
                     """
                     log(4, "----------- START POS REF -------------")
                     for dID in self.di.S.keys():
@@ -390,7 +404,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
                         data_ma.record_done(self.queue, 'compute')
                         cp.cuda.runtime.memcpyAsync(dst=err_fourier.data.ptr,
                                                src=error_state.data.ptr,
-                                               size=err_fourier.nbytes, 
+                                               size=err_fourier.nbytes,
                                                kind=3, # d2d
                                                stream=self.queue.ptr)
                         if use_tiles:
@@ -405,7 +419,7 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
             cp.asnumpy(s.gpu, stream=self.queue, out=s.data)
         for name, s in self.pr.S.items():
             cp.asnumpy(s.gpu, stream=self.queue, out=s.data)
-        
+
         # Gather errors from device
         for dID, prep in self.diff_info.items():
             err_fourier = prep.err_fourier_gpu.get()

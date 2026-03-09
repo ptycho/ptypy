@@ -22,6 +22,8 @@ from pycuda.tools import DeviceMemoryPool
 from ptypy import utils as u
 from ptypy.utils.verbose import log, logger
 from ptypy.utils import parallel
+from ptypy.accelerate.base.mem_utils import (max_fpb_from_scans,
+calculate_safe_fpb)
 from ptypy.engines import register
 from ptypy.engines.projectional import DMMixin, RAARMixin
 from . import projectional_pycuda
@@ -32,6 +34,8 @@ from ..mem_utils import GpuDataManager
 EX_MA_BLOCKS_RATIO = 2
 MAX_BLOCKS = 99999  # can be used to limit the number of blocks, simulating that they don't fit
 #MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
+# the number of blocks to have with a safe value of frames_per_block
+NUM_BLK_SAFE_FPB = 3
 
 __all__ = ['DM_pycuda_stream', 'RAAR_pycuda_stream']
 
@@ -61,9 +65,21 @@ class _ProjectionEngine_pycuda_stream(projectional_pycuda._ProjectionEngine_pycu
         ma_mem = mag_mem
         mem = cuda.mem_get_info()[0]
         blk = ex_mem * EX_MA_BLOCKS_RATIO + ma_mem + mag_mem
-        fit = int(mem - 200 * 1024 * 1024) // blk  # leave 200MB room for safety
+
+        # leave 200MB room for safety
+        avail_mem = max(int(mem - 200 * 1024 * 1024), 0)
+        fit =  avail_mem // blk
         if not fit:
             log(1,"Cannot fit memory into device, if possible reduce frames per block. Exiting...")
+            # max_fpb is None if there is a GradFull in the scan models
+            # as 'frames_per_block' is irrelevant
+            max_fpb = max_fpb_from_scans(self.ptycho.model.scans)
+            if max_fpb is not None:
+                per_frame = blk / max_fpb
+                safe_fpb = calculate_safe_fpb(avail_mem, per_frame, NUM_BLK_SAFE_FPB)
+                log(1,f"Your current 'frames_per_block' is {max_fpb}.")
+                log(1,f"With current reconstruction parameters and computing resources, you can try setting 'frames_per_block' to {safe_fpb}.")
+                log(1,f"This would divide your reonstruction into {NUM_BLK_SAFE_FPB} blocks.")
             raise SystemExit("ptypy has been exited.")
 
         # TODO grow blocks dynamically
