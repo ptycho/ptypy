@@ -621,7 +621,7 @@ def stxm_analysis(storage, probe=None):
         pod = list(v.pods.values())[0]
         if not pod.active:
             continue
-        t = pod.diff.sum()
+        t = (pod.diff * pod.mask).sum()
         if t > t2:
             t2=t
         ss = v.slice
@@ -629,7 +629,7 @@ def stxm_analysis(storage, probe=None):
         #       slice(v.roi[0,0], v.roi[1,0]),
         #       slice(v.roi[0,1], v.roi[1,1]))
         # bufview = buf[ss]
-        m = mass_center(pod.diff) # + 1.
+        m = mass_center(pod.diff * pod.mask) # + 1.
         q = pod.di_view.storage._to_phys(m)
         dpc_row[ss] += q[0] * v.psize[0] * pr * 2 * np.pi / pod.geometry.lz
         dpc_col[ss] += q[1] * v.psize[1] * pr * 2 * np.pi / pod.geometry.lz
@@ -723,7 +723,7 @@ def phase_from_dpc(dpc_row, dpc_col):
 
     """
     py =- dpc_row
-    px =- dpc_col
+    px =+ dpc_col
     sh = px.shape
     sh = np.asarray(sh)
     fac = np.ones_like(sh)

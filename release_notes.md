@@ -1,3 +1,29 @@
+# PtyPy 0.9 release notes
+
+We're excited to bring you a new release in preparation for the [PtyPy workshop 2025](https://www.synchrotron-soleil.fr/en/events/ptypy-2025)
+held at SOLEIL. This release provides a new pre-conditioner for the ML engine and a few bug fixes.
+
+## ML with wavefield pre-conditioner
+
+We have added a new pre-conditioner to the ML engines, which seems to significantly improve probe retrieval
+and overall convergence. It can be enabled by setting the following parameters
+
+```
+p.engines.engine.name = "ML"
+p.engines.engine.wavefield_precond = True
+p.engines.engine.wavefield_delta_object = 0.1
+p.engines.engine.wavefield_delta_probe = 0.1
+```
+
+where ```wavefield_delta_object``` and ```wavefield_delta_probe``` are regularisation parameters to avoid
+division by zero. 
+
+## Other changes
+
+We have dropped support for Python <= 3.8 and adopted Numpy >= 2.0.
+We have also fixed an issue with the filtered_fft build and made small improvements to the custom WASP engine.
+
+
 # PtyPy 0.8 release notes
 
 We're excited to bring you a new release, with new engines, CuPy support and
@@ -43,9 +69,8 @@ Patch release.
 
 # PtyPy 0.7 release notes
 
-This release is focused on improving the usability of PtyPy in Jupyter notebooks in preparation for the 
-[PtyPy workshop](https://www.diamond.ac.uk/Home/Events/2023/Ptychography--PtyPy--Software-Workshop-2023.html) 
-held at the Diamond Light Source in January 2023. The workshop features extensive interactive 
+This release is focused on improving the usability of PtyPy in Jupyter notebooks in preparation for the first 
+PtyPy workshop held at the Diamond Light Source in January 2023. The workshop features extensive interactive 
 [tutorials](https://ptycho.github.io/tutorials) delivered using Jupyter notebooks. 
 
 ## Build changes

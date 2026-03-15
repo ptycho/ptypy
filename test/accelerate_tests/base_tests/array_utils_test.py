@@ -2,11 +2,12 @@
 Tests for the array_utils module
 '''
 
-import unittest
+import unittest, pytest
 import numpy as np
 from ptypy.accelerate.base import FLOAT_TYPE, COMPLEX_TYPE
 from ptypy.accelerate.base import array_utils as au
 
+_numpy_version = tuple(map(int, np.__version__.split(".")))
 
 class ArrayUtilsTest(unittest.TestCase):
 
@@ -291,6 +292,7 @@ class ArrayUtilsTest(unittest.TestCase):
                          dtype=np.complex64)
         np.testing.assert_array_almost_equal(A, exp_A)
 
+    @pytest.mark.skipif(_numpy_version < (2,0), reason="requires Numpy 2.0 or higher to match expected output")
     def test_fft_filter(self):
         data = np.zeros((256, 512), dtype=COMPLEX_TYPE)
         data[64:-64,128:-128] = 1 + 1.j
@@ -342,6 +344,7 @@ class ArrayUtilsTest(unittest.TestCase):
         
         np.testing.assert_array_almost_equal(output.flat[::2000], known_test_output, decimal=5)
 
+    @pytest.mark.skipif(_numpy_version < (2,0), reason="requires Numpy 2.0 or higher to match expected output")
     def test_fft_filter_batched(self):
         data = np.zeros((2,256, 512), dtype=COMPLEX_TYPE)
         data[:,64:-64,128:-128] = 1 + 1.j

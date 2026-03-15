@@ -338,8 +338,9 @@ class WASP_cupy(WASP_serial):
                     ob_old = ob.copy()
                     POK.ob_update_wasp(addr, ob, pr, ex, aux, ob_sum_nmr,
                                        ob_sum_dnm, alpha=self.p.alpha)
-                    POK.pr_update_wasp(addr, pr, ob_old, ex, aux, pr_sum_nmr,
-                                       pr_sum_dnm, beta=self.p.beta)
+                    if self.p.probe_update_start <= self.curiter:
+                        POK.pr_update_wasp(addr, pr, ob_old, ex, aux, pr_sum_nmr,
+                                           pr_sum_dnm, beta=self.p.beta)
 
                     ## compute log-likelihood
                     if self.p.compute_log_likelihood:
@@ -355,7 +356,8 @@ class WASP_cupy(WASP_serial):
                 self.multigpu.allReduceSum(pr_sum_dnm)
 
                 POK.avg_wasp(ob, ob_sum_nmr, ob_sum_dnm)
-                POK.avg_wasp(pr, pr_sum_nmr, pr_sum_dnm)
+                if self.p.probe_update_start <= self.curiter:
+                    POK.avg_wasp(pr, pr_sum_nmr, pr_sum_dnm)
 
                 # Clip object
                 if self.p.clip_object is not None:

@@ -70,14 +70,20 @@ def complex_gaussian_filter(input, mfs):
     '''
     takes 2D and 3D arrays. Complex input, complex output. mfs has len 0<x<=2
     '''
-    if len(mfs) > 2:
+    if isinstance(mfs, list) and len(mfs) > 2:
         raise NotImplementedError("Only batches of 2D arrays allowed!")
+    if isinstance(mfs, (int, float)):
+        mfs_list = [mfs, mfs]
+        if input.ndim == 3:
+            mfs_list = [0, mfs, mfs]
+    elif isinstance(mfs, (list,tuple)):
+        mfs_list = list(mfs)
+        if input.ndim == 3:
+            mfs_list.insert(0,0)
+    else:
+        raise NotImplementedError(f"Cannot interpret mfs of type {type(mfs)}")
 
-    if input.ndim == 3:
-        mfs = np.insert(mfs, 0, 0)
-
-    return (ndi.gaussian_filter(np.real(input), mfs) + 1j * ndi.gaussian_filter(np.imag(input), mfs)).astype(
-        input.dtype)
+    return (ndi.gaussian_filter(np.real(input), mfs_list).astype(input.dtype) + 1j * ndi.gaussian_filter(np.imag(input), mfs_list))
 
 
 def complex_gaussian_filter_fft(input, mfs):
