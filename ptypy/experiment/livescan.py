@@ -1,70 +1,9 @@
 """
-Current state: In progress, not checked to work yet.
-                Connects to directly to streamer
-
-After running the reconstruction script, variables of the LiveScan class can be found under
-    P.model.scans['scan00'].ptyscan.__dict__
-
-Old notes:
-----------------------------------------------------------------------------
-Things to fix / troubleshooting notes:
-----------------------------------------------------------------------------
-* Could you maybe add a weight to the iterations somehow so that the reconstructions from
-    the earlier iterations (which are calculated with less frames) contributes with a
-    lesser impact, or would this be impossible due to the iterative nature of the reconstruction?
-* If num_iter have been reached before all patterns have been collected then
-    Ptycho stops because it thinks it's finished!
-    -> Define a number of iterations for recon that starts counting only after scan is over: yes!
-* If 'p.scans.contrast.data.shape = 128' is included in the 'livescan.py' script then
-    ptycho-reconstruction becomes super fast and stops before scan is over as above.
-* Check: how to specify " kind = 'full_flat' " as input for save_run(..) that is called by Ptycho.
-    Or rather, is there a way to save the pods to the .ptyr files as well?
-* Iterations will not be performed while ptycho.model.new_data() has new data, meaning that if data is
-    streamed seemingly continuous, Ptycho won't start with the iterations until all data has been acquired..
-*Automatically check which iteration has the lowes error and chose that reconstruction as the final reconstruction instead of just the last one.
-
-* Number of frames included in iteration  0    10    20    30  40  50  60  70  80  90  100
-    min_frames = 10, DM.numiter = 10:
-        check return:                     6*   8*9    0*
-        latest_pos_index_received         27* 69*105 120*
-        Repackaged data from frame        21* 61*96  120*
-        .ptyr / error_local                -   21    96   120
-
-    min_frames = 1, DM.numiter = 1:
-        check return:                     0     0
-        latest_pos_index_received         28    120
-        Repackaged data from frame        28    120
-        .ptyr / error_local               -     120
-    min_frames = 1, DM.numiter = 10:
-        check return:                     0     0
-        latest_pos_index_received         29    120
-        Repackaged data from frame        29    120
-        .ptyr / error_local
- 
-SOLVED PROBLEMS:
-✖✖✖✖✖✖✖✖✖ Ptycho keeps going in to LiveScan.check() after all frames have been acquired, which overwrites
-            then self.end_of_scan..
-            ✖ SOLUTION: Move 'self.end_of_scan = False' under LiveScan.init() instead of under LiveScan.check().
-✖✖✖✖✖✖✖✖✖ There is still a small difference in the resulting object and exit wave compared to original script.
-            Exit waves, masks, object etc get their values already during ptycho level 2 ( P.init_data() )!
-            While the object is still just a uniform matrix at this point, the value it
-            is filled with differs between livescan and 1222!
-            - P.probe, Pobj, Pexit gets their first view and storage in line 981 of 'manager.py' (during P2) but are
-                still just a zero matrix at this point.
-            - P.probe is filled with values at line 1122 of 'manager.py'
-            ✖ SOLUTION: Difference occurs in line359 of sample.py and comes from different precisions in variable k,
-                which inherits the type from the energy! In 1222_...py energy gets read into a ndarray of
-                size (1,) with type float64, whereas my energy is loaded directly as a float, i.e. float32!!
-✖✖✖✖✖✖✖✖✖ Check if there is a way to see how many pods/frames that are included in each .ptyr file.
-            ✖ SOLUTION: Using inspect.getouterframes(..) to retrieve variables from classes/methods/functions that
-                calls on LiveScan. This is implemented in my fynction "self.BackTrace()"
+Subclass for running real-time ptychography. Is expected to be run together with a relay server which can be found at:
+https://github.com/Lexelius/RelayServer
 """
 
 """
-To do:
-* Check how the time for loading/Repacking data changes with the number of frames
------------------------------------------------------------
-Notes:
 -----------------------------------------------------------
 Subclasses of PtyScan can be made to override to tweak the methods of base class PtyScan.
 Methods defined in PtyScan(object) are:
@@ -95,14 +34,14 @@ Methods defined in PtyScan(object) are:
 import numpy as np
 import zmq
 import time
-import bitshuffle
-import struct
+#import bitshuffle
+#import struct
 import ptypy
-from ptypy.core import Ptycho
+#from ptypy.core import Ptycho
 from ptypy.core.data import PtyScan
 from ptypy import utils as u
 from ptypy.utils import parallel
-from ptypy import defaults_tree
+#from ptypy import defaults_tree
 from ptypy.experiment import register
 from ptypy.utils.verbose import headerline
 import inspect
@@ -122,7 +61,7 @@ def logger_info(*arg):
 @register()
 class LiveScan(PtyScan):
     """
-    A PtyScan subclass to extract data from a numpy array.
+    A PtyScan subclass to receive data from a relay server.
 
     Defaults:
 
@@ -177,20 +116,15 @@ class LiveScan(PtyScan):
     type = str
     help = Which detector from the contrast stream to use
 
-    [block_wait_count]
-    default = 0
-    type = int
-    help = Signals a WAIT to the model after this many blocks
-
     [start_frame]
     default = 1
     type = int
-    help = Minimum number of frames loaded before starting iterations
+    help = Minimum number of frames loaded before starting iterations (No longer in use, code is commented out! Is used together with frames_per_iter)
 
     [frames_per_iter]
     default = None
     type = int
-    help = Load a fixed number of frames in between each iteration
+    help = Load a fixed number of frames in between each iteration (No longer in use, code is commented out!)
 
     [crop_at_RS]
     default = None
@@ -209,22 +143,34 @@ class LiveScan(PtyScan):
     type = str
     help = Which x motor to use for averaging positions.
      Only used when there is 2 x- and y positions per frame.
+     (Not fully implemented in the RelayServer yet)
 
     [average_y_at_RS]
     default = None
     type = str
     help = Which y motor to use for averaging positions.
      Only used when there is 2 x- and y positions per frame.
+     (Not fully implemented in the RelayServer yet)
 
     [maskfile]
     default = None
     type = str
     help = Path to maskfile.h5
 
+    [mask_key]
+    default = None
+    type = str
+    help = H5 path to where data is stored in the maskfile.
+
     [backgroundfile]
     default = None
     type = str
-    help = Path to backgroundfile
+    help = Path to backgroundfile.
+
+    [background_key]
+    default = '/entry/instrument/zyla/data'
+    type = str
+    help = H5 path to where data is stored in the backgroundfile.
     """
 
 
@@ -237,7 +183,7 @@ class LiveScan(PtyScan):
         p.update(pars)
         p.update(kwargs)
 
-        super(LiveScan, self).__init__(p, **kwargs) # To get the parent of LiveScan, e.g. PtyScan
+        super(LiveScan, self).__init__(p, **kwargs)  # To get the parent of LiveScan, i.e. PtyScan
 
         self.end_of_scan = False
         self.energy_replied = False
@@ -260,6 +206,7 @@ class LiveScan(PtyScan):
         except:
             self.BT_fname = None
             print("Warning: Couldn't write a self.BackTrace-file.")
+        # This file is used for writing down which node the process is being run on. Used for live-plotting on a different node/computer.
         self.BT_logfname = '/data/staff/nanomax/commissioning_2022-2/reblex/interaction_log.txt'##'/mxn/home/reblex/interaction_log.txt' # Will have to be updated on official release.
 
         logger.info(headerline('', 'c', '#'))
@@ -283,8 +230,17 @@ class LiveScan(PtyScan):
             self.preprocess_RS['average_x_at_RS'] = self.info.average_x_at_RS
         if self.info.average_y_at_RS is not None:
             self.preprocess_RS['average_y_at_RS'] = self.info.average_y_at_RS
-        # if self.info.maskfile is not None and (self.info.rebin_at_RS or self.info.crop_at_RS):
-        #     self.preprocess_RS['maskfile'] = self.info.maskfile
+        if self.info.maskfile is not None and (self.info.rebin_at_RS or self.info.crop_at_RS):
+            self.preprocess_RS['maskfile'] = self.info.maskfile
+            if self.info.mask_key is not None:
+                self.preprocess_RS['maskkey'] = self.info.mask_key
+
+        # Only remove background in RelayServer if rebinning or cropping & finding center is done there.
+        self.rm_bg_at_RS = True if ((self.info.crop_at_RS is not None) and (not isinstance(self.p.center, tuple))) or (self.info.rebin_at_RS is not None and self.info.rebin_at_RS != 1) else False
+
+        if self.info.backgroundfile is not None and self.rm_bg_at_RS:
+            logger.info('Background removal will be performed in the RelayServer.')
+            self.preprocess_RS['bgfile'] = [self.info.backgroundfile, self.info.background_key]
 
         self.socket.send_json(['preprocess', self.preprocess_RS])
         self.socket.recv_json()
@@ -293,22 +249,25 @@ class LiveScan(PtyScan):
 
         self.meta.energy = self.common['energy']  # common gets data into all the ranks
 
-        if self.info.backgroundfile is not None:
+        if self.info.backgroundfile is not None and not self.rm_bg_at_RS:
+            logger.info('Background removal will be performed in the LiveScan subclass.')
             with h5py.File(self.info.backgroundfile, 'r') as fp:
-                self.data_background = fp['/entry/instrument/zyla/data'] ### DEBUG: HARDCODED
+                self.data_background = fp[self.info.background_key]
                 self.data_background = np.mean(self.data_background, axis=0)## check data type, change to float 32
             if self.info.crop_at_RS is not None:
                 self.data_background = u.crop_pad_symmetric_2d(self.data_background, (self.info.crop_at_RS, self.info.crop_at_RS), center=self.p.center)[0]
-            if self.info.rebin_at_RS is not None:
-                self.data_background = u.rebin_2d(self.data_background, self.info.rebin_at_RS)[0]
+
 
         if self.info.maskfile:
             with h5py.File(self.info.maskfile, 'r') as hf:
-                self.mask_data = np.array(hf.get('mask'))
-            if self.info.crop_at_RS is not None:
-                self.mask_data = u.crop_pad_symmetric_2d(self.mask_data, (self.info.crop_at_RS, self.info.crop_at_RS), center=self.p.center)[0]
-            if self.info.rebin_at_RS is not None:
-                self.mask_data = u.rebin_2d(self.mask_data, self.info.rebin_at_RS)[0]
+                if self.info.mask_key is not None:
+                    self.mask_data = hf[self.info.mask_key][:]
+                else:
+                    self.mask_data = np.array(hf.get('mask'))
+            # if self.info.crop_at_RS is not None:
+            #     self.mask_data = u.crop_pad_symmetric_2d(self.mask_data, (self.info.crop_at_RS, self.info.crop_at_RS), center=self.p.center)[0]
+            # if self.info.rebin_at_RS is not None:
+            #     self.mask_data = u.rebin_2d(self.mask_data, self.info.rebin_at_RS)[0]
             logger.info('############## Loading mask! mask.shape = %s, np.sum(mask) = %s' % (str(self.mask_data.shape), str(np.sum(self.mask_data))))  ### DEBUG
             logger.info('############## Loading mask! mask.shape = %s, nr. of dead pixels = %s' % (str(self.mask_data.shape), str(self.mask_data.shape[0]*self.mask_data.shape[1] - np.sum(self.mask_data))))  ### DEBUG
 
@@ -372,6 +331,7 @@ class LiveScan(PtyScan):
         if not self.interaction_started:
             self.BackTrace(plotlog=self.BT_logfname)
 
+        # Ask the RelayServer how many new frames are available and if the scan is finished:
         self.socket.send_json(['check'])
         msg = self.socket.recv_json()
         logger.info('#### check message = %s' % msg)
@@ -398,6 +358,7 @@ class LiveScan(PtyScan):
         logger.info(headerline('', 'c', '#') + '\n')
         return min(frames, msg[0]), msg[1]
 
+        ########### Old code for allowing a fixed number of frames per iterations, e.g. to strictly always load X new frames and always compute exactly Y iterations before next load.c xxxxxxx
         # while True:
         #     self.socket.send_json(['check'])
         #     msg = self.socket.recv_json()
@@ -508,7 +469,6 @@ class LiveScan(PtyScan):
         msgs = self.socket.recv_pyobj()
         buff = self.socket.recv(copy=True)
         imgs = decompress_lz4(np.frombuffer(buff, dtype=np.dtype('uint8')), msgs[0]['shape'], msgs[0]['dtype'])
-        #if self.loadnr == 1 and 'new_center' in msgs[0].keys():
         if 'new_center' in msgs[0].keys():
             self.info.center = msgs[0]['new_center']
             self.meta.center = msgs[0]['new_center']
@@ -518,7 +478,10 @@ class LiveScan(PtyScan):
                 # Maybe not the best solution to let rebin_at_RS be of type bool,
                 # since the only way of seeing the rebinning factor used in RS is
                 # to compare the shapes in meta and info of the .ptyd file..
-                self.info.shape = u.expect2(self.info.shape) // self.info.rebin_at_RS
+                if self.info.shape is not None:
+                    self.info.shape = u.expect2(self.info.shape) // self.info.rebin_at_RS
+                if self.info.crop_at_RS is not None:
+                    self.info.shape = u.expect2(self.info.crop_at_RS) // self.info.rebin_at_RS
                 if self.info.psize is not None:
                     self.meta.psize = u.expect2(self.info.psize) * self.info.rebin_at_RS
                     self.info.psize = u.expect2(self.info.psize) * self.info.rebin_at_RS
@@ -526,26 +489,50 @@ class LiveScan(PtyScan):
             # else:
             #     # Setting this to False to get correct info when writing to .ptyd
             #     self.info.rebin_at_RS = False
-        if self.loadnr == 1 and len(imgs) == 3:
-            # Then imgs contain both diff, weights and mask.
-            w = imgs[1]
-            self.mask_data = imgs[2]
-            imgs = imgs[0]
-        elif self.info.rebin_at_RS:
+        ### if self.loadnr == 1 and len(imgs) == 3:
+        ###     # Then imgs contain both diff, weights and mask.
+        ###     w = imgs[1]
+        ###     self.mask_data = imgs[2]
+        ###     imgs = imgs[0]
+
+        if self.loadnr == 1 and 'mask_preprocessed' in msgs[0].keys() and msgs[0]['mask_preprocessed']:
+            # Then diffraction patterns and mask have been concatenated into imgs.
+            self.mask_data = imgs[-1]
+            frames_per_block = len(indices)
+            imgs = imgs[0:frames_per_block]
+            logger.info('### self-mask_data.shape: %s' % (str(self.mask_data.shape)))  ### DEBUG
+        if self.loadnr == 1 and self.info.rebin_at_RS is not None and self.info.rebin_at_RS > 1:
+            # Then diffraction patterns, weights and mask have all been concatenated into imgs.
+            self.mask_data = imgs[-1]
+            frames_per_block = len(indices)
+            w = imgs[frames_per_block:2*frames_per_block]
+            imgs = imgs[0:frames_per_block]
+        elif self.info.rebin_at_RS is not None and self.info.rebin_at_RS > 1:
             # Then imgs contain both diff and weights.
             print(f'len(imgs) = {len(imgs)}')### DEBUG
             w = imgs[1]
             imgs = imgs[0]
 
         imgs = imgs.astype(np.float64)
+        logger.info('### imgs shape before repackaging: %s' % (str(imgs.shape)))  ### DEBUG
         # repackage data and return
         for k, i in enumerate(indices):
             try:
-                if self.info.backgroundfile is not None:
+                if self.info.backgroundfile is not None and not self.rm_bg_at_RS:
                     imgs[k] = imgs[k] - self.data_background
                 raw[i] = imgs[k]
-                raw[i][raw[i] <= 0] = 0  ##  Take care of overexposed pixels.
+                #raw[i][raw[i] <= 0] = 0  ##  Take care of overexposed pixels. Commented on 2025-11-26 since this is dealt with by the weights below..
                 logger.info('### i = %s, raw[i].shape = %s' % (str(i), str(raw[i].shape))) ### DEBUG
+
+
+                if self.info.rebin_at_RS is not None and self.info.rebin_at_RS > 1:
+                    weight[i] = w[k]
+                else:
+                    weight[i] = np.ones_like(raw[i])
+                    weight[i][np.where(raw[i] == 2 ** 32 - 1)] = 0
+                    weight[i][np.where(raw[i] < 0)] = 0
+                if self.info.maskfile:
+                    weight[i] = weight[i] * self.mask_data
 
                 xMotorKeys = self.info.xMotor.split('/')
                 yMotorKeys = self.info.yMotor.split('/')
@@ -560,25 +547,16 @@ class LiveScan(PtyScan):
                 if self.info.yMotorFlipped:
                     y *= -1
 
-                pos[i] = np.array((y, x)) * self.info.positions_multiplier #### CHECK IF THIS SHOULD BE MINUS!
+                pos[i] = np.array((y, x)) * self.info.positions_multiplier
                 pos[i] = pos[i].reshape(len(pos[i]))
 
                 logger.info('### pos[i].shape = %s' % (str(pos[i].shape)))  ### DEBUG
-                if self.info.rebin_at_RS:
-                    weight[i] = w[k]
-                else:
-                    weight[i] = np.ones_like(raw[i])
-                    weight[i][np.where(raw[i] == 2 ** 32 - 1)] = 0
-                    weight[i][np.where(raw[i] < 0)] = 0
-                if self.info.maskfile:
-                    weight[i] = weight[i] * self.mask_data
+
             except Exception as err:
                 logger.info('### load exception')  ### DEBUG
                 print('Error: ', err)
                 raise err
                 break
-
-
 
         t1 = time.perf_counter()
         self.loadtottime += t1 - t0
@@ -599,11 +577,17 @@ class LiveScan(PtyScan):
         self.mask_data = None
         if self.info.maskfile:
             with h5py.File(self.info.maskfile, 'r') as hf:
-                self.mask_data = np.array(hf.get('mask'))
-            if self.info.crop_at_RS is not None:
-                self.mask_data = u.crop_pad_symmetric_2d(self.mask_data, (self.info.crop_at_RS, self.info.crop_at_RS), center=self.p.center)[0]
-            if self.info.rebin_at_RS is not None:
-                self.mask_data = u.rebin_2d(self.mask_data, self.info.rebin_at_RS)[0]
+                if self.info.mask_key is not None:
+                    self.mask_data = hf[self.info.mask_key][:]
+                else:
+                    self.mask_data = np.array(hf.get('mask'))
+            # if self.info.crop_at_RS is not None:
+            #      self.mask_data = u.crop_pad_symmetric_2d(self.mask_data, (self.info.crop_at_RS, self.info.crop_at_RS), center=self.p.center)[0]
+            # if self.info.rebin_at_RS is not None:
+            #     self.mask_data = u.rebin_2d(self.mask_data, self.info.rebin_at_RS)[0]
+            logger.info('############## Inside load_weight(), mask_data = %s' % (str(self.mask_data)))  ### DEBUG
+            print('mask: ', self.mask_data)
+            print('mask.shape: ', self.mask_data.shape)
             logger.info('############## Inside load_weight(), mask_data.shape = %s, np.sum(mask_data) = %s' % (str(self.mask_data.shape), str(np.sum(self.mask_data))))  ### DEBUG
             logger.info('##############... Loading mask! mask_data.shape = %s, nr. of dead pixels = %s' % (str(self.mask_data.shape), str(self.mask_data.shape[0] * self.mask_data.shape[1] - np.sum(self.mask_data))))  ### DEBUG
         return self.mask_data
