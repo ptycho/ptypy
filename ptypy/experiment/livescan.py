@@ -200,14 +200,13 @@ class LiveScan(PtyScan):
 
         self.p = p
 
-
         try:
             self.BT_fname = re.sub(r'(.*/).*/.*', rf'\1backtrace_{time.strftime("%F_%H:%M:%S", time.localtime())}.txt', self.p.dfile)
         except:
             self.BT_fname = None
             print("Warning: Couldn't write a self.BackTrace-file.")
         # This file is used for writing down which node the process is being run on. Used for live-plotting on a different node/computer.
-        self.BT_logfname = '/data/staff/nanomax/commissioning_2022-2/reblex/interaction_log.txt'##'/mxn/home/reblex/interaction_log.txt' # Will have to be updated on official release.
+        self.BT_logfname = re.sub(r'(.*/).*/.*', rf'\1temp_interaction_log.txt', self.p.dfile)
 
         logger.info(headerline('', 'c', '#'))
         logger.info(headerline('Leaving LiveScan().init()', 'c', '#'))
