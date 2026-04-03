@@ -785,11 +785,48 @@ class NanomaxContrast(NanomaxStepscanSep2019):
     help = x-axis upper limit
     doc =
 
-    [trigger_offset]
-    default = 0
-    type = int
-    help = by how many triggers are the positions and diffraction patterns offset
+    [make_positions_relative]
+    default = False
+    type = bool
+    help = if True, will make all positions start at zero
     doc =
+
+    [ingnore_first_N]
+    default = None
+    type = int
+    help = only load after the first N positions / diffraction patterns
+    doc =
+
+    [ingnore_beyond_N]
+    default = None
+    type = int
+    help = load only the first N positions / diffraction patterns
+    doc =
+
+    [position_limit_x_min]
+    default = None
+    type = float
+    help = only load data from horizontal scan positions larger or equal to this number
+    doc =
+
+    [position_limit_x_max]
+    default = None
+    type = float
+    help = only load data from horizontal scan positions smaller or equal to this number
+    doc =
+
+    [position_limit_y_min]
+    default = None
+    type = float
+    help = only load data from vertical scan positions larger or equal to this number
+    doc =
+
+    [position_limit_y_max]
+    default = None
+    type = float
+    help = only load data from vertical scan positions smaller or equal to this number
+    doc =
+
     """
 
     def clean_mask(self, mask):
@@ -824,7 +861,8 @@ class NanomaxContrast(NanomaxStepscanSep2019):
 
     def calc_mask(self, diffraction_pattern, log=False):
         """
-        Calculates the mask for a given diffraction pattern
+        Calculates the mask for a given diffraction pattern.
+        log = True would print / log how many pixels got masked.
         """
         
         data = diffraction_pattern
@@ -859,12 +897,159 @@ class NanomaxContrast(NanomaxStepscanSep2019):
 
         return mask
 
+    def check_positions(self, xpositions, ypositions):
+        """
+        Checking a list of positions and returns boolean mask for those points
+        that fall within the given selection.
+        """
+        
+        # create a boolean mask for all positons in the given list of positions
+        position_mask = np.ones(len(xpositions), dtype=int)
 
-    def load(self, indices):
-        raw, weights, positions = {}, {}, {}
+        # check for a limiting rectangle
+        if self.info.position_limit_x_min != None:
+            position_mask[xpositions<self.info.position_limit_x_min] = 0
+        if self.info.position_limit_x_max != None:
+            position_mask[xpositions>self.info.position_limit_x_max] = 0
+        if self.info.position_limit_y_min != None:
+            position_mask[ypositions<self.info.position_limit_y_min] = 0
+        if self.info.position_limit_y_max != None:
+            position_mask[ypositions>self.info.position_limit_y_max] = 0
+
+        # check if certain scan position indicees are exluded
+        if self.info.ingnore_first_N != None:
+            position_mask[self.info.ingnore_first_N:] = 0
+        if self.info.ingnore_beyond_N != None:    
+            position_mask[:self.info.ingnore_beyond_N] = 0
+
+        # room for more sophisticated rules if needed
+
+        # return the boolean mask on which positions to use / not use
+        return position_mask
+
+    def load_positions(self):
 
         filename = '%06u.h5' % self.info.scanNumber
         fullfilename = os.path.join(self.info.path, filename)
+        self.frames_per_scan = {}
+        self.scan_to_load_from = []
+        self.data_index_to_load_from = []
+        self.per_scan_mask = {}
+        self.per_scan_indicees = {}
+
+        xFlipper, yFlipper = 1, 1
+        if self.info.xMotorFlipped:
+            xFlipper = -1
+            logger.warning("note: x motor is specified as flipped")
+        if self.info.yMotorFlipped:
+            yFlipper = -1
+            logger.warning("note: y motor is specified as flipped")
+
+        # if the x/y axis is tilted with respect to the beam axis, take that into account.
+        xCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
+        yCosFactor = np.cos(self.info.yMotorAngle / 180.0 * np.pi)
+        logger.info("x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
+
+        try:
+            self.info.scanNumber = tuple(self.info.scanNumber)
+        except TypeError:
+            self.info.scanNumber = (self.info.scanNumber,)
+
+        normdata, x, y = [], [], []
+        for scan in self.info.scanNumber:
+
+            # load the positions
+            with h5py.File(fullfilename, 'r') as hf:
+                # load the raw positions from the scan file
+                x_raw = np.array(hf['entry/measurement/%s' % (self.info.xMotor)])
+                y_raw = np.array(hf['entry/measurement/%s' % (self.info.yMotor)]) 
+
+                # check which ones to ues and which ones to discard for the reconstruction
+                position_selection_mask = self.check_positions(x_raw, y_raw)
+                if np.sum(position_selection_mask) < len(x_raw) and np.sum(position_selection_mask) >0:
+                    logger.info(f'[!] Scan #{scan} has {len(x_raw)} scan positions.')
+                    logger.info(f'    But {len(x_raw)-np.sum(position_selection_mask)} of them were discarded due to selection rules.')
+                    logger.info(f'    That leaves {np.sum(position_selection_mask)} positions from scan #{scan} that are being used in the reconstruction.')
+                elif np.sum(position_selection_mask) == 0:
+                    logger.info(f'[!] Scan #{scan} has {len(x_raw)} scan positions.')
+                    logger.info(f'    But all of them were discarded due to selection rules. ')
+                # calc which indicees per scan to load
+                indicees = np.linspace(0, len(x_raw)-1, len(x_raw), dtype=int)
+                indicees_to_load = indicees[position_selection_mask==1]
+
+                # convert according to paramters given
+                x_tmp = xFlipper * xCosFactor * x_raw[position_selection_mask==1]
+                y_tmp = yFlipper * yCosFactor * y_raw[position_selection_mask==1]
+
+                # append the selected and converted positions of this scan to the overall list
+                x.append(x_tmp)
+                y.append(y_tmp)
+
+                # keep some information on which positions were taken, so that only the corresponding frames scan be loaded
+                self.frames_per_scan[scan] = x[-1].shape[0]
+                self.scan_to_load_from += [scan for _ in x_tmp]
+                self.data_index_to_load_from += [index for index in range(len(x_raw)) if position_selection_mask[index]==1]
+                self.per_scan_mask[scan] = position_selection_mask
+                self.per_scan_indicees[scan] = indicees_to_load
+
+            # make some lists to arrays for easier use later down the line
+            self.scan_to_load_from = np.array(self.scan_to_load_from)
+            self.data_index_to_load_from = np.array(self.data_index_to_load_from)
+
+            # may as well get normalization data of this scan here too
+            if self.info.I0 is not None:
+                logger.info('*** going to normalize by channel %s' % self.info.I0)
+                with h5py.File(fullfilename, 'r') as hf:
+                    normdata_raw = np.array(hf['entry/measurement/%s' % (self.info.I0)], dtype=float)
+                    normdata.append(normdata_raw[position_selection_mask==1])
+
+        # unify norm data over all scans
+        first_frames = [sum(list(self.frames_per_scan.values())[:i]) for i in range(len(self.frames_per_scan))]
+        self.first_frame_of_scan = {scan:first_frames[i] for i, scan in enumerate(self.info.scanNumber)}
+        if normdata:
+            normdata = np.concatenate(normdata)
+            self.normdata = normdata / np.mean(normdata)
+
+        # make list of lists of positions to one single array
+        x = np.concatenate(x)
+        y = np.concatenate(y)   
+
+        chi_rad_x = 0
+        chi_rad_y = 0
+        # if the detector and motor frame of reference are roated around the beam axis
+        if self.info.zDetectorAngle != 0:
+            chi_rad_x = self.info.zDetectorAngle / 180.0 * np.pi
+            chi_rad_y = 1.*chi_rad_x
+            logger.info("x and y motor positions were roated by %.4f degree to align with the detector pixel grid" % (self.info.zDetectorAngle))
+        # if x and y are not under 90 degrees to each other
+        if self.info.xyAxisSkewOffset != 0:
+            chi_rad_x += -0.5 * self.info.xyAxisSkewOffset / 180.0 * np.pi
+            chi_rad_y += +0.5 * self.info.xyAxisSkewOffset / 180.0 * np.pi
+            logger.info("x and y motor positions were skewed by %.4f degree to each other" % (self.info.xyAxisSkewOffset))
+        x, y = np.cos(chi_rad_x)*x-np.sin(chi_rad_y)*y, np.sin(chi_rad_x)*x+np.cos(chi_rad_y)*y
+            
+        # set origin of the used scan position to the lowest and left most positions recorded
+        if self.info.make_positions_relative:
+            x -= np.min(x)
+            y -= np.min(y)
+
+        # put the two arrays (vertical and horizontal positions) together and express in [m]
+        positions = -np.vstack((y, x)).T * 1e-6
+
+        # return a list of all the scan positions across all scans to be loaded
+        return positions
+
+
+    def figure_out_cropping(self):
+        """
+        Function to figure out the required cropping for the detector frames on
+        load according to what is specified in the scan file
+        """
+
+        scan = self.info.scanNumber[0]
+        filename = f'{scan:0>6}.h5'
+        fullfilename = os.path.join(self.info.path, filename)
+        logger.info(f'Will figure out the beam center using scan #{scan}')
 
         # crop on load is requested, but the actual indices to crop are not yet defined
         if self.info.cropOnLoad and self.info.cropOnLoad_y_lower == None:
@@ -917,53 +1102,87 @@ class NanomaxContrast(NanomaxStepscanSep2019):
             # now fix the new center
             self.info.tmp_center = (tmp_center_y, tmp_center_x)
             self.info.center = (dy//2, dx//2)
-        
-        # set the photon energy
+
+
+    def figure_out_photon_energy(self):
+        """
+        Function to setthe photon energy of the probing beam either from the first
+        scan file or using the number explicitly given in the reconstruction script.
+        """
+        # placed where the photon energy could be in the scan file (backwards compatability)
         path_options = ['entry/snapshot/energy',
                         'entry/snapshots/pre_scan/energy',
                         'entry/snapshots/prost_scan/energy']
-        if self.info.energy == None:	
+
+        if self.info.energy == None: 
+            # load from scan file   
+            scan = self.info.scanNumber[0]
+            filename = f'{scan:0>6}.h5'
+            fullfilename = os.path.join(self.info.path, filename)  
+            logger.info(f'Will figure out the photon energy using scan #{scan}')
             with h5py.File(fullfilename, 'r') as fp:
                 existing_paths = [x for x in path_options if x in fp.keys()]
                 self.meta.energy = fp[existing_paths[0]][:] * 1e-3
         else:
+            # use what is explictly defined in the reconstruction script
+            logger.info(f'Using the photon energy explicitly given in the reconstruction script')
             self.meta.energy = self.info.energy
+        logger.info(f'Using a photon energy of {self.meta.energy[0]:.3f} eV')
 
-        # actually loading the detector frames
-        with h5py.File(fullfilename, 'r') as fp:
 
-            for ind in indices:
-                load_ind = ind
-                #trigger offset
-                if self.info.trigger_offset<0:
-                    load_ind = ind - self.info.trigger_offset
-     
-                # load only a cropped bit of the full frame
-                if self.info.cropOnLoad:
-                    frame = fp['entry/measurement/%s/frames'%self.info.detector][load_ind,self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
-                    raw[ind] = self.pad_to_size(frame, -1)
-                # load the full raw frame                
-                else:	
-                    raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][load_ind]
-                # if there is I0 information, use it to normalize the just loaded frame                
-                if self.info.I0:
-                    self.normdata = self.normdata.flatten()
-                    #logger.info('normalizing frame %u by %f' % (ind, self.normdata[ind]))
-                    #logger.info('hack! assuming mask = 2**32-1 when I0-normalizing')
-                    msk = np.where(raw[ind] == 2**32-1)
-                    raw[ind] = np.round(raw[ind] / self.normdata[ind]).astype(raw[ind].dtype)
-                    raw[ind][msk] = 2**32-1
+    def load(self, indices):
+        raw, weights, positions = {}, {}, {}
 
+        # figure out cropping and photon energy yo use
+        self.figure_out_cropping()
+        self.figure_out_photon_energy()
+
+        # figure out which scan files to open
+        scan_files_to_open = self.scan_to_load_from[indices]
+        scan_files_to_open = list(set(scan_files_to_open))
+
+        # making sure to open each scan file only ones and load the indices in question
+        for scan in scan_files_to_open:
+            # figure out which of the requested indices are in this file
+            tmp_scan_to_load_from = np.array(self.scan_to_load_from[indices], dtype=int)
+            subset_indices = [v for i, v in enumerate(indices) if tmp_scan_to_load_from[i]==scan]
+
+            # load the scan file
+            filename = f'{scan:0>6}.h5'
+            fullfilename = os.path.join(self.info.path, filename)
+            with h5py.File(fullfilename, 'r') as fp:
+
+                # iterate over the indices that can be found in this file
+                for ind in subset_indices: 
+
+                    # which data pint in the file to load to get this index
+                    load_ind = self.data_index_to_load_from[ind]
+         
+                    # load only a cropped bit of the full frame
+                    if self.info.cropOnLoad:
+                        frame = fp['entry/measurement/%s/frames'%self.info.detector][load_ind,self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                        raw[ind] = self.pad_to_size(frame, -1)
+                    # load the full raw frame                
+                    else:	
+                        raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][load_ind]
+                    # if there is I0 information, use it to normalize the just loaded frame                
+                    if self.info.I0:
+                        self.normdata = self.normdata.flatten()
+                        #logger.info('normalizing frame %u by %f' % (ind, self.normdata[ind]))
+                        #logger.info('hack! assuming mask = 2**32-1 when I0-normalizing')
+                        msk = np.where(raw[ind] == 2**32-1)
+                        raw[ind] = np.round(raw[ind] / self.normdata[ind]).astype(raw[ind].dtype)
+                        raw[ind][msk] = 2**32-1
 
         # calculate a seperate mask for each diffraction pattern
         for ind in raw.keys():
             if ind==0:
-                weights[ind] = self.calc_mask(raw[ind], True)
+                weights[ind] = self.calc_mask(raw[ind], log=True)
             else:
-                weights[ind] = self.calc_mask(raw[ind])
+                # no printing / logging on screen for consecutive frames
+                weights[ind] = self.calc_mask(raw[ind], log=False) 
 
         return raw, positions, weights
-
 
     def load_weight(self):
         """
@@ -971,7 +1190,7 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         the shape of the first frame.
         """
         
-        pass
+        pass  # moved into the main load function to work on individual patterns
         
         #r, w, p = self.load(indices=(0,))
         #data = r[0]
