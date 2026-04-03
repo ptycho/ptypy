@@ -928,9 +928,6 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         return position_mask
 
     def load_positions(self):
-
-        filename = '%06u.h5' % self.info.scanNumber
-        fullfilename = os.path.join(self.info.path, filename)
         self.frames_per_scan = {}
         self.scan_to_load_from = []
         self.data_index_to_load_from = []
@@ -957,6 +954,10 @@ class NanomaxContrast(NanomaxStepscanSep2019):
 
         normdata, x, y = [], [], []
         for scan in self.info.scanNumber:
+
+            # which file to load from
+            filename = f'{scan:0>6}.h5'
+            fullfilename = os.path.join(self.info.path, filename)
 
             # load the positions
             with h5py.File(fullfilename, 'r') as hf:
@@ -992,16 +993,16 @@ class NanomaxContrast(NanomaxStepscanSep2019):
                 self.per_scan_mask[scan] = position_selection_mask
                 self.per_scan_indicees[scan] = indicees_to_load
 
-            # make some lists to arrays for easier use later down the line
-            self.scan_to_load_from = np.array(self.scan_to_load_from)
-            self.data_index_to_load_from = np.array(self.data_index_to_load_from)
-
             # may as well get normalization data of this scan here too
             if self.info.I0 is not None:
                 logger.info('*** going to normalize by channel %s' % self.info.I0)
                 with h5py.File(fullfilename, 'r') as hf:
                     normdata_raw = np.array(hf['entry/measurement/%s' % (self.info.I0)], dtype=float)
                     normdata.append(normdata_raw[position_selection_mask==1])
+
+        # make some lists to arrays for easier use later down the line
+        self.scan_to_load_from = np.array(self.scan_to_load_from)
+        self.data_index_to_load_from = np.array(self.data_index_to_load_from)
 
         # unify norm data over all scans
         first_frames = [sum(list(self.frames_per_scan.values())[:i]) for i in range(len(self.frames_per_scan))]
