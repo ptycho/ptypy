@@ -31,6 +31,8 @@ def parse():
                             help="Provide parameter configuration as a JSON string.")
     parser.add_argument('--output-folder', '-o', type=str,
                         help="The path we want the outputs to exist in (will get created).")
+    parser.add_argument('--use-timestamp', action="store_true",
+                        help="Turn on timestamping of output folder")
     parser.add_argument('--ptypy-level', '-l', default=5, type=str,
                         help="The level we want to run to ptypy to.")
     parser.add_argument('--identifier', '-i', type=str, default=None,
@@ -74,7 +76,7 @@ def run(args):
     # 
     if args.output_folder is not None:
         p.io.home = get_output_file_name(args)
-        p.io.rfile = "%s.ptyr" % get_output_file_name(args)
+        p.io.rfile = "%(run)s_%(engine)s_%(iterations)04d.ptyr"
         #parameters.io.autosave = u.Param(active=True)
         #log(3, "Autosave is on, with io going in {}, and the final reconstruction into {}".format(parameters.io.home,
         #                                                                                        parameters.io.rfile))
@@ -134,10 +136,11 @@ def substitute_id_in_ptyscan(params, extra):
 def get_output_file_name(args):
     from datetime import datetime
     now = datetime.now()
+    output_path = "{}/scan".format(args.output_folder)
     if args.identifier is not None:
-        output_path = "{}/scan_{}_{}".format(args.output_folder, args.identifier, now.strftime("%Y%m%d%H%M%S"))
-    else:
-        output_path = "{}/scan_{}".format(args.output_folder, now.strftime("%Y%m%d%H%M%S"))
+        output_path += "_{}".format(args.identifier)
+    if args.use_timestamp:
+        output_path += "_{}".format(now.strftime("%Y%m%d%_H%M%S"))
     log("info", "Output is going in: {}".format(output_path))
     return output_path
 
