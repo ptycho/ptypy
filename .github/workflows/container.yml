@@ -36,7 +36,7 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}_${{ matrix.platform }}_${{ matrix.mpi }}
           tags: |
-            type=raw,value=v0.9.0
+            type=raw,value=${{ steps.tags.outputs.version}}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
