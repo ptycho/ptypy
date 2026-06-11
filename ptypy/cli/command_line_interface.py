@@ -57,9 +57,9 @@ def run(args):
 
     # Load parameter tree from file or JSON string
     if args.file:
-        p = create_parameter_tree(load_config_as_dict_from_file(args.file))
+        p, extra = create_parameter_tree(load_config_as_dict_from_file(args.file))
     if args.json:
-        p = create_parameter_tree(json.loads(args.json))
+        p, extra = create_parameter_tree(json.loads(args.json))
     p.run = args.identifier
 
     # TODO
@@ -83,8 +83,8 @@ def run(args):
         p.io.autosave = u.Param(active=False)
         log("info", "Autosave is off. No output will be saved.")
 
-    # Substitute %(run) with in ptyscan 
-    substitute_id_in_ptyscan(p)
+    # Substitute %(run) with in ptyscan
+    substitute_id_in_ptyscan(p, extra)
 
     # Run PtyPy to given level
     P = Ptycho(p, level=args.ptypy_level)
@@ -110,9 +110,16 @@ def create_parameter_tree(params) -> u.Param:
         parameters_to_run.update(previous_parameters)
     if params['parameter_tree'] is not None:
         parameters_to_run.update(params['parameter_tree'], Convert=True)
-    return parameters_to_run
 
-def substitute_id_in_ptyscan(params):
+    # Additional non-ptypy params
+    extra = {}
+    for k,v in params.items():
+        if k != "parameter_tree":
+            extra[k] = v
+    
+    return parameters_to_run, extra
+
+def substitute_id_in_ptyscan(params, extra):
     def _substitute(d, p):
         for k, v in d.items():
             if isinstance(v, MutableMapping):
@@ -122,7 +129,7 @@ def substitute_id_in_ptyscan(params):
                 d[k] = v % p
     for scan_key, scan in params.scans.items():
         data_entry = scan.data
-        _substitute(data_entry, params)
+        _substitute(data_entry, params | extra)
 
 def get_output_file_name(args):
     from datetime import datetime
