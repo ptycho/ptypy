@@ -652,6 +652,56 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
         return self._ob_shape
 
 
+class ThreePIEWaveKernel:
+
+    def __init__(self, queue_thread=None, math_type='float'):
+        self.queue = queue_thread
+        self.math_type = math_type
+        if math_type not in ['float', 'double']:
+            raise ValueError("math type must be float or double")
+
+        self.pr_to_aux_cuda, self.aux_to_pr_cuda = load_kernel(
+            ("threepie_pr_to_aux", "threepie_aux_to_pr"), {
+                'IN_TYPE': 'float',
+                'OUT_TYPE': 'float',
+                'MATH_TYPE': self.math_type
+            }, "threepie_wave.cu")
+
+    def pr_to_aux(self, aux, pr, addr):
+        prsh = [np.int32(ax) for ax in pr.shape]
+        auxsh = [np.int32(ax) for ax in aux.shape]
+        bx = 64
+        by = 1
+        if self.queue is not None:
+            self.queue.use()
+        self.pr_to_aux_cuda(grid=(
+            1, int((auxsh[-2] + by - 1) // by),
+            int(addr.shape[0] * addr.shape[1])),
+            block=(bx, by, 1),
+            args=(aux,
+                  auxsh[-2], auxsh[-1],
+                  pr,
+                  prsh[-2], prsh[-1],
+                  addr))
+
+    def aux_to_pr(self, pr, aux, addr):
+        prsh = [np.int32(ax) for ax in pr.shape]
+        auxsh = [np.int32(ax) for ax in aux.shape]
+        bx = 64
+        by = 1
+        if self.queue is not None:
+            self.queue.use()
+        self.aux_to_pr_cuda(grid=(
+            1, int((auxsh[-2] + by - 1) // by),
+            int(addr.shape[0] * addr.shape[1])),
+            block=(bx, by, 1),
+            args=(aux,
+                  auxsh[-2], auxsh[-1],
+                  pr,
+                  prsh[-2], prsh[-1],
+                  addr))
+
+
 class GradientDescentKernel(ab.GradientDescentKernel):
 
     def __init__(self, aux, nmodes=1, queue=None, accumulate_type='double', math_type='float'):

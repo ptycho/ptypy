@@ -14,6 +14,9 @@ import cupy as cp
 import cupyx
 
 from ptypy import utils as u
+from ptypy import io
+from ptypy.core import geometry
+from ptypy.utils import Param
 from ptypy.utils.verbose import logger, log
 from ptypy.utils import parallel
 from ptypy.engines import register
@@ -22,7 +25,7 @@ from ptypy.accelerate.base.engines.stochastic import _StochasticEngineSerial
 from ptypy.accelerate.base import address_manglers
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel,\
-    PositionCorrectionKernel, PropagationKernel
+    PositionCorrectionKernel, PropagationKernel, ThreePIEWaveKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel,\
     TransposeKernel, MaxAbs2Kernel, MassCenterKernel, Abs2SumKernel,\
     InterpolatedShiftKernel
@@ -529,6 +532,359 @@ class _StochasticEngineCupy(_StochasticEngineSerial):
 
         #self.context.detach()
         super().engine_finalize()
+
+
+@register()
+class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
+    """
+    An accelerated implementation of multislice ePIE / 3PIE.
+
+    Defaults:
+
+    [name]
+    default = ThreePIE_cupy
+    type = str
+    help =
+    doc =
+
+    [number_of_slices]
+    default = 2
+    type = int
+    help = The number of slices
+    doc = Defines how many slices are used for the multi-slice object.
+
+    [slice_thickness]
+    default = 1e-6
+    type = float, list, tuple
+    help = Thickness of a single slice in meters
+    doc = A single float value or a list of float values. If a single value is used, all slices are assumed to have the same thickness.
+
+    [slice_start_iteration]
+    default = 0
+    type = int, list, tuple
+    help = iteration number to start using a specific slice
+    doc =
+
+    [fslices]
+    default = slices.h5
+    type = str
+    help = File path for the slice data
+    doc =
+
+    """
+
+    def __init__(self, ptycho_parent, pars=None):
+        _StochasticEngineCupy.__init__(self, ptycho_parent, pars)
+        EPIEMixin.__init__(self, self.p.alpha, self.p.beta)
+        self.article = dict(
+            title='Ptychographic transmission microscopy in three dimensions using a multi-slice approach',
+            author='A. M. Maiden et al.',
+            journal='J. Opt. Soc. Am. A',
+            volume=29,
+            year=2012,
+            page=1606,
+            doi='10.1364/JOSAA.29.001606',
+            comment='The 3PIE reconstruction algorithm',
+        )
+        ptycho_parent.citations.add_article(**self.article)
+
+    def engine_initialize(self):
+        super().engine_initialize()
+
+        if self.p.number_of_slices < 1:
+            raise ValueError("number_of_slices must be at least 1")
+
+        self._object = [None] * self.p.number_of_slices
+        self._probe = [None] * self.p.number_of_slices
+        self._exits = [None] * self.p.number_of_slices
+        for i in range(self.p.number_of_slices):
+            self._object[i] = self.ob.copy(self.ob.ID + "_o_" + str(i))
+            self._probe[i] = self.pr.copy(self.pr.ID + "_p_" + str(i))
+            self._exits[i] = self.pr.copy(self.pr.ID + "_e_" + str(i))
+
+        if isinstance(self.p.slice_start_iteration, int):
+            self.p.slice_start_iteration = (
+                np.ones(self.p.number_of_slices, dtype=np.int32)
+                * self.p.slice_start_iteration
+            )
+        elif len(self.p.slice_start_iteration) != self.p.number_of_slices:
+            raise ValueError(
+                "slice_start_iteration must have one value per slice"
+            )
+
+    def _setup_kernels(self):
+        super()._setup_kernels()
+        self._setup_slice_propagators()
+
+    def _setup_slice_propagators(self):
+        if isinstance(self.p.slice_thickness, (list, tuple)):
+            if len(self.p.slice_thickness) != self.p.number_of_slices - 1:
+                raise ValueError(
+                    "slice_thickness must contain number_of_slices - 1 values"
+                )
+            thicknesses = self.p.slice_thickness
+        else:
+            thicknesses = [self.p.slice_thickness] * (self.p.number_of_slices - 1)
+
+        for label, scan in self.ptycho.model.scans.items():
+            geo = scan.geometries[0]
+            g = Param()
+            g.energy = geo.energy
+            g.psize = geo.resolution
+            g.shape = geo.shape
+            g.propagation = "nearfield"
+
+            kern = self.kernels[label]
+            kern.slice_PROP = []
+            aux = np.zeros(tuple(kern.aux.shape), dtype=kern.aux.dtype)
+            for thickness in thicknesses:
+                g.distance = thickness
+                G = geometry.Geo(owner=None, pars=g)
+                prop = PropagationKernel(
+                    aux, G.propagator, self.queue, self.p.fft_lib
+                )
+                prop.allocate()
+                kern.slice_PROP.append(prop)
+            kern.slice_exits = [
+                cp.empty_like(kern.aux) for _ in range(self.p.number_of_slices)
+            ]
+            kern.slice_tmp = cp.empty_like(kern.aux)
+            kern.slice_back = cp.empty_like(kern.aux)
+            kern.TWK = ThreePIEWaveKernel(queue_thread=self.queue)
+
+    def engine_prepare(self):
+        super().engine_prepare()
+        for container in self._object + self._probe + self._exits:
+            for storage in container.S.values():
+                if not hasattr(storage, "gpu"):
+                    storage.gpu, storage.data = mppa(storage.data)
+
+    def _slice_active(self, index):
+        return self.curiter >= self.p.slice_start_iteration[index]
+
+    def _sync_primary_gpu_arrays(self):
+        for oID, storage in self.ob.S.items():
+            cp.copyto(storage.gpu, self._object[0].S[oID].gpu)
+            for i in range(1, self.p.number_of_slices):
+                storage.gpu *= self._object[i].S[oID].gpu
+        for pID, storage in self.pr.S.items():
+            cp.copyto(storage.gpu, self._probe[0].S[pID].gpu)
+
+    def engine_iterate(self, num=1):
+        """
+        Compute one multislice ePIE iteration on the GPU.
+        """
+        self.dID_list = list(self.di.S.keys())
+
+        for it in range(num):
+            reduced_error = np.zeros((3,))
+            reduced_error_count = 0
+            local_error = {}
+
+            for iblock, dID in enumerate(self.dID_list):
+                prep = self.diff_info[dID]
+                pID, oID, eID = prep.poe_IDs
+
+                kern = self.kernels[prep.label]
+                FUK = kern.FUK
+                AWK = kern.AWK
+                POK = kern.POK
+                MAK = kern.MAK
+                PROP = kern.PROP
+                TWK = kern.TWK
+                aux = kern.aux
+
+                ob_layers = [self._object[i].S[oID].gpu
+                             for i in range(self.p.number_of_slices)]
+                pr_layers = [self._probe[i].S[pID].gpu
+                             for i in range(self.p.number_of_slices)]
+
+                vieworder = prep.vieworder
+                prep.rng.shuffle(vieworder)
+
+                ev_ex, ex_full, data_ex = self.ex_data.to_gpu(
+                    prep.ex, dID, self.qu_htod)
+                ev_mag, mag_full, data_mag = self.mag_data.to_gpu(
+                    prep.mag, dID, self.qu_htod)
+                ev_ma, ma_full, data_ma = self.ma_data.to_gpu(
+                    prep.ma, dID, self.qu_htod)
+
+                prep.ex_full = ex_full
+                prep.mag_full = mag_full
+                prep.ma_full = ma_full
+
+                self.queue.wait_event(ev_ex)
+
+                for i in vieworder:
+                    addr = prep.addr_gpu[i, None]
+                    ex_from, ex_to = prep.addr_ex[i]
+                    ex = prep.ex_full[ex_from:ex_to]
+                    mag = prep.mag_full[i, None]
+                    ma = prep.ma_full[i, None]
+                    ma_sum = prep.ma_sum_gpu[i, None]
+                    obn = prep.obn
+                    prn = prep.prn
+                    err_phot = prep.err_phot_gpu[i, None]
+                    err_fourier = prep.err_fourier_gpu[i, None]
+                    err_exit = prep.err_exit_gpu[i, None]
+
+                    self.position_update_local(prep, i)
+                    if self.do_position_refinement:
+                        prep.addr[i, None] = addr.get()
+
+                    for s in range(self.p.number_of_slices):
+                        old_exit = kern.slice_exits[s]
+                        if self._slice_active(s):
+                            AWK.build_aux2_no_ex(
+                                old_exit, addr, ob_layers[s], pr_layers[s])
+                        else:
+                            TWK.pr_to_aux(old_exit, pr_layers[s], addr)
+
+                        if s < self.p.number_of_slices - 1:
+                            kern.slice_PROP[s].fw(old_exit, kern.slice_tmp)
+                            TWK.aux_to_pr(pr_layers[s + 1], kern.slice_tmp, addr)
+
+                    cp.copyto(ex, kern.slice_exits[-1][:ex.shape[0]])
+                    AWK.make_aux(aux, addr, ob_layers[-1], pr_layers[-1], ex,
+                                 c_po=self._c, c_e=1-self._c)
+
+                    PROP.fw(aux, aux)
+
+                    self.queue.wait_event(ev_mag)
+                    if self.p.compute_fourier_error:
+                        self.queue.wait_event(ev_ma)
+                        FUK.fourier_error(aux, addr, mag, ma, ma_sum)
+                        FUK.error_reduce(addr, err_fourier)
+                    else:
+                        FUK.fourier_deviation(aux, addr, mag)
+                        self.queue.wait_event(ev_ma)
+                    FUK.fmag_update_nopbound(aux, addr, mag, ma)
+
+                    PROP.bw(aux, aux)
+
+                    AWK.make_exit(aux, addr, ob_layers[-1], pr_layers[-1], ex,
+                                  c_a=self._b, c_po=self._a,
+                                  c_e=-(self._a + self._b))
+                    if self.p.compute_exit_error:
+                        FUK.exit_error(aux, addr)
+                        FUK.error_reduce(addr, err_exit)
+
+                    if self.p.compute_log_likelihood:
+                        AWK.build_aux2_no_ex(
+                            aux, addr, ob_layers[-1], pr_layers[-1])
+                        PROP.fw(aux, aux)
+                        FUK.log_likelihood2(aux, addr, mag, ma, err_phot)
+
+                    back_wave = ex
+
+                    for s in range(self.p.number_of_slices - 1, -1, -1):
+                        if s < self.p.number_of_slices - 1:
+                            TWK.pr_to_aux(
+                                kern.slice_tmp, pr_layers[s + 1], addr)
+                            kern.slice_PROP[s].bw(
+                                kern.slice_tmp, kern.slice_back)
+                            back_wave = kern.slice_back
+
+                        if self._slice_active(s):
+                            POK.pr_norm_local(addr, pr_layers[s], prn)
+                            POK.ob_update_local(
+                                addr, ob_layers[s], pr_layers[s], back_wave,
+                                kern.slice_exits[s], prn,
+                                a=self._ob_a, b=self._ob_b)
+
+                            if self._object_norm_is_global and self._pr_a == 0:
+                                obn_max = cp.empty((1,), dtype=np.float32)
+                                MAK.max_abs2(ob_layers[s], obn_max)
+                                obn.fill(np.float32(0.))
+                            else:
+                                POK.ob_norm_local(addr, ob_layers[s], obn)
+                                obn_max = cp.max(obn)
+                            if self.p.probe_update_start <= self.curiter:
+                                POK.pr_update_local(
+                                    addr, pr_layers[s], ob_layers[s], back_wave,
+                                    kern.slice_exits[s], obn, obn_max,
+                                    a=self._pr_a, b=self._pr_b)
+                        else:
+                            TWK.aux_to_pr(pr_layers[s], back_wave, addr)
+
+                    self._sync_primary_gpu_arrays()
+
+                data_ex.record_done(self.queue, 'compute')
+                if iblock + len(self.ex_data) < len(self.dID_list):
+                    data_ex.from_gpu(self.qu_dtoh)
+
+            self.dID_list.reverse()
+            self._sync_primary_gpu_arrays()
+            self.curiter += 1
+            self.ex_data.syncback = False
+
+        self.queue.synchronize()
+
+        for name, s in self.ob.S.items():
+            cp.cuda.runtime.memcpyAsync(dst=s.data.ctypes.data,
+                            src=s.gpu.data.ptr,
+                            size=s.gpu.nbytes,
+                            kind=2,
+                            stream=self.queue.ptr)
+        for name, s in self.pr.S.items():
+            cp.cuda.runtime.memcpyAsync(dst=s.data.ctypes.data,
+                            src=s.gpu.data.ptr,
+                            size=s.gpu.nbytes,
+                            kind=2,
+                            stream=self.queue.ptr)
+
+        for dID, prep in self.diff_info.items():
+            err_fourier = prep.err_fourier_gpu.get()
+            err_phot = prep.err_phot_gpu.get()
+            err_exit = prep.err_exit_gpu.get()
+            errs = np.ascontiguousarray(
+                np.vstack([err_fourier, err_phot, err_exit]).T)
+            if self.p.record_local_error:
+                local_error.update(zip(prep.view_IDs, errs))
+            else:
+                reduced_error += errs.sum(axis=0)
+                reduced_error_count += errs.shape[0]
+
+        if self.p.record_local_error:
+            error = local_error
+        else:
+            error = parallel.allreduce(reduced_error)
+            count = parallel.allreduce(reduced_error_count)
+            error /= count
+
+        self.qu_dtoh.synchronize()
+
+        return error
+
+    def engine_finalize(self):
+        self._sync_primary_gpu_arrays()
+        self.queue.synchronize()
+
+        for container in self._object + self._probe + self._exits:
+            for storage in container.S.values():
+                storage.data = storage.gpu.get()
+
+        slices_info = Param()
+        slices_info.number_of_slices = self.p.number_of_slices
+        slices_info.slice_thickness = self.p.slice_thickness
+        slices_info.objects = {
+            ob.ID: {ID: S._to_dict() for ID, S in ob.storages.items()}
+            for ob in self._object
+        }
+        slices_info.slice_start_iteration = self.p.slice_start_iteration
+
+        header = {'description': 'multi-slices result details.'}
+        h5opt = io.h5options['UNSUPPORTED']
+        io.h5options['UNSUPPORTED'] = 'ignore'
+        logger.info(f'Saving to {self.p.fslices}')
+        io.h5write(self.p.fslices, header=header, content=slices_info)
+        io.h5options['UNSUPPORTED'] = h5opt
+
+        for container in self._object + self._probe + self._exits:
+            for storage in container.S.values():
+                del storage.gpu
+
+        return super().engine_finalize()
 
 
 @register()
