@@ -13,6 +13,7 @@ This file is part of the PTYPY package.
     :license: see LICENSE for details.
 """
 
+import os
 import numpy as np
 import cupy as cp
 import cupyx
@@ -31,6 +32,11 @@ EX_MA_BLOCKS_RATIO = 2
 # can be used to limit the number of blocks, simulating that they don't fit
 MAX_BLOCKS = 99999
 # MAX_BLOCKS = 3  # can be used to limit the number of blocks, simulating that they don't fit
+
+# Estimate the device memory safety margin as fraction of total device memory
+device_memory_fractional_safety_margin = 0.025
+if "PTYPY_DEVICE_MEM_SAFETY" in os.environ:
+    device_memory_fractional_safety_margin = float(os.environ["PTYPY_DEVICE_MEM_SAFETY"])
 
 __all__ = ['DM_cupy_stream', 'RAAR_cupy_stream']
 
@@ -65,9 +71,11 @@ class _ProjectionEngine_cupy_stream(projectional_cupy._ProjectionEngine_cupy):
         # as both will be used for allocations
         mempool = cp.get_default_memory_pool()
         mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
-        
-        # leave 200MB room for safety
-        fit = int(mem - 200 * 1024 * 1024) // blk
+        tot = cp.cuda.runtime.memGetInfo()[1]
+        safety_margin = max(device_memory_fractional_safety_margin * tot, 400 * 1024 * 1024)
+
+        # leave room for safety
+        fit = int(mem - safety_margin) // blk
         if not fit:
             log(1, "Cannot fit memory into device, if possible reduce frames per block. Exiting...")
             raise SystemExit("ptypy has been exited.")

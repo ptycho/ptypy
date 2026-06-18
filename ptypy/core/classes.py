@@ -33,7 +33,7 @@ This file is part of the PTYPY package.
 
 """
 import numpy as np
-import weakref
+import weakref, os
 from collections import OrderedDict
 
 try:
@@ -90,7 +90,7 @@ class Base(object):
     _PREFIX = BASE_PREFIX
     
     __slots__ = ['ID','numID','owner','_pool','_recs','_record']
-    _fields = [('ID','<S16')]
+    _fields = [('ID','<S8')]
     
     def __init__(self, owner=None, ID=None, BeOwner=True):
         """
@@ -145,7 +145,7 @@ class Base(object):
 
         if self._pool.get(prefix) is None:
             self._pool[prefix] = OrderedDict()
-            self._recs[prefix] = np.zeros((8,),dtype=obj.__class__._fields)
+            self._recs[prefix] = np.zeros((8,), dtype=obj.__class__._fields)
             
         d = self._pool[prefix]
         # Check if ID is already taken and assign a new one
@@ -176,15 +176,17 @@ class Base(object):
         obj.ID = nID
         idx = len(d)
         obj.numID = idx
-        recs = self._recs[prefix]
-        l = len(recs)
+        l = len(self._recs[prefix])
         if idx >= l:
             nl = l + 8192 if idx > 10000 else 2*l
-            recs = np.resize(recs,(nl,))
-            self._recs[prefix] = recs
-        rec = recs[idx] 
-        obj._record = rec
-        rec['ID'] = nID
+            self._recs[prefix].resize((nl,), refcheck=False)
+            # after .resize() all previous references to the records
+            # array are not guaranteed to point to correct memory
+            # therefore need to update all previous pointers
+            for v in self._pool[prefix].values():
+                v._record = self._recs[prefix][v.numID]
+        obj._record = self._recs[prefix][idx]
+        self._recs[prefix][idx]['ID'] = nID
         
         return
         
@@ -1141,15 +1143,15 @@ class View(Base):
     """
     _fields = Base._fields + \
                [('active', 'b1'),
-                ('dlayer', '<i8'),
-                ('layer', '<i8'), 
-                ('dhigh', '(5,)i8'),
-                ('dlow', '(5,)i8'),
-                ('shape', '(5,)i8'),
-                ('dcoord', '(5,)i8'),
-                ('psize', '(5,)f8'),
-                ('coord', '(5,)f8'),
-                ('sp', '(5,)f8')]
+                ('dlayer', '<i4'),
+                ('layer', '<i4'), 
+                ('dhigh', '(5,)i4'),
+                ('dlow', '(5,)i4'),
+                ('shape', '(5,)i4'),
+                ('dcoord', '(5,)i4'),
+                ('psize', '(5,)f4'),
+                ('coord', '(5,)f4'),
+                ('sp', '(5,)f4')]
     __slots__ = Base.__slots__ + ['_ndim', 'storage', 'storageID', '_pod', '_pods', 'error']
     ########
     # TODO #
@@ -1289,7 +1291,7 @@ class View(Base):
 
     def copy(self,ID=None, update = True):
         nView = View(self.owner, ID)
-        nView._record = self._record.copy()
+        nView._record[...][()] = self._record.copy()[...]
         nView._ndim = self._ndim
         nView.storage = self.storage
         nView.storageID = self.storageID
