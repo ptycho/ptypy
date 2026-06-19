@@ -31,6 +31,8 @@ def parse():
                             help="Provide parameter configuration as a JSON string.")
     parser.add_argument('--output-folder', '-o', type=str,
                         help="The path we want the outputs to exist in (will get created).")
+    parser.add_argument('--use-timestamp', action="store_true",
+                        help="Turn on timestamping of output folder")
     parser.add_argument('--ptypy-level', '-l', default=5, type=str,
                         help="The level we want to run to ptypy to.")
     parser.add_argument('--identifier', '-i', type=str, default=None,
@@ -57,9 +59,9 @@ def run(args):
 
     # Load parameter tree from file or JSON string
     if args.file:
-        p = create_parameter_tree(load_config_as_dict_from_file(args.file))
+        p, extra = create_parameter_tree(load_config_as_dict_from_file(args.file))
     if args.json:
-        p = create_parameter_tree(json.loads(args.json))
+        p, extra = create_parameter_tree(json.loads(args.json))
     p.run = args.identifier
 
     # TODO
@@ -74,7 +76,7 @@ def run(args):
     # 
     if args.output_folder is not None:
         p.io.home = get_output_file_name(args)
-        p.io.rfile = "%s.ptyr" % get_output_file_name(args)
+        p.io.rfile = "%(run)s_%(engine)s_%(iterations)04d.ptyr"
         #parameters.io.autosave = u.Param(active=True)
         #log(3, "Autosave is on, with io going in {}, and the final reconstruction into {}".format(parameters.io.home,
         #                                                                                        parameters.io.rfile))
@@ -83,8 +85,8 @@ def run(args):
         p.io.autosave = u.Param(active=False)
         log("info", "Autosave is off. No output will be saved.")
 
-    # Substitute %(run) with in ptyscan 
-    substitute_id_in_ptyscan(p)
+    # Substitute %(run) with in ptyscan
+    substitute_id_in_ptyscan(p, extra)
 
     # Run PtyPy to given level
     P = Ptycho(p, level=args.ptypy_level)
@@ -110,9 +112,16 @@ def create_parameter_tree(params) -> u.Param:
         parameters_to_run.update(previous_parameters)
     if params['parameter_tree'] is not None:
         parameters_to_run.update(params['parameter_tree'], Convert=True)
-    return parameters_to_run
 
-def substitute_id_in_ptyscan(params):
+    # Additional non-ptypy params
+    extra = {}
+    for k,v in params.items():
+        if k != "parameter_tree":
+            extra[k] = v
+    
+    return parameters_to_run, extra
+
+def substitute_id_in_ptyscan(params, extra):
     def _substitute(d, p):
         for k, v in d.items():
             if isinstance(v, MutableMapping):
@@ -122,15 +131,16 @@ def substitute_id_in_ptyscan(params):
                 d[k] = v % p
     for scan_key, scan in params.scans.items():
         data_entry = scan.data
-        _substitute(data_entry, params)
+        _substitute(data_entry, params | extra)
 
 def get_output_file_name(args):
     from datetime import datetime
     now = datetime.now()
+    output_path = "{}/scan".format(args.output_folder)
     if args.identifier is not None:
-        output_path = "{}/scan_{}_{}".format(args.output_folder, args.identifier, now.strftime("%Y%m%d%H%M%S"))
-    else:
-        output_path = "{}/scan_{}".format(args.output_folder, now.strftime("%Y%m%d%H%M%S"))
+        output_path += "_{}".format(args.identifier)
+    if args.use_timestamp:
+        output_path += "_{}".format(now.strftime("%Y%m%d%_H%M%S"))
     log("info", "Output is going in: {}".format(output_path))
     return output_path
 
