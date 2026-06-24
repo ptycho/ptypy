@@ -75,14 +75,16 @@ class Ptycho(Base):
     default = 'ERROR'
     help = Verbosity level
     doc = Verbosity level for information logging.
-       - ``CRITICAL``: Only critical errors
-       - ``ERROR``:    All errors
-       - ``WARNING``:  Warning
-       - ``INFO``:     Process Information
-       - ``INSPECT``:  Object Information
-       - ``DEBUG``:    Debug
+       - ``CITATION``:    Only citation message
+       - ``CRITICAL``:    Only critical errors
+       - ``ERROR``:       All errors
+       - ``WARNING``:     Warning
+       - ``INTERACTIVE``: Interactive logging for jupyter notebooks
+       - ``INFO``:        Process Information
+       - ``INSPECT``:     Object Information
+       - ``DEBUG``:       Debug
     type = str, int
-    choices = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'INSPECT', 'DEBUG']
+    choices = ['CITATION', 'CRITICAL', 'ERROR', 'WARNING', 'INTERACTIVE', 'INFO', 'INSPECT', 'DEBUG']
     userlevel = 0
 
     [data_type]
