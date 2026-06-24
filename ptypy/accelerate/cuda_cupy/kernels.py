@@ -676,6 +676,7 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         }
         self.make_model_cuda = load_kernel('make_model', subs)
         self.make_a012_cuda = load_kernel('make_a012', subs)
+        self.make_a012_notb_cuda = load_kernel('make_a012_notb', subs)
         self.error_reduce_cuda = load_kernel('error_reduce', {
             **subs,
             'OUT_TYPE': 'float' if self.ftype == np.float32 else 'double',
@@ -746,6 +747,29 @@ class GradientDescentKernel(ab.GradientDescentKernel):
         self.make_a012_cuda(grid=(int((x + bx - 1) // bx), 1, int(z)),
                             block=(bx, 1, 1),
                             args=(b_f, b_a, b_b, I, fic,
+                            A0, A1, A2, z, y, x, maxz))
+
+    def make_a012_notb(self, b_f, b_a, addr, I, fic):
+        # reference shape (= GPU global dims)
+        sh = I.shape
+
+        # stopper
+        maxz = I.shape[0]
+
+        A0 = self.gpu.Imodel
+        A1 = self.gpu.LLerr
+        A2 = self.gpu.LLden
+
+        z = np.int32(sh[0])
+        maxz = np.int32(maxz)
+        y = np.int32(self.nmodes)
+        x = np.int32(sh[1]*sh[2])
+        bx = 1024
+        if self.queue is not None:
+            self.queue.use()
+        self.make_a012_notb_cuda(grid=(int((x + bx - 1) // bx), 1, int(z)),
+                            block=(bx, 1, 1),
+                            args=(b_f, b_a, I, fic,
                             A0, A1, A2, z, y, x, maxz))
 
     def fill_b(self, addr, Brenorm, w, B):
