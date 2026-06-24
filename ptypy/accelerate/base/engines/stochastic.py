@@ -277,6 +277,8 @@ class _StochasticEngineSerial(_StochasticEngine):
                     self.benchmark.object_update += time.time() - t1
                     self.benchmark.calls_object += 1
 
+                    self.clip_object(ob) 
+                    
                     # probe update
                     t1 = time.time()
                     if self._object_norm_is_global and self._pr_a == 0:
