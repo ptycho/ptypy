@@ -134,11 +134,13 @@ illumination_desc.from_string(r"""
     userlevel = 0
 
     [photons]
-    type = int, float, None
-    default = None
+    type = int, float, str, None
+    default = 'maxdiff'
     help = Number of photons in the incident illumination
-    doc = A value specified here will take precedence over calculated statistics from the loaded data.
-    lowlim = 0
+    doc = A value specified here will take precedence over calculated statistics from the loaded data. Choices:
+         - ``None`` : modeled or loaded probe remains unscaled in intensity
+         - ``int`` or ``float`` : modeled or loaded probe intensity is scaled to that number of photons
+         - ``'maxdiff'`` : modeled or loaded probe intensity is scaled to match the brightest diffraction pattern
     userlevel = 2
 
     [propagation]
@@ -311,7 +313,8 @@ def init_storage(storage, pars, energy=None, **kwargs):
 
     p = DEFAULT.copy(depth=3)
     model = None
-    if hasattr(pars, 'items') or hasattr(pars, 'items'):
+
+    if hasattr(pars, 'items'):
         # This is a dict
         p.update(pars, in_place_depth=3)
 
@@ -362,7 +365,7 @@ def init_storage(storage, pars, energy=None, **kwargs):
 
     if p.model is None:
         model = np.ones(s.shape, s.dtype)
-        if p.photons is not None:
+        if (type(p.photons) is int) or (type(p.photons) is float):
             model *= np.sqrt(p.photons) / np.prod(s.shape)
     elif type(p.model) is np.ndarray:
         model = p.model
@@ -377,7 +380,6 @@ def init_storage(storage, pars, energy=None, **kwargs):
             'Attempt to load layer `%s` of probe storage with ID `%s` from `%s`'
             % (str(layer), str(ID), p.recon.rfile))
         model = u.load_from_ptyr(p.recon.rfile, 'probe', ID, layer)
-        p.photons = None
         # This could be more sophisticated,
         # i.e. matching the real space grids etc.
     elif str(p.model) == 'stxm':
@@ -475,7 +477,7 @@ def _process(model, aperture_pars=None, prop_pars=None, photons=1e7,
     model = prop(model)
 
     # apply photon count
-    if photons is not None:
+    if (type(photons) is int) or (type(photons) is float):
         model *= np.sqrt(photons / u.norm2(model))
 
     return model
