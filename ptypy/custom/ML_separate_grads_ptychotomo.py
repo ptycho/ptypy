@@ -279,6 +279,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # Probe gradient
         self.pr_grad_new = None
 
+        # Probe shift gradients
+        self.pr_grad_x = None
+        self.pr_grad_y = None
+
         # Tomography projector
         self.projector = None
 
@@ -289,6 +293,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.nangles = self.p.n_angles
         self.tmin_rho = None
         self.tmin_pr = None
+        self.tmin_pr_x = None
+        self.tmin_pr_y = None
         self.ML_model = None
         self.smooth_gradient = None
 
@@ -352,9 +358,15 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.pr_grad_new = self.pr.copy(self.pr.ID + '_grad_new', fill=0.)
         self.pr_h = self.pr.copy(self.pr.ID + '_h', fill=0.)
 
+        # Initialise probe shift gradients
+        self.pr_grad_x = self.pr.copy(self.pr.ID + '_grad_x', fill=0.)
+        self.pr_grad_y = self.pr.copy(self.pr.ID + '_grad_y', fill=0.)
+
         # Initialise step sizes
         self.tmin_rho = 1.
         self.tmin_pr = 1.
+        self.tmin_pr_x = 1.
+        self.tmin_pr_y = 1.
 
         # Initialise smoothing preconditioner for volume
         self.smooth_gradient = prepare_smoothing_preconditioner(
@@ -404,6 +416,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         """
         tg = 0.
         tc = 0.
+        ts = 0.
         ta = time.time()
         for it in range(num):
 
@@ -533,6 +546,60 @@ class MLPtychoTomo(PositionCorrectionEngine):
             self.rho += self.rho_h
             self.pr += self.pr_h
 
+            ########################
+            # Compute shift step-sizes
+            # pr_x: tmin_pr_x
+            # pr_y: tmin_pr_y
+            ########################
+
+            t3 = time.time()
+
+            if self.p.poly_line_coeffs == "quadratic":
+                B_pr_x = self.ML_model.poly_line_coeffs_pr(self.pr_grad_x)
+                B_pr_y = self.ML_model.poly_line_coeffs_pr(self.pr_grad_y)
+
+                # same as below but quicker when poly quadratic
+                self.tmin_pr_x = dt(-0.5 * B_pr_x[1] / B_pr_x[2])
+                self.tmin_pr_y = dt(-0.5 * B_pr_y[1] / B_pr_y[2])
+
+            elif self.p.poly_line_coeffs == "all":
+                B_pr_x = self.ML_model.poly_line_all_coeffs_pr(self.pr_grad_x)
+                diffB_pr_x = np.arange(1,len(B_pr_x))*B_pr_x[1:] # coefficients of poly derivative
+                roots = np.roots(np.flip(diffB_pr_x.astype(np.double))) # roots only supports double
+                real_roots = np.real(roots[np.isreal(roots)]) # not interested in complex roots
+                if real_roots.size == 1: # single real root
+                    self.tmin_pr_x = dt(real_roots[0])
+                else: # find real root with smallest poly objective
+                    evalp = lambda root: np.polyval(np.flip(B_pr_x),root)
+                    self.tmin_pr_x = dt(min(real_roots, key=evalp)) # root with smallest poly objective
+
+                B_pr_y = self.ML_model.poly_line_all_coeffs_pr(self.pr_grad_y)
+                diffB_pr_y = np.arange(1,len(B_pr_y))*B_pr_y[1:] # coefficients of poly derivative
+                roots = np.roots(np.flip(diffB_pr_y.astype(np.double))) # roots only supports double
+                real_roots = np.real(roots[np.isreal(roots)]) # not interested in complex roots
+                if real_roots.size == 1: # single real root
+                    self.tmin_pr_y = dt(real_roots[0])
+                else: # find real root with smallest poly objective
+                    evalp = lambda root: np.polyval(np.flip(B_pr_y),root)
+                    self.tmin_pr_y = dt(min(real_roots, key=evalp)) # root with smallest poly objective
+
+            else:
+                raise NotImplementedError("poly_line_coeffs should be 'quadratic' or 'all'")
+
+            ts += time.time() - t3
+
+            ########################
+            # Take probe shift step
+            # pr += tmin_pr_x * pr_grad_x
+            # pr += tmin_pr_y * pr_grad_y
+            ########################
+
+            self.pr_grad_x *= self.tmin_pr_x
+            self.pr_grad_y *= self.tmin_pr_y
+
+            self.pr += self.pr_grad_x
+            self.pr += self.pr_grad_y
+
             # FIXME: move saving volumes to run script
             if parallel.master and (self.curiter+1) % 1000 == 0: # curiter starts at zero
             # Get SLURM Job ID
@@ -556,6 +623,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
+        logger.info('  ....  in shift coeff calculation: %.2f' % ts)
         return error_dct  # np.array([[self.ML_model.LL[0]] * 3])
 
     def engine_finalize(self):
@@ -571,6 +639,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
         del self.pr_grad_new
         del self.ptycho.containers[self.pr_h.ID]
         del self.pr_h
+        del self.pr_grad_x
+        del self.pr_grad_y
 
         # Save floating intensities into runtime
         self.ptycho.runtime["float_intens"] = parallel.gather_dict(self.ML_model.float_intens_coeff)
@@ -599,6 +669,8 @@ class BaseModel(object):
         self.ex = self.engine.ex
         self.coverage = self.engine.coverage
         self.projected_rho = self.engine.projected_rho
+        self.pr_grad_x = self.engine.pr_grad_x
+        self.pr_grad_y = self.engine.pr_grad_y
 
         self.pr = self.engine.pr
         self.float_intens_coeff = {}
@@ -744,6 +816,8 @@ class GaussianModel(BaseModel):
         """
         self.rho_grad.fill(0.)
         self.pr_grad.fill(0.)
+        self.pr_grad_x.fill(0.)
+        self.pr_grad_y.fill(0.)
 
         # We need an array for MPI
         LL = np.array([0.])
@@ -793,6 +867,9 @@ class GaussianModel(BaseModel):
                 self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
                 prod_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.tot_power
                 self.projected_rho[pod.ex_view] = prod_xi_psi_conj
+                grad_y, grad_x = np.gradient(pod.probe)
+                self.pr_grad_x[pod.pr_view] += grad_x
+                self.pr_grad_y[pod.pr_view] += grad_y
 
             diff_view.error = LLL
             error_dct[dname] = np.array([0, LLL / np.prod(DI.shape), 0])
@@ -810,6 +887,8 @@ class GaussianModel(BaseModel):
         # MPI reduction of gradients
         self.rho_grad.allreduce()
         self.pr_grad.allreduce()
+        self.pr_grad_x.allreduce()
+        self.pr_grad_y.allreduce()
         parallel.allreduce(LL)
 
         # Volume regularizer
