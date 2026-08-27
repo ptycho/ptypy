@@ -534,6 +534,63 @@ class _StochasticEngineCupy(_StochasticEngineSerial):
         super().engine_finalize()
 
 
+def _crop_pad_last2(array, target_shape, out=None):
+    """Centered crop/pad on the last two axes (GPU arrays)."""
+    target_shape = tuple(int(v) for v in target_shape)
+    if out is None:
+        out = cp.zeros(array.shape[:-2] + target_shape, dtype=array.dtype)
+    else:
+        out.fill(0)
+    src_slices = []
+    dst_slices = []
+    for src_n, dst_n in zip(array.shape[-2:], target_shape):
+        n = min(src_n, dst_n)
+        src0 = (src_n - n) // 2
+        dst0 = (dst_n - n) // 2
+        src_slices.append(slice(src0, src0 + n))
+        dst_slices.append(slice(dst0, dst0 + n))
+    out[(...,) + tuple(dst_slices)] = array[(...,) + tuple(src_slices)]
+    return out
+
+
+class _PaddedSlicePROP:
+    """
+    GPU inter-slice propagator with optional centered zero-padding.
+
+    Wraps an allocated ``PropagationKernel`` built on the padded grid and keeps
+    the ``fw(x, y)`` / ``bw(x, y)`` call signature of the unpadded kernel.
+    This is a plain helper: it is NOT an engine and must never carry
+    ``@register()`` (an older draft registered a second ThreePIE_cupy this way
+    and shadowed the canonical engine).
+    """
+
+    def __init__(self, prop_kernel, shape, pad=1):
+        self.propagator = prop_kernel
+        self._pad_factor = int(pad)
+        self._shape = tuple(int(v) for v in shape)
+        self._padded_shape = tuple(
+            int(v) * self._pad_factor for v in self._shape)
+        self._buffer = None
+
+    def _run(self, x, y, direction):
+        if self._pad_factor == 1:
+            direction(x, y)
+            return
+        if self._buffer is None or self._buffer.shape != \
+                x.shape[:-2] + self._padded_shape:
+            self._buffer = cp.zeros(
+                x.shape[:-2] + self._padded_shape, dtype=x.dtype)
+        _crop_pad_last2(x, self._padded_shape, out=self._buffer)
+        direction(self._buffer, self._buffer)
+        _crop_pad_last2(self._buffer, self._shape, out=y)
+
+    def fw(self, x, y):
+        self._run(x, y, self.propagator.fw)
+
+    def bw(self, x, y):
+        self._run(x, y, self.propagator.bw)
+
+
 @register()
 class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
     """
@@ -569,6 +626,18 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
     default = slices.h5
     type = str
     help = File path for the slice data
+    doc =
+
+    [slice_pad]
+    default = 1
+    type = int, str
+    help = Zero-padding factor for inter-slice near-field propagation
+    doc = Positive integer or ``"auto"``. Padding preserves the real-space pixel size while increasing the propagation grid, which raises the angular-spectrum sampling limit for fixed slice spacing.
+
+    [slice_bandlimit]
+    default = True
+    type = bool
+    help = Apply angular-spectrum anti-aliasing support for slice propagation
     doc =
 
     """
@@ -626,25 +695,42 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
         else:
             thicknesses = [self.p.slice_thickness] * (self.p.number_of_slices - 1)
 
+        # The padding/bandlimit policy is shared with the serial engine so the
+        # two backends stay numerically comparable.
+        from ptypy.custom.threepie_serial import (
+            normalize_slice_pad, slice_bandlimit)
+
         for label, scan in self.ptycho.model.scans.items():
             geo = scan.geometries[0]
+            pad = normalize_slice_pad(
+                self.p.slice_pad, geo.shape, geo.resolution, geo.energy,
+                self.p.slice_thickness)
             g = Param()
             g.energy = geo.energy
             g.psize = geo.resolution
-            g.shape = geo.shape
+            g.shape = tuple(int(v) * pad for v in geo.shape)
             g.propagation = "nearfield"
 
             kern = self.kernels[label]
             kern.slice_PROP = []
-            aux = np.zeros(tuple(kern.aux.shape), dtype=kern.aux.dtype)
+            aux_shape = tuple(kern.aux.shape[:-2]) + tuple(
+                int(v) * pad for v in kern.aux.shape[-2:])
+            aux = np.zeros(aux_shape, dtype=kern.aux.dtype)
             for thickness in thicknesses:
                 g.distance = thickness
                 G = geometry.Geo(owner=None, pars=g)
+                if self.p.slice_bandlimit:
+                    support = slice_bandlimit(
+                        G.propagator.kernel.shape, geo.resolution, geo.energy,
+                        thickness)
+                    G.propagator.kernel *= support
+                    G.propagator.ikernel *= support
                 prop = PropagationKernel(
                     aux, G.propagator, self.queue, self.p.fft_lib
                 )
                 prop.allocate()
-                kern.slice_PROP.append(prop)
+                kern.slice_PROP.append(
+                    _PaddedSlicePROP(prop, kern.aux.shape[-2:], pad=pad))
             kern.slice_exits = [
                 cp.empty_like(kern.aux) for _ in range(self.p.number_of_slices)
             ]
