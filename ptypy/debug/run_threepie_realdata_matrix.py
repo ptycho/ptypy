@@ -14,8 +14,8 @@ the same scan land in separate, systematically named output folders:
 
 The helpers in this module (``output_suffix``, ``detector_pixel``,
 ``diagnostic_crops``, ``add_common_run_args``, ``positive_int``) are unit-tested
-by ``test/util_tests/threepie_matrix_runner_test.py`` -- keep their behaviour in
-sync with that contract and with the argparser of the beamtime runner script.
+by ``test/util_tests/threepie_matrix_runner_test.py``. Keep their behaviour in
+sync with that test and with the argparser of the beamtime runner script.
 
 Typical use (from the repo root, with the ptypy_v8 environment):
 

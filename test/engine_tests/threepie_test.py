@@ -33,7 +33,7 @@ def threepie_serial_params():
 
     # 40 iterations: at 10 the stochastic view-shuffle noise floor of a
     # single engine (serial-vs-serial ncorr ~0.84) is as large as any
-    # cross-backend difference, so equivalence cannot be certified.
+    # cross-backend difference, so equivalence cannot be shown.
     Niter = 40
     Nsave = 1
 
@@ -166,7 +166,7 @@ def test_reconstruction_equvalence(threepie_serial_params):
     obj = P.obj.storages['Sscan00G00'].data[0, :, :]
     probe = P.probe.storages['Sscan00G00'].data[0, :, :]
 
-    # Replace the serialized engine with the pod/view CPU reference and run again.
+    # Replace the serialized engine with the CPU pod/view reference; rerun.
     p.engines.engine00.name = "ThreePIE"
     P_basic = Ptycho(p, level=5)
 
@@ -191,7 +191,7 @@ def test_reconstruction_equvalence(threepie_serial_params):
             view_basic.dhigh, view.dhigh)
 
     # asserts: both engines shuffle views independently, so elementwise
-    # equality is not attainable -- compare with the same phase/scale-
+    # equality is not attainable. Compare with the same phase/scale-
     # invariant correlation used by threepie_serial_test.py.
     # Measured same-engine (serial-vs-serial) reproducibility at this
     # crop-32 / 3-slice / real-data configuration spans ncorr 0.70-0.93

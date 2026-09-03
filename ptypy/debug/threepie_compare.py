@@ -4,8 +4,9 @@
 Shared helpers for comparing ThreePIE reconstructions.
 
 The multislice comparison tools in this directory all need the same handful of
-operations, and getting them subtly different is how two "comparisons" end up
-disagreeing about the same pair of reconstructions. They live here once:
+operations. If each tool carried its own slightly different copy, two
+comparisons of the same pair of reconstructions could disagree, so the
+operations live here once:
 
   ncorr / aligned_ncorr   phase-, scale- and translation-invariant similarity
   central                 crop away the poorly covered border
@@ -13,14 +14,14 @@ disagreeing about the same pair of reconstructions. They live here once:
   read_slices             per-slice objects from an engine's ``fslices`` file
   read_recon              object/probe/pixel size from a ``.ptyr``
 
-Why the invariances matter: a ptychographic solution is only defined up to a
-global phase and a joint probe/object translation, and stochastic (ePIE-type)
-engines shuffle their view order independently. Comparing two correct
-reconstructions elementwise therefore fails no matter how correct they are.
-Every comparison in this directory goes through ``aligned_ncorr``.
+The invariances are needed because a ptychographic solution is only defined
+up to a global phase and a joint probe/object translation, and stochastic
+(ePIE-type) engines shuffle their view order independently. An elementwise
+comparison of two correct reconstructions therefore fails. Every comparison
+in this directory goes through ``aligned_ncorr``.
 
-This module is intentionally numpy-only at import time; ``h5py`` is imported
-lazily by the readers.
+This module is numpy-only at import time; ``h5py`` is imported lazily by the
+readers.
 
 This file is part of the PTYPY package.
 
@@ -119,9 +120,10 @@ def gauge_phase(obj):
     """
     Phase of ``obj`` with the global phase gauge removed, wrap-safely.
 
-    Rotating by the phase of the complex mean (rather than subtracting a mean
-    phase) keeps the result away from the +-pi branch cut, which is what makes
-    an otherwise featureless panel render as solid black-and-white noise.
+    The field is rotated by the phase of its complex mean, which keeps the
+    result away from the +-pi branch cut. Subtracting a mean phase does not:
+    near the cut an otherwise featureless panel renders as solid
+    black-and-white noise.
     """
     ref = np.asarray(obj).mean()
     if np.abs(ref) > 0:
@@ -178,7 +180,7 @@ def read_recon(path):
 
 def iteration_seconds(path):
     """
-    Mean seconds per iteration recorded inside a ``.ptyr``.
+    Total engine seconds and number of recorded iteration blocks in a ``.ptyr``.
 
     The engine stores a ``runtime/iter_info`` group with one ``duration`` per
     saved iteration block, so a reconstruction carries its own timing and no

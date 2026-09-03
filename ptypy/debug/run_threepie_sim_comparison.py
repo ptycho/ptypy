@@ -7,15 +7,15 @@ frame shapes.
 The frame shape is the simulation analogue of detector cropping: it sets the
 number of pixels per frame and, with it, the reconstruction grid. For every
 requested shape this script runs the CPU (``ThreePIE``), serialized
-(``ThreePIE_serial``) and GPU (``ThreePIE_cupy``) engines on an *identical*
-MoonFlowerScan -- same RNG seed, same frames, same iteration count -- and then
+(``ThreePIE_serial``) and GPU (``ThreePIE_cupy``) engines on the same
+MoonFlowerScan (same RNG seed, same frames, same iteration count) and then
 compares their objects, probes and per-slice objects with the phase- and
 scale-invariant normalized correlation from ``ptypy.debug.threepie_compare``.
 
-Because the data is generated on the fly there is nothing to stage: the script
-runs anywhere. The GPU engine is skipped with a warning (not a crash) when
-cupy or a usable device is missing, so a CPU-only machine still gets the
-CPU-vs-serial half of the comparison.
+The data is generated on the fly, so there is nothing to stage and the script
+runs anywhere. The GPU engine is skipped with a warning when cupy or a usable
+device is missing, so a CPU-only machine still gets the CPU-vs-serial half of
+the comparison.
 
 Outputs, all written into ``--outdir``:
 
@@ -135,8 +135,8 @@ def default_numiter():
     Default for ``--numiter``.
 
     The beamtime version of this script read the iteration count from the
-    ``SIM_NUMITER`` environment variable. That still works -- it is now just
-    the default of a proper command-line argument, so ``--numiter`` wins.
+    ``SIM_NUMITER`` environment variable. That still works: it is now the
+    default of the command-line argument, so ``--numiter`` wins.
     """
     try:
         return positive_int(os.environ.get("SIM_NUMITER", DEFAULT_NUMITER))
@@ -199,9 +199,9 @@ def import_ptypy():
     """
     Import ptypy, with a pointer to the usual cause when it is not on the path.
 
-    This module lives inside the package, so it deliberately does no sys.path
-    surgery: run it as ``python -m ptypy.debug.run_threepie_sim_comparison``
-    from the repository root instead.
+    This module lives inside the package, so it does not edit sys.path. Run
+    it as ``python -m ptypy.debug.run_threepie_sim_comparison`` from the
+    repository root instead.
     """
     try:
         import ptypy
@@ -215,13 +215,13 @@ def import_ptypy():
 
 def have_cupy():
     """
-    True only when cupy is importable AND a GPU is actually reachable.
+    True only when cupy is importable and a GPU is reachable.
 
     Importing cupy and calling ``load_gpu_engines("cupy")`` both succeed on a
     machine that has cupy installed but no visible device (e.g. under
-    ``CUDA_VISIBLE_DEVICES=""``), and the failure then surfaces much later as a
+    ``CUDA_VISIBLE_DEVICES=""``). The failure then shows up later as a
     CUDARuntimeError in the middle of a reconstruction. Touching the device
-    here turns that into a clean skip.
+    here turns that into a skip.
     """
     if importlib.util.find_spec("cupy") is None:
         return False
@@ -237,9 +237,9 @@ def load_engines(engine_names):
     """
     Register the requested ThreePIE backends and return the ones that loaded.
 
-    A backend that cannot be used -- in practice ``ThreePIE_cupy`` on a machine
-    without cupy or without a visible device -- is reported and left out
-    instead of taking the whole comparison down with it.
+    A backend that cannot be used (usually ``ThreePIE_cupy`` on a machine
+    without cupy or without a visible device) is reported and left out, so
+    the rest of the comparison still runs.
     """
     ptypy = import_ptypy()
 
@@ -247,7 +247,7 @@ def load_engines(engine_names):
     for name in engine_names:
         bundle, module = ENGINE_SETUP[name]
         if bundle == "cupy" and not have_cupy():
-            print("WARNING: skipping %s -- no usable GPU (cupy missing or no "
+            print("WARNING: skipping %s: no usable GPU (cupy missing or no "
                   "visible device)" % name, flush=True)
             continue
         try:
@@ -255,7 +255,7 @@ def load_engines(engine_names):
                 ptypy.load_gpu_engines(bundle)
             importlib.import_module(module)
         except Exception as err:     # noqa: BLE001 - any backend problem skips
-            print("WARNING: skipping %s -- backend unavailable (%s: %s)"
+            print("WARNING: skipping %s: backend unavailable (%s: %s)"
                   % (name, type(err).__name__, err), flush=True)
             continue
         available.append(name)
@@ -336,7 +336,7 @@ def make_metric(args):
 
     Default is the plain ``ncorr`` the original comparison used. ``--aligned``
     switches to ``aligned_ncorr``, which registers ``b`` onto ``a`` first and
-    returns ``(shift, value)`` -- only the value is tabulated.
+    returns ``(shift, value)``; only the value is tabulated.
     """
     from ptypy.debug.threepie_compare import aligned_ncorr, ncorr
 
@@ -350,7 +350,7 @@ def make_metric(args):
 
 
 def active_pairs(engines):
-    """The historical engine pairs, restricted to engines that actually ran."""
+    """The historical engine pairs, restricted to engines that ran."""
     return [(a, b, tag) for a, b, tag in PAIRS if a in engines and b in engines]
 
 
@@ -420,7 +420,7 @@ def main():
     args = parser.parse_args()
 
     # Validate everything that can be validated without importing ptypy, so a
-    # typo is reported as a clean argparse error rather than a traceback.
+    # typo gives an argparse error, not a traceback.
     try:
         shapes = parse_int_list(args.shapes, what="shape")
     except (ValueError, argparse.ArgumentTypeError) as err:
@@ -436,7 +436,7 @@ def main():
 
     engines = load_engines(requested)
     if not engines:
-        raise SystemExit("no ThreePIE backend could be loaded -- nothing to run")
+        raise SystemExit("no ThreePIE backend could be loaded; nothing to run")
     if len(engines) < len(requested):
         print("running with engines: %s" % ", ".join(engines), flush=True)
 

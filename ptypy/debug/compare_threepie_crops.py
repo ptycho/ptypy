@@ -9,7 +9,7 @@ the output directory names), this loads the last ``rec_*.ptyr`` of every
 object-phase panel figure (rows = crop, cols = engine).
 
 Agreement is measured with the phase- and scale-invariant normalized
-correlation ``ncorr``; the ``obj-aligned`` column additionally removes the joint
+correlation ``ncorr``; the ``obj-aligned`` column also removes the joint
 probe/object translation gauge, which stochastic ePIE-type engines are free to
 pick differently on every run. Both metrics are taken on the central region
 only, because the border of the object is barely covered by the scan.
@@ -24,9 +24,9 @@ The reconstruction folders are expected to be named the way
     <base>/ptycho_ptypy_Mslice_<tag>_crop-<crop>_bin-<bin>_slices-<S>_pmodes-<P><suffix>/rec/rec_*.ptyr
 
 Typical use (from the repo root, with the ptypy_v8 environment). Run it as a
-module so ``import ptypy`` resolves to this checkout without any path hacking;
-if ptypy is installed, or PYTHONPATH points at the repo root, calling the file
-by path works just as well::
+module so ``import ptypy`` resolves to this checkout without changing the
+path; if ptypy is installed, or PYTHONPATH points at the repo root, calling
+the file by path also works::
 
     python -m ptypy.debug.compare_threepie_crops \
         --base <beamtime>/process/0002_multislice/scan_000434 \
@@ -115,7 +115,7 @@ def load_rec(base, dirtag, crop, args):
     Latest ``.ptyr`` of one (engine, crop) reconstruction, or None if missing.
 
     Returns the ``read_recon`` dict with ``probe`` reduced to the first probe
-    mode, which is what the agreement table compares.
+    mode; the agreement table compares only that mode.
     """
     pattern = os.path.join(
         base,
@@ -167,8 +167,8 @@ def phase_panel(data, args, label, out_png):
     Object-phase panel figure: rows = crop, cols = engine.
 
     The global phase gauge is removed per panel (wrap-safely, via
-    ``gauge_phase``) and robust 1/99 percentile color limits are shared across
-    each row so the backends of one crop are on one scale.
+    ``gauge_phase``) and 1/99 percentile color limits are shared across each
+    row so the backends of one crop are on one scale.
     """
     engines = list(ENGINE_DIRTAG)
     fig, axes = plt.subplots(len(args.crops), len(engines),

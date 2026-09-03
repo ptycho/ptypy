@@ -559,9 +559,9 @@ class _PaddedSlicePROP:
 
     Wraps an allocated ``PropagationKernel`` built on the padded grid and keeps
     the ``fw(x, y)`` / ``bw(x, y)`` call signature of the unpadded kernel.
-    This is a plain helper: it is NOT an engine and must never carry
-    ``@register()`` (an older draft registered a second ThreePIE_cupy this way
-    and shadowed the canonical engine).
+    This is a helper, not an engine. Do not add ``@register()`` to it: an
+    older draft did that, registered a second ThreePIE_cupy and shadowed the
+    engine below.
     """
 
     def __init__(self, prop_kernel, shape, pad=1):
@@ -614,7 +614,8 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
     default = 1e-6
     type = float, list, tuple
     help = Thickness of a single slice in meters
-    doc = A single float value or a list of float values. If a single value is used, all slices are assumed to have the same thickness.
+    doc = A single float value or a list of float values. If a single value
+          is given, all slices get the same thickness.
 
     [slice_start_iteration]
     default = 0
@@ -632,7 +633,9 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
     default = 1
     type = int, str
     help = Zero-padding factor for inter-slice near-field propagation
-    doc = Positive integer or ``"auto"``. Padding preserves the real-space pixel size while increasing the propagation grid, which raises the angular-spectrum sampling limit for fixed slice spacing.
+    doc = Positive integer or ``"auto"``. Padding keeps the real-space pixel
+          size and enlarges the propagation grid, which raises the
+          angular-spectrum sampling limit for a fixed slice spacing.
 
     [slice_bandlimit]
     default = True

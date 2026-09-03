@@ -2,7 +2,7 @@
 """
 Diagnose crop-dependent ThreePIE multislice propagation limits.
 
-The critical condition is for angular-spectrum propagation between slices:
+The critical condition for angular-spectrum propagation between slices is:
 
     z <= N * dx**2 / lambda
 

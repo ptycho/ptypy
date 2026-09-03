@@ -7,38 +7,38 @@ The data are generated with a real two-slice forward model
 
     probe -> x obj0 -> near-field(slice_sep) -> x obj1 -> far field
 
-from two DISTINCT, KNOWN phantoms (flowers upstream, a spoke star downstream),
-so every reconstructed slice can be scored against truth rather than only
-against another backend. This is what the plain MoonFlower comparison cannot
-provide: there the data come from a single object plane, so the 2-slice split
-is a free gauge and any division of the object between the slices is "right".
+from two distinct, known phantoms (flowers upstream, a spoke star downstream),
+so every reconstructed slice can be scored against truth and not only against
+another backend. The plain MoonFlower comparison cannot provide that: there
+the data come from a single object plane, so the 2-slice split is a free gauge
+and any division of the object between the slices is "right".
 
-The scan is self-contained -- it needs no external data files.
+The scan is self-contained and needs no external data files.
 
 Reported per engine (``ThreePIE`` / ``ThreePIE_serial`` / ``ThreePIE_cupy``):
 
   recovery    aligned ncorr(reconstructed slice i, ground-truth phantom i)
-  swap check  aligned ncorr(reconstructed slice i, the OTHER phantom)
-  distinctness   aligned ncorr(phantom 0, phantom 1) -- the premise of the test
+  swap check  aligned ncorr(reconstructed slice i, the other phantom)
+  distinctness   aligned ncorr(phantom 0, phantom 1), the premise of the test
   cross-backend  aligned ncorr of the same slice between two backends
 
 plus a figure whose first column is the ground truth and whose remaining
 columns are the engines, one row per slice.
 
-This is the exploratory / figure-producing sibling of the pass-fail gate in
-``test/engine_tests/threepie_groundtruth_slices_test.py``; the phantom, the
+This is the exploratory, figure-producing sibling of the pass-fail gate in
+``test/engine_tests/threepie_groundtruth_slices_test.py``. The phantom, the
 focus-midway probe treatment, the ``slice_bandlimit=False`` choice for the
-serialized/GPU engines and the metric conventions are deliberately kept
-identical to that test. Two of those settings matter and are not incidental:
+serialized/GPU engines and the metric conventions are kept identical to that
+test. Two of those settings matter:
 
   * The beam focus is placed midway between the slices. A quasi-collimated
     probe has almost no depth discrimination over the slice separation, and
-    the reconstruction then splits the two layers arbitrarily -- for every
+    the reconstruction then splits the two layers arbitrarily, for every
     backend alike. Use ``--no-focus-mid`` to see that failure mode.
-  * ``slice_bandlimit`` is switched off for the serialized/GPU engines: the
+  * ``slice_bandlimit`` is switched off for the serialized/GPU engines. The
     data are generated with the exact near-field propagator below the
-    angular-spectrum critical distance, where the anti-alias band limit --
-    correct protection for real data above z_crit -- would discard true
+    angular-spectrum critical distance. There the anti-alias band limit
+    (correct protection for real data above z_crit) would discard true
     signal and bias the comparison against those engines.
 
 Outputs, written into ``--outdir``:
@@ -84,8 +84,8 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np               # noqa: E402
 
 # ptypy itself is imported inside the functions that need it, so that --help
-# still works when the repo root is not on sys.path (this script deliberately
-# does not touch sys.path; run it as a module from the repo root, or with the
+# still works when the repo root is not on sys.path (this script does not
+# touch sys.path; run it as a module from the repo root, or with the
 # package installed).
 
 # Name of the PtyScan registered below. Kept in sync with the pytest sibling.
@@ -123,7 +123,7 @@ def gt_ncorr(a, b):
 
 
 def have_cupy():
-    """True when cupy is importable and a GPU is actually reachable."""
+    """True when cupy is importable and a GPU is reachable."""
     if importlib.util.find_spec("cupy") is None:
         return False
     try:
@@ -200,7 +200,7 @@ def register_scan():
         default = True
         type = bool
         help = Place the beam focus midway between the two slices
-        doc = Mirrors the real experiment (slices at +-0.75 mm around focus); the curvature difference between the planes is what gives the reconstruction its depth discrimination.
+        doc = Mirrors the real experiment (slices at +-0.75 mm around focus); the curvature difference between the planes gives the reconstruction its depth discrimination.
         """
 
         def __init__(self, pars=None, **kwargs):
@@ -218,7 +218,7 @@ def register_scan():
             g.propagation = "nearfield"
             self._slice_prop = geometry.Geo(owner=None, pars=g).propagator
             if self.p.focus_mid:
-                # treat the moon field as the FOCAL plane and back-propagate
+                # treat the moon field as the focal plane and back-propagate
                 # it by slice_sep/2, so the focus sits midway between the
                 # slices: converging at slice 0, diverging at slice 1. That
                 # curvature difference carries the depth information.
@@ -477,10 +477,10 @@ def build_argparser():
                              "dropped automatically when cupy is unavailable.")
     parser.add_argument("--no-focus-mid", dest="focus_mid",
                         action="store_false",
-                        help="Do NOT place the beam focus midway between the "
+                        help="Do not place the beam focus midway between the "
                              "slices. The quasi-collimated probe then has "
-                             "almost no depth discrimination -- useful to see "
-                             "the failure mode, not a valid comparison.")
+                             "almost no depth discrimination. Use this to see "
+                             "the failure mode; it is not a valid comparison.")
     parser.set_defaults(focus_mid=True)
     return parser
 
