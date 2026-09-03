@@ -2,16 +2,16 @@
 """
 Serialized (NumPy) implementation of the multislice ePIE / 3PIE algorithm.
 
-This is the *bridge* engine between the pod/view CPU reference
+This engine sits between the pod/view CPU reference
 (``ptypy.custom.threepie.ThreePIE``) and the GPU engine
 (``ptypy.accelerate.cuda_cupy.engines.stochastic.ThreePIE_cupy``).
 
-It runs entirely on the CPU but uses the *same* serialized address layout and
-kernel set as the GPU engine (``AuxiliaryWaveKernel``, ``PoUpdateKernel``,
-``FourierUpdateKernel`` and the new ``ThreePIEWaveKernel`` from
-``ptypy.accelerate.base.kernels``).  Because of that, the ``engine_iterate``
-multislice sweep is a line-for-line NumPy mirror of the CuPy version: validate
-the algorithm here (no GPU needed), and the GPU port becomes a trivial diff.
+It runs on the CPU but uses the same serialized address layout and kernel
+set as the GPU engine (``AuxiliaryWaveKernel``, ``PoUpdateKernel``,
+``FourierUpdateKernel`` and ``ThreePIEWaveKernel`` from
+``ptypy.accelerate.base.kernels``). The ``engine_iterate`` multislice sweep
+is therefore a line-for-line NumPy mirror of the CuPy version. The algorithm
+can be checked here without a GPU, and the GPU port is a small diff.
 
 Reference: A. M. Maiden, M. J. Humphry, J. M. Rodenburg,
 "Ptychographic transmission microscopy in three dimensions using a multi-slice
@@ -159,7 +159,9 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
     default = 1
     type = int, str
     help = Zero-padding factor for inter-slice near-field propagation
-    doc = Positive integer or ``"auto"``. Padding preserves the real-space pixel size while increasing the propagation grid, which raises the angular-spectrum sampling limit for fixed slice spacing.
+    doc = Positive integer or ``"auto"``. Padding keeps the real-space pixel
+          size and enlarges the propagation grid, which raises the
+          angular-spectrum sampling limit for a fixed slice spacing.
 
     [slice_bandlimit]
     default = True
@@ -193,8 +195,8 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
         if nslices < 1:
             raise ValueError("number_of_slices must be at least 1")
 
-        # one object / probe container per slice (probe[s>0] are the propagated
-        # incident waves; only probe[0] is the true illumination)
+        # one object / probe container per slice (probe[0] is the
+        # illumination, probe[s>0] hold the propagated incident waves)
         self._object = [None] * nslices
         self._probe = [None] * nslices
         for i in range(nslices):
