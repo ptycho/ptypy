@@ -3,12 +3,12 @@
 """
 Per-slice comparison of ThreePIE reconstructions across CPU/serial/GPU backends.
 
-The point of multislice is to separate information between the slices, so this
-compares the individual slice objects (not their product):
+Multislice should separate information between the slices, so this compares
+the individual slice objects (not their product):
 
   * cross-backend agreement per slice:  ncorr(A slice i, B slice i)
   * slice-swap check:                   ncorr(A slice 0, B slice 1) and the
-    reverse -- a high value here means the backends ordered the layers
+    reverse. A high value here means the backends ordered the layers
     differently, or that the layers are duplicates of each other
   * separation within one engine:       ncorr(slice 0, slice 1). Low means the
     two layers carry distinct structure, high means leakage/duplication.
@@ -20,10 +20,10 @@ the systematically named outputs of ``run_threepie_realdata_matrix.py``:
     <base-dir>/ptycho_ptypy_Mslice_<tag>_crop-<crop>_bin-<bin>_
         slices-<S>_pmodes-<P><suffix>/
 
-Every comparison goes through ``aligned_ncorr`` from ``ptypy.debug.threepie_compare``,
-because a ptychographic solution is only defined up to a global phase and a joint
-probe/object translation, and stochastic engines shuffle their view order
-independently.
+Every comparison goes through ``aligned_ncorr`` from
+``ptypy.debug.threepie_compare``, because a ptychographic solution is only
+defined up to a global phase and a joint probe/object translation, and
+stochastic engines shuffle their view order independently.
 
 Two outputs land in ``--outdir``: ``slice_comparison_<tag>.txt`` (the report,
 also printed) and ``slice_comparison_<tag>.png`` (rows = crop x slice,
@@ -158,8 +158,8 @@ def render_figure(args, data, crops, scan_label, out_png):
     Per-slice object-phase panel: rows = crop x slice, cols = engine.
 
     Each panel's global phase gauge is removed (rotate by the phase of the
-    complex mean -- wrap-safe), and the engines in a row share robust percentile
-    color limits so large particles keep their internal contrast.
+    complex mean, which is wrap-safe), and the engines in a row share
+    percentile color limits so large particles keep their internal contrast.
     """
     engines = list(ENGINE_DIRTAG)
     nrows = len(crops) * args.slices

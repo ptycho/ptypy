@@ -5,12 +5,12 @@ Plot ThreePIE engine speed versus raw detector crop for the three backends.
 
 Every ptypy reconstruction carries its own timing: the engine writes a
 ``runtime/iter_info`` group into each saved ``.ptyr``, with one ``duration``
-entry per saved iteration block. This script therefore needs no benchmark log
-at all -- it opens the newest ``rec/rec_*.ptyr`` of each run directory, sums
+entry per saved iteration block. This script therefore needs no benchmark
+log. It opens the newest ``rec/rec_*.ptyr`` of each run directory, sums
 those durations and divides by the *declared* iteration count of the run
 family. (The number of ``iter_info`` entries is the number of save blocks, not
-the number of iterations, so the declared count is what makes the numbers
-comparable -- hence ``--family SUFFIX:NUMITER``.)
+the number of iterations, so the declared count is the divisor that makes the
+numbers comparable; hence ``--family SUFFIX:NUMITER``.)
 
 Runs are located by the naming convention of the beamtime runner:
 
@@ -19,8 +19,9 @@ Runs are located by the naming convention of the beamtime runner:
 
 with ``<tag>`` one of ``gpu`` / ``serial`` / ``cpu``. Two or more run families
 (same physics, different iteration counts) can be given; the family with the
-most iterations draws the line, the others are plotted as open triangles, which
-shows at a glance that the per-iteration cost does not drift with run length.
+most iterations draws the line, the others are plotted as open triangles.
+Triangles on the line mean the per-iteration cost does not drift with run
+length.
 
 The figure has two panels, both with a log-scaled crop axis:
 
@@ -38,8 +39,8 @@ Typical use (with the ptypy_v8 environment, from the repo root):
     python ptypy/debug/plot_threepie_speed.py --scan-dir <scan-dir> --help
 
 The colours are a fixed, colourblind-safe palette (blue / orange / green) and
-are deliberately not configurable, so that the same engine keeps the same hue
-across every figure in this comparison set.
+are not configurable, so the same engine keeps the same hue across every
+figure in this comparison set.
 
 This file is part of the PTYPY package.
 
@@ -252,7 +253,7 @@ def make_figure(args, data, main, others):
     ax.set_yscale("log")
     style_axis(ax, crops, "raw detector crop (pixels)",
                "engine time per iteration (s)",
-               "ThreePIE speed vs crop — %s, %d frames, bin %d,\n"
+               "ThreePIE speed vs crop: %s, %d frames, bin %d,\n"
                "%d slices, %d probe modes (%s)"
                % (scan_label(args.scan_dir, args.scan_label), args.frames,
                   args.binning, args.slices, args.probe_modes,
@@ -289,7 +290,7 @@ def build_argparser():
                         help="Scan directory holding the "
                              "ptycho_ptypy_Mslice_* run folders, e.g. "
                              "<beamtime>/process/<sample>/scan_000434. "
-                             "Required: there is no sensible default.")
+                             "Required; there is no default.")
     parser.add_argument("--outdir", default=".",
                         help="Directory the figure is written to, created if "
                              "missing (default: the working directory).")
@@ -356,7 +357,7 @@ def main():
     data = collect(args, families)
     print_table(data, args.crops)
     if not any(data.values()):
-        raise SystemExit("no reconstructions found under %s -- check "
+        raise SystemExit("no reconstructions found under %s; check "
                          "--scan-dir, --crops, --family, --binning, --slices "
                          "and --probe-modes" % args.scan_dir)
 

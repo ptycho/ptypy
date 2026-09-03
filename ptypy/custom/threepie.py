@@ -36,7 +36,8 @@ class ThreePIE(stochastic.EPIE):
     default = 1e-6
     type = float, list, tuple
     help = Thickness of a single slice in meters
-    doc = A single float value or a list of float values. If a single value is used, all the slice will be assumed to be of the same thickness.
+    doc = A single float value or a list of float values. If a single value
+          is given, all slices get the same thickness.
 
     [slice_start_iteration]
     default = 0
@@ -74,7 +75,7 @@ class ThreePIE(stochastic.EPIE):
     def engine_initialize(self):
         super().engine_initialize()
 
-        # Create a list of objects and exit waves (one for each slice)
+        # One object, probe and exit-wave container per slice
         self._object = [None] * self.p.number_of_slices
         self._probe = [None] * self.p.number_of_slices
         self._exits = [None] * self.p.number_of_slices
@@ -86,13 +87,13 @@ class ThreePIE(stochastic.EPIE):
         # ToDo:
         #    - allow for non equal slice spacing
         #    - allow for start_slice_update at a freely chosen iteration
-        #      for each slice separately - works, but not if the
-        #      most downstream slice is switched off
+        #      for each slice separately (works, but not if the
+        #      most downstream slice is switched off)
 
         if isinstance(self.p.slice_start_iteration, int):
             self.p.slice_start_iteration = np.ones(self.p.number_of_slices) * self.p.slice_start_iteration
-        #if ĺen(self.p.slice_start_iteration) != self.p.number_of_slices:
-        #    logger.info(f'dimension of given slice_start_iteration ({ĺen(self.p.slice_start_iteration)}) does not match number of slices ({self.p.number_of_slices})')
+        #if len(self.p.slice_start_iteration) != self.p.number_of_slices:
+        #    logger.info(f'dimension of given slice_start_iteration ({len(self.p.slice_start_iteration)}) does not match number of slices ({self.p.number_of_slices})')
 
         scan = list(self.ptycho.model.scans.values())[0]
         geom = scan.geometries[0]
@@ -188,7 +189,7 @@ class ThreePIE(stochastic.EPIE):
                 self._exits[-1][pod.pr_view] = self._probe[-1][pod.pr_view] * self._object[-1][pod.ob_view]
             else:
                 self._exits[-1][pod.pr_view] = self._probe[-1][pod.pr_view] * 1.
-            # Save final state into pod (need for ptypy fourier update)
+            # Save final state into the pod (needed for the Fourier update)
             pod.probe = self._probe[-1][pod.pr_view]
             pod.object = self._object[-1][pod.ob_view]
             pod.exit = self._exits[-1][pod.pr_view]
@@ -218,7 +219,7 @@ class ThreePIE(stochastic.EPIE):
                     pod.probe = self._probe[i][pod.pr_view]
                     pod.object = self._object[i][pod.ob_view]
 
-                # Actual object/probe update
+                # Object/probe update
                 self.object_update(view, {pod.ID:self._exits[i][pod.pr_view] for name, pod in view.pods.items()})
                 self.probe_update(view, {pod.ID:self._exits[i][pod.pr_view] for name, pod in view.pods.items()})
                 for name, pod in view.pods.items():
@@ -228,7 +229,7 @@ class ThreePIE(stochastic.EPIE):
                 for name, pod in view.pods.items():
                     self._probe[i][pod.pr_view] = self.bw[i](self._probe[i+1][pod.pr_view])
 
-        # set the object as the product of all slices for better live plotting
+        # object = product of all slices, for live plotting
         self.ob.fill(self._object[0])
         for i in range(1, self.p.number_of_slices):
             self.ob *= self._object[i]
@@ -240,11 +241,11 @@ class ThreePIE(stochastic.EPIE):
 
     def apply_object_regularization(self):
         # single mode implementation
-        # only valide for slices with identical thickness
+        # only valid for slices of identical thickness
         assert(self.p.number_of_slices > 1)
         assert(isinstance(self.p.slice_thickness, float))
 
-        # iterate the actual storages (the original implementation hardcoded
+        # loop over the storage IDs (the original implementation hardcoded
         # the "Sscan_00G00" ID and broke for any other scan name)
         for sname in self._object[0].S.keys():
             shape = self._object[0].S[sname].data.shape[1:]

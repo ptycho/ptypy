@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-# One-command sanity check for the ThreePIE multislice engines (CPU / serial / GPU)
+# One-command check of the ThreePIE multislice engines (CPU / serial / GPU)
 # and the near-field anti-aliasing (band-limit + slice_pad).
 #
 # Runs three things in order:
 #   1. crop sampling / slice_pad diagnostic   (pure numpy, instant)
 #   2. ground-truth slice separation          (CPU + serial, no GPU needed)
-#   3. GPU engine + wave kernel               (needs CuPy + GPU; skips cleanly otherwise)
+#   3. GPU engine + wave kernel               (needs CuPy + GPU; skipped otherwise)
 #
 # Usage:
 #   bash test/engine_tests/check_threepie.sh
@@ -48,8 +48,8 @@ echo
 
 echo "========================================================================="
 if [ "$rc" -eq 0 ]; then
-    echo "check_threepie: DONE — all checks passed"
+    echo "check_threepie: DONE: all checks passed"
 else
-    echo "check_threepie: DONE — a check exited non-zero (see output above)"
+    echo "check_threepie: DONE: a check exited non-zero (see output above)"
 fi
 exit "$rc"
