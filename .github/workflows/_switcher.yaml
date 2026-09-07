@@ -6,16 +6,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PtyPy Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Upload index.html as Artifact
-        uses: actions/upload-artifact@v4.4.3
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: docs-index-html
           path: .github/pages/index.html
 
       - name: Download All Docs Artifact
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v7.0.0
         with:
           pattern: docs-*
           merge-multiple: true
@@ -25,7 +25,7 @@ jobs:
         run: python .github/pages/switcher.py ./doc_versions ${{ github.repository }} .github/pages/switcher.json
 
       - name: Upload switcher.json as Artifact
-        uses: actions/upload-artifact@v4.4.3
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: docs-switcher-json
           path: .github/pages/switcher.json
