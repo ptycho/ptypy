@@ -40,10 +40,10 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v7
-    - uses: conda-incubator/setup-miniconda@v3
+    - uses: conda-incubator/setup-miniconda@v4.0.1
       with:
         auto-update-conda: true
-        auto-activate-base: false
+        auto-activate: false
         conda-remove-defaults: true
         channels: conda-forge
         activate-environment: ptypy_env
