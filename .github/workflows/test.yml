@@ -28,18 +28,18 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - "3.9"
           - "3.10"
           - "3.11"
           - "3.12"
           - "3.13"
+          - "3.14"
         conda-env:
           - "core"
           - "full"
     name: Python ${{ matrix.python-version }} and ${{ matrix.conda-env }} dependencies
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - uses: conda-incubator/setup-miniconda@v3
       with:
         auto-update-conda: true
