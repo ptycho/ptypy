@@ -24,7 +24,7 @@ jobs:
       run:
         shell: bash -el {0}
     strategy:
-      max-parallel: 10
+      max-parallel: 5
       fail-fast: false
       matrix:
         python-version:
