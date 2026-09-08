@@ -116,7 +116,7 @@ class P06Scan(PtyScan):
     doc =
 
     [position_bounds]
-    default =
+    default = [[None, None], [None, None]]
     type = float, list, tuple
     help = Omit data outside bounding box. Given as ((xmin, xmax), (ymin, ymax))
 
@@ -229,6 +229,14 @@ class P06Scan(PtyScan):
         self.num_frames = len(self.all_selected_inds)
         self.frames_per_file, ni, nj = self.determine_data_shape()
         self.detector_shape = (ni, nj)
+
+        n_frames_on_disk = self.count_frames_on_disk()
+        if n_frames_on_disk != len(self.all_positions):
+            raise ValueError(
+                f"Number of detector frames on disk ({n_frames_on_disk}) does not match "
+                f"the number of valid positions ({len(self.all_positions)}) read from "
+                f"{self.info.positions_path}"
+            )
 
 
         if self.num_frames == 0:
@@ -566,6 +574,22 @@ class P06Scan(PtyScan):
             os.path.join(detector_directory, x) for x in os.listdir(detector_directory) if not ('master' in x)
         ])
         return detector_file_list
+
+    def count_frames_on_disk(self):
+        """
+        Count the detector frames over all data files.
+
+        Returns
+        -------
+        int
+            Total number of frames.
+        """
+        n_frames = 0
+        for detector_file in self.get_file_list():
+            with h5py.File(detector_file, 'r') as handle:
+                n_frames += handle['entry/data/data'].shape[0]
+
+        return n_frames
 
     def determine_data_shape(self):
         """
