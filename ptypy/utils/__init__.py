@@ -14,6 +14,7 @@ from .scripts import *
 from .parameters import *
 from .verbose import *
 from .citations import *
+from .metrics import *
 from . import descriptor
 from . import parallel
 from .. import __has_matplotlib__ as hmpl
