@@ -70,12 +70,20 @@ This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: see LICENSE for details.
+
+--seed-engines N gives every engine the same seeded view order. Without it
+each engine shuffles its views with its own unseeded generator, and the
+panels then differ by the draw as much as by the backend: one engine run
+twice agrees with itself at only 0.6 to 0.8 per slice at shape 64. Set it
+for any run that compares backends.
 """
 
 import argparse
+import contextlib
 import importlib
 import importlib.util
 import os
+from unittest import mock
 
 import matplotlib
 matplotlib.use("Agg")            # these runs are headless; before pyplot
@@ -349,7 +357,17 @@ def run_engine(engine_name, zsep, args):
     from ptypy.debug.threepie_compare import read_slices
     np.random.seed(args.seed)   # identical positions + noise realization
     pars = build_params(engine_name, zsep, args)
-    P = Ptycho(pars, level=5)
+    if args.seed_engines is None:
+        seeded = contextlib.nullcontext()
+    else:
+        # every engine draws its view order from numpy.random.default_rng();
+        # give them all the same seeded generator
+        seeded = mock.patch(
+            "numpy.random.default_rng",
+            lambda *a, **k: np.random.Generator(
+                np.random.PCG64(args.seed_engines)))
+    with seeded:
+        P = Ptycho(pars, level=5)
     ptyscan = list(P.model.scans.values())[0].ptyscan
     truth = {0: np.array(ptyscan.obj0), 1: np.array(ptyscan.obj1)}
     del P
@@ -361,9 +379,11 @@ def run_engine(engine_name, zsep, args):
 # --------------------------------------------------------------------------- #
 def build_report(engines, gt, results, zsep, args):
     """The printed/saved comparison report, as one string."""
+    order = ("engines unseeded" if args.seed_engines is None
+             else "same seeded view order (seed %d)" % args.seed_engines)
     lines = ["ground-truth two-slice simulation: shape %d, %d frames, %d it, "
-             "slice_sep %.2f mm" % (args.shape, args.nframes, args.numiter,
-                                    zsep * 1e3),
+             "slice_sep %.2f mm, %s" % (args.shape, args.nframes, args.numiter,
+                                        zsep * 1e3, order),
              "",
              "engine slice vs GROUND TRUTH (aligned ncorr):",
              "engine            slice0        slice1"]
@@ -435,9 +455,11 @@ def make_figure(engines, gt, results, zsep, args, path):
         cb = fig.colorbar(im, ax=axes[i, -1], fraction=0.046, pad=0.03)
         cb.set_label("phase (rad)", fontsize=8)
         cb.ax.tick_params(labelsize=7)
+    order = ("engines unseeded" if args.seed_engines is None
+             else "same seeded view order, seed %d" % args.seed_engines)
     fig.suptitle("Two-slice ground-truth simulation, shape %d, %d it, "
-                 "slice_sep %.2f mm" % (args.shape, args.numiter, zsep * 1e3),
-                 fontsize=13)
+                 "slice_sep %.2f mm, %s"
+                 % (args.shape, args.numiter, zsep * 1e3, order), fontsize=12)
     fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(path, dpi=150)
     plt.close(fig)
@@ -472,6 +494,12 @@ def build_argparser():
     parser.add_argument("--seed", type=int, default=7,
                         help="Seed for the scan positions and the Poisson "
                              "noise; every engine gets the same realization.")
+    parser.add_argument("--seed-engines", type=int, default=None,
+                        help="Seed for the engines' view order. Without it "
+                             "each engine draws its own order from an "
+                             "unseeded generator, so two runs differ. With it, "
+                             "all engines see the views in the same order. "
+                             "Default: unseeded.")
     parser.add_argument("--engines", default=DEFAULT_ENGINES,
                         help="Comma-separated engine list. ThreePIE_cupy is "
                              "dropped automatically when cupy is unavailable.")
