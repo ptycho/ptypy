@@ -3,12 +3,9 @@ name: Documentation
 on:
   push:
     branches:
-      - master
       - dev
-  release:
-    type: [published]
   schedule:
-    - cron: 0 0 * * 1
+    - cron: "*/10 * * * *"
 
 jobs:
   legacy_docs:
