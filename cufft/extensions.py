@@ -147,7 +147,6 @@ class CustomBuildExt(build_ext):
         if has_cu:
             old_compiler = self.compiler
             self.compiler = NvccCompiler(verbose=old_compiler.verbose,
-                                        dry_run=old_compiler.dry_run,
                                         force=old_compiler.force) # this is our bespoke compiler
             super(CustomBuildExt, self).build_extension(ext)
             self.compiler=old_compiler

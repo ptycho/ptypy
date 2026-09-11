@@ -1,3 +1,14 @@
+# PtyPy 0.10 release notes
+
+New release in preparation for the PtyPy hackathon 2026. This release provides the skeleton of a new documentation page, a new module for FRC/FSC calculations, and a few bug fixes.
+
+## Other changes
+
+We have dropped support for Python <= 3.9.
+We have fixed a bug in the core POD creation module that caused unnecessarily large record arrays for extreme (~1M frames) data.
+We have also increased the default safety margin when allocating arrays on GPU devices to 400 MB. This safety margin can also be configured using environment variable PTYPY_DEVICE_MEM_SAFETY.
+
+
 # PtyPy 0.9 release notes
 
 We're excited to bring you a new release in preparation for the [PtyPy workshop 2025](https://www.synchrotron-soleil.fr/en/events/ptypy-2025)
