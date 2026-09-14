@@ -876,7 +876,6 @@ class _Vanilla(object):
 
         s.model_initialized = True
 
-
 class _Full(object):
     """
     Manage a single scan model (sharing, coherence, propagation, ...)
