@@ -12,6 +12,28 @@ import scipy.ndimage as ndimage
 import astra
 import ptypy.utils.tomo as tu
 
+from .parameters import Param
+
+
+def extra_from_angles(angles, n_frames_per_angle):
+    """
+    Builds the ``extra`` access rule that carries a tomographic angle per
+    frame, to be handed to a scan as ``data.extra``.
+
+    Receives:
+    angles                  1D array of the tomographic angles, one per
+                            projection
+    n_frames_per_angle      number of frames collected at each angle, either
+                            a single number or one per angle
+
+    Returns a Param holding "vals", the angle of every frame, and "ind", the
+    index of every frame. The frames are taken to be ordered by angle, i.e.
+    all the frames of the first angle come first.
+    """
+    vals = np.repeat(np.asarray(angles), n_frames_per_angle)
+
+    return Param(vals=vals, ind=np.arange(len(vals), dtype=int))
+
 
 class AstraViewBased:
 
