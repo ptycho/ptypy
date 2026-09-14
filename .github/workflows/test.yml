@@ -57,7 +57,9 @@ jobs:
         conda install -c conda-forge flake8 pytest pytest-cov
         conda list
     - name: Prepare ptypy
-      run: pip install .
+      # PTYPY_REQUIRE_EXT makes a failed C extension build fail the install,
+      # instead of only printing a warning as it does for users.
+      run: PTYPY_REQUIRE_EXT=1 pip install .
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names

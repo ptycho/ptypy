@@ -1,61 +1,108 @@
+# -*- coding: utf-8 -*-
 """
-Temporary file to test the quality-map unwrapping function.
+Quality-map guided phase unwrapping.
 
-Compile the c file with:
-    gcc -O3 -fPIC -shared -o libqmunwrap.so _qmunwrap.c -lm
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: see LICENSE for details.
 """
+
+import importlib
+
 import numpy as np
-import ctypes
 
-# Load the shared library
-lib = ctypes.CDLL('./libqmunwrap.so')
+try:
+    _qmunwrap = importlib.import_module('._qmunwrap', __package__)
+    _import_error = None
+except ImportError as err:
+    _qmunwrap = None
+    _import_error = err
 
-# Define the argument and return types for the unwrap function
-lib.unwrap.argtypes = [
-    ctypes.POINTER(ctypes.c_double),  # phase
-    ctypes.c_int,                     # N0
-    ctypes.c_int,                     # N1
-    ctypes.c_int,                     # num_levels
-    ctypes.c_int,                     # start0
-    ctypes.c_int,                     # start1
-    ctypes.POINTER(ctypes.c_double)   # aout
-]
-lib.unwrap.restype = None
+__all__ = ['unwrap', 'qualitymap']
+
+
+def _extension():
+    if _qmunwrap is None:
+        raise ImportError(
+            "ptypy was installed without the compiled _qmunwrap extension "
+            "(%s). Reinstall ptypy with a C compiler available."
+            % _import_error)
+    return _qmunwrap
+
 
 def unwrap(phase, num_levels=8, start=(0, 0)):
+    """
+    Unwraps a two-dimensional phase array.
+
+    Pixels are unwrapped in order of decreasing quality, the quality being
+    measured by the local squared wrapped gradient (see :any:`qualitymap`).
+    The quality map is quantized into `num_levels` bins, which avoids sorting
+    at the price of a (low-risk) non-sequential unwrapping.
+
+    Parameters
+    ----------
+    phase : array-like
+        Two-dimensional wrapped phase.
+
+    num_levels : int
+        Number of quality bins. Behaviour is not expected to be much
+        different for num_levels > 20 or so.
+
+    start : tuple of int
+        Coordinates of the pixel the unwrapping starts from.
+
+    Returns
+    -------
+    ndarray
+        The unwrapped phase, equal to `phase` at the starting pixel.
+    """
+    ext = _extension()
+
     phase = np.ascontiguousarray(phase, dtype=np.float64)
-    N0, N1 = phase.shape
-    aout = np.empty_like(phase)
-    # Call the C function
-    lib.unwrap(
-        phase.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        N0,
-        N1,
-        num_levels,
-        start[0],
-        start[1],
-        aout.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-    )
-    return aout
+    if phase.ndim != 2:
+        raise ValueError("phase must be a 2D array, got %d dimension(s)"
+                         % phase.ndim)
 
-def test():
-    from scipy.ndimage import gaussian_filter
-    sh = (100,100)
-    T = np.exp(1j*20*(gaussian_filter(np.random.normal(size=sh),10) + 3*gaussian_filter(np.random.normal(size=sh), 5)))
-    phase = np.angle(T)
+    num_levels = int(num_levels)
+    if num_levels < 1:
+        raise ValueError("num_levels must be >= 1, got %d" % num_levels)
 
-    # Unwrap the phase
-    unwrapped_phase = unwrap(phase, num_levels=8)
+    start0, start1 = (int(s) for s in start)
+    if not (0 <= start0 < phase.shape[0] and 0 <= start1 < phase.shape[1]):
+        raise ValueError("start %r is outside an array of shape %r"
+                         % ((start0, start1), phase.shape))
 
-    # Plot the results
-    import matplotlib.pyplot as plt
-    plt.figure(figsize=(12, 6))
-    plt.subplot(1, 2, 1)
-    plt.title('Original Phase')
-    plt.imshow(phase)
-    plt.colorbar()
-    plt.subplot(1, 2, 2)
-    plt.title('Unwrapped Phase')
-    plt.imshow(unwrapped_phase)
-    plt.colorbar()
-    plt.show()
+    out = np.empty_like(phase)
+    ext.unwrap(phase, out, num_levels, start0, start1)
+    return out
+
+
+def qualitymap(phase):
+    """
+    Computes the quality map of a two-dimensional wrapped phase.
+
+    The quality map is the sum, over the (up to four) edges a pixel takes part
+    in, of the squared wrapped phase gradient along that edge. Low values mean
+    high quality.
+
+    Parameters
+    ----------
+    phase : array-like
+        Two-dimensional wrapped phase.
+
+    Returns
+    -------
+    ndarray
+        The quality map, with the same shape as `phase`.
+    """
+    ext = _extension()
+
+    phase = np.ascontiguousarray(phase, dtype=np.float64)
+    if phase.ndim != 2:
+        raise ValueError("phase must be a 2D array, got %d dimension(s)"
+                         % phase.ndim)
+
+    qmap = np.zeros_like(phase)
+    ext.qualitymap(phase, qmap)
+    return qmap

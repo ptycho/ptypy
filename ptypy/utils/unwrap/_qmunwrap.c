@@ -9,16 +9,19 @@ Author: Pierre Thibault
 Date: First version sometimes around 2010.
 */
 
-#include "math.h"
-#include "stdlib.h"
-#include "stdio.h"
+#include <math.h>
+#include <stdlib.h>
+#include <limits.h>
 
-static inline double dround(double x) {
-    return (x >= 0.0) ? floor(x + 0.5) : ceil(x - 0.5);
-}
+#include "_qmunwrap.h"
+
+// Pixel states during the flood fill.
+#define FREE 0
+#define QUEUED 1
+#define DONE 2
 
 
-void qualitymap(double* phase, int N0, int N1, double* qmap)
+void qmunwrap_qualitymap(double* phase, int N0, int N1, double* qmap)
 {
     /*
     Basic quality test for the wrapped phase.
@@ -37,31 +40,31 @@ void qualitymap(double* phase, int N0, int N1, double* qmap)
         for(j=0; j<N1-1; j++)
         {
             d0 = phase[(i+1)*N1 + j] - phase[i*N1 + j];
-            d0 = fmod(d0 + pi, 2.*pi) - pi;
+            d0 -= 2.*pi*round(d0/(2.*pi));
             qmap[i*N1 + j] += d0*d0;
             qmap[(i+1)*N1 + j] += d0*d0;
             d1 = phase[i*N1 + (j+1)] - phase[i*N1 + j];
-            d1 = fmod(d1 + pi, 2.*pi) - pi;
+            d1 -= 2.*pi*round(d1/(2.*pi));
             qmap[i*N1 + j] += d1*d1;
             qmap[i*N1 + (j+1)] += d1*d1;
         }
 
-    // Last row
-    for(i==0; i<N0-1; i++)
+    // Last column
+    for(i=0; i<N0-1; i++)
     {
         j = N1-1;
         d0 = phase[(i+1)*N1 + j] - phase[i*N1 + j];
-        d0 = fmod(d0 + pi, 2.*pi) - pi;
+        d0 -= 2.*pi*round(d0/(2.*pi));
         qmap[i*N1 + j] += d0*d0;
         qmap[(i+1)*N1 + j] += d0*d0;
     }
 
-    // Last column
-    for(j==0; j<N1-1; j++)
+    // Last row
+    for(j=0; j<N1-1; j++)
     {
         i = N0-1;
         d1 = phase[i*N1 + (j+1)] - phase[i*N1 + j];
-        d1 = fmod(d1 + pi, 2.*pi) - pi;
+        d1 -= 2.*pi*round(d1/(2.*pi));
         qmap[i*N1 + j] += d1*d1;
         qmap[i*N1 + (j+1)] += d1*d1;
     }
@@ -69,7 +72,7 @@ void qualitymap(double* phase, int N0, int N1, double* qmap)
 }
 
 
-void quantize(double* a, int size, int N, int* aout)
+void qmunwrap_quantize(double* a, int size, int N, int* aout)
 {
     /*
     Quantize the array a into N bins.
@@ -88,16 +91,75 @@ void quantize(double* a, int size, int N, int* aout)
     }
     dbin = (amax - amin)/N;
 
+    // Constant array (or NaNs around): everything goes into the first bin.
+    if(!(dbin > 0.))
+    {
+        for(i=0; i<size; i++)
+            aout[i] = 0;
+        return;
+    }
+
     for(i=0; i<size; i++)
     {
         aout[i] = (int)((a[i] - amin)/dbin);
-        if(aout[i] == N)
+        if(aout[i] < 0)
+            aout[i] = 0;
+        else if(aout[i] >= N)
             aout[i] = N-1;
     }
 }
 
 
-void unwrap(double* phase, int N0, int N1, int num_levels, int start0, int start1, double* aout)
+/*
+Queue of pixels waiting to be unwrapped, with one slice per quality level.
+Each entry is a pair: "to" is the pixel to unwrap, "from" an already unwrapped
+neighbour it is unwrapped against. A pixel is queued at most once and always
+lands in bin qbin[to], so slice b never needs room for more than the number of
+pixels falling in bin b. offsets[] slices a single Nt-sized array accordingly.
+*/
+typedef struct
+{
+    int N1;
+    int Nt;
+    int* qbin;
+    int* mask;
+    int* offsets;
+    int* nbins;
+    int* bins0;
+    int* bins1;
+} queue;
+
+
+static void push(queue* que, int from, int to)
+{
+    int b;
+
+    if (que->mask[to] != FREE)
+        return;
+    b = que->qbin[to];
+    que->bins0[que->offsets[b] + que->nbins[b]] = from;
+    que->bins1[que->offsets[b] + que->nbins[b]] = to;
+    que->nbins[b] += 1;
+    que->mask[to] = QUEUED;
+}
+
+
+static void push_neighbours(queue* que, int p)
+{
+    int col = p % que->N1;
+
+    if (col + 1 < que->N1)
+        push(que, p, p + 1);            // east
+    if (col > 0)
+        push(que, p, p - 1);            // west
+    if (p + que->N1 < que->Nt)
+        push(que, p, p + que->N1);      // south
+    if (p - que->N1 >= 0)
+        push(que, p, p - que->N1);      // north
+}
+
+
+int qmunwrap_unwrap(double* phase, int N0, int N1, int num_levels, int start0, int start1, double* aout)
 {
 
     /*
@@ -109,14 +171,24 @@ void unwrap(double* phase, int N0, int N1, int num_levels, int start0, int start
          - start0, start1: coordinate of the starting point in the unwrapping routine
     Output:
          - aout: unwrapped phase array
-    Because of memory consumption, num_levels should not be too high. Behaviour is not expected to be much different for num_levels > 20 or so.
+    Returns QMUNWRAP_OK, QMUNWRAP_EINVAL or QMUNWRAP_ENOMEM.
+    Behaviour is not expected to be much different for num_levels > 20 or so.
     */
 
-    int ok, k, percent_done, last_percent = -1;
+    int ok, k, i;
     int Nl, Nt;
-    int p,p0,q,pp0,pp1,ibin;
+    int p0,pp0,pp1,ibin;
+    int status = QMUNWRAP_ENOMEM;
     double pi = 3.141592653589793;
     double a_jump;
+    queue que;
+
+    if (N0 < 1 || N1 < 1 || num_levels < 1)
+        return QMUNWRAP_EINVAL;
+    if (N0 > INT_MAX/N1)
+        return QMUNWRAP_EINVAL;
+    if (start0 < 0 || start0 >= N0 || start1 < 0 || start1 >= N1)
+        return QMUNWRAP_EINVAL;
 
     ok = 1;
     Nl = num_levels;
@@ -126,75 +198,59 @@ void unwrap(double* phase, int N0, int N1, int num_levels, int start0, int start
     double* qmap = (double*)calloc(Nt, sizeof(double));
     // Quantized quality map
     int* qbin = (int*)malloc(Nt * sizeof(int));
-    // This mask will keep track of which pixels are unwrapped
+    // This mask keeps track of which pixels are FREE, QUEUED or DONE
     int* mask = (int*)calloc(Nt, sizeof(int));
-    // Number of elements in each bin
+    // Number of elements currently in each bin
     int* nbins = (int*)calloc(Nl, sizeof(int));
-    // Which pixel belongs to which bin
-    int* bins0 = (int*)malloc(Nl * Nt * sizeof(int));
-    int* bins1 = (int*)malloc(Nl * Nt * sizeof(int));
-    // These two arrays are much too large, maybe there is a way to prove that no one quantized bin can contain more than a given number of elements? For now, memory is allocated as if all pixels falling into the same bin is a possibility.
-    
+    // Where each bin's slice of bins0/bins1 starts
+    int* offsets = (int*)calloc(Nl, sizeof(int));
+    // Which pixel pair belongs to which bin
+    int* bins0 = (int*)malloc(Nt * sizeof(int));
+    int* bins1 = (int*)malloc(Nt * sizeof(int));
+
+    if (!qmap || !qbin || !mask || !nbins || !offsets || !bins0 || !bins1)
+        goto done;
 
     // generate quantized quality map
-    qualitymap(phase, N0, N1, qmap);
-    quantize(qmap, Nt, Nl, qbin);
+    qmunwrap_qualitymap(phase, N0, N1, qmap);
+    qmunwrap_quantize(qmap, Nt, Nl, qbin);
+
+    // Bin histogram, turned into the per-level slice offsets
+    for (i = 0; i < Nt; i++)
+        offsets[qbin[i]] += 1;
+    for (i = 0, ibin = 0; ibin < Nl; ibin++)
+    {
+        int count = offsets[ibin];
+        offsets[ibin] = i;
+        i += count;
+    }
 
     // Copy initial phase values
-    for (int i = 0; i < Nt; i++)
+    for (i = 0; i < Nt; i++)
     {
         aout[i] = phase[i];
     }
 
+    que.N1 = N1;
+    que.Nt = Nt;
+    que.qbin = qbin;
+    que.mask = mask;
+    que.offsets = offsets;
+    que.nbins = nbins;
+    que.bins0 = bins0;
+    que.bins1 = bins1;
+
     // seed
     p0 = N1*start0 + start1;
-    mask[p0] = 1;
+    mask[p0] = DONE;
     k = 1;
- 
-    // Take care of the first neighbors.
-    // east
-    p = p0 + 1; 
-    if ((p % N1) != 0)
-    {
-        q = qbin[p];
-        bins0[q*Nt + nbins[q]] = p0;
-        bins1[q*Nt + nbins[q]] = p;
-        nbins[q]+=1;
-    }
-    // west
-    p = p0 - 1;
-    if (((p0 % N1) != 0) && (mask[p] == 0))
-    {
-        q = qbin[p];
-        bins0[q*Nt + nbins[q]] = p0;
-        bins1[q*Nt + nbins[q]] = p;
-        nbins[q]+=1;
-    }
 
-    // south
-    p = p0 + N1;
-    if ((p < Nt) && (mask[p] == 0))
-    {
-        q = qbin[p];
-        bins0[q*Nt + nbins[q]] = p0;
-        bins1[q*Nt + nbins[q]] = p;
-        nbins[q]+=1;
-    }
-    // north
-    p = p0 - N1;
-    if ((p > 0) && (mask[p] == 0))
-    {
-        q = qbin[p];
-        bins0[q*Nt + nbins[q]] = p0;
-        bins1[q*Nt + nbins[q]] = p;
-        nbins[q]+=1;
-    }
+    // Take care of the first neighbors.
+    push_neighbours(&que, p0);
 
     while(k<Nt)
     {
         ok = 1;
-        // printf("Unwrapping pixel %d/%d\r", k, Nt);
-        // fflush(stdout);
         // loop over bins, always starting from the highest quality
         for (ibin = 0; ibin < Nl; ibin++)
         {
@@ -204,80 +260,35 @@ void unwrap(double* phase, int N0, int N1, int num_levels, int start0, int start
                 nbins[ibin]-=1;
 
                 // unwrap from pp0 to pp1
-                pp0 = bins0[ibin*Nt + nbins[ibin]];
-                pp1 = bins1[ibin*Nt + nbins[ibin]];
-
-                if (mask[pp1])
-                {
-                    // This pixel was already unwrapped, let's move on
-                    ok = 0; // set ok to 0 to restart the loop from the highest quality
-                    continue;
-                }
+                pp0 = bins0[offsets[ibin] + nbins[ibin]];
+                pp1 = bins1[offsets[ibin] + nbins[ibin]];
                 a_jump = (aout[pp0]-aout[pp1]);
 
                 // This is where unwrapping happens
-                aout[pp1] += 2.*pi*dround(a_jump/(2*pi));
-                mask[pp1] = 1;
+                aout[pp1] += 2.*pi*round(a_jump/(2*pi));
+                mask[pp1] = DONE;
                 k+=1;
 
                 // add neigbors
-                p0 = pp1;
+                push_neighbours(&que, pp1);
 
-                // east
-                p = p0 + 1;
-                if ((p % N1) != 0 && (mask[p]==0))
-                {
-                    q = qbin[p];
-                    bins0[q*Nt + nbins[q]] = p0;
-                    bins1[q*Nt + nbins[q]] = p;
-                    nbins[q]+=1;
-                }
-                // west
-                p = p0 - 1;
-                if ((p0 % N1) != 0 && (mask[p]==0))
-                {
-                    q = qbin[p];
-                    bins0[q*Nt + nbins[q]] = p0;
-                    bins1[q*Nt + nbins[q]] = p;
-                    nbins[q]+=1;
-                }
-                // south
-                p = p0 + N1;
-                if (p < Nt && (mask[p]==0))
-                {
-                    q = qbin[p];
-                    bins0[q*Nt + nbins[q]] = p0;
-                    bins1[q*Nt + nbins[q]] = p;
-                    nbins[q]+=1;
-                }
-                // north
-                p = p0 - N1;
-                if (p > 0 && (mask[p]==0))
-                {
-                    q = qbin[p];
-                    bins0[q*Nt + nbins[q]] = p0;
-                    bins1[q*Nt + nbins[q]] = p;
-                    nbins[q]+=1;
-                }
                 // start over
                 ok = 0;
             }
         }
-        /*
-        percent_done = (k * 100) / Nt;
-        if (percent_done != last_percent) {
-            printf("%d%% completed\n", percent_done);
-            last_percent = percent_done;
-        }
-        */
         if (ok) {
             break;
         }
     }
+    status = QMUNWRAP_OK;
+
+done:
     free(qmap);
     free(qbin);
     free(mask);
+    free(offsets);
     free(bins0);
     free(bins1);
     free(nbins);
+    return status;
 }
