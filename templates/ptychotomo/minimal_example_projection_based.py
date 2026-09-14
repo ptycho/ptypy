@@ -153,6 +153,11 @@ p.engines.engine.numiter_contiguous = 10
 p.engines.engine.probe_support = None
 p.engines.engine.probe_fourier_support = None
 
+# Save the volume every 50 iterations, and once more when the engine is done.
+# The path is relative to p.io.home, and .npy volumes are written with numpy.
+p.engines.engine.save_vol = "vols/%(run)s_%(iteration)04d.npy"
+p.engines.engine.save_vol_interval = 50
+
 u.verbose.set_level("info")
 
 if __name__ == "__main__":

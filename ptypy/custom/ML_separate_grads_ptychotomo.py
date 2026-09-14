@@ -12,9 +12,9 @@ This file is part of the PTYPY package.
     :license: see LICENSE for details.
 """
 import numpy as np
+import os
 import time
-import h5py
-import subprocess
+from .. import io
 from .. import utils as u
 from ..utils.verbose import logger
 from ..utils import parallel
@@ -179,6 +179,25 @@ class MLPtychoTomo(PositionCorrectionEngine):
     lowlim = 0.0
     help = StdDev for initial volume blur
     doc = Standard deviation for the initial volume Gaussian blur.
+
+    [save_vol]
+    default = None
+    type = str
+    help = Where to save the reconstructed volume
+    doc = If None, the volume is never saved. Otherwise a path, taken
+          relative to ``io.home`` unless it is absolute, which may contain
+          the ``%(run)s``, ``%(engine)s`` and ``%(iteration)04d``
+          placeholders, e.g. ``vols/%(run)s_%(iteration)04d.npy``. The file
+          format follows the extension: ``.npy`` is written with numpy,
+          anything else as hdf5 with the volume in the ``data`` entry.
+
+    [save_vol_interval]
+    default = 0
+    type = int
+    lowlim = 0
+    help = Number of iterations between two saved volumes
+    doc = If ``<=0``, the volume is only saved once the engine has finished.
+          Has no effect unless ``save_vol`` is set.
 
     [floating_intensities]
     default = False
@@ -398,6 +417,42 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 ind_active_views.append(ind)
         return ind_active_views
 
+    def _volume_path(self):
+        """
+        The path the volume is saved to at the current iteration, i.e. the
+        `save_vol` template with its placeholders filled in and made
+        absolute, relative to `io.home` if it was not already.
+        """
+        path = os.path.expanduser(self.p.save_vol)
+        if not os.path.isabs(path):
+            path = os.path.join(self.ptycho.paths.home, path)
+
+        return os.path.abspath(path % {
+            'run': self.ptycho.runtime.run,
+            'engine': self.p.name,
+            'iteration': self.curiter,
+        })
+
+    def _save_volume(self):
+        """
+        Write the current volume to `save_vol`, creating the directory it
+        lives in if needed. Only the master node writes.
+        """
+        if not parallel.master:
+            return
+
+        path = self._volume_path()
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+
+        logger.info('Saving volume to %s' % path)
+        data = self.rho.storages['S_rho'].data
+        if path.endswith('.npy'):
+            np.save(path, data)
+        else:
+            io.h5write(path, data=data)
+
     def engine_iterate(self, num=1):
         """
         Compute `num` iterations.
@@ -533,26 +588,16 @@ class MLPtychoTomo(PositionCorrectionEngine):
             self.rho += self.rho_h
             self.pr += self.pr_h
 
-            # FIXME: move saving volumes to run script
-            if parallel.master and (self.curiter+1) % 1000 == 0: # curiter starts at zero
-            # Get SLURM Job ID
-                sid = subprocess.check_output("squeue -u $USER | tail -1| awk '{print $1}'", encoding="ascii", shell=True).strip()
-            # Saving volumes every 100 iterations when running simulated problem (saves to npy)
-                np.save('vol_it'+str(self.curiter+1)+'_'+sid, self.rho.storages['S_rho'].data)
-            # Saving probe when running simulated problem
-            #    np.save('probe_200iters_'+sid, self.pr.storages['Sscan_00G00'].data)
-            # Saving volumes when running real data (saves to cmap)
-            #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_recon_vol_ampl_HARDC_it200_"+sid+".cmap", "w") as f:
-            #        f["data"] = np.imag(self.rho)[100:-100,100:-100,100:-100]
-            #    with h5py.File("/dls/science/users/iat69393/ptycho-tomo-project/SMALLER_NEG_recon_vol_phase_HARDC_it200_"+sid+".cmap", "w") as f:
-            #        f["data"] = -np.real(self.rho)[100:-100,100:-100,100:-100]
-            # FIXME: end move saving volumes to run script
-
             # Position correction
             self.position_update()
 
             # increase iteration counter
             self.curiter +=1
+
+            # Save an intermediate volume if one is due
+            if (self.p.save_vol and self.p.save_vol_interval > 0
+                    and self.curiter % self.p.save_vol_interval == 0):
+                self._save_volume()
 
         logger.info('Time spent in gradient calculation: %.2f' % tg)
         logger.info('  ....  in coefficient calculation: %.2f' % tc)
@@ -560,8 +605,11 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
     def engine_finalize(self):
         """
-        Delete temporary containers.
+        Save the final volume and delete temporary containers.
         """
+        if self.p.save_vol:
+            self._save_volume()
+
         del self.rho_grad
         del self.rho_grad_new
         del self.rho_h
