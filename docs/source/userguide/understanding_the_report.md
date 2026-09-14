@@ -66,3 +66,65 @@ The report in ptypy contains the binary image, the horizontal and veritcal size 
 - ToDO: add some figures
 
 ### average step size
+
+Another important metric to report is the (average) step size.
+It defines how densily a certain field of view is covered in scan positions.
+It should always be smaller than the probe size, as a too large step size will hinder or even prevent the convergance of the ptychographic reconstruction.
+Step size and probe size togehter allow for calculating the overlap (see further on in the list of metrics).
+
+While the step size is often already defined in the scan command used to record ptychographic data, ptypy explicitly calculates the average step size from the positions used in, and potentially even refined during, the ptychographic reconstruction.
+
+#### via the three nearest neighbors (from_NN)
+
+To estimate the step size, ptypy finds the three nearest neighbors of each scan point. 
+Averaging the all the distances to the three nearest neighbors of each scan point results in a single distance that is reported in meters. 
+
+In case of different probe size in for example horizontal and vertical direction, it is often advisable to use different step sizes in the horizontal and veritcal direction as well, to keep the relative overlap similar n both directons.
+The way pytpty calculates the average step size, does not account for such cases or very inhomegenious sampling patterns like for example often utilized in nearfield ptychography.
+
+- ToDO: add some figures
+- ToDO: add references for nearfield
+
+
+### overlap
+The overlap is a measurment of the redundacy in the ptychographic data.
+It explains how much the illuminated sample areas of adjacent scan positions overlap, or in other words how much of the previously illuminated sample area is re-illuminated at a neighboring scan point.
+The higher the overlap, the more redundancy there is in the ptychographic data and the more likely a successful reconstruction can be obtained.
+But high overlap and high redundancy comes at the price of slow scanning speed, as the same areas of the object are illuminated many times from nearby scanning positions.
+
+As usual there is not a single way of reporting the overlap.
+Ptypy calculates the linear overlap area overlap.
+
+- ToDO: add references 
+
+#### liner overlap
+The linear overlap is calculated as:
+
+```{math}
+:label: My label
+
+\mbox{overlap}_{\tiny\mbox{linear}} = 1 - \frac{\mbox{step size}}{\mbox{probe size}}
+```
+
+The previously reported average step size is used as step size in this calculation.
+As probe size, both the estimates via FWHM as well as the 90 percent of intensity criterion results are being used.
+This results in two seperate estimates for the linear overlap.
+
+#### area overlap overlap
+
+- ToDo: Check what exactly is calculated there
+
+
+
+
+
+
+
+
+### speckle oversampling
+
+### size of the imaged field of view
+
+### number of photons detected
+
+### pixel wise maps
