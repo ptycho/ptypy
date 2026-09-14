@@ -189,7 +189,6 @@ class ScanModel(object):
         # By default we create a new exit buffer for each view
         self._single_exit_buffer_for_all_views = False
 
-
     @classmethod
     def makePtyScan(cls, pars):
         """
