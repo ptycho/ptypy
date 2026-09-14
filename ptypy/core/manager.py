@@ -745,7 +745,7 @@ class _Vanilla(object):
                                   'layer': 0,
                                   'active': True})
             else:
-                pv = pv.copy(update=False, rec_copy=False)
+                pv = pv.copy(update=False)
                 pv.coord = 0.0
 
             # if True:
@@ -758,7 +758,7 @@ class _Vanilla(object):
                                   'layer': 0,
                                   'active': True})
             else:
-                ov = ov.copy(update=False, rec_copy=False)
+                ov = ov.copy(update=False)
                 ov.coord = self.new_positions[i]
 
             # if True:
@@ -771,7 +771,7 @@ class _Vanilla(object):
                                   'layer': dv.layer,
                                   'active': dv.active})
             else: 
-                ev = ev.copy(update=False, rec_copy=False)
+                ev = ev.copy(update=False)
                 ev.storageID = dv.storageID
                 ev.layer = dv.layer
                 ev.active = dv.active
