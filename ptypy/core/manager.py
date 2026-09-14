@@ -1105,6 +1105,11 @@ class _Full(object):
                         pod.probe_weight = 1.0
                         pod.object_weight = 1.0
 
+            # The views just made are reused for the next diffraction
+            # pattern, unless that one belongs to another diffraction
+            # storage, in which case they are made again from scratch
+            last_diff_storage_ID = dv.storageID
+
         return new_pods, new_probe_ids, new_object_ids
 
     def _initialize_geo(self, common):

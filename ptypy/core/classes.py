@@ -1300,6 +1300,7 @@ class View(Base):
         nView._ndim = self._ndim
         nView.storage = self.storage
         nView.storageID = self.storageID
+        nView.extra = self.extra
         if update:
             nView.storage.update_views(nView)
         return nView
