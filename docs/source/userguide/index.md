@@ -5,6 +5,7 @@
 todo: short description
 
 ```{toctree}
+:caption: Working with real data
 ---
 maxdepth: 1
 ---
@@ -15,6 +16,7 @@ setting_probe_init.md
 todo: short description
 
 ```{toctree}
+:caption: Advanced topics
 ---
 maxdepth: 1
 ---
