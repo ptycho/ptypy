@@ -3,10 +3,9 @@ This script is a test for ptycho-tomographic reconstructions.
 """
 from ptypy.core import Ptycho
 from ptypy import utils as u
-import ptypy.simulations as sim
 import ptypy.utils.tomo as tu
+# Imported for its side effect, which is registering the MLPtychoTomo engine
 from ptypy.custom import ML_separate_grads_ptychotomo
-import random
 
 import astra
 import numpy as np
