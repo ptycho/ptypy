@@ -138,7 +138,7 @@ class SimScan(PtyScan):
         pp.scans.sim.name = 'Full'
         pp.scans.sim.propagation = self.info.propagation
         pp.scans.sim.data=u.Param()
-        pp.scans.sim.data.positions_theory = xy.from_pars(self.info.xy)
+        pp.scans.sim.data.positions_theory = self._positions_theory()
         pp.scans.sim.data.name = 'PtyScan'
         pp.scans.sim.data.shape = self.info.shape
         pp.scans.sim.data.psize = self.info.psize
@@ -148,6 +148,8 @@ class SimScan(PtyScan):
         pp.scans.sim.illumination = self.info.illumination
 
         pp.scans.sim.data.auto_center = False
+
+        self._customize_sim_scan(pp.scans.sim)
 
         # Now we let Ptycho sort out things
         logger.info('Generating simulating Ptycho instance for scan `%s`.' % str(self.info.get('label')))
@@ -167,6 +169,8 @@ class SimScan(PtyScan):
         # Make sure all diff storages are empty
         for name, storage in P.diff.S.items():
             storage.data.fill(0.)
+
+        self._prepare_exit_waves(P)
 
         # Simulate diffraction signal
         logger.info('Propagating exit waves.')
@@ -231,6 +235,32 @@ class SimScan(PtyScan):
         u.parallel.loadmanager.reset()
 
 
+    def _positions_theory(self):
+        """
+        The theoretical scan positions handed to the simulating Ptycho
+        instance. Overwrite in a child class to scan the same pattern
+        several times, e.g. once per tomographic angle.
+        """
+        return xy.from_pars(self.info.xy)
+
+    def _customize_sim_scan(self, scan_pars):
+        """
+        Overwrite in a child class to add parameters to the scan of the
+        simulating Ptycho instance, before that instance is created.
+
+        Receives:
+            scan_pars   Param - the scan parameters, i.e. pp.scans.sim
+        """
+        pass
+
+    def _prepare_exit_waves(self, ptycho):
+        """
+        Overwrite in a child class to set the exit waves of the simulating
+        Ptycho instance. Called once the diffraction storages have been
+        emptied and before the exit waves are propagated.
+        """
+        pass
+
     def load(self,indices):
         """
         Load data, weights and positions from internal dictionarys
@@ -258,10 +288,15 @@ defaults_tree['scandata.SimScan3D'].add_child(illumination_desc, copy=True)
 defaults_tree['scandata.SimScan3D'].add_child(sample_desc, copy=True)
 defaults_tree['scandata.SimScan3D'].add_child(xy.xy_desc, copy=True)
 @defaults_tree.parse_doc('scandata.SimScan3D')
-class SimScan3D(PtyScan):
+class SimScan3D(SimScan):
 
     """
-    Simulates a ptychographic scan and acts as Virtual data source.
+    Simulates a tomographic ptychographic scan and acts as Virtual data
+    source.
+
+    Identical to :any:`SimScan`, except that the scan pattern is repeated at
+    every tomographic angle and that the object is replaced, angle by angle,
+    by the corresponding projection of the volume.
 
     Defaults:
 
@@ -270,254 +305,67 @@ class SimScan3D(PtyScan):
     type = str
     help =
 
-    [pos_noise]
-    default =  1e-10
-    type = float
-    help = Uniformly distributed noise in xy experimental positions
-
-    [pos_scale]
-    default = 0.
-    type = float, list
-    help = Amplifier for noise.
-    doc = Will be extended to match number of positions. Maybe used to only put nois on individual points
-
-    [pos_drift]
-    default = 0.
-    type = float, list
-    help = Drift or offset paramter
-    doc = Noise independent drift. Will be extended like pos_scale.
-
-    [detector]
-    default = 'PILATUS_300K'
-    type = str, Param
-    help =
-
-    [frame_size]
-    default =
-    type = float, tuple
-    help = Final frame size when saving
-    doc = If None, no cropping/padding happens.
-
-    [psf]
-    default =
-    type = float, tuple, array
-    help = Parameters for gaussian convolution or convolution kernel after propagation
-    doc = Use it for simulating partial coherence.
-
-    [verbose_level]
-    default = 1
-    type = int
-    help = Verbose level when simulating
-
-    [plot]
-    default = True
-    type = bool
-    help =
-
-    [propagation]
-    default = farfield
-    type = str
-    help = farfield or nearfield
-
     [projections]
-    default = 
+    default =
     type = list
-    help =
+    help = Complex projections of the volume, one per tomographic angle
 
     [positions]
     default = None
     type = list
     help = List of position arrays per angle
+    doc = If None, the pattern described by the xy parameters is repeated at
+          every angle.
 
     [tomo_angles]
-    default = 
+    default =
     type = int
     help = Number of tomographic angles
 
     [n_frames_per_angle]
-    default = 
+    default =
     type = int
     help = Number of frames per angle
     """
 
-    def __init__(self, pars=None, **kwargs):
+    def _positions_theory(self):
         """
-        Parameters
-        ----------
-        pars : Param
-            PtyScan parameters. See :py:data:`scandata.SimScan3D`.
-
+        The scan pattern, repeated at every tomographic angle unless a list
+        of per-angle positions was given.
         """
-
-        p = self.DEFAULT.copy(99)
-        p.update(pars)
-
-        # Initialize parent class
-        super(SimScan3D, self).__init__(p, **kwargs)
-
-        # we will use ptypy to figure out everything
-        pp = u.Param()
-
-        # we don't want a server
-        pp.io = u.Param()
-        pp.io.interaction = None
-
-        # be as silent as possible
-        self.verbose_level = u.verbose.get_level()
-        pp.verbose_level = p.verbose_level
-
-        # Create a Scan that will deliver empty diffraction patterns
-        # FIXME: This may be obsolete if the dry_run switch works.
-
-        pp.scans=u.Param()
-        pp.scans.sim = u.Param()
-        pp.scans.sim.name = 'Full'
-        pp.scans.sim.propagation = self.info.propagation
-        pp.scans.sim.data=u.Param()
-
-        ######## NEW PARAMS ############################
-        pp.scans.sim.tomo_angles = self.info.tomo_angles
-        pp.scans.sim.projections = self.info.projections
-        pp.scans.sim.n_frames_per_angle = self.info.n_frames_per_angle
-        pp.scans.sim.extra = self.info.extra
-        ################################################
-
         if self.info.positions is None:
-            pos_to_repeat = xy.from_pars(self.info.xy)
-            pp.scans.sim.data.positions_theory = np.tile(pos_to_repeat, (pp.scans.sim.tomo_angles,1))
-        else:
-            pp.scans.sim.data.positions_theory = np.vstack(self.info.positions)
+            return np.tile(xy.from_pars(self.info.xy),
+                           (self.info.tomo_angles, 1))
 
-        pp.scans.sim.data.name = 'PtyScan'
-        pp.scans.sim.data.shape = self.info.shape
-        pp.scans.sim.data.psize = self.info.psize
-        pp.scans.sim.data.energy = self.info.energy
-        pp.scans.sim.data.distance = self.info.distance
-        pp.scans.sim.sample = self.info.sample
-        pp.scans.sim.illumination = self.info.illumination
-        pp.scans.sim.data.auto_center = False
+        return np.vstack(self.info.positions)
 
-        # Now we let Ptycho sort out things
-        logger.info('Generating simulating Ptycho instance for scan `%s`.' % str(self.info.get('label')))
-        P=Ptycho(pp,level=2)
-        P.model.new_data()
-        u.parallel.barrier()
+    def _customize_sim_scan(self, scan_pars):
+        scan_pars.tomo_angles = self.info.tomo_angles
+        scan_pars.projections = self.info.projections
+        scan_pars.n_frames_per_angle = self.info.n_frames_per_angle
+        scan_pars.extra = self.info.extra
 
-        # Be now as verbose as before
-        u.verbose.set_level(self.verbose_level )
+    def _prepare_exit_waves(self, ptycho):
+        """
+        Replace the object by the projection of the volume at the angle of
+        each pod, and recompute the exit wave from it.
+        """
+        # TODO: re-check this code, changed quite a bit through refactoring
+        # The angle cannot be taken from pod.ob_view.extra, which is still
+        # empty at this point, so it is looked up by frame index instead
+        angles = np.asarray(self.info.extra['vals'])
+        layer_of_angle = {a: i for i, a in enumerate(np.unique(angles))}
 
-        #############################################################
-        # Place here additional manipulation on position and sample #
-        logger.info('Calling inline manipulation function.')
-        P = self.manipulate_ptycho(P)
-        #############################################################
+        # Does not currently work with multiple object storages
+        storage = ptycho.obj.S[next(iter(ptycho.obj.S))]
 
-        # Make sure all diff storages are empty
-        for name, storage in P.diff.S.items():
-            storage.data.fill(0.)
-
-        #### New : overwrite P.obj.S['SsimG00'] ######################
-        # pod.ob_view.extra is {'val': None, 'ind': None} here, so can't use that
-        all_unique_angles = set(self.info.extra['vals'])
-        angles_ordered_list = sorted(all_unique_angles)
-
-        for key, pod in P.pods.items():
+        for name, pod in ptycho.pods.items():
             if not pod.active: continue
 
-            current_index = int(key[1:])
-            angle = self.info.extra['vals'][current_index]     
+            angle = angles[pod.di_view.layer]
+            storage.data = self.info.projections[layer_of_angle[angle]]
+            pod.exit = pod.probe * pod.object
 
-            angle_ind = angles_ordered_list.index(angle)
-            
-            # this if condition only works when NOT using mpi
-            # if not (current_index % pp.scans.sim.n_frames_per_angle):
-            storage_key = next(iter(P.obj.S))
-            P.obj.S[storage_key].data = pp.scans.sim.projections[angle_ind]
-            pod.exit = pod.probe * pod.object 
-        #############################################################
-
-        # Simulate diffraction signal
-        logger.info('Propagating exit waves.')
-        for name, pod in P.pods.items():
-            if not pod.active: continue
-            pod.diff += conv(u.abs2(pod.fw(pod.exit)), self.info.psf)
-
-        # Simulate detector reponse
-        if self.info.detector is not None:
-            Det = Detector(self.info.detector)
-            save_dtype = Det.dtype
-            acquire = Det.filter
-        else:
-            save_dtype = None
-            acquire = lambda x: (x, np.ones(x.shape).astype(bool))
-
-        # create dictionaries for 'raw' data
-        self.diff = {}
-        self.mask = {}
-        self.pos = {}
-
-
-        ID,Sdiff = list(P.diff.S.items())[0]
-        logger.info('Collecting simulated `raw` data.')
-        for view in Sdiff.views:
-            ind = view.layer
-            dat, mask = acquire(view.data)
-            view.data = dat
-            #view.mask = mask
-            pos = np.array(view.pod.ob_view.coord)
-            dat = dat.astype(save_dtype) if save_dtype is not None else dat
-            self.diff[ind] = dat
-            self.mask[ind] = mask
-            self.pos[ind] = pos
-
-        # plot overview
-        if self.info.plot and u.parallel.master:
-            logger.info('Plotting simulation overview')
-            P.plot_overview(200)
-            u.pause(5.)
-        u.parallel.barrier()
-
-        #self.P=P
-        # Fix the number of available frames
-        num = np.array([len(self.diff)])
-        u.parallel.allreduce(num)
-        self.num_frames = np.min((num[0],self.num_frames)) if self.num_frames is not None else num[0]
-        logger.info('Setting frame count to %d.' %self.num_frames)
-        # Create 'raw' ressource buffers. We will let the master node keep them
-        # as memary may be short (Not that this is the most efficient type)
-        logger.debug('Gathering data at master node.')
-        self.diff = u.parallel.gather_dict(self.diff)
-        self.mask = u.parallel.gather_dict(self.mask)
-        self.pos = u.parallel.gather_dict(self.pos)
-
-        # we have to avoid loading in parallel now
-        self.load_in_parallel = False
-
-
-        # RESET THE loadmanager
-        logger.debug('Resetting loadmanager().')
-        u.parallel.loadmanager.reset()
-
-
-    def load(self,indices):
-        """
-        Load data, weights and positions from internal dictionarys
-        """
-        raw = {}
-        pos = {}
-        weight = {}
-        for ind in indices:
-            raw[ind] = self.diff[ind]
-            pos[ind] = self.pos[ind]
-            weight[ind] = self.mask[ind]
-        return raw, pos, weight
-
-    def manipulate_ptycho(self, ptycho):
-        """
-        Overwrite in child class for inline manipulation
-        of the ptycho instance that is created by the Simulation
-        """
-        return ptycho
 
 # if __name__ == "__main__":
 #     from ptypy import resources
