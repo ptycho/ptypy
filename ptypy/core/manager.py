@@ -1852,9 +1852,9 @@ class ModelManager(object):
 
                 # Reformatting
                 ilog_message('%s: loading data for scan %s (reformatting probe/obj/exit)'  %(type(scan).__name__,label))
-                self.ptycho.probe.reformat(False)
-                self.ptycho.obj.reformat(False)
-                self.ptycho.exit.reformat(False)
+                self.ptycho.probe.reformat(True)
+                self.ptycho.obj.reformat(True)
+                self.ptycho.exit.reformat(True)
 
                 # Initialize probe/object/exit
                 ilog_message('%s: loading data for scan %s (initializing probe/obj/exit)'  %(type(scan).__name__,label))
