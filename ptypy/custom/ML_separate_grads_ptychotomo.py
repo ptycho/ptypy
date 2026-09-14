@@ -168,7 +168,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
     default = None
     type = tuple
     help = Shape of volume
-    doc = Size for the initial volume, if starting from a zero volume.
+    doc = Size for the initial volume, if starting from a zero volume. If
+          None, a cube with the side of the object views is used. Ignored
+          unless ``init_vol_zero`` is True, the shape being taken from the
+          loaded volume otherwise.
 
     [init_vol_real]
     default = None
@@ -319,7 +322,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         self.omega = None
 
-        # Get volume size
+        # Side of the object views, used as the volume size when none is given
         self.view_shape = list(self.ptycho.obj.S.values())[0].data.shape[-1]
 
         # FIXME: update with paper
@@ -340,28 +343,24 @@ class MLPtychoTomo(PositionCorrectionEngine):
         """
         super(MLPtychoTomo, self).engine_initialize()
 
-        # Initialise volume gradient and minimization direction
-        self.rho_grad = Container()
-        self.rho_grad_new = Container()
-        self.rho_h = Container()
-
-        self.rho_grad.new_storage(ID=VOL_STORAGE_ID, shape=(3*(self.view_shape,)))
-        self.rho_grad_new.new_storage(ID=VOL_STORAGE_ID, shape=(3*(self.view_shape,)))
-        self.rho_h.new_storage(ID=VOL_STORAGE_ID, shape=(3*(self.view_shape,)))
-
-        # Needed in poly_line_coeffs_rho
-        self.omega = self.ex
-        self.projected_rho = self.ex.copy(self.ex.ID + '_proj_rho', fill=0.)
-
-        if self.p.init_vol_zero and self.p.vol_size:
-            rho_real = np.zeros(self.p.vol_size, dtype=np.complex64)
-            rho_imag = np.zeros(self.p.vol_size, dtype=np.complex64)
-        elif self.p.init_vol_zero: # starting from zero volume
-            rho_real = np.zeros(3*(self.view_shape,), dtype=np.complex64)
-            rho_imag = np.zeros(3*(self.view_shape,), dtype=np.complex64)
-        else: # starting from given volume
+        # Shape of the volume, shared by the volume itself, its gradient and
+        # its minimization direction
+        if self.p.init_vol_zero: # starting from zero volume
+            if self.p.vol_size:
+                vol_shape = tuple(self.p.vol_size)
+            else:
+                vol_shape = 3*(self.view_shape,)
+            rho_real = np.zeros(vol_shape, dtype=np.complex64)
+            rho_imag = np.zeros(vol_shape, dtype=np.complex64)
+        else: # starting from given volume, which sets the shape
             rho_real = np.load(self.p.init_vol_real)
             rho_imag = np.load(self.p.init_vol_imag)
+            if rho_real.shape != rho_imag.shape:
+                raise ValueError(
+                    'The real and imaginary parts of the initial volume have '
+                    'different shapes, %s and %s.'
+                    % (rho_real.shape, rho_imag.shape))
+            vol_shape = rho_real.shape
 
         if self.p.init_vol_blur: # gaussian blur initial volume
             rho_real = gaussian_filter(rho_real, sigma=self.p.init_vol_blur_sigma)
@@ -369,8 +368,21 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         # Initialise volume rho as container
         self.rho = Container()
-        self.rho.new_storage(ID=VOL_STORAGE_ID, shape=(3*(self.view_shape,)))
+        self.rho.new_storage(ID=VOL_STORAGE_ID, shape=vol_shape)
         self.rho.fill(rho_real + 1j * rho_imag)
+
+        # Initialise volume gradient and minimization direction
+        self.rho_grad = Container()
+        self.rho_grad_new = Container()
+        self.rho_h = Container()
+
+        self.rho_grad.new_storage(ID=VOL_STORAGE_ID, shape=vol_shape)
+        self.rho_grad_new.new_storage(ID=VOL_STORAGE_ID, shape=vol_shape)
+        self.rho_h.new_storage(ID=VOL_STORAGE_ID, shape=vol_shape)
+
+        # Needed in poly_line_coeffs_rho
+        self.omega = self.ex
+        self.projected_rho = self.ex.copy(self.ex.ID + '_proj_rho', fill=0.)
 
         # Initialise probe gradient and minimization direction
         self.pr_grad = self.pr.copy(self.pr.ID + '_grad', fill=0.)
