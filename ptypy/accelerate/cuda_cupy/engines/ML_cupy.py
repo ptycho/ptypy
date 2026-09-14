@@ -167,7 +167,7 @@ class ML_cupy(ML_serial):
         mempool = cp.get_default_memory_pool()
         mem = cp.cuda.runtime.memGetInfo()[0] + mempool.total_bytes() - mempool.used_bytes()
         tot = cp.cuda.runtime.memGetInfo()[1]
-        safety_margin = device_memory_fractional_safety_margin * tot
+        safety_margin = max(device_memory_fractional_safety_margin * tot, 400 * 1024 * 1024)
 
         # leave room for safety
         fit = int(mem - safety_margin) // blk
