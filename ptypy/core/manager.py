@@ -1082,6 +1082,7 @@ class _Full(object):
                         else:
                             pv[ii] = pv[ii].copy(update=False)
                             pv[ii].layer = probe_index
+                            pv[ii].extra = extra_dict
 
                         if ov[ii] is None:
                             ov[ii] = View(container=self.ptycho.obj,
@@ -1096,6 +1097,7 @@ class _Full(object):
                             ov[ii] = ov[ii].copy(update=False)
                             ov[ii].layer = object_index
                             ov[ii].coord = pos_obj
+                            ov[ii].extra = extra_dict
 
                         if ev[ii] is None:
                             ev[ii] = View(container=self.ptycho.exit,
@@ -1110,6 +1112,8 @@ class _Full(object):
                         else:
                             ev[ii] = ev[ii].copy(update=False)
                             ev[ii].layer = exit_index
+                            ev[ii].active = dv.active
+                            ev[ii].extra = extra_dict
 
 
                         views = {'probe': pv[ii],
@@ -1127,6 +1131,11 @@ class _Full(object):
                         mode_index +=1
                         pod.probe_weight = 1.0
                         pod.object_weight = 1.0
+
+            # The views just made are reused for the next diffraction
+            # pattern, unless that one belongs to another diffraction
+            # storage, in which case they are made again from scratch
+            last_diff_storage_ID = dv.storageID
 
         return new_pods, new_probe_ids, new_object_ids
 
