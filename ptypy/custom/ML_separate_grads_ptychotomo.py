@@ -830,19 +830,55 @@ class GaussianModel(BaseModel):
         Compute the coefficients of the polynomial for line minimization
         in direction h for the volume
         """
+        return self._poly_line_coeffs_rho(rho_h, order=2)
 
-        B = np.zeros((3,), dtype=np.longdouble)
+    def poly_line_all_coeffs_rho(self, rho_h):
+        """
+        Compute all the coefficients of the polynomial for line minimization
+        in direction h for the volume
+        """
+        return self._poly_line_coeffs_rho(rho_h, order=4)
+
+    def poly_line_coeffs_pr(self, pr_h):
+        """
+        Compute the coefficients of the polynomial for line minimization
+        in direction h for the probe
+        """
+        return self._poly_line_coeffs_pr(pr_h, order=2)
+
+    def poly_line_all_coeffs_pr(self, pr_h):
+        """
+        Compute all the coefficients of the polynomial for line minimization
+        in direction h for the probe
+        """
+        return self._poly_line_coeffs_pr(pr_h, order=4)
+
+    def _poly_line_coeffs_rho(self, rho_h, order):
+        """
+        Compute the coefficients of the polynomial of the given order for
+        line minimization in direction rho_h for the volume.
+
+        Receives:
+            rho_h   container - the volume minimization direction
+            order   int - 2 for the quadratic approximation, 4 for all
+                    coefficients
+        """
+
+        B = np.zeros((order + 1,), dtype=np.longdouble)
         Brenorm = 1. / self.LL[0]**2
+        ind = self.get_indexes_of_active_views()
 
         # Forward project volume minimization direction
         self.tomo_wrapper.forward(
             vol=rho_h.storages['S_rho'].data,
-            ind=self.get_indexes_of_active_views() ,
+            ind=ind,
             output=self.omega
         )
+        # Forward project the volume itself, as new_grad has since
+        # overwritten projected_rho with the gradient product
         self.tomo_wrapper.forward(
             vol=self.rho.storages['S_rho'].data,
-            ind=self.get_indexes_of_active_views(),
+            ind=ind,
             output=self.projected_rho
         )
         # Multiply omega by the required 1j
@@ -882,128 +918,34 @@ class GaussianModel(BaseModel):
                     A1 += 2 * np.real(f * a.conj())
                     A2 += (np.real(f * b.conj()) + u.abs2(a))
 
-            if self.p.floating_intensities:
-                A0 *= self.float_intens_coeff[dname]
-                A1 *= self.float_intens_coeff[dname]
-                A2 *= self.float_intens_coeff[dname]
-
-            A0 = np.double(A0) - pod.upsample(I)
-            #A0 -= pod.upsample(I)
-            w = pod.upsample(w)
-
-            B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
-            B[1] += np.dot(w.flat, (2*A0*A1).flat) * Brenorm
-            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
+            self._accumulate_B(B, A0, A1, A2, w, I, pod, dname, Brenorm)
 
         parallel.allreduce(B)
 
-        # Volume regularizer
+        # Volume regularizer, which only contributes up to the quadratic term
         if self.regularizer:
             for name, s in self.rho.storages.items():
-                B += Brenorm * self.regularizer.poly_line_coeffs(
+                B[:3] += Brenorm * self.regularizer.poly_line_coeffs(
                     rho_h.storages[name].data, s.data)
 
-        if np.isinf(B).any() or np.isnan(B).any():
-            logger.warning(
-                'Warning! inf or nan found! Trying to continue...')
-            B[np.isinf(B)] = 0.
-            B[np.isnan(B)] = 0.
+        self._zero_non_finite_B(B)
 
         self.B = B
 
         return B
 
-    def poly_line_all_coeffs_rho(self, rho_h):
+    def _poly_line_coeffs_pr(self, pr_h, order):
         """
-        Compute the coefficients of the polynomial for line minimization
-        in direction h for the volume
-        """
+        Compute the coefficients of the polynomial of the given order for
+        line minimization in direction pr_h for the probe.
 
-        B = np.zeros((5,), dtype=np.longdouble)
-        Brenorm = 1. / self.LL[0]**2
-
-        # Forward project volume minimization direction
-        self.tomo_wrapper.forward(
-            vol=rho_h.storages['S_rho'].data,
-            ind=self.get_indexes_of_active_views(), 
-            output=self.omega
-        )
-        # Multiply omega by the required 1j
-        self.omega.__imul__(1j)
-
-        # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.items():
-            if not diff_view.active:
-                continue
-
-            # Weights and intensities for this view
-            w = self.weights[diff_view]
-            I = diff_view.data
-
-            A0 = None
-            A1 = None
-            A2 = None
-
-            for name, pod in diff_view.pods.items():
-                if not pod.active:
-                    continue
-
-                psi = pod.probe * np.exp(1j * self.projected_rho[pod.ex_view])   # exit_wave
-                f = pod.fw(psi)
-
-                omega_i = self.omega[pod.ex_view]
-                a = pod.fw(psi*omega_i)
-                b = pod.fw(psi*(omega_i**2))
-
-                if A0 is None:
-                    A0 = u.abs2(f).astype(np.longdouble)
-                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
-                    A2 = np.real(f * b.conj()).astype(np.longdouble) + u.abs2(a).astype(np.longdouble)
-                else:
-                    A0 += u.abs2(f)
-                    A1 += 2 * np.real(f * a.conj())
-                    A2 += (np.real(f * b.conj()) + u.abs2(a))
-
-            if self.p.floating_intensities:
-                A0 *= self.float_intens_coeff[dname]
-                A1 *= self.float_intens_coeff[dname]
-                A2 *= self.float_intens_coeff[dname]
-
-            A0 = np.double(A0) - pod.upsample(I)
-            #A0 -= pod.upsample(I)
-            w = pod.upsample(w)
-
-            B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
-            B[1] += np.dot(w.flat, (2*A0*A1).flat) * Brenorm
-            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
-            B[3] += np.dot(w.flat, (2*A1*A2).flat) * Brenorm
-            B[4] += np.dot(w.flat, (A2**2).flat) * Brenorm
-
-        parallel.allreduce(B)
-
-        # Volume regularizer
-        if self.regularizer:
-            for name, s in self.rho.storages.items():
-                B += Brenorm * self.regularizer.poly_line_coeffs(
-                    rho_h.storages[name].data, s.data)
-
-        if np.isinf(B).any() or np.isnan(B).any():
-            logger.warning(
-                'Warning! inf or nan found! Trying to continue...')
-            B[np.isinf(B)] = 0.
-            B[np.isnan(B)] = 0.
-
-        self.B = B
-
-        return B
-
-    def poly_line_coeffs_pr(self, pr_h):
-        """
-        Compute the coefficients of the polynomial for line minimization
-        in direction h for the probe
+        Receives:
+            pr_h    container - the probe minimization direction
+            order   int - 2 for the quadratic approximation, 4 for all
+                    coefficients
         """
 
-        B = np.zeros((3,), dtype=np.longdouble)
+        B = np.zeros((order + 1,), dtype=np.longdouble)
         Brenorm = 1. / self.LL[0]**2
 
         # Outer loop: through diffraction patterns
@@ -1023,11 +965,11 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
 
-                f = pod.fw(pod.probe * np.exp(1j * self.projected_rho[pod.ex_view]))
-                a = pod.fw(pr_h[pod.pr_view] * np.exp(1j * self.projected_rho[pod.ex_view]))
+                expobj = np.exp(1j * self.projected_rho[pod.ex_view])
+                f = pod.fw(pod.probe * expobj)
+                a = pod.fw(pr_h[pod.pr_view] * expobj)
 
                 if A0 is None:
-
                     A0 = u.abs2(f).astype(np.longdouble)
                     A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
                     A2 = u.abs2(a).astype(np.longdouble)
@@ -1036,96 +978,51 @@ class GaussianModel(BaseModel):
                     A1 += 2 * np.real(f * a.conj())
                     A2 += u.abs2(a)
 
-            if self.p.floating_intensities:
-                A0 *= self.float_intens_coeff[dname]
-                A1 *= self.float_intens_coeff[dname]
-                A2 *= self.float_intens_coeff[dname]
-
-            A0 = np.double(A0) - pod.upsample(I)
-            #A0 -= pod.upsample(I)
-            w = pod.upsample(w)
-
-            B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
-            B[1] += np.dot(w.flat, (2*A0*A1).flat) * Brenorm
-            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
+            self._accumulate_B(B, A0, A1, A2, w, I, pod, dname, Brenorm)
 
         parallel.allreduce(B)
 
-        if np.isinf(B).any() or np.isnan(B).any():
-            logger.warning(
-                'Warning! inf or nan found! Trying to continue...')
-            B[np.isinf(B)] = 0.
-            B[np.isnan(B)] = 0.
+        self._zero_non_finite_B(B)
 
         self.B = B
 
         return B
 
-    def poly_line_all_coeffs_pr(self, pr_h):
+    def _accumulate_B(self, B, A0, A1, A2, w, I, pod, dname, Brenorm):
         """
-        Compute the coefficients of the polynomial for line minimization
-        in direction h for the probe
+        Apply the floating intensity correction to the A coefficients of a
+        single diffraction view, subtract the measured intensities and
+        accumulate the resulting polynomial coefficients into B.
+
+        The number of terms accumulated follows the length of B, i.e. 3 for
+        the quadratic approximation and 5 for all coefficients.
         """
+        if self.p.floating_intensities:
+            A0 *= self.float_intens_coeff[dname]
+            A1 *= self.float_intens_coeff[dname]
+            A2 *= self.float_intens_coeff[dname]
 
-        B = np.zeros((5,), dtype=np.longdouble)
-        Brenorm = 1. / self.LL[0]**2
+        A0 = np.double(A0) - pod.upsample(I)
+        w = pod.upsample(w)
 
-        # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.items():
-            if not diff_view.active:
-                continue
+        B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
+        B[1] += np.dot(w.flat, (2*A0*A1).flat) * Brenorm
+        B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
 
-            # Weights and intensities for this view
-            w = self.weights[diff_view]
-            I = diff_view.data
-
-            A0 = None
-            A1 = None
-            A2 = None
-
-            for name, pod in diff_view.pods.items():
-                if not pod.active:
-                    continue
-
-                f = pod.fw(pod.probe * np.exp(1j * self.projected_rho[pod.ex_view]))
-                a = pod.fw(pr_h[pod.pr_view] * np.exp(1j * self.projected_rho[pod.ex_view]))
-
-                if A0 is None:
-
-                    A0 = u.abs2(f).astype(np.longdouble)
-                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
-                    A2 = u.abs2(a).astype(np.longdouble)
-                else:
-                    A0 += u.abs2(f)
-                    A1 += 2 * np.real(f * a.conj())
-                    A2 += u.abs2(a)
-
-            if self.p.floating_intensities:
-                A0 *= self.float_intens_coeff[dname]
-                A1 *= self.float_intens_coeff[dname]
-                A2 *= self.float_intens_coeff[dname]
-
-            A0 = np.double(A0) - pod.upsample(I)
-            #A0 -= pod.upsample(I)
-            w = pod.upsample(w)
-
-            B[0] += np.dot(w.flat, (A0**2).flat) * Brenorm
-            B[1] += np.dot(w.flat, (2*A0*A1).flat) * Brenorm
-            B[2] += np.dot(w.flat, (A1**2 + 2*A0*A2).flat) * Brenorm
+        if len(B) > 3:
             B[3] += np.dot(w.flat, (2*A1*A2).flat) * Brenorm
             B[4] += np.dot(w.flat, (A2**2).flat) * Brenorm
 
-        parallel.allreduce(B)
-
+    @staticmethod
+    def _zero_non_finite_B(B):
+        """
+        Zero out any inf or nan polynomial coefficient, warning if found.
+        """
         if np.isinf(B).any() or np.isnan(B).any():
             logger.warning(
                 'Warning! inf or nan found! Trying to continue...')
             B[np.isinf(B)] = 0.
             B[np.isnan(B)] = 0.
-
-        self.B = B
-
-        return B
 
 class Regul_del2(object):
     """\
