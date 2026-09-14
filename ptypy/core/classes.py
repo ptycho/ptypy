@@ -1145,15 +1145,15 @@ class View(Base):
     """
     _fields = Base._fields + \
                [('active', 'b1'),
-                ('dlayer', '<i8'),
-                ('layer', '<i8'), 
-                ('dhigh', '(5,)i8'),
-                ('dlow', '(5,)i8'),
-                ('shape', '(5,)i8'),
-                ('dcoord', '(5,)i8'),
-                ('psize', '(5,)f8'),
-                ('coord', '(5,)f8'),
-                ('sp', '(5,)f8')]
+                ('dlayer', '<i4'),
+                ('layer', '<i4'),
+                ('dhigh', '(5,)i4'),
+                ('dlow', '(5,)i4'),
+                ('shape', '(5,)i4'),
+                ('dcoord', '(5,)i4'),
+                ('psize', '(5,)f4'),
+                ('coord', '(5,)f4'),
+                ('sp', '(5,)f4')]
     __slots__ = Base.__slots__ + ['_ndim', 'storage', 'storageID', '_pod', '_pods', 'error', 'extra']
     ########
     # TODO #
