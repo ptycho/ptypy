@@ -40,7 +40,7 @@ p.data_type = "single"
 
 p.run = None
 p.io = u.Param()
-p.io.home = "/".join([tmpdir, "ptypy_letizia"])
+p.io.home = "/".join([tmpdir, "ptypy"])
 p.io.autosave = u.Param(active=True)
 p.io.autoplot = u.Param(active=False)
 p.io.autoplot.layout='minimal'
@@ -69,12 +69,8 @@ proj_real_id, proj_real = astra.create_sino3d_gpu(rmap.real, pgeom, vgeom)
 proj_imag_id, proj_imag = astra.create_sino3d_gpu(rmap.imag, pgeom, vgeom)
 proj = np.moveaxis(proj_real + 1j * proj_imag, 1,0)
 
-sim.extra = u.Param()
-repeated_angles = []
-for angle in angles:
-    repeated_angles += n_frames*[angle]
-sim.extra.vals = np.array(repeated_angles)
-sim.extra.ind = np.arange(len(repeated_angles)).astype(int)
+# The angle every frame was collected at, carried through to the views
+sim.extra = tu.extra_from_angles(angles, n_frames)
 
 sim.illumination = u.Param()
 sim.illumination.model = None
