@@ -29,6 +29,21 @@ from ptypy.core import View, Container, Storage, Base
 
 __all__ = ['MLPtychoTomo']
 
+# ID given to the storage of every volume container, i.e. the volume itself,
+# its gradient and its minimization direction.
+VOL_STORAGE_ID = "_rho"
+
+
+def volume_data(container):
+    """
+    The data array of a volume container, e.g. the volume itself or its
+    gradient.
+
+    Each of those containers holds a single storage, which is read off here
+    rather than looked up by the ID it was created with.
+    """
+    return next(iter(container.storages.values())).data
+
 
 class PtypyTomoWrapper:
     def __init__(self, obj, vol, shifts=None):
@@ -330,9 +345,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.rho_grad_new = Container()
         self.rho_h = Container()
 
-        self.rho_grad.new_storage(ID="_rho", shape=(3*(self.view_shape,)))
-        self.rho_grad_new.new_storage(ID="_rho", shape=(3*(self.view_shape,)))
-        self.rho_h.new_storage(ID="_rho", shape=(3*(self.view_shape,)))
+        self.rho_grad.new_storage(ID=VOL_STORAGE_ID, shape=(3*(self.view_shape,)))
+        self.rho_grad_new.new_storage(ID=VOL_STORAGE_ID, shape=(3*(self.view_shape,)))
+        self.rho_h.new_storage(ID=VOL_STORAGE_ID, shape=(3*(self.view_shape,)))
 
         # Needed in poly_line_coeffs_rho
         self.omega = self.ex
@@ -354,7 +369,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         # Initialise volume rho as container
         self.rho = Container()
-        self.rho.new_storage(ID="_rho", shape=(3*(self.view_shape,)))
+        self.rho.new_storage(ID=VOL_STORAGE_ID, shape=(3*(self.view_shape,)))
         self.rho.fill(rho_real + 1j * rho_imag)
 
         # Initialise probe gradient and minimization direction
@@ -372,7 +387,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         self.tomo_wrapper = PtypyTomoWrapper(
             obj=self.ptycho.obj,
-            vol=self.rho.storages['S_rho'].data,
+            vol=volume_data(self.rho),
             shifts=self.p.shifts
         )
 
@@ -438,7 +453,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             os.makedirs(directory, exist_ok=True)
 
         logger.info('Saving volume to %s' % path)
-        data = self.rho.storages['S_rho'].data
+        data = volume_data(self.rho)
         if path.endswith('.npy'):
             np.save(path, data)
         else:
@@ -481,7 +496,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
             # Smoothing preconditioner for the volume
             if self.smooth_gradient:
                 self.smooth_gradient.sigma *= (1. - self.p.smooth_gradient_decay)
-                new_rho_grad_data = self.smooth_gradient(new_rho_grad.storages['S_rho'].data)
+                new_rho_grad_data = self.smooth_gradient(volume_data(new_rho_grad))
                 new_rho_grad.fill(new_rho_grad_data)
 
             ############################
@@ -518,7 +533,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
             # Smoothing preconditioner for the volume
             if self.smooth_gradient:
-                self.rho_h -= self.smooth_gradient(self.rho_grad.storages['S_rho'].data)
+                self.rho_h -= self.smooth_gradient(volume_data(self.rho_grad))
             else:
                 self.rho_h -= self.rho_grad
 
@@ -789,7 +804,7 @@ class GaussianModel(BaseModel):
 
         # Forward project volume
         self.tomo_wrapper.forward(
-            vol=self.rho.storages['S_rho'].data,
+            vol=volume_data(self.rho),
             ind=self.get_indexes_of_active_views(),
             output=self.projected_rho
         )
@@ -908,14 +923,14 @@ class GaussianModel(BaseModel):
 
         # Forward project volume minimization direction
         self.tomo_wrapper.forward(
-            vol=rho_h.storages['S_rho'].data,
+            vol=volume_data(rho_h),
             ind=ind,
             output=self.omega
         )
         # Forward project the volume itself, as new_grad has since
         # overwritten projected_rho with the gradient product
         self.tomo_wrapper.forward(
-            vol=self.rho.storages['S_rho'].data,
+            vol=volume_data(self.rho),
             ind=ind,
             output=self.projected_rho
         )
