@@ -223,12 +223,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
     lowlim = 0.0
     help = Amplitude of the Gaussian prior if used
 
-    [weight_gradient]
-    default = False
-    type = bool
-    help = Coverage gradient weights
-    doc = Weight the gradient based on the view coverage.
-
     [smooth_gradient]
     default = 0.0
     type = float
@@ -300,9 +294,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
         # Tomography projector
         self.projector = None
-
-        # View coverage
-        self.coverage = None
 
         # Other
         self.nangles = self.p.n_angles
@@ -645,7 +636,6 @@ class BaseModel(object):
         self.pr_grad = self.engine.pr_grad_new
         self.omega = self.engine.omega
         self.ex = self.engine.ex
-        self.coverage = self.engine.coverage
         self.projected_rho = self.engine.projected_rho
 
         self.pr = self.engine.pr
