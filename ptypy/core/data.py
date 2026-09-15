@@ -255,7 +255,8 @@ class PtyScan(object):
     EOS = EOS
     CODES = CODES
 
-    METAKEYS = ['version', 'num_frames', 'label', 'shape', 'psize', 'energy', 'center', 'distance']
+    METAKEYS = ['version', 'num_frames', 'label', 'shape', 'psize', 'energy', 'center', 'distance',
+                'extra']
     """ Keys to store in meta param """
 
     def __init__(self, pars=None, **kwargs):
