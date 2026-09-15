@@ -124,7 +124,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
     Defaults:
 
     [name]
-    default = ML
+    default = MLPtychoTomo
     type = str
     help =
     doc =
