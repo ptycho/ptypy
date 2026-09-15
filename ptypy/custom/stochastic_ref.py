@@ -17,7 +17,7 @@ from ..engines.base import PositionCorrectionEngine
 from ..engines import register
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, GradFull, BlockGradFull
 
-__all__ = ['EPIE_ref', 'SDR']
+__all__ = ['EPIE_ref', 'SDR_ref']
 
 class _StochasticEngine_ref(PositionCorrectionEngine):
     """
