@@ -20,12 +20,11 @@ from ..utils.verbose import logger
 from ..utils import parallel
 from ..engines.utils import Cnorm2, Cdot
 from ..engines import register
-from ..engines.base import BaseEngine, PositionCorrectionEngine
+from ..engines.base import PositionCorrectionEngine
 from ..core.manager import Full, Vanilla, Bragg3dModel, BlockVanilla, BlockFull, BlockFull3D, GradFull, BlockGradFull
+from ..core import Container
 from ..utils.tomo import AstraViewBased
-from scipy.ndimage.filters import gaussian_filter
-from scipy.ndimage import shift
-from ptypy.core import View, Container, Storage, Base
+from scipy.ndimage import gaussian_filter
 
 __all__ = ['MLPtychoTomo']
 
