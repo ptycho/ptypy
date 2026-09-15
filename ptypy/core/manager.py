@@ -1103,7 +1103,6 @@ class _Full(object):
                                   geometry=geometry)  # , meta=meta)
 
                         new_pods.append(pod)
-
                         pod.probe_weight = 1.0
                         pod.object_weight = 1.0
 
