@@ -229,12 +229,14 @@ class AstraViewBased:
 
     def _create_proj_geom(self):
         """Creates proj_array geometry"""
-        self._sub_vec = self._vec[[self._ind_of_views]]
+        # One 12-element vector per view in the block, i.e. shape
+        # (len(ind_of_views), 12), which is what astra expects
+        self._sub_vec = self._vec[self._ind_of_views]
         self._proj_geom = astra.create_proj_geom(
             'parallel3d_vec',
             self._view_shape[0],
             self._view_shape[1],
-            np.squeeze(self._sub_vec)
+            self._sub_vec
         )
 
     def _setup_config_for_forward(self, type="FP3D_CUDA"):
