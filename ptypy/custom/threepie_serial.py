@@ -28,6 +28,7 @@ from ptypy.engines.stochastic import EPIEMixin
 from ptypy.accelerate.base.engines.stochastic import _StochasticEngineSerial
 from ptypy.accelerate.base.kernels import ThreePIEWaveKernel
 from ptypy.accelerate.base import array_utils as au
+from ptypy.utils.nvtx_ranges import nvtx_push, nvtx_pop
 
 __all__ = ["ThreePIE_serial", "normalize_slice_pad"]
 
@@ -309,8 +310,13 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                     err_fourier = prep.err_fourier[i, None]
                     err_exit = prep.err_exit[i, None]
 
+                    if self.do_position_refinement:
+                        # position refinement reads the primary object and
+                        # probe, so keep them current per view in that case
+                        self._sync_primary_arrays(oID, pID)
                     self.position_update_local(prep, i)
 
+                    nvtx_push("3pie.forward")
                     # ---- forward multislice sweep --------------------------
                     for s in range(nslices):
                         old_exit = kern.slice_exits[s]
@@ -328,6 +334,8 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                             kern.slice_tmp[:] = kern.slice_FW[s](old_exit)
                             TWK.aux_to_pr(pr_layers[s + 1], kern.slice_tmp, addr)
 
+                    nvtx_pop()
+                    nvtx_push("3pie.fourier")
                     # ---- last slice: far-field Fourier constraint ----------
                     ex[:] = kern.slice_exits[-1][:ex.shape[0]]
                     AWK.make_aux(aux, addr, ob_layers[-1], pr_layers[-1], ex,
@@ -355,6 +363,8 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                         aux[:] = FW(aux)
                         FUK.log_likelihood(aux, addr, mag, ma, err_phot)
 
+                    nvtx_pop()
+                    nvtx_push("3pie.backward")
                     # ---- backward sweep (update O_s, P_s) ------------------
                     back_wave = ex
                     for s in range(nslices - 1, -1, -1):
@@ -385,7 +395,14 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                         else:
                             TWK.aux_to_pr(pr_layers[s], back_wave, addr)
 
-                    self._sync_primary_arrays(oID, pID)
+                    nvtx_pop()
+                    self._last_view = prep.view_IDs[i]
+
+                # product object and entrance probe for output/plotting, once
+                # per iteration: nothing inside the view loop reads them
+                nvtx_push("3pie.sync")
+                self._sync_primary_arrays(oID, pID)
+                nvtx_pop()
 
                 # accumulate per-view errors (matches base serial engine)
                 errs = np.ascontiguousarray(
@@ -397,6 +414,15 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
             self.curiter += 1
 
         return error_dct
+
+    def _last_view_record(self):
+        """ID, frame index and position of the last view this engine processed."""
+        name = getattr(self, "_last_view", None)
+        if name is None:
+            return None
+        view = self.di.views[name]
+        return {"ID": str(name), "layer": int(view.layer),
+                "coord": np.asarray(view.pod.ob_view.coord, dtype=float)}
 
     # --------------------------------------------------------------- finalize
     def engine_finalize(self):
@@ -414,6 +440,15 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
         slices_info.objects = {
             ob.ID: {ID: S._to_dict() for ID, S in ob.storages.items()}
             for ob in self._object}
+        # incident wave per slice: probes[0] is the illumination, probes[s > 0]
+        # the wave that entered slice s for the last view that was processed
+        slices_info.probes = {
+            pr.ID: {ID: S._to_dict() for ID, S in pr.storages.items()}
+            for pr in self._probe}
+        # which scan position the probes[s > 0] waves belong to
+        record = self._last_view_record()
+        if record is not None:
+            slices_info.last_view = record
 
         header = {'description': 'multi-slices result details.'}
         h5opt = io.h5options['UNSUPPORTED']

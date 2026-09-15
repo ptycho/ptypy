@@ -12,6 +12,7 @@ from ptypy.utils import Param
 from ptypy.utils.verbose import logger
 from ptypy import io
 import numpy as np
+from ptypy.utils.nvtx_ranges import nvtx_push, nvtx_pop
 
 @register()
 class ThreePIE(stochastic.EPIE):
@@ -139,15 +140,22 @@ class ThreePIE(stochastic.EPIE):
 
                 # Multislice update
                 error_dct[name] = self.multislice_update(view)
+                self._last_view = name
+                if self.p.object_norm_is_global:
+                    # the global object norm of the probe update reads the
+                    # primary object storage, so keep it current per view
+                    self._sync_product_object()
 
+            # product object for live plotting, once per iteration
+            nvtx_push("3pie.sync")
+            self._sync_product_object()
+            nvtx_pop()
             self.curiter += 1
 
         return error_dct
 
     def engine_finalize(self):
-        self.ob.fill(self._object[0])
-        for i in range(1, self.p.number_of_slices):
-            self.ob *= self._object[i]
+        self._sync_product_object()
 
         # Save the slices
         slices_info = Param()
@@ -155,6 +163,14 @@ class ThreePIE(stochastic.EPIE):
         slices_info.slice_thickness = self.p.slice_thickness
         slices_info.objects = {ob.ID: {ID: S._to_dict() for ID, S in ob.storages.items()}
                                for ob in self._object}
+        # incident wave per slice: probes[0] is the illumination, probes[s > 0]
+        # the wave that entered slice s for the last view that was processed
+        slices_info.probes = {pr.ID: {ID: S._to_dict() for ID, S in pr.storages.items()}
+                              for pr in self._probe}
+        # which scan position the probes[s > 0] waves belong to
+        record = self._last_view_record()
+        if record is not None:
+            slices_info.last_view = record
         slices_info.slice_start_iteration = self.p.slice_start_iteration
 
         header = {'description': 'multi-slices result details.'}
@@ -172,6 +188,7 @@ class ThreePIE(stochastic.EPIE):
         Performs one 'iteration' of 3PIE (multislice ePIE) for a single view.
         Based on https://doi.org/10.1364/JOSAA.29.001606
         """
+        nvtx_push("3pie.forward")
 
         for i in range(self.p.number_of_slices-1):
             for name, pod in view.pods.items():
@@ -194,8 +211,12 @@ class ThreePIE(stochastic.EPIE):
             pod.object = self._object[-1][pod.ob_view]
             pod.exit = self._exits[-1][pod.pr_view]
 
+        nvtx_pop()
         # Fourier update
+        nvtx_push("3pie.fourier")
         error = self.fourier_update(view)
+        nvtx_pop()
+        nvtx_push("3pie.backward")
 
         # Object/probe update for the last slice
         if self.curiter >= self.p.slice_start_iteration[-1]:
@@ -229,15 +250,26 @@ class ThreePIE(stochastic.EPIE):
                 for name, pod in view.pods.items():
                     self._probe[i][pod.pr_view] = self.bw[i](self._probe[i+1][pod.pr_view])
 
-        # object = product of all slices, for live plotting
+        if self.p.object_regularization_rate > 0:
+            self.apply_object_regularization()
+        nvtx_pop()
+
+        return error
+
+    def _last_view_record(self):
+        """ID, frame index and position of the last view this engine processed."""
+        name = getattr(self, "_last_view", None)
+        if name is None:
+            return None
+        view = self.di.views[name]
+        return {"ID": str(name), "layer": int(view.layer),
+                "coord": np.asarray(view.pod.ob_view.coord, dtype=float)}
+
+    def _sync_product_object(self):
+        """Product of all slices into the primary object, for plotting/output."""
         self.ob.fill(self._object[0])
         for i in range(1, self.p.number_of_slices):
             self.ob *= self._object[i]
-
-        if self.p.object_regularization_rate > 0:
-            self.apply_object_regularization()
-
-        return error
 
     def apply_object_regularization(self):
         # single mode implementation
