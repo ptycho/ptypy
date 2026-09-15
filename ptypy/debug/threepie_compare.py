@@ -140,23 +140,67 @@ def find_latest(pattern):
     return hits[-1] if hits else None
 
 
-def read_slices(path):
+def _read_slice_group(path, group):
     """
-    Per-slice object arrays from an engine's ``fslices`` output.
+    ``{slice_index: data array}`` for one group of an ``fslices`` file.
 
-    Returns ``{slice_index: complex ndarray}``. The slice containers are named
-    ``<container>_o_<index>``, one storage each.
+    The containers in a group are named ``<container>_o_<index>`` (objects)
+    or ``<container>_p_<index>`` (probes), one storage each; the full storage
+    data (layers/modes first) is returned. An absent group gives ``{}``.
     """
     import h5py
     out = {}
     with h5py.File(path, "r") as f:
-        objects = f["content/objects"]
-        for name in objects:
+        key = "content/%s" % group
+        if key not in f:
+            return out
+        for name in f[key]:
             idx = int(name.rsplit("_", 1)[-1])
-            group = objects[name]
-            storage = group[list(group.keys())[0]]
-            out[idx] = np.array(storage["data"])[0]
+            storage = f[key][name]
+            storage = storage[list(storage.keys())[0]]
+            out[idx] = np.array(storage["data"])
     return out
+
+
+def read_slices(path):
+    """
+    Per-slice object arrays from an engine's ``fslices`` output.
+
+    Returns ``{slice_index: complex ndarray}`` (first object layer). The slice
+    containers are named ``<container>_o_<index>``, one storage each.
+    """
+    return {idx: data[0] for idx, data in _read_slice_group(path, "objects").items()}
+
+
+def read_last_view(path):
+    """
+    ``{"ID", "layer", "coord"}`` of the last view the engine processed, as
+    saved with the per-slice probes (``layer`` is the frame index, ``coord``
+    the scan position in metres), or ``None`` for files without it.
+    """
+    import h5py
+    with h5py.File(path, "r") as f:
+        if "content/last_view" not in f:
+            return None
+        g = f["content/last_view"]
+        ID = g["ID"][()]
+        if isinstance(ID, bytes):
+            ID = ID.decode()
+        return {"ID": str(ID), "layer": int(g["layer"][()]),
+                "coord": np.array(g["coord"], dtype=float)}
+
+
+def read_slice_probes(path):
+    """
+    Per-slice incident waves from an engine's ``fslices`` output.
+
+    Returns ``{slice_index: complex ndarray (modes, ny, nx)}``: index 0 is the
+    reconstructed illumination, index ``s > 0`` the wave that entered slice
+    ``s`` for the last view the engine processed (it carries the object
+    structure of that scan position, so it is not a free-space propagated
+    probe). Files written before the engines saved probes give ``{}``.
+    """
+    return _read_slice_group(path, "probes")
 
 
 def read_recon(path):
