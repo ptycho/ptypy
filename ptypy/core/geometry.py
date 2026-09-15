@@ -471,12 +471,17 @@ class FFTchooser(object):
         self.ifft = lambda x: fftw_np.ifft2(x, planner_effort=pe)
 
     def _scipy_fft(self):
-        self.fft = lambda x: scipy.fft.fft2(x).astype(x.dtype)
-        self.ifft = lambda x: scipy.fft.ifft2(x).astype(x.dtype)
+        # scipy keeps the input precision, so the cast is a no-op and
+        # ``copy=False`` avoids a full extra pass over the array.
+        self.fft = lambda x: scipy.fft.fft2(x).astype(x.dtype, copy=False)
+        self.ifft = lambda x: scipy.fft.ifft2(x).astype(x.dtype, copy=False)
 
     def _numpy_fft(self):
-        self.fft = lambda x: np.ascontiguousarray(np.fft.fft2(x).astype(x.dtype))
-        self.ifft = lambda x: np.ascontiguousarray(np.fft.ifft2(x).astype(x.dtype))
+        # numpy always returns complex128, so the cast is real work here.
+        # ascontiguousarray is a no-op on numpy >= 2 (C-ordered result) and
+        # restores the C order that numpy 1.x transforms lose.
+        self.fft = lambda x: np.ascontiguousarray(np.fft.fft2(x).astype(x.dtype, copy=False))
+        self.ifft = lambda x: np.ascontiguousarray(np.fft.ifft2(x).astype(x.dtype, copy=False))
 
     def assign_scaling(self, shape):
         if isinstance(self.ffttype, tuple) and len(self.ffttype) > 2:
@@ -631,6 +636,11 @@ class BasicFarfieldPropagator(object):
         self.post_ifft = self.pre_fft.conj()
         self.sc, self.isc = self.FFTch.assign_scaling(self.sh)
 
+        # Scaling folded into the post filters so that ``fw``/``bw`` do a
+        # single multiply after the transform instead of two passes.
+        self._post_fft_sc = (self.post_fft * self.sc).astype(self.dtype)
+        self._post_ifft_isc = (self.post_ifft * self.isc).astype(self.dtype)
+
 
     def fw(self, W):
         """
@@ -643,7 +653,7 @@ class BasicFarfieldPropagator(object):
         else:
             w = W
 
-        w = self.post_fft * self.sc * self.fft(self.pre_fft * w)
+        w = self._post_fft_sc * self.fft(self.pre_fft * w)
 
         # Cropping again
         if (self.crop_pad != 0).any():
@@ -662,7 +672,7 @@ class BasicFarfieldPropagator(object):
             w = W
 
         # Compute transform
-        w = self.ifft(self.pre_ifft * w) * self.isc * self.post_ifft
+        w = self.ifft(self.pre_ifft * w) * self._post_ifft_isc
 
         # Cropping again
         if (self.crop_pad != 0).any():
