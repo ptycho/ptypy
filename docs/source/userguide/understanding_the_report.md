@@ -48,8 +48,8 @@ The probe size is then estimate via the width of these one-dimensional profiles 
 
 The report in ptypy contains the horizontal and vertical probe size measured via the FWHM in units of pixels and meters.
 
-	../report/metrics/<storageID>/probe_size/FWHM_px
-	../report/metrics/<storageID>/probe_size/FWHM_m
+	content/report/metrics/<storageID>/probe_size/FWHM_px
+	content/report/metrics/<storageID>/probe_size/FWHM_m
 
 Measuring the FWHM assumes a "single contiguous blob of intensity". 
 If the intensity within the probe is distrubuted as multiple separate islands of intensity, the reported size via FWHM might not be the most applicable metric.
@@ -219,6 +219,6 @@ The final map that is reported counts how often a pixel in the object plane is c
 
 Any pixel with the value zero in this map is never seen by the probe at any of the scan positions. 
 Hence there can not be any meaningful information in these pixels.
-Any piel with the value of 1 in he view coverage map is only ever covered by the probe at one single scan position.
+Any pixel with the value of 1 in he view coverage map is only ever covered by the probe at one single scan position.
 Without any redundancy in the measurment, the value of these pixels in the reconstruction is also not very trustworthy.
 Pixels with a high number get updated from many different scan positions and thus have a higher chance at a high fidelity reconstruction.
