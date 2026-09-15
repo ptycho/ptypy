@@ -48,6 +48,11 @@ extensions = [
     'myst_parser',
 ]
 
+myst_enable_extensions = [
+    "dollarmath",
+    "amsmath",
+]
+
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
