@@ -48,16 +48,6 @@ class PtypyTomoWrapper:
     def __init__(self, obj, vol, shifts=None):
         self._setup_projector(obj, vol, shifts)
 
-    def get_indexes_of_active_views(self, obj):
-        """
-        Get indices of active views
-        """
-        ind_active_views = []
-        for ind, v in enumerate(obj.views.values()):
-            if v.pod.active:
-                ind_active_views.append(ind)
-        return ind_active_views
-
     def _setup_projector(self, obj, vol, shifts=None):
         list_view_to_proj_vectors = []
         all_angles = []
@@ -79,7 +69,7 @@ class PtypyTomoWrapper:
             vol=vol,
             n_views = len(all_angles),
             view_shape = np.shape(list(obj.views.values())[0]),
-            block_size = len(self.get_indexes_of_active_views(obj)),
+            block_size = sum(1 for v in obj.views.values() if v.pod.active),
             angles = all_angles,
             shifts = None,
             view_to_proj_vectors = view_to_proj_vectors
@@ -423,16 +413,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
         when new data arrives.
         """
         self.ML_model.prepare()
-
-    def get_indexes_of_active_views(self):
-        """
-        Get indexes of active views.
-        """
-        ind_active_views = []
-        for ind, v in enumerate(self.ptycho.obj.views.values()):
-            if v.pod.active:
-                ind_active_views.append(ind)
-        return ind_active_views
 
     def _volume_path(self):
         """
@@ -788,15 +768,20 @@ class GaussianModel(BaseModel):
 
     def get_indexes_of_active_views(self):
         """
-        Get indices of active views
+        The indices of the active pods, counted over every pod of every
+        diffraction view in turn, active or not.
+
+        These index into the view list the projector was built with in
+        `PtypyTomoWrapper._setup_projector`, which is in object view order,
+        so the two orderings have to stay in step.
         """
         ind_active_views = []
         i = 0
-        for dname, diff_view in self.di.views.items():
-            for name, pod in diff_view.pods.items():
+        for diff_view in self.di.views.values():
+            for pod in diff_view.pods.values():
                 if pod.active:
                     ind_active_views.append(i)
-                i+=1
+                i += 1
 
         return ind_active_views
 
