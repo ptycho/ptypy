@@ -293,8 +293,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
         # Probe gradient
         self.pr_grad_new = None
 
-        # Tomography projector
-        self.projector = None
+        # Tomography projector wrapper
+        self.tomo_wrapper = None
 
         # Other
         self.nangles = self.p.n_angles
@@ -646,7 +646,6 @@ class BaseModel(object):
         else:
             self.Irenorm = self.p.intensity_renormalization
 
-        self.projector = self.engine.projector
         self.tomo_wrapper = self.engine.tomo_wrapper
 
         if self.p.reg_del2:
