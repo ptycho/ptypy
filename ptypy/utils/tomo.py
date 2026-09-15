@@ -39,7 +39,7 @@ class AstraViewBased:
     Base class for wrappers for the Astra projectors.
     """
 
-    def __init__(self, vol, n_views, view_shape, block_size, angles, shifts, view_to_proj_vectors):
+    def __init__(self, vol, n_views, view_shape, block_size, angles, view_to_proj_vectors):
 
         """
         Receives:
@@ -48,9 +48,9 @@ class AstraViewBased:
         view_shape              shape of view
         block_size              size of chunk (a sub-part or equal to n_views)
         angles                  1D array of angles (same length as n_views)
-        shifts                  2D array of x and y shifts, having shape: n_views x 2 (with 2 being x and y)
-        view_to_proj_vectors    2D array of vectors, computed as differences between the center of views and 
-                                the center of projections (same length as n_views)
+        view_to_proj_vectors    2D array of vectors, computed as differences between the center of views and
+                                the center of projections (same length as n_views). Any per-view shift is
+                                expected to be folded into these vectors by the caller.
 
         Does the following:
          - the astra geometry for the projection array and the volume
@@ -62,7 +62,6 @@ class AstraViewBased:
         self._view_shape = view_shape
         self._block_size = block_size
         self._angles = angles
-        self._shifts = shifts
         self._view_to_proj_vectors = view_to_proj_vectors
         self._ind_of_views = np.arange(self._block_size)
 
