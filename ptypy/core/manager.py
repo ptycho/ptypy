@@ -1029,7 +1029,6 @@ class _Full(object):
             pos_pr = u.expect2(0.0)
             pos_obj = self.new_positions[i] if 'empty' not in self.p.tags else 0.0
 
-            mode_index = 0
             # For multiwavelength reconstructions: loop here over
             # geometries, and modify probe_id and object_id.
             for ii, geometry in enumerate(self.geometries):
@@ -1130,7 +1129,6 @@ class _Full(object):
                                   geometry=geometry)  # , meta=meta)
 
                         new_pods.append(pod)
-                        mode_index +=1
                         pod.probe_weight = 1.0
                         pod.object_weight = 1.0
 
