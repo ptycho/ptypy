@@ -1,6 +1,12 @@
 # User Guide
 
-## The Basics Concepts
+## Getting Started
+```{toctree}
+:maxdepth: 1
+generated/legacy/rst/getting_started.rst
+```
+
+## The Basic Concepts
 PtyPy is a Python-based reconstruction framework that offers a large variety of features which can be
 configured using a "parameter tree". The following articles describe the basic concepts of PtyPy and
 how to work with this parameter tree.

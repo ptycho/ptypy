@@ -11,9 +11,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path('../..', 'ptypy').resolve()))
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
-from _param_generator import generate_parameters_rst
 
 # Generate List of Parameters
+from _param_generator import generate_parameters_rst
 #generate_parameters_rst("ptycho", outfile="ptycho.rst", title="Root/Ptycho (p)")
 generate_parameters_rst("io", outfile="io.rst", title="Input/Output (p.io)")
 generate_parameters_rst("scans", outfile="scans.rst", title="List of Scans (p.scans)")
@@ -28,7 +28,16 @@ create_test_image(outdir="./userguide/generated/", outfile="test.png")
 from _userguide_generator import create_all_init_probe_figures
 create_all_init_probe_figures(outdir="./userguide/generated/")
 
+# Generate legacy tutorials
+from _legacy_tutorial_generator import generate_legacy_tutorial_rst
+generate_legacy_tutorial_rst("minimal_script.py", outdir="./userguide/generated/legacy/")
+#generate_legacy_tutorial_rst("ptypyclasses.py", outdir="./userguide/generated/legacy/")
+#generate_legacy_tutorial_rst("simupod.py", outdir="./userguide/generated/legacy/")
+#generate_legacy_tutorial_rst("ownengine.py", outdir="./userguide/generated/legacy/")
+#generate_legacy_tutorial_rst("subclassptyscan.py", outdir="./userguide/generated/legacy/")
 
+from _legacy_tutorial_generator import replace_rst_in_templates
+replace_rst_in_templates("./userguide/rst_templates/getting_started.tmp")
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
