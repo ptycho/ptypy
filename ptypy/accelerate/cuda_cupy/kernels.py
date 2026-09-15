@@ -1295,10 +1295,17 @@ class PoUpdateKernel(ab.PoUpdateKernel):
                                                     np.float32(
                                                   fac) if ex.dtype == np.complex64 else np.float64(fac)))
 
-    def ob_update_local(self, addr, ob, pr, ex, aux, prn, a=0., b=1.):
+    def ob_update_local(self, addr, ob, pr, ex, aux, prn, a=0., b=1.,
+                        prn_max=None):
+        """
+        ``prn_max`` may be a preallocated one-element device array holding
+        max(prn); when it is None it is computed here with cp.max, which
+        allocates (not safe inside CUDA graph capture).
+        """
         if self.queue is not None:
             self.queue.use()
-        prn_max = cp.max(prn)
+        if prn_max is None:
+            prn_max = cp.max(prn)
         obsh = [np.int32(ax) for ax in ob.shape]
         prsh = [np.int32(ax) for ax in pr.shape]
         exsh = [np.int32(ax) for ax in ex.shape]

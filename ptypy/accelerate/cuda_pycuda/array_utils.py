@@ -78,6 +78,8 @@ class BatchedMultiplyKernel:
             'OUT_TYPE': 'float' if array.dtype==np.complex64 else 'double',
             'MATH_TYPE': 'float' if math_type==np.complex64 else 'double'
         })
+        # the kernel's scale argument has the math type
+        self._scale_dtype = np.float32 if math_type == np.complex64 else np.float64
         self.block = (32,32,1)
         self.grid = (
             int((self.array_shape[0] + 31) // 32),
@@ -89,7 +91,7 @@ class BatchedMultiplyKernel:
         assert x.dtype == y.dtype, "Input arrays must be of same data type"
         assert x.shape[-2:] == y.shape[-2:], "Input arrays must be of the same size in last 2 dims"
         self.batched_multiply_cuda(x,x,y,
-                                   np.float32(scale),
+                                   self._scale_dtype(scale),
                                    np.int32(self.batches),
                                    np.int32(self.array_shape[0]),
                                    np.int32(self.array_shape[1]),

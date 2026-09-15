@@ -111,10 +111,13 @@ class FFT_cupy(FFT_base):
             'OUT_TYPE': 'float' if array.dtype == np.complex64 else 'double',
             'MATH_TYPE': math_type
         }) if pre_fft is not None else None
+        # the scale argument of the multiply kernels has each kernel's math type
+        self._pre_scale_dtype = np.float32 if math_type == 'float' else np.float64
 
         math_type = 'float' if array.dtype == np.complex64 else 'double'
         if post_fft is not None:
             math_type = 'float' if post_fft.dtype == np.complex64 else 'double'
+        self._post_scale_dtype = np.float32 if math_type == 'float' else np.float64
         self.post_fft_knl = load_kernel("batched_multiply", {
             'MPY_DO_SCALE': 'true' if (not forward and not symmetric) or symmetric else 'false',
             'MPY_DO_FILT': 'true' if post_fft is not None else 'false',
@@ -132,8 +135,22 @@ class FFT_cupy(FFT_base):
         if self.queue is not None:
             self.queue.use()
         self.plan = get_fft_plan(array, self.arr_shape, axes=(-2, -1), value_type="C2C")
-        self.scale = 1.0
-        self.norm = 'ortho' if symmetric else 'backward'
+        # The transform itself runs unscaled (cupy norm 'backward' for the
+        # forward direction, 'forward' for the inverse direction: no scaling
+        # kernel is launched either way) and the normalisation is folded
+        # into the post-FFT multiply kernel, which already carries a scale
+        # argument. This saves one elementwise launch per transform.
+        npix = float(self.arr_shape[0] * self.arr_shape[1])
+        self.symmetric = symmetric
+        self.forward = forward
+        self.npix = npix
+        if symmetric:
+            self.scale = 1.0 / np.sqrt(npix)
+        else:
+            self.scale = 1.0 if forward else 1.0 / npix
+        # norm and scale of the direction the object was built for; ft/ift
+        # of the other direction fall back to cupy's own scaling (see _ift)
+        self.norm = 'backward' if forward else 'forward'
 
         if pre_fft is not None:
             self.pre_fft = cp.asarray(pre_fft)
@@ -152,33 +169,48 @@ class FFT_cupy(FFT_base):
             self.pre_fft_knl(grid=self.grid,
                              block=self.block,
                              args=(x, y, self.pre_fft,
-                                   np.float32(self.scale),
+                                   self._pre_scale_dtype(1.0),
                                    np.int32(self.batches),
                                    np.int32(self.arr_shape[0]),
                                    np.int32(self.arr_shape[1])))
         else:
             y[:] = x[:]
 
-    def _postfilt(self, y):
+    def _postfilt(self, y, scale):
         if self.post_fft_knl:
             assert self.post_fft is not None
-            assert self.scale is not None
             self.post_fft_knl(grid=self.grid,
                               block=self.block,
-                              args=(y, y, self.post_fft, np.float32(self.scale),
+                              args=(y, y, self.post_fft,
+                                    self._post_scale_dtype(scale),
                                     np.int32(self.batches),
                                     np.int32(self.arr_shape[0]),
                                     np.int32(self.arr_shape[1])))
+
     def _ft(self, x, y):
         if self.queue is not None:
             self.queue.use()
         self._prefilt(x, y)
-        cuxfft.fft2(y, axes=(-2, -1), plan=self.plan, overwrite_x=True, norm=self.norm)
-        self._postfilt(y)
+        # forward: never scaled by cupy; the post kernel applies 1/sqrt(N)
+        # for a symmetric transform and nothing otherwise (its scale
+        # multiply is compiled out for a non-symmetric forward object)
+        cuxfft.fft2(y, axes=(-2, -1), plan=self.plan, overwrite_x=True,
+                    norm='backward')
+        self._postfilt(y, 1.0 / np.sqrt(self.npix) if self.symmetric else 1.0)
 
     def _ift(self, x, y):
         if self.queue is not None:
             self.queue.use()
         self._prefilt(x, y)
-        cuxfft.ifft2(y, axes=(-2, -1), plan=self.plan, overwrite_x=True, norm=self.norm)
-        self._postfilt(y)
+        if self.symmetric or not self.forward:
+            # the post kernel carries the scale (1/sqrt(N) or 1/N)
+            cuxfft.ifft2(y, axes=(-2, -1), plan=self.plan, overwrite_x=True,
+                         norm='forward')
+            self._postfilt(y, 1.0 / np.sqrt(self.npix) if self.symmetric
+                           else 1.0 / self.npix)
+        else:
+            # non-symmetric object built for the forward direction: its post
+            # kernel cannot scale, let cupy apply the 1/N of the inverse
+            cuxfft.ifft2(y, axes=(-2, -1), plan=self.plan, overwrite_x=True,
+                         norm='backward')
+            self._postfilt(y, 1.0)
