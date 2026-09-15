@@ -318,7 +318,9 @@ class ScanModel(object):
             AR_mask.layer = index
             AR_diff.active = active
             AR_mask.active = active
-            AR_diff.extra = dct['extra']
+            # Bragg3dModel reassembles the iterable without an 'extra' entry,
+            # so fall back to the default of no extra information
+            AR_diff.extra = dct.get('extra')
 
             # check here: is there already a view to this layer? Is it active?
             try:
