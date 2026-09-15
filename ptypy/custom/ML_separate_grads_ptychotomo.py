@@ -242,12 +242,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
     help = Decay rate for smoothing preconditioner
     doc = Sigma for gaussian filter will reduce exponentially at this rate
 
-    [scale_precond]
-    default = False
-    type = bool
-    help = Whether to use the object/probe scaling preconditioner
-    doc = This parameter can give faster convergence for weakly scattering samples.
-
     [probe_update_start]
     default = 0
     type = int
