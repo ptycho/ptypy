@@ -8,9 +8,7 @@ This file is part of the PTYPY package.
     :license: see LICENSE for details.
 """
 import numpy as np
-import scipy.ndimage as ndimage
 import astra
-import ptypy.utils.tomo as tu
 
 from .parameters import Param
 
