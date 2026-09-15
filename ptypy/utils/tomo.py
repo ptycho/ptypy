@@ -267,10 +267,32 @@ class AstraViewBased:
         cfg["ProjectionDataId"] = self._proj_id_imag
         self.backward_alg_id_imag = astra.algorithm.create(cfg)
 
+    @staticmethod
+    def _combine(real, imag, out):
+        """
+        Combines the real and imaginary parts of a projection into a single
+        complex array.
+
+        When "out" is given the parts are written straight into its real and
+        imaginary views, so no full-size complex temporary is allocated.
+        Otherwise a new array is returned.
+        """
+        if out is None:
+            return real + 1j * imag
+
+        if not (isinstance(out, np.ndarray) and np.iscomplexobj(out)):
+            raise ValueError(
+                "The parameter 'out' should be a complex numpy array."
+                )
+        out.real[:] = real
+        out.imag[:] = imag
+        return out
+
     def forward(self, iter=1, out=None):
         """
-        Computes forward projection, based on self._vol (this must have
-        been defined). Places output in "out" if provided.
+        Computes the forward projection, based on self._vol (this must have
+        been defined). Writes the result into "out" if provided, and returns
+        it either way.
         """
         astra.algorithm.run(self.forward_alg_id_real, iter)
         astra.algorithm.run(self.forward_alg_id_imag, iter)
@@ -280,36 +302,19 @@ class AstraViewBased:
 
         _ob_views_real = np.moveaxis(_proj_data_real, 0, 1)
         _ob_views_imag = np.moveaxis(_proj_data_imag, 0, 1)
-        _ob_views_complex = _ob_views_real + 1j * _ob_views_imag
 
-        if isinstance(out, np.ndarray):
-            out[:] = _ob_views_complex
-        elif out is None:
-            out = _ob_views_complex
-        else:
-            raise ValueError(
-                "The parameter 'out' provided as input to forward "
-                "should be of type np.ndarray."
-                )
-        return out
+        return self._combine(_ob_views_real, _ob_views_imag, out)
 
     def backward(self, iter=1, out=None):
         """
-        Computes backward projection, based on _proj_array (this must have
-        been defined). Places output in "out" if provided.
+        Computes the backward projection, based on self._proj_array (this must
+        have been defined). Writes the result into "out" if provided, and
+        returns it either way.
         """
         astra.algorithm.run(self.backward_alg_id_real, iter)
         astra.algorithm.run(self.backward_alg_id_imag, iter)
 
-        _vol = astra.data3d.get(self._vol_id_real) + 1j * astra.data3d.get(self._vol_id_imag)
+        _vol_real = astra.data3d.get(self._vol_id_real)
+        _vol_imag = astra.data3d.get(self._vol_id_imag)
 
-        if isinstance(out, np.ndarray):
-            out[:] = _vol
-        elif out is None:
-            out = _vol
-        else:
-            raise ValueError(
-                "The parameter 'out' provided as input to forward "
-                "should be of type np.ndarray."
-                )
-        return out
+        return self._combine(_vol_real, _vol_imag, out)

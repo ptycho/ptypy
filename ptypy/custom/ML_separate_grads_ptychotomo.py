@@ -74,6 +74,24 @@ class PtypyTomoWrapper:
             view_to_proj_vectors = view_to_proj_vectors
         )
 
+    @staticmethod
+    def _only_storage(output):
+        """
+        Returns the single storage of the container "output".
+
+        The projector works on every active view at once, so its result is one
+        array spanning all of them, which cannot be split over several
+        storages. Raises if the container holds anything but one.
+        """
+        if len(output.storages) != 1:
+            raise ValueError(
+                "Multiple storages are not yet supported by the tomographic "
+                "projector, which produces a single array spanning every "
+                "active view. Expected one storage in the output container, "
+                "but %s holds %d." % (output.ID, len(output.storages))
+                )
+        return next(iter(output.storages.values()))
+
     def forward(self, vol, ind, output):
         """
         Computes the forward projection, so a 3d array of shape
@@ -83,15 +101,12 @@ class PtypyTomoWrapper:
         Receives:
             vol     3d numpy array - the volume
             ind     list[int] - the indices of the active views
-            output  container - to store the result
+            output  container - to store the result, must hold one storage
         """
         self.projector.vol = vol
         self.projector.ind_of_views = ind
 
-        # Does not currently work with multiple storages
-        output_proj_array = self.projector.forward()
-        for ID, s in output.storages.items():
-            s.data[:] = output_proj_array
+        self.projector.forward(out=self._only_storage(output).data)
 
     def backward(self, proj_array, ind, output):
         """
@@ -103,15 +118,12 @@ class PtypyTomoWrapper:
             proj_array  3d numpy array - what we want to backward project
                         Has shape : (view_shape_1, n_active_views, view_shape_2)
             ind         list[int] - the indices of the active views
-            output      container - to store the result
+            output      container - to store the result, must hold one storage
         """
         self.projector.proj_array = proj_array
         self.projector.ind_of_views = ind
 
-        # Does not currently work with multiple storages
-        output_vol = self.projector.backward()
-        for ID, s in output.storages.items():
-            s.data[:] = output_vol
+        self.projector.backward(out=self._only_storage(output).data)
 
 
 @register()
