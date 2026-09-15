@@ -63,7 +63,6 @@ class PtypyTomoWrapper:
             all_angles.append(v.extra['val'])
 
         view_to_proj_vectors = np.array(list_view_to_proj_vectors)
-        #print(view_to_proj_vectors)
 
         self.projector = AstraViewBased(
             vol=vol,
@@ -1175,21 +1174,6 @@ def prepare_smoothing_preconditioner(amplitude):
         def __call__(self, x):
             return u.c_gf(x, self.sigma) # blur all 3 dimensions of volume
 
-    # from scipy.signal import correlate2d
-    # class HannFilt:
-    #    def __call__(self, x):
-    #        y = np.empty_like(x)
-    #        sh = x.shape
-    #        xf = x.reshape((-1,) + sh[-2:])
-    #        yf = y.reshape((-1,) + sh[-2:])
-    #        for i in range(len(xf)):
-    #            yf[i] = correlate2d(xf[i],
-    #                                np.array([[.0625, .125, .0625],
-    #                                          [.125, .25, .125],
-    #                                          [.0625, .125, .0625]]),
-    #                                mode='same')
-    #        return y
-
     if amplitude > 0.:
         logger.debug(
             'Using a smooth gradient filter (Gaussian blur - only for ML)')
@@ -1197,7 +1181,3 @@ def prepare_smoothing_preconditioner(amplitude):
 
     elif amplitude < 0.:
         raise RuntimeError('Hann filter not implemented (negative smoothing amplitude not supported)')
-        # logger.debug(
-        #    'Using a smooth gradient filter (Hann window - only for ML)')
-        # return HannFilt()
-
