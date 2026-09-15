@@ -338,7 +338,7 @@ class MPLplotter(object):
     """
     DEFAULT = DEFAULT
 
-    def __init__(self, pars=None, probes = None, objects= None, runtime= None, in_thread=False):
+    def __init__(self, pars=None, probes = None, objects= None, runtime= None, in_thread=False, is_refractive=False):
         """
         Create a client and attempt to connect to a running reconstruction server.
         """
@@ -351,6 +351,7 @@ class MPLplotter(object):
             self.runtime.iter_info = []
         else:
             self.runtime = runtime
+        self.is_refractive = is_refractive
         self._set_autolayout(pars)
         self.pr_plot=Param()
         self.ob_plot=Param()
@@ -582,7 +583,12 @@ class MPLplotter(object):
                     ptya = pty_axes[ii]
                 except IndexError:
                     cmap = pp.cmaps[ind % len(pp.cmaps)] #if ind[1]=='p' else pp.cmaps[0]
-                    ptya = PtyAxis(axes[ii], data = data[layer], channel=channel,cmap = cmap)
+                    if self.is_refractive: # plot real and imaginary part
+                        if channel == 'a':
+                            channel = 'r'
+                        if channel == 'p':
+                            channel = 'i'
+                    ptya = PtyAxis(axes[ii], data = data[layer], channel=channel, cmap = cmap)
                     ptya.set_mask(mask, False)
                     if pp.clims is not None and pp.clims[ind] is not None:
                         ptya.set_clims(pp.clims[ind][0],pp.clims[ind][1], False)
@@ -606,6 +612,10 @@ class MPLplotter(object):
                     ttl = '%s#%d (C)\n%s' % (title, layer, info)
                 elif channel == 'a':
                     ttl = '%s#%d (a)' % (title, layer)
+                elif channel == 'r':
+                    ttl = '%s#%d (r)' % (title, layer)
+                elif channel == 'i':
+                    ttl = '%s#%d (i)' % (title, layer)
                 else:
                     ttl = '%s#%d (p)' % (title, layer)
                 ptya.ax.set_title(ttl, size=12)
@@ -648,7 +658,7 @@ class MPLClient(MPLplotter):
 
     def __init__(self, client_pars=None, autoplot_pars=None, home=None,\
                  layout_pars=None, in_thread=False, is_slave=False):
-        
+
         from ptypy.core.ptycho import Ptycho
         self.config = Ptycho.DEFAULT.io.autoplot.copy(depth=3)
         self.config.update(autoplot_pars)
@@ -709,7 +719,7 @@ class _JupyterClient(MPLplotter):
         self.config.update(autoplot_pars)
         layout = self.config.get('layout',layout_pars)
 
-        super(_JupyterClient,self).__init__(pars=layout, 
+        super(_JupyterClient,self).__init__(pars=layout,
                                       objects=ptycho.obj.S,
                                       probes=ptycho.probe.S,
                                       runtime=ptycho.runtime,
@@ -733,9 +743,9 @@ class _JupyterClient(MPLplotter):
 
     def display(self,title):
         self.ipython.display.display(self.plot(title=title), clear=True)
-        
 
-def figure_from_ptycho(P, pars=None):
+
+def figure_from_ptycho(P, pars=None, is_refractive=False):
     """
     Returns a matplotlib figure displaying a reconstruction
     from a Ptycho instance.
@@ -753,16 +763,17 @@ def figure_from_ptycho(P, pars=None):
     """
     if pars is None:
         pars = TEMPLATES["jupyter"]
-    plotter = MPLplotter(pars=pars, 
+    plotter = MPLplotter(pars=pars,
                          objects=P.obj.S,
                          probes=P.probe.S,
                          runtime=P.runtime,
+                         is_refractive=is_refractive,
                          in_thread=False)
     plotter.update_plot_layout()
     plotter.plot_all()
     return plotter.plot_fig
 
-def figure_from_ptyr(filename, pars=None):
+def figure_from_ptyr(filename, pars=None, is_refractive=False):
     """
     Returns a matplotlib figure displaying a reconstruction
     from a .ptyr file.
@@ -782,7 +793,7 @@ def figure_from_ptyr(filename, pars=None):
     header = h5read(filename,'header')['header']
     if str(header['kind']) == 'fullflat':
         raise NotImplementedError('Loading specific data from flattened dump not yet supported')
-    else: 
+    else:
         content = list(h5read(filename,'content').values())[0]
         runtime = content['runtime']
         probes = Param()
@@ -791,10 +802,11 @@ def figure_from_ptyr(filename, pars=None):
         objects.update(content['obj'], Convert = True)
     if pars is None:
         pars = TEMPLATES["jupyter"]
-    plotter = MPLplotter(pars=pars, 
+    plotter = MPLplotter(pars=pars,
                          objects=objects,
                          probes=probes,
                          runtime=runtime,
+                         is_refractive=is_refractive,
                          in_thread=False)
     plotter.update_plot_layout()
     plotter.plot_all()
