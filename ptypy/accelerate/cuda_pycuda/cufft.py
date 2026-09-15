@@ -124,6 +124,8 @@ class FFT_skcuda(FFT_base):
             'OUT_TYPE': 'float' if array.dtype == np.complex64 else 'double',
             'MATH_TYPE': math_type
         }) if pre_fft is not None else None
+        # the kernels' scale argument has each kernel's math type
+        self._pre_scale_dtype = np.float32 if math_type == 'float' else np.float64
 
         math_type = 'float' if array.dtype == np.complex64 else 'double'
         if post_fft is not None:
@@ -135,6 +137,7 @@ class FFT_skcuda(FFT_base):
             'OUT_TYPE': 'float' if array.dtype == np.complex64 else 'double',
             'MATH_TYPE': math_type
         }) if (not (forward and not symmetric) or post_fft is not None) else None
+        self._post_scale_dtype = np.float32 if math_type == 'float' else np.float64
 
         self.block = (32, 32, 1)
         self.grid = (
@@ -173,7 +176,7 @@ class FFT_skcuda(FFT_base):
     def _prefilt(self, x, y):
         if self.pre_fft_knl:
             self.pre_fft_knl(x, y, self.pre_fft,
-                             np.float32(self.scale),
+                             self._pre_scale_dtype(self.scale),
                              np.int32(self.batches),
                              np.int32(self.arr_shape[0]),
                              np.int32(self.arr_shape[1]),
@@ -188,7 +191,7 @@ class FFT_skcuda(FFT_base):
         if self.post_fft_knl:
             assert self.post_fft is not None
             assert self.scale is not None
-            self.post_fft_knl(y, y, self.post_fft, np.float32(self.scale),
+            self.post_fft_knl(y, y, self.post_fft, self._post_scale_dtype(self.scale),
                               np.int32(self.batches),
                               np.int32(self.arr_shape[0]),
                               np.int32(self.arr_shape[1]),

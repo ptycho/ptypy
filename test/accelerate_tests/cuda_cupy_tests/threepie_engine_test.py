@@ -68,11 +68,13 @@ class ThreePIECupyTest(unittest.TestCase):
 
     # -- helpers ---------------------------------------------------------
     def _run(self, name, numiter=100, slices=None, thickness=1e-7,
-             start=0, scanmodel="BlockFull", fpb=100):
+             start=0, scanmodel="BlockFull", fpb=100, graphs=None):
         ep = u.Param()
         ep.name = name
         ep.numiter = numiter
         ep.probe_update_start = 0
+        if graphs is not None:
+            ep.cuda_graphs = graphs
         if slices is not None:
             ep.number_of_slices = slices
             ep.slice_thickness = thickness
@@ -127,6 +129,28 @@ class ThreePIECupyTest(unittest.TestCase):
         self.assertGreater(sim, 0.85,
                            "GPU and CPU 3PIE product objects disagree "
                            "(correlation=%.3f)" % sim)
+
+    def test_cuda_graphs_match_plain_launches(self):
+        """Replaying captured graphs gives the same reconstruction as
+        launching the kernels one by one (same seeded view order)."""
+        from unittest import mock
+        results = {}
+        for graphs in (False, True):
+            np.random.seed(3)
+            seeded = mock.patch(
+                "numpy.random.default_rng",
+                lambda *a, **k: np.random.Generator(np.random.PCG64(5)))
+            with seeded:
+                P = self._run("ThreePIE_cupy", numiter=60, slices=2,
+                              thickness=1e-7, graphs=graphs)
+            results[graphs] = (self._obj(P).copy(), self._probe(P).copy(),
+                               self._summed_error(P))
+        ob0, pr0, err0 = results[False]
+        ob1, pr1, err1 = results[True]
+        # the same kernels run in the same order, so the replay is exact
+        np.testing.assert_array_equal(ob1, ob0)
+        np.testing.assert_array_equal(pr1, pr0)
+        np.testing.assert_array_equal(err1, err0)
 
     def test_slice_start_iteration_list(self):
         """A per-slice start-iteration list must be accepted and run."""
