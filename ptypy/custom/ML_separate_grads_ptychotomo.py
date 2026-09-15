@@ -71,7 +71,6 @@ class PtypyTomoWrapper:
             view_shape = np.shape(list(obj.views.values())[0]),
             block_size = sum(1 for v in obj.views.values() if v.pod.active),
             angles = all_angles,
-            shifts = None,
             view_to_proj_vectors = view_to_proj_vectors
         )
 
