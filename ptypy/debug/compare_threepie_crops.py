@@ -52,49 +52,19 @@ import matplotlib
 matplotlib.use("Agg")  # headless: must be set before pyplot is imported
 import matplotlib.pyplot as plt  # noqa: E402
 
-try:                             # normal in-package import
-    from ptypy.debug.threepie_compare import (  # noqa: E402
-        ncorr,
-        central,
-        gauge_phase,
-        aligned_ncorr,
-        read_recon,
-        find_latest,
-    )
-except ImportError:              # executed as a bare script from this folder
-    from threepie_compare import (  # noqa: E402
-        ncorr,
-        central,
-        gauge_phase,
-        aligned_ncorr,
-        read_recon,
-        find_latest,
-    )
-
-# Engine name -> the tag that appears in the output directory name.
-ENGINE_DIRTAG = {
-    "ThreePIE": "cpu",
-    "ThreePIE_serial": "serial",
-    "ThreePIE_cupy": "gpu",
-}
-
-# Backend pairs of the agreement table, in printing order.
-PAIRS = (
-    ("ThreePIE_serial", "ThreePIE", "serial-vs-cpu"),
-    ("ThreePIE_cupy", "ThreePIE", "gpu-vs-cpu"),
-    ("ThreePIE_cupy", "ThreePIE_serial", "gpu-vs-serial"),
+from ptypy.debug.threepie_compare import (  # noqa: E402
+    ncorr,
+    central,
+    gauge_phase,
+    aligned_ncorr,
+    read_recon,
+    find_latest,
+    ENGINE_DIRTAG,
+    PAIRS,
+    crop_list,
 )
 
 DEFAULT_CROPS = "128,256,512"
-
-
-def crop_list(value):
-    """argparse type: comma-separated crops -> list of ints."""
-    crops = [int(c) for c in str(value).split(",") if c.strip()]
-    if not crops:
-        raise argparse.ArgumentTypeError(
-            "expected at least one crop, got %r" % (value,))
-    return crops
 
 
 def scan_label(base):
@@ -195,8 +165,6 @@ def phase_panel(data, args, label, out_png):
             half = phases[eng].shape[-1] / 2 * rec["psize"] * 1e6
             im = ax.imshow(phases[eng], cmap="gray", vmin=vmin, vmax=vmax,
                            extent=(-half, half, -half, half))
-            ax.set_xticks([])
-            ax.set_yticks([])
             if i == 0:
                 ax.set_title("%s (%s)" % (eng, ENGINE_DIRTAG[eng]), fontsize=11)
             if j == 0:
@@ -255,8 +223,6 @@ def main():
 
     data = collect(args)
 
-    # Backend agreement per crop (same grid), central region; the "aligned"
-    # column removes the joint probe+object translation gauge mode.
     report = agreement_report(data, args, label)
     print(report)
     out_txt = os.path.join(outdir, "real_crop_comparison_%s.txt" % tag)

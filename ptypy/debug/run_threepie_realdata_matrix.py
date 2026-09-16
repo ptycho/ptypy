@@ -4,7 +4,8 @@
 Launch a small ThreePIE real-data crop/bin matrix on the NanoMAX multislice scan.
 
 This is a thin orchestrator around the beamtime runner
-``<beamtime-basedir>/scripts/run_threepie_cupy_nanomax.py``: it builds one
+``<beamtime-basedir>/scripts/run_threepie_cupy_nanomax.py`` (a beamline
+script that lives outside ptypy, see ``--runner``): it builds one
 runner command per (engine, crop) combination, so CPU (``ThreePIE``),
 serialized (``ThreePIE_serial``) and GPU (``ThreePIE_cupy``) reconstructions of
 the same scan land in separate, systematically named output folders:
@@ -22,6 +23,11 @@ Typical use (from the repo root, with the ptypy_v8 environment):
     python ptypy/debug/run_threepie_realdata_matrix.py --dry-run
     python ptypy/debug/run_threepie_realdata_matrix.py \
         --engines ThreePIE_serial,ThreePIE_cupy --crop 256 --slice-pad 2
+
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: see LICENSE for details.
 """
 
 import argparse
@@ -30,9 +36,15 @@ import os
 import subprocess
 import sys
 
-# Reference slice spacing of the NanoMAX 0002_multislice scan 434:
-# both sample layers sit ~750 um up/downstream of focus -> 1.5 mm spacing.
+from ptypy.debug.threepie_compare import positive_int
+
+# Slice spacing of the reference scan: the two layers sit +-750 um around
+# the focus.
 DEFAULT_SLICE_THICKNESS = 1500.0e-6
+
+# Checkout that contains this file, put on PYTHONPATH for the runner.
+DEFAULT_PTYPY_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 
 # Detector pixel sizes matched to the defaults of run_threepie_cupy_nanomax.py.
 DETECTOR_PIXEL = {
@@ -40,15 +52,6 @@ DETECTOR_PIXEL = {
     "merlin": 55e-6,
     "pilatus": 172e-6,
 }
-
-
-def positive_int(value):
-    """argparse type: strictly positive integer (used for --slice-pad)."""
-    ivalue = int(value)
-    if ivalue < 1:
-        raise argparse.ArgumentTypeError(
-            "expected a positive integer, got %r" % (value,))
-    return ivalue
 
 
 def detector_pixel(args):
@@ -64,11 +67,11 @@ def output_suffix(args):
 
     An explicit --output-suffix always wins. The default encodes the raw crop
     plus any non-default physics options so control runs never overwrite the
-    baselines:  _LT_debug<crop>[_z<um>um][_pad<N>]
+    baselines:  _matrix<crop>[_z<um>um][_pad<N>]
     """
     if getattr(args, "output_suffix", None) is not None:
         return args.output_suffix
-    suffix = "_LT_debug%d" % args.crop
+    suffix = "_matrix%d" % args.crop
     thickness = args.slice_thickness
     if abs(thickness - DEFAULT_SLICE_THICKNESS) > 1e-12:
         suffix += "_z%dum" % int(round(thickness * 1e6))
@@ -81,8 +84,7 @@ def diagnostic_crops(args):
     """
     Crops for the geometry diagnostic, as a comma-separated string.
 
-    Defaults to the requested crop plus the 128/512 transition context
-    (crop 128 converges on this scan, larger crops historically did not).
+    Defaults to the requested crop plus 128 and 512 for context.
     """
     if getattr(args, "diagnostic_crops", None):
         return args.diagnostic_crops
@@ -132,8 +134,12 @@ def build_argparser():
                         help="Path to run_threepie_cupy_nanomax.py "
                              "(default: <beamtime-basedir>/scripts/).")
     # Common physics/geometry arguments, defaults matched to the runner.
-    parser.add_argument("--ptypy-path", default="/home/litang/ptypy_v8/dev-work/")
-    parser.add_argument("--beamtime-basedir", default="/home/litang/multislice")
+    parser.add_argument("--ptypy-path", default=DEFAULT_PTYPY_PATH,
+                        help="Checkout put on PYTHONPATH for the runner "
+                             "(default: the one containing this file).")
+    parser.add_argument("--beamtime-basedir", required=True,
+                        help="Beamtime folder with raw/, process/ and "
+                             "scripts/run_threepie_cupy_nanomax.py.")
     parser.add_argument("--sample", default="0002_multislice")
     parser.add_argument("--detector", default="eiger4m")
     parser.add_argument("--detector-pixel", type=float, default=None,

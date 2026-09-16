@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Diagnose crop-dependent ThreePIE multislice propagation limits.
 
@@ -9,6 +9,11 @@ The critical condition for angular-spectrum propagation between slices is:
 where N and dx are the prepared real-space wavefront size and pixel size after
 detector cropping/rebinning. Larger detector crops reduce dx and therefore make
 the safe inter-slice propagation distance smaller.
+
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: see LICENSE for details.
 """
 
 import argparse
@@ -20,10 +25,14 @@ HC_KEV_M = 12.398419843320026e-10
 
 def build_argparser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--energy-kev", type=float, default=8.0)
-    parser.add_argument("--detector-distance", type=float, default=4.150)
-    parser.add_argument("--detector-pixel", type=float, default=75e-6)
-    parser.add_argument("--binning", type=int, default=2)
+    parser.add_argument("--energy-kev", type=float, default=8.0,
+                        help="Photon energy in keV.")
+    parser.add_argument("--detector-distance", type=float, default=4.150,
+                        help="Sample to detector distance in meters.")
+    parser.add_argument("--detector-pixel", type=float, default=75e-6,
+                        help="Detector pixel size in meters (before binning).")
+    parser.add_argument("--binning", type=int, default=2,
+                        help="Binning applied to the detector frames.")
     parser.add_argument("--suggest-binnings", default="1,2,4,8",
                         help="Comma-separated binnings to evaluate for each crop.")
     parser.add_argument("--slice-thickness", type=float, default=1500.0e-6,
@@ -36,12 +45,14 @@ def build_argparser():
 
 
 def bandlimit_keep_fraction(n, dx, wavelength, distance):
+    """Fraction of the spectrum kept by the angular-spectrum band limit."""
     vlim = 1.0 / np.sqrt((2.0 * distance / (n * dx)) ** 2 + 1.0)
     coord = np.arange(n)
     coord = ((coord + n // 2) % n) - n // 2
     v = coord * (wavelength / (n * dx))
     V, W = np.meshgrid(v, v, indexing="ij")
-    return float(((np.abs(V) <= vlim) & (np.abs(W) <= vlim)).mean()), float(vlim), float(np.max(np.abs(v)))
+    keep = ((np.abs(V) <= vlim) & (np.abs(W) <= vlim)).mean()
+    return float(keep), float(vlim), float(np.max(np.abs(v)))
 
 
 def crop_sampling_stats(raw_crop, binning, wavelength, detector_distance,
@@ -128,7 +139,8 @@ def recommendation_text(stats, current_binning, suggested_binning=None):
         )
     if suggested_binning is not None and suggested_binning != current_binning:
         if suggested_binning < current_binning:
-            text += f"; lower binning to {suggested_binning} is also sampled safely if memory allows"
+            text += (f"; lower binning to {suggested_binning} is also "
+                     "sampled safely if memory allows")
         else:
             text += f"; binning {suggested_binning} is also sampled safely"
     return text + "."
@@ -149,7 +161,8 @@ def main():
     print(f"detector pixel after binning: {args.detector_pixel * args.binning:.6e} m")
     print(f"slice thickness: {args.slice_thickness:.6e} m (fixed physical spacing)")
     print()
-    print("raw_crop prepared_N dx_nm zcrit_mm slice/zcrit bandlimit_keep min_pad auto_pad suggested_binning status")
+    print("raw_crop prepared_N dx_nm zcrit_mm slice/zcrit bandlimit_keep "
+          "min_pad auto_pad suggested_binning status")
 
     recommendations = []
     for crop in crops:
@@ -161,9 +174,9 @@ def main():
             print(f"{crop:8d} incompatible with binning {args.binning}")
             continue
         print(
-            f"{crop:8d} {stats['prepared_n']:10d} {stats['dx']*1e9:7.3f} "
-            f"{stats['zcrit']*1e3:8.3f} {stats['ratio']:11.3f} "
-            f"{100*stats['keep_fraction']:13.2f}% "
+            f"{crop:8d} {stats['prepared_n']:10d} {stats['dx'] * 1e9:7.3f} "
+            f"{stats['zcrit'] * 1e3:8.3f} {stats['ratio']:11.3f} "
+            f"{100 * stats['keep_fraction']:13.2f}% "
             f"{padding_suggestion(stats):7d} "
             f"{stats['auto_pad']:8d} ",
             end="",
@@ -185,7 +198,7 @@ def main():
             else:
                 print(
                     f"{('bin%d' % binning):>17s} "
-                    f"{stats['status']} (safe dx={safe_stats['dx']*1e9:.1f} nm)"
+                    f"{stats['status']} (safe dx={safe_stats['dx'] * 1e9:.1f} nm)"
                 )
                 recommendations.append(
                     recommendation_text(stats, args.binning, binning))

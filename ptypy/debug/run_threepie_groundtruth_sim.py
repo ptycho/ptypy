@@ -105,16 +105,14 @@ too when ptypy is installed or PYTHONPATH points at the checkout.
 is not available, so the script still produces its report and figure on a
 CPU-only machine.
 
+``--seed-engines N`` gives every engine the same seeded view order; without
+it each engine draws its own order and the panels differ by the draw as much
+as by the backend. Set it for any run that compares backends.
+
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
     :license: see LICENSE for details.
-
---seed-engines N gives every engine the same seeded view order. Without it
-each engine shuffles its views with its own unseeded generator, and the
-panels then differ by the draw as much as by the backend: one engine run
-twice agrees with itself at only 0.6 to 0.8 per slice at shape 64. Set it
-for any run that compares backends.
 """
 
 import argparse
@@ -130,17 +128,15 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 import numpy as np               # noqa: E402
 
-# ptypy itself is imported inside the functions that need it, so that --help
-# still works when the repo root is not on sys.path (this script does not
-# touch sys.path; run it as a module from the repo root, or with the
-# package installed).
+from ptypy.debug.threepie_compare import (  # noqa: E402
+    ENGINE_DIRTAG, PAIRS, have_cupy, common_crop)
+
+# the engines are imported inside the functions that need them
 
 # Name of the PtyScan registered below. Kept in sync with the pytest sibling.
 SCAN_NAME = "ThreePIEGroundTruthScan"
 
-ENGINE_LABEL = {"ThreePIE": "cpu",
-                "ThreePIE_serial": "serial",
-                "ThreePIE_cupy": "gpu"}
+ENGINE_LABEL = ENGINE_DIRTAG
 DEFAULT_ENGINES = "ThreePIE,ThreePIE_serial,ThreePIE_cupy"
 
 # Metric conventions, identical to threepie_groundtruth_slices_test.py: both
@@ -158,9 +154,6 @@ NUMITER_CONTIGUOUS = 20
 FIGURE_CROP_FRAC = 0.8
 
 
-# --------------------------------------------------------------------------- #
-# metrics
-# --------------------------------------------------------------------------- #
 def gt_ncorr(a, b):
     """Aligned normalized correlation; ``aligned_ncorr`` returns (shift, value)."""
     from ptypy.debug.threepie_compare import aligned_ncorr
@@ -169,21 +162,6 @@ def gt_ncorr(a, b):
     return value
 
 
-def have_cupy():
-    """True when cupy is importable and a GPU is reachable."""
-    if importlib.util.find_spec("cupy") is None:
-        return False
-    try:
-        import cupy as cp
-        cp.cuda.Device(0).compute_capability
-        return True
-    except Exception:
-        return False
-
-
-# --------------------------------------------------------------------------- #
-# the phantoms and the ground-truth two-slice scan
-# --------------------------------------------------------------------------- #
 def spoke_star(shape, spokes=24, phase=0.4, rmax=0.95):
     """Siemens-star-like phase phantom for the downstream slice, amplitude ~1."""
     n0, n1 = shape
@@ -339,10 +317,10 @@ def gaussian_na_probe(shape, resolution, energy, na, fwhm, slice_sep,
     # converging for focus > 0, diverging for focus < 0
     phase = -k * np.sign(focus) * (np.sqrt(r2 + focus ** 2) - abs(focus))
     if model == "vortex":
-        l = int(charge)
+        ell = int(charge)
         theta = np.arctan2(y[:, None], x[None, :])
-        amp = amp * (np.sqrt(r2) / w) ** abs(l)
-        phase = phase + l * theta
+        amp = amp * (np.sqrt(r2) / w) ** abs(ell)
+        phase = phase + ell * theta
     elif model != "gaussian":
         raise ValueError("unknown probe model %r" % model)
     return (amp * np.exp(1j * phase)).astype(np.complex64)
@@ -469,7 +447,8 @@ def register_scan():
         [phantom_phase]
         default = 1.0
         type = float
-        help = Peak-to-peak phase range in radians of an image phantom (phase = phantom_phase * (g - mean g)); keep it below 2 pi
+        help = Peak-to-peak phase range in radians of an image phantom
+        doc = phase = phantom_phase * (g - mean g); keep it below 2 pi.
         doc =
 
         [phantom_amp]
@@ -482,13 +461,20 @@ def register_scan():
         default = True
         type = bool
         help = Place the beam focus midway between the two slices
-        doc = Mirrors the real experiment (slices at +-0.75 mm around focus); the curvature difference between the planes gives the reconstruction its depth discrimination. Applies to the moon probe only.
+        doc = Mirrors the real experiment (slices at +-0.75 mm around focus);
+          the curvature difference between the planes gives the
+          reconstruction its depth discrimination. Applies to the moon probe
+          only.
 
         [probe_model]
         default = moon
         type = str
         help = Probe that generates the data: "moon", "gaussian", "vortex" or "multifocal"
-        doc = "gaussian" is a Gaussian intensity profile with a converging spherical phase of numerical aperture probe_na, defined at slice 0; "vortex" adds an orbital angular momentum probe_charge (ring-shaped beam); "multifocal" is the coherent sum of converging waves with foci at the fractions probe_foci of the slice separation.
+        doc = "gaussian" is a Gaussian intensity profile with a converging
+          spherical phase of numerical aperture probe_na, defined at slice 0;
+          "vortex" adds an orbital angular momentum probe_charge (ring-shaped
+          beam); "multifocal" is the coherent sum of converging waves with
+          foci at the fractions probe_foci of the slice separation.
 
         [probe_charge]
         default = 1
@@ -531,7 +517,6 @@ def register_scan():
             self.obj1 = make_phantom(self.p.phantom1, self.obj.shape,
                                      self.p.phantom_phase, self.p.phantom_amp,
                                      self.p.spokes, flowers=self.obj)
-            # inter-slice near-field propagator on the probe frame
             g = Param()
             g.energy = self.geo.energy
             g.distance = self.p.slice_sep
@@ -580,9 +565,6 @@ def register_scan():
     return ThreePIEGroundTruthScan
 
 
-# --------------------------------------------------------------------------- #
-# geometry / reconstruction
-# --------------------------------------------------------------------------- #
 def slice_separation(scan_cls, args):
     """
     Slice separation in meters, taken from the scan's own geometry.
@@ -601,9 +583,7 @@ def slice_separation(scan_cls, args):
     dof = 5.2 * dx * dx / lam
     if getattr(args, "sep_dof", None) is not None:
         return args.sep_dof * dof, dx, zcrit, dof
-    # sep/DOF = 0.164 * shape at the default --sep-frac, i.e. ~11 at the
-    # default --shape 64, matching the real crop-128 case that separates
-    # cleanly.
+    # at the default --sep-frac, sep/DOF = 0.164 * shape (about 11 at shape 64)
     return args.sep_frac * zcrit, dx, zcrit, dof
 
 
@@ -689,11 +669,12 @@ def build_params(engine_name, zsep, args):
     if args.probe == "vortex" and args.probe_init == "aperture":
         # a plain aperture is orthogonal to a vortex beam (no angular
         # momentum); start from the analytic ring instead
-        print("note: --probe-init aperture carries no angular momentum, using "
-              "the scaled analytic vortex beam as initial probe", flush=True)
+        from ptypy.utils.verbose import logger
+        logger.warning("--probe-init aperture carries no angular momentum, "
+                       "using the scaled analytic vortex beam as initial probe")
         args.probe_init = "gaussian"
-    # initial probe hint, like the real runner's --defocus-um: start from a
-    # probe whose focus sits where the true one is
+    # initial probe hint: start from a probe whose focus sits where the true
+    # one is
     p.scans.MF.illumination = u.Param()
     p.scans.MF.illumination.propagation = u.Param()
     if structured and args.probe_init == "aperture":
@@ -766,7 +747,6 @@ def load_engines(engines):
         importlib.import_module("ptypy.custom.threepie_serial")
     if "ThreePIE_cupy" in engines:
         ptypy.load_gpu_engines("cupy")
-        importlib.import_module("ptypy.custom.threepie_cupy")
 
 
 def run_engine(engine_name, zsep, args):
@@ -840,9 +820,6 @@ def probe_results(probes, zsep, meta, last=None, truth=None):
     return out
 
 
-# --------------------------------------------------------------------------- #
-# report and figure
-# --------------------------------------------------------------------------- #
 def build_report(engines, gt, results, gtp, pres, geom, args):
     """The printed/saved comparison report, as one string."""
     zsep, dx, zcrit, dof = geom
@@ -895,11 +872,7 @@ def build_report(engines, gt, results, gtp, pres, geom, args):
 
     lines += ["", "GT slice0-vs-slice1 (phantom distinctness): %.4f"
               % gt_ncorr(gt[0], gt[1])]
-    pairs = [(a, b, tag)
-             for a, b, tag in (("ThreePIE_serial", "ThreePIE", "serial-vs-cpu"),
-                               ("ThreePIE_cupy", "ThreePIE", "gpu-vs-cpu"),
-                               ("ThreePIE_cupy", "ThreePIE_serial",
-                                "gpu-vs-serial"))
+    pairs = [(a, b, tag) for a, b, tag in PAIRS
              if a in engines and b in engines]
     if pairs:
         lines += ["cross-backend per slice (aligned):"]
@@ -946,18 +919,6 @@ def build_report(engines, gt, results, gtp, pres, geom, args):
     return "\n".join(lines)
 
 
-def common_crop(panels, frac=FIGURE_CROP_FRAC):
-    """Crop every panel centrally to the same (smallest) shape."""
-    n0 = int(min(p.shape[-2] for p in panels) * frac)
-    n1 = int(min(p.shape[-1] for p in panels) * frac)
-    out = []
-    for x in panels:
-        c0 = (x.shape[-2] - n0) // 2
-        c1 = (x.shape[-1] - n1) // 2
-        out.append(x[..., c0:c0 + n0, c1:c1 + n1])
-    return out
-
-
 def make_figure(engines, gt, results, zsep, args, path):
     """Rows = slice, columns = ground truth followed by each engine."""
     from ptypy.debug.threepie_compare import gauge_phase
@@ -966,8 +927,7 @@ def make_figure(engines, gt, results, zsep, args, path):
     fig, axes = plt.subplots(2, len(cols), figsize=(3.9 * len(cols), 3.9 * 2))
     for i in (0, 1):
         panels = [gt[i]] + [results[(e, "slice%d" % i)] for e in engines]
-        # crop every panel (ground truth included) to the same central FOV
-        phases = [gauge_phase(p) for p in common_crop(panels)]
+        phases = [gauge_phase(p) for p in common_crop(panels, FIGURE_CROP_FRAC)]
         pooled = np.concatenate([p.ravel() for p in phases])
         vmin, vmax = np.percentile(pooled, [1, 99])
         im = None
@@ -1182,7 +1142,7 @@ def make_overview_figure(engines, gt, results, gtp, pres, geom, args, path):
     for i in (0, 1):
         r = 2 + i
         panels = [gt[i]] + [results[(e, "slice%d" % i)] for e in engines]
-        phases = [gauge_phase(p) for p in common_crop(panels)]
+        phases = [gauge_phase(p) for p in common_crop(panels, FIGURE_CROP_FRAC)]
         pooled = np.concatenate([p.ravel() for p in phases])
         vmin, vmax = np.percentile(pooled, [1, 99])
         im = None
@@ -1267,9 +1227,6 @@ def make_probe_figure(engines, gtp, pres, geom, args, path):
     plt.close(fig)
 
 
-# --------------------------------------------------------------------------- #
-# command line
-# --------------------------------------------------------------------------- #
 def build_argparser():
     parser = argparse.ArgumentParser(
         description=__doc__.split("\n")[1],
@@ -1394,8 +1351,8 @@ def main():
         raise SystemExit("unknown engine(s): %s (known: %s)"
                          % (", ".join(unknown), ", ".join(ENGINE_LABEL)))
     if "ThreePIE_cupy" in engines and not have_cupy():
-        print("cupy unavailable -> skipping the ThreePIE_cupy engine",
-              flush=True)
+        from ptypy.utils.verbose import logger
+        logger.warning("cupy unavailable, skipping the ThreePIE_cupy engine")
         engines = [e for e in engines if e != "ThreePIE_cupy"]
     if not engines:
         raise SystemExit("no engines left to run")
@@ -1420,8 +1377,9 @@ def main():
           % (dx * 1e9, zcrit * 1e3, dof * 1e6, zsep * 1e3, zsep / dof,
              zsep / zcrit), flush=True)
     if zsep > zcrit:
-        print("WARNING: slice_sep exceeds z_crit, the near-field forward "
-              "model is aliased", flush=True)
+        from ptypy.utils.verbose import logger
+        logger.warning("slice_sep exceeds z_crit, the near-field forward "
+                       "model is aliased")
 
     results = {}
     pres = {}

@@ -52,23 +52,9 @@ import matplotlib
 matplotlib.use("Agg")           # these run headless; must precede pyplot
 import matplotlib.pyplot as plt  # noqa: E402
 
-try:                            # normal in-package import
-    from ptypy.debug.threepie_compare import (
-        ncorr, aligned_ncorr, central, gauge_phase, read_slices, find_latest)
-except ImportError:             # executed as a bare script from this folder
-    from threepie_compare import (
-        ncorr, aligned_ncorr, central, gauge_phase, read_slices, find_latest)
-
-
-# Engine class name -> the tag used in the reconstruction directory name.
-ENGINE_DIRTAG = {"ThreePIE": "cpu",
-                 "ThreePIE_serial": "serial",
-                 "ThreePIE_cupy": "gpu"}
-
-# Backend pairs for the per-slice cross-backend table, (a, b, label).
-CROSS_PAIRS = (("ThreePIE_serial", "ThreePIE", "serial-vs-cpu"),
-               ("ThreePIE_cupy", "ThreePIE", "gpu-vs-cpu"),
-               ("ThreePIE_cupy", "ThreePIE_serial", "gpu-vs-serial"))
+from ptypy.debug.threepie_compare import (  # noqa: E402
+    ncorr, aligned_ncorr, central, gauge_phase, read_slices, find_latest,
+    ENGINE_DIRTAG, PAIRS as CROSS_PAIRS)
 
 # The swap check only needs the two comparisons against the CPU reference.
 SWAP_PAIRS = CROSS_PAIRS[:2]
@@ -170,6 +156,7 @@ def render_figure(args, data, crops, scan_label, out_png):
             r = ic * args.slices + isl
             phases = {eng: gauge_phase(central(data[(crop, eng)][isl]))
                       for eng in engines if (crop, eng) in data}
+            vmin = vmax = None
             if phases:
                 pooled = np.concatenate([p.ravel() for p in phases.values()])
                 vmin, vmax = np.percentile(pooled, [1, 99])

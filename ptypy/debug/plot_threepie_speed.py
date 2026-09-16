@@ -58,10 +58,8 @@ import matplotlib
 matplotlib.use("Agg")            # these plots are made headless
 import matplotlib.pyplot as plt  # noqa: E402  (must follow the backend choice)
 
-try:                            # normal in-package import
-    from ptypy.debug.threepie_compare import find_latest, iteration_seconds
-except ImportError:             # executed as a bare script from this folder
-    from threepie_compare import find_latest, iteration_seconds
+from ptypy.debug.threepie_compare import (  # noqa: E402
+    find_latest, iteration_seconds, crop_list)
 
 # Fixed palette order: engine identity -> hue (colourblind-safe).
 ENGINES = [
@@ -78,15 +76,12 @@ REC_GLOB = os.path.join("rec", "rec_*.ptyr")
 
 DEFAULT_FAMILIES = [("_speed20", 20), ("_cmp100", 100)]
 DEFAULT_CROPS = "128,256,512"
-DEFAULT_GPU_NOTE = "GPU is launch-overhead-bound, flat at 0.85 s/it"
+DEFAULT_GPU_NOTE = ""
 
 TEXT1, TEXT2 = "#1a1a19", "#5f5e56"
 GRID, SPINE = "#e7e6e0", "#c9c8c0"
 
 
-# --------------------------------------------------------------------------- #
-# argument types
-# --------------------------------------------------------------------------- #
 def family_spec(value):
     """argparse type for ``--family``: ``SUFFIX:NUMITER`` -> (suffix, n)."""
     if ":" not in value:
@@ -104,29 +99,6 @@ def family_spec(value):
     return suffix, numiter
 
 
-def crop_list(value):
-    """argparse type for ``--crops``: comma-separated positive integers."""
-    crops = []
-    for part in value.split(","):
-        part = part.strip()
-        if not part:
-            continue
-        try:
-            crop = int(part)
-        except ValueError:
-            raise argparse.ArgumentTypeError(
-                "crop %r is not an integer" % part)
-        if crop < 1:
-            raise argparse.ArgumentTypeError("crop %r must be positive" % part)
-        crops.append(crop)
-    if not crops:
-        raise argparse.ArgumentTypeError("no crops given")
-    return crops
-
-
-# --------------------------------------------------------------------------- #
-# timing extraction
-# --------------------------------------------------------------------------- #
 def run_pattern(args, tag, crop, suffix):
     """Glob for the saved reconstructions of one (engine, crop, family) run."""
     return os.path.join(args.scan_dir,
@@ -168,7 +140,7 @@ def collect(args, families):
 
 
 def print_table(data, crops):
-    """The same per-engine/per-family table the beamtime script printed."""
+    """Per-engine, per-family table of seconds per iteration."""
     print("%-8s %-9s " % ("engine", "family") +
           " ".join("crop%4d" % c for c in crops))
     for (tag, suffix), vals in data.items():
@@ -176,9 +148,6 @@ def print_table(data, crops):
         print("%-8s %-9s %s" % (tag, suffix, row))
 
 
-# --------------------------------------------------------------------------- #
-# figure
-# --------------------------------------------------------------------------- #
 def scan_label(scan_dir, override=None):
     """``.../scan_000434`` -> ``scan 434``; ``--scan-label`` overrides it."""
     if override:
@@ -221,7 +190,7 @@ def make_figure(args, data, main, others):
         1, 2, figsize=(10.4, 4.4), facecolor="white",
         gridspec_kw={"width_ratios": [1.5, 1]})
 
-    # --- left: seconds per iteration vs crop (log-log) -------------------- #
+    # left panel: seconds per iteration vs crop
     for tag, label, color in ENGINES:
         main_vals = data[(tag, main_suffix)]
         if not main_vals:
@@ -238,7 +207,6 @@ def make_figure(args, data, main, others):
                     textcoords="offset points", xytext=(8, -3),
                     fontsize=9, color=TEXT1)
 
-    # crop^2 guide through the reference engine's smallest crop
     ref = data.get((GUIDE_TAG, main_suffix), {})
     anchor = crops[0]
     if anchor in ref:
@@ -253,13 +221,14 @@ def make_figure(args, data, main, others):
     ax.set_yscale("log")
     style_axis(ax, crops, "raw detector crop (pixels)",
                "engine time per iteration (s)",
-               "ThreePIE speed vs crop: %s, %d frames, bin %d,\n"
+               "ThreePIE speed vs crop: %s%s, bin %d,\n"
                "%d slices, %d probe modes (%s)"
-               % (scan_label(args.scan_dir, args.scan_label), args.frames,
+               % (scan_label(args.scan_dir, args.scan_label),
+                  ", %d frames" % args.frames if args.frames else "",
                   args.binning, args.slices, args.probe_modes,
                   marker_note(main, others)))
 
-    # --- right: GPU speedup factor ---------------------------------------- #
+    # right panel: GPU speedup factor
     gpu = data.get((GPU_TAG, main_suffix), {})
     for tag, label, color in ENGINES:
         if tag == GPU_TAG:
@@ -275,15 +244,12 @@ def make_figure(args, data, main, others):
                      fontsize=10, color=TEXT1)
     ax2.axhline(1.0, color=TEXT2, lw=1, ls=":")
     style_axis(ax2, crops, "raw detector crop (pixels)", "GPU speedup factor",
-               "GPU advantage grows with crop\n(%s)" % args.gpu_note)
+               "GPU speedup vs crop" + ("\n(%s)" % args.gpu_note if args.gpu_note else ""))
 
     fig.tight_layout()
     return fig
 
 
-# --------------------------------------------------------------------------- #
-# cli
-# --------------------------------------------------------------------------- #
 def build_argparser():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--scan-dir", required=True,
@@ -321,15 +287,12 @@ def build_argparser():
     parser.add_argument("--probe-modes", type=int, default=2,
                         help="Number of probe modes of the runs to read "
                              "(default: 2).")
-    parser.add_argument("--frames", type=int, default=670,
+    parser.add_argument("--frames", type=int, default=None,
                         help="Frame count quoted in the plot title; it is "
-                             "annotation only and is not measured "
-                             "(default: 670).")
+                             "annotation only and is not measured.")
     parser.add_argument("--gpu-note", default=DEFAULT_GPU_NOTE,
-                        help="Parenthesised second line of the speedup panel "
-                             "title; the default describes the scan-434 "
-                             "reference dataset (default: %s)."
-                             % DEFAULT_GPU_NOTE)
+                        help="Optional parenthesised second line of the "
+                             "speedup panel title.")
     parser.add_argument("--scan-label", default=None,
                         help="Scan name used in the plot title "
                              "(default: derived from --scan-dir).")
@@ -340,8 +303,6 @@ def build_argparser():
 
 def main():
     args = build_argparser().parse_args()
-    if isinstance(args.crops, str):          # untouched string default
-        args.crops = crop_list(args.crops)
     families = args.families or list(DEFAULT_FAMILIES)
 
     known = [suffix for suffix, _ in families]

@@ -49,6 +49,7 @@ This file is part of the PTYPY package.
 
 import argparse
 import importlib
+import importlib.util
 import os
 
 import matplotlib
@@ -56,21 +57,16 @@ matplotlib.use("Agg")            # headless: must happen before pyplot loads
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np               # noqa: E402
 
-# Engine name -> (argument for ptypy.load_gpu_engines, module that registers it).
-# ThreePIE itself is pure numpy and needs no GPU-engine bundle.
+from ptypy.debug.threepie_compare import (  # noqa: E402
+    PAIRS, positive_int, have_cupy)
+
+# Engine name -> (argument for ptypy.load_gpu_engines, module that registers
+# it, or None when the bundle registers it). ThreePIE itself is pure numpy.
 ENGINE_SETUP = {
     "ThreePIE": (None, "ptypy.custom.threepie"),
     "ThreePIE_serial": ("serial", "ptypy.custom.threepie_serial"),
-    "ThreePIE_cupy": ("cupy", "ptypy.custom.threepie_cupy"),
+    "ThreePIE_cupy": ("cupy", None),
 }
-
-# Engine pairs reported in the correlation tables, in the historical order.
-# Pairs whose engines did not both run are dropped.
-PAIRS = (
-    ("ThreePIE_serial", "ThreePIE", "serial-vs-cpu"),
-    ("ThreePIE_cupy", "ThreePIE", "gpu-vs-cpu"),
-    ("ThreePIE_cupy", "ThreePIE_serial", "gpu-vs-serial"),
-)
 
 DEFAULT_SHAPES = ["32", "64", "128"]
 DEFAULT_ENGINES = ["ThreePIE", "ThreePIE_serial", "ThreePIE_cupy"]
@@ -86,21 +82,8 @@ SCAN_DENSITY = 0.2
 SCAN_PHOTONS = 1e8
 SCAN_PSF = 0.0
 
-# Fraction of the object kept in the figure panels: the original crop was
-# ob[n // 6 : n - n // 6], i.e. the central two thirds.
+# Central two thirds of the object are shown in the figure panels.
 FIGURE_CROP_FRAC = 2.0 / 3.0
-
-
-# --------------------------------------------------------------------------- #
-# argument parsing
-# --------------------------------------------------------------------------- #
-def positive_int(value):
-    """argparse type: strictly positive integer."""
-    ivalue = int(value)
-    if ivalue < 1:
-        raise argparse.ArgumentTypeError(
-            "expected a positive integer, got %r" % (value,))
-    return ivalue
 
 
 def parse_int_list(values, what="value"):
@@ -130,20 +113,6 @@ def parse_str_list(values):
     return out
 
 
-def default_numiter():
-    """
-    Default for ``--numiter``.
-
-    The beamtime version of this script read the iteration count from the
-    ``SIM_NUMITER`` environment variable. That still works: it is now the
-    default of the command-line argument, so ``--numiter`` wins.
-    """
-    try:
-        return positive_int(os.environ.get("SIM_NUMITER", DEFAULT_NUMITER))
-    except (ValueError, argparse.ArgumentTypeError):
-        return DEFAULT_NUMITER
-
-
 def build_argparser():
     parser = argparse.ArgumentParser(
         description="Compare the ThreePIE CPU/serial/GPU backends on the "
@@ -162,7 +131,7 @@ def build_argparser():
                              "Choose from ThreePIE, ThreePIE_serial, "
                              "ThreePIE_cupy (default: all three). Engines "
                              "whose backend is unavailable are skipped.")
-    parser.add_argument("--numiter", type=positive_int, default=default_numiter(),
+    parser.add_argument("--numiter", type=positive_int, default=DEFAULT_NUMITER,
                         help="Iterations per reconstruction (default: "
                              "%(default)s; the SIM_NUMITER environment "
                              "variable sets this default).")
@@ -182,8 +151,7 @@ def build_argparser():
     parser.add_argument("--aligned", action="store_true",
                         help="Report aligned_ncorr (registers out the joint "
                              "probe/object translation gauge) instead of the "
-                             "plain ncorr. Off by default so the numbers stay "
-                             "comparable with earlier runs.")
+                             "plain ncorr (default: off).")
     parser.add_argument("--aligned-crop-frac", type=float, default=None,
                         help="With --aligned, first reduce both inputs to this "
                              "central fraction. Only needed when comparing "
@@ -192,9 +160,6 @@ def build_argparser():
     return parser
 
 
-# --------------------------------------------------------------------------- #
-# engine setup
-# --------------------------------------------------------------------------- #
 def import_ptypy():
     """
     Import ptypy, with a pointer to the usual cause when it is not on the path.
@@ -213,26 +178,6 @@ def import_ptypy():
     return ptypy
 
 
-def have_cupy():
-    """
-    True only when cupy is importable and a GPU is reachable.
-
-    Importing cupy and calling ``load_gpu_engines("cupy")`` both succeed on a
-    machine that has cupy installed but no visible device (e.g. under
-    ``CUDA_VISIBLE_DEVICES=""``). The failure then shows up later as a
-    CUDARuntimeError in the middle of a reconstruction. Touching the device
-    here turns that into a skip.
-    """
-    if importlib.util.find_spec("cupy") is None:
-        return False
-    try:
-        import cupy as cp
-        cp.cuda.Device(0).compute_capability
-        return True
-    except Exception:                # noqa: BLE001 - no usable device
-        return False
-
-
 def load_engines(engine_names):
     """
     Register the requested ThreePIE backends and return the ones that loaded.
@@ -242,21 +187,23 @@ def load_engines(engine_names):
     the rest of the comparison still runs.
     """
     ptypy = import_ptypy()
+    from ptypy.utils.verbose import logger
 
     available = []
     for name in engine_names:
         bundle, module = ENGINE_SETUP[name]
         if bundle == "cupy" and not have_cupy():
-            print("WARNING: skipping %s: no usable GPU (cupy missing or no "
-                  "visible device)" % name, flush=True)
+            logger.warning("skipping %s: no usable GPU (cupy missing or no "
+                           "visible device)" % name)
             continue
         try:
             if bundle is not None:
                 ptypy.load_gpu_engines(bundle)
-            importlib.import_module(module)
+            if module is not None:
+                importlib.import_module(module)
         except Exception as err:     # noqa: BLE001 - any backend problem skips
-            print("WARNING: skipping %s: backend unavailable (%s: %s)"
-                  % (name, type(err).__name__, err), flush=True)
+            logger.warning("skipping %s: backend unavailable (%s: %s)"
+                           % (name, type(err).__name__, err))
             continue
         available.append(name)
     return available
@@ -327,14 +274,11 @@ def run_reconstructions(shapes, engines, args):
     return results
 
 
-# --------------------------------------------------------------------------- #
-# comparison
-# --------------------------------------------------------------------------- #
 def make_metric(args):
     """
     The similarity metric used throughout the report.
 
-    Default is the plain ``ncorr`` the original comparison used. ``--aligned``
+    Default is the plain ``ncorr``. ``--aligned``
     switches to ``aligned_ncorr``, which registers ``b`` onto ``a`` first and
     returns ``(shift, value)``; only the value is tabulated.
     """
@@ -350,7 +294,7 @@ def make_metric(args):
 
 
 def active_pairs(engines):
-    """The historical engine pairs, restricted to engines that ran."""
+    """The pairs of ``PAIRS`` whose engines both ran."""
     return [(a, b, tag) for a, b, tag in PAIRS if a in engines and b in engines]
 
 
@@ -414,7 +358,6 @@ def save_figure(results, shapes, engines, args, path):
     plt.close(fig)
 
 
-# --------------------------------------------------------------------------- #
 def main():
     parser = build_argparser()
     args = parser.parse_args()

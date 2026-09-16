@@ -29,8 +29,9 @@ This file is part of the PTYPY package.
     :license: see LICENSE for details.
 """
 
+import argparse
 import glob
-import os
+import importlib.util
 
 import numpy as np
 
@@ -40,16 +41,92 @@ __all__ = [
     "aligned_ncorr",
     "central",
     "common_central",
+    "common_crop",
     "gauge_phase",
     "read_slices",
+    "read_last_view",
+    "read_slice_probes",
     "read_recon",
     "find_latest",
+    "iteration_seconds",
+    "ENGINE_DIRTAG",
+    "PAIRS",
+    "positive_int",
+    "crop_list",
+    "have_cupy",
 ]
 
+# Engine class name -> tag used in the reconstruction directory names.
+ENGINE_DIRTAG = {"ThreePIE": "cpu",
+                 "ThreePIE_serial": "serial",
+                 "ThreePIE_cupy": "gpu"}
 
-# --------------------------------------------------------------------------- #
-# similarity metrics
-# --------------------------------------------------------------------------- #
+# Backend pairs of the agreement tables, (a, b, label), in printing order.
+PAIRS = (("ThreePIE_serial", "ThreePIE", "serial-vs-cpu"),
+         ("ThreePIE_cupy", "ThreePIE", "gpu-vs-cpu"),
+         ("ThreePIE_cupy", "ThreePIE_serial", "gpu-vs-serial"))
+
+
+def positive_int(value):
+    """argparse type: strictly positive integer."""
+    ivalue = int(value)
+    if ivalue < 1:
+        raise argparse.ArgumentTypeError(
+            "expected a positive integer, got %r" % (value,))
+    return ivalue
+
+
+def crop_list(value):
+    """argparse type: comma-separated positive integers -> list of ints."""
+    crops = []
+    for part in str(value).split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            crop = int(part)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                "crop %r is not an integer" % part)
+        if crop < 1:
+            raise argparse.ArgumentTypeError("crop %r must be positive" % part)
+        crops.append(crop)
+    if not crops:
+        raise argparse.ArgumentTypeError("no crops given")
+    return crops
+
+
+def have_cupy():
+    """
+    True only when cupy is importable and a GPU is reachable.
+
+    Importing cupy and calling ``load_gpu_engines("cupy")`` both succeed on a
+    machine that has cupy installed but no visible device (for example under
+    ``CUDA_VISIBLE_DEVICES=""``); the failure would only show up inside a
+    reconstruction. Touching the device here turns that into a skip.
+    """
+    if importlib.util.find_spec("cupy") is None:
+        return False
+    try:
+        import cupy as cp
+        cp.cuda.Device(0).compute_capability
+        return True
+    except Exception:
+        return False
+
+
+def common_crop(panels, frac):
+    """Crop every panel centrally to the same fraction of the smallest shape."""
+    n0 = int(min(p.shape[-2] for p in panels) * frac)
+    n1 = int(min(p.shape[-1] for p in panels) * frac)
+    out = []
+    for x in panels:
+        c0 = (x.shape[-2] - n0) // 2
+        c1 = (x.shape[-1] - n1) // 2
+        out.append(x[..., c0:c0 + n0, c1:c1 + n1])
+    return out
+
+
 def ncorr(a, b):
     """
     Normalized correlation of two complex fields, invariant to a global phase
@@ -113,9 +190,6 @@ def aligned_ncorr(a, b, margin_frac=0.08, crop_frac=None):
     return shift, ncorr(a[..., m:-m, m:-m], b[..., m:-m, m:-m])
 
 
-# --------------------------------------------------------------------------- #
-# display
-# --------------------------------------------------------------------------- #
 def gauge_phase(obj):
     """
     Phase of ``obj`` with the global phase gauge removed, wrap-safely.
@@ -131,9 +205,6 @@ def gauge_phase(obj):
     return np.angle(obj)
 
 
-# --------------------------------------------------------------------------- #
-# readers
-# --------------------------------------------------------------------------- #
 def find_latest(pattern):
     """Newest path matching a glob, or None."""
     hits = sorted(glob.glob(pattern))
@@ -236,8 +307,3 @@ def iteration_seconds(path):
         durations = [float(info[k]["duration"][()])
                      for k in info if "duration" in info[k]]
     return float(np.sum(durations)), len(durations)
-
-
-if __name__ == "__main__":
-    print(__doc__)
-    print("Exports: " + ", ".join(__all__))

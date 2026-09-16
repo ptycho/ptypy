@@ -9,12 +9,12 @@
 #   3. GPU engine + wave kernel               (needs CuPy + GPU; skipped otherwise)
 #
 # Usage:
-#   bash test/engine_tests/check_threepie.sh
-#   bash test/engine_tests/check_threepie.sh --crops 256,512 --slice-thickness 1500e-6
+#   bash ptypy/debug/check_threepie.sh
+#   bash ptypy/debug/check_threepie.sh --crops 256,512 --slice-thickness 1500e-6
 #       (extra args are forwarded to the crop diagnostic only)
 #
 # Point at a different ptypy checkout:
-#   PTYPY_PATH=/path/to/ptypy bash test/engine_tests/check_threepie.sh
+#   PTYPY_PATH=/path/to/ptypy bash ptypy/debug/check_threepie.sh
 #
 set -uo pipefail
 
