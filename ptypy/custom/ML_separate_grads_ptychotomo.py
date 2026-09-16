@@ -343,8 +343,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
                 vol_shape = tuple(self.p.vol_size)
             else:
                 vol_shape = 3*(self.view_shape,)
-            rho_real = np.zeros(vol_shape, dtype=np.complex64)
-            rho_imag = np.zeros(vol_shape, dtype=np.complex64)
+            # Nothing to load, and the storage below is created zeroed
+            rho_real = None
+            rho_imag = None
         else: # starting from given volume, which sets the shape
             rho_real = np.load(self.p.init_vol_real)
             rho_imag = np.load(self.p.init_vol_imag)
@@ -355,14 +356,24 @@ class MLPtychoTomo(PositionCorrectionEngine):
                     % (rho_real.shape, rho_imag.shape))
             vol_shape = rho_real.shape
 
-        if self.p.init_vol_blur: # gaussian blur initial volume
+        # Blurring a zero volume leaves it zero, so there is nothing to do
+        if self.p.init_vol_blur and rho_real is not None:
             rho_real = gaussian_filter(rho_real, sigma=self.p.init_vol_blur_sigma)
             rho_imag = gaussian_filter(rho_imag, sigma=self.p.init_vol_blur_sigma)
 
         # Initialise volume rho as container
         self.rho = Container()
         self.rho.new_storage(ID=VOL_STORAGE_ID, shape=vol_shape)
-        self.rho.fill(rho_real + 1j * rho_imag)
+        self.rho.fill(0.)
+
+        # Write the two parts into the buffer the storage has already
+        # allocated. Combining them into a complex volume and handing that to
+        # "fill" would hold three more volumes at once.
+        if rho_real is not None:
+            rho_data = volume_data(self.rho)
+            rho_data.real[:] = rho_real
+            rho_data.imag[:] = rho_imag
+            del rho_real, rho_imag
 
         # Initialise volume gradient and minimization direction
         self.rho_grad = Container()
