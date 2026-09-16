@@ -13,6 +13,10 @@ except ImportError:
     logger.warning('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
 import h5py
 import os.path
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 @register()
 class NanomaxStepscanNov2018(PtyScan):
@@ -792,6 +796,8 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         return self.clean_mask(mask)
 
     def load_mask_tiff(self):
+        if Image is None:
+            raise ImportError("reading a TIFF mask file requires PIL (pillow)")
         with Image.open(self.info.maskfile) as im:
             mask = np.array(im) 
         return self.clean_mask(mask)

@@ -1,6 +1,11 @@
 """
-Test for the threepie_serial engine.
+Test for the threepie_serial engine on a real NanoMAX scan.
+
+The scan data are not part of the repository. Point PTYPY_NANOMAX_DATA at a
+beamtime folder that holds raw/<sample>/ and process/<sample>/, or place it
+at test/multislice; the test is skipped when neither exists.
 """
+import os
 import sys
 
 import numpy as np
@@ -16,10 +21,16 @@ from ptypy.custom.threepie_serial import ThreePIE_serial
 from ptypy.experiment import nanomax_class
 
 
+BEAMTIME_BASEDIR = os.environ.get("PTYPY_NANOMAX_DATA", "test/multislice")
+
+pytestmark = pytest.mark.skipif(
+    not os.path.isdir(BEAMTIME_BASEDIR),
+    reason="NanoMAX multislice scan data not available (set PTYPY_NANOMAX_DATA)")
+
+
 @pytest.fixture()
 def threepie_serial_params():
-    beamtime_basedir = "test/multislice"  # f'/home/litang/multislice'
-    print(beamtime_basedir)
+    beamtime_basedir = BEAMTIME_BASEDIR
     sample = '0002_multislice'
     detector = 'eiger4m'
 
