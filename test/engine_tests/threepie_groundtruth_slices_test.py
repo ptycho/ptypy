@@ -50,7 +50,6 @@ import ptypy
 from ptypy import utils as u
 from ptypy.core import Ptycho, geometry
 from test.accelerate_tests.cuda_cupy_tests import have_cupy
-from test.utils import seeded_view_order
 
 # Larger frames are more weakly constrained at this position count and the
 # two slices stop separating; keep the grid small.
@@ -68,6 +67,20 @@ SPOKES = 24
 RECOVERY_MIN = 0.60
 CROSSTALK_MAX = 0.30
 CROSS_BACKEND_MIN = 0.60
+
+
+def seeded_view_order(seed):
+    """
+    Context manager that gives the stochastic engines a seeded view order.
+
+    The stochastic engines draw their view order from an unseeded
+    ``numpy.random.default_rng()``; patching it lets two reconstructions see
+    the views in the same order, so their results can be compared without
+    the draw entering the comparison.
+    """
+    from unittest import mock
+    return mock.patch("numpy.random.default_rng",
+                      lambda *a, **k: np.random.Generator(np.random.PCG64(seed)))
 
 
 def ncorr(a, b):
@@ -299,6 +312,7 @@ class ThreePIEGroundTruthTest(unittest.TestCase):
         ptypy.load_gpu_engines("serial")
         if have_cupy():
             ptypy.load_gpu_engines("cupy")
+            importlib.import_module("ptypy.custom.threepie_cupy")
         importlib.import_module("ptypy.custom.threepie")
         importlib.import_module("ptypy.custom.threepie_serial")
 

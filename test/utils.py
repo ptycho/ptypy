@@ -178,17 +178,3 @@ def EngineTestRunner2(engine_params,propagator='farfield',output_path='./', outp
     parallel.loadmanager.reset()
 
     return P
-
-
-def seeded_view_order(seed):
-    """
-    Context manager that gives the stochastic engines a seeded view order.
-
-    The stochastic engines draw their view order from an unseeded
-    ``numpy.random.default_rng()``; patching it lets two reconstructions see
-    the views in the same order, so their results can be compared without
-    the draw entering the comparison.
-    """
-    from unittest import mock
-    return mock.patch("numpy.random.default_rng",
-                      lambda *a, **k: np.random.Generator(np.random.PCG64(seed)))

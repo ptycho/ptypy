@@ -30,16 +30,29 @@ import unittest
 import numpy as np
 
 from . import have_cupy
-from test.utils import seeded_view_order
 
 if have_cupy():
     from test import utils as tu
     from ptypy import utils as u
 
     import ptypy
-    ptypy.load_gpu_engines("cupy")        # registers ThreePIE_cupy, EPIE_cupy, ...
+    ptypy.load_gpu_engines("cupy")        # registers EPIE_cupy, SDR_cupy, ...
+    import ptypy.custom.threepie_cupy     # registers ThreePIE_cupy
     import ptypy.custom.threepie          # registers the CPU reference ThreePIE
 
+
+def seeded_view_order(seed):
+    """
+    Context manager that gives the stochastic engines a seeded view order.
+
+    The stochastic engines draw their view order from an unseeded
+    ``numpy.random.default_rng()``; patching it lets two reconstructions see
+    the views in the same order, so their results can be compared without
+    the draw entering the comparison.
+    """
+    from unittest import mock
+    return mock.patch("numpy.random.default_rng",
+                      lambda *a, **k: np.random.Generator(np.random.PCG64(seed)))
 
 def _similarity(a, b, crop=30):
     """Normalised complex correlation |<a, b>| / (||a|| ||b||) of two images.
