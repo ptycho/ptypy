@@ -125,7 +125,15 @@ class AstraViewBased:
     def ind_of_views(self, indeces):
         """
         Sets ind_of_views to the value passed as input.
+
+        The astra geometry is only rebuilt when the indices actually change.
+        The geometry held by astra always matches "_ind_of_views", as it is
+        built from it here and in "__init__", so nothing is left stale by
+        returning early.
         """
+        if np.array_equal(self._ind_of_views, indeces):
+            return
+
         self._ind_of_views = indeces
 
         # Create and update astra geometry
