@@ -1,24 +1,22 @@
-"""Tests for the ThreePIE crop-dependent propagation diagnostic."""
+"""
+Tests for the ThreePIE crop-dependent propagation diagnostic.
 
-import importlib.util
-import os
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: see LICENSE for details.
+"""
 import unittest
 
-
-def _load_diagnostic_module():
-    test_dir = os.path.dirname(os.path.abspath(__file__))
-    repo_root = os.path.dirname(os.path.dirname(test_dir))
-    path = os.path.join(repo_root, "ptypy", "debug", "diagnose_threepie_crop.py")
-    spec = importlib.util.spec_from_file_location("diagnose_threepie_crop", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+from ptypy.debug import diagnose_threepie_crop as diag
+from ptypy.accelerate.base.multislice import normalize_slice_pad
+from test.accelerate_tests.cuda_cupy_tests import have_cupy
 
 
 class ThreePIECropDiagnosticTest(unittest.TestCase):
 
     def setUp(self):
-        self.diag = _load_diagnostic_module()
+        self.diag = diag
         self.wavelength = self.diag.HC_KEV_M / 8.0
         self.detector_distance = 4.150
         self.detector_pixel_after_binning = 75e-6 * 2
@@ -109,33 +107,28 @@ class ThreePIECropDiagnosticTest(unittest.TestCase):
         self.assertIn("--slice-pad 4", text)
         self.assertIn("keeps only 8.8% of frequencies", text)
 
-    def test_gpu_padding_wrapper_is_not_registered_or_shadowed(self):
-        test_dir = os.path.dirname(os.path.abspath(__file__))
-        repo_root = os.path.dirname(os.path.dirname(test_dir))
-        gpu_path = os.path.join(
-            repo_root, "ptypy", "accelerate", "cuda_cupy", "engines",
-            "stochastic.py")
-        serial_path = os.path.join(
-            repo_root, "ptypy", "custom", "threepie_serial.py")
-        with open(gpu_path, "r") as stream:
-            source = stream.read()
+    def test_normalize_slice_pad_rejects_non_positive_values(self):
+        self.assertEqual(normalize_slice_pad(None, (64, 64), (1e-8, 1e-8), 8.0, 1e-6), 1)
+        self.assertEqual(normalize_slice_pad(2, (64, 64), (1e-8, 1e-8), 8.0, 1e-6), 2)
+        for bad in (0, -1):
+            with self.assertRaises(ValueError):
+                normalize_slice_pad(bad, (64, 64), (1e-8, 1e-8), 8.0, 1e-6)
+        with self.assertRaises(ValueError):
+            normalize_slice_pad("sideways", (64, 64), (1e-8, 1e-8), 8.0, 1e-6)
 
-        marker = "class _PaddedSlicePROP:"
-        class_start = source.index(marker)
-        prefix_lines = [
-            line.strip() for line in source[:class_start].splitlines()
-            if line.strip()
-        ]
-        self.assertNotEqual(prefix_lines[-1], "@register()")
-        self.assertIn("self._pad_factor = int(pad)", source)
-        self.assertNotIn("self._pad = int(pad)", source)
-        self.assertIn("normalize_slice_pad", source)
+    def test_auto_slice_pad_grows_with_the_slice_spacing(self):
+        thin = normalize_slice_pad("auto", (64, 64), (1e-8, 1e-8), 8.0, 1e-9)
+        thick = normalize_slice_pad("auto", (64, 64), (1e-8, 1e-8), 8.0, 1e-3)
+        self.assertEqual(thin, 1)
+        self.assertEqual(thick, 4)
 
-        with open(serial_path, "r") as stream:
-            serial_source = stream.read()
-        self.assertIn('"normalize_slice_pad"', serial_source)
-        self.assertIn("def normalize_slice_pad", serial_source)
-        self.assertIn("slice_pad must be a positive integer", serial_source)
+    @unittest.skipUnless(have_cupy(), "cupy and a GPU are required")
+    def test_gpu_padding_wrapper_is_not_registered(self):
+        import ptypy
+        from ptypy.engines import ENGINES
+        ptypy.load_gpu_engines("cupy")
+        self.assertIn("ThreePIE_cupy", ENGINES)
+        self.assertNotIn("_PaddedSlicePROP", ENGINES)
 
 
 if __name__ == "__main__":

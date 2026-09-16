@@ -30,6 +30,7 @@ import unittest
 import numpy as np
 
 from . import have_cupy
+from test.utils import seeded_view_order
 
 if have_cupy():
     from test import utils as tu
@@ -66,7 +67,6 @@ class ThreePIECupyTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.outpath, ignore_errors=True)
 
-    # -- helpers ---------------------------------------------------------
     def _run(self, name, numiter=100, slices=None, thickness=1e-7,
              start=0, scanmodel="BlockFull", fpb=100, graphs=None):
         ep = u.Param()
@@ -99,7 +99,6 @@ class ThreePIECupyTest(unittest.TestCase):
     def _probe(P, key="SMFG00"):
         return P.probe.S[key].data[0]
 
-    # -- tests -----------------------------------------------------------
     def test_single_slice_reduces_to_epie(self):
         """ThreePIE_cupy with one slice must behave like ordinary ePIE."""
         P_ref = self._run("EPIE_serial", numiter=100)
@@ -133,14 +132,10 @@ class ThreePIECupyTest(unittest.TestCase):
     def test_cuda_graphs_match_plain_launches(self):
         """Replaying captured graphs gives the same reconstruction as
         launching the kernels one by one (same seeded view order)."""
-        from unittest import mock
         results = {}
         for graphs in (False, True):
             np.random.seed(3)
-            seeded = mock.patch(
-                "numpy.random.default_rng",
-                lambda *a, **k: np.random.Generator(np.random.PCG64(5)))
-            with seeded:
+            with seeded_view_order(5):
                 P = self._run("ThreePIE_cupy", numiter=60, slices=2,
                               thickness=1e-7, graphs=graphs)
             results[graphs] = (self._obj(P).copy(), self._probe(P).copy(),

@@ -1,3 +1,11 @@
+"""
+Tests of the ThreePIE wave-transfer kernels (probe storage <-> auxiliary buffer).
+
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: see LICENSE for details.
+"""
 import unittest
 import numpy as np
 from . import CupyCudaTest, have_cupy

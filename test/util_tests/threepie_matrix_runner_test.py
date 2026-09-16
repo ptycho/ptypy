@@ -1,28 +1,21 @@
-"""Tests for the ThreePIE real-data matrix runner helpers."""
+"""
+Tests for the ThreePIE real-data matrix runner helpers.
 
-import importlib.util
-import os
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: see LICENSE for details.
+"""
 import unittest
+from types import SimpleNamespace as Args
 
-
-def _load_matrix_module():
-    test_dir = os.path.dirname(os.path.abspath(__file__))
-    repo_root = os.path.dirname(os.path.dirname(test_dir))
-    path = os.path.join(repo_root, "ptypy", "debug", "run_threepie_realdata_matrix.py")
-    spec = importlib.util.spec_from_file_location("run_threepie_realdata_matrix", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-class Args:
-    pass
+from ptypy.debug import run_threepie_realdata_matrix as matrix
 
 
 class ThreePIEMatrixRunnerTest(unittest.TestCase):
 
     def setUp(self):
-        self.matrix = _load_matrix_module()
+        self.matrix = matrix
 
     def test_default_output_suffix_follows_crop(self):
         args = Args()
@@ -30,10 +23,10 @@ class ThreePIEMatrixRunnerTest(unittest.TestCase):
         args.output_suffix = None
         args.slice_thickness = 1500e-6
         args.slice_pad = 1
-        self.assertEqual(self.matrix.output_suffix(args), "_LT_debug256")
+        self.assertEqual(self.matrix.output_suffix(args), "_matrix256")
 
         args.crop = 512
-        self.assertEqual(self.matrix.output_suffix(args), "_LT_debug512")
+        self.assertEqual(self.matrix.output_suffix(args), "_matrix512")
 
     def test_default_output_suffix_includes_nondefault_slice_thickness(self):
         args = Args()
@@ -41,7 +34,7 @@ class ThreePIEMatrixRunnerTest(unittest.TestCase):
         args.output_suffix = None
         args.slice_thickness = 900e-6
         args.slice_pad = 1
-        self.assertEqual(self.matrix.output_suffix(args), "_LT_debug256_z900um")
+        self.assertEqual(self.matrix.output_suffix(args), "_matrix256_z900um")
 
     def test_default_output_suffix_includes_padding(self):
         args = Args()
@@ -49,7 +42,7 @@ class ThreePIEMatrixRunnerTest(unittest.TestCase):
         args.output_suffix = None
         args.slice_thickness = 1500e-6
         args.slice_pad = 2
-        self.assertEqual(self.matrix.output_suffix(args), "_LT_debug256_pad2")
+        self.assertEqual(self.matrix.output_suffix(args), "_matrix256_pad2")
 
     def test_explicit_output_suffix_is_preserved(self):
         args = Args()
@@ -127,7 +120,7 @@ class ThreePIEMatrixRunnerTest(unittest.TestCase):
         self.assertIn("--slice-pad", cmd)
         self.assertEqual(cmd[cmd.index("--slice-pad") + 1], "2")
         self.assertIn("--output-suffix", cmd)
-        self.assertEqual(cmd[cmd.index("--output-suffix") + 1], "_LT_debug256_pad2")
+        self.assertEqual(cmd[cmd.index("--output-suffix") + 1], "_matrix256_pad2")
 
     def test_positive_int_rejects_invalid_slice_pad(self):
         self.assertEqual(self.matrix.positive_int("2"), 2)

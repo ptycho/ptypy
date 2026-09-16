@@ -32,25 +32,28 @@ Two settings are needed for a fair test:
     the angular-spectrum critical distance. The anti-alias band limit is
     correct protection for real data above z_crit, but here it would discard
     true signal and bias the comparison against those engines.
+
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: see LICENSE for details.
 """
 import importlib
+import os
 import shutil
 import tempfile
 import unittest
-from unittest import mock
 
 import numpy as np
 
 import ptypy
 from ptypy import utils as u
 from ptypy.core import Ptycho, geometry
+from test.accelerate_tests.cuda_cupy_tests import have_cupy
+from test.utils import seeded_view_order
 
-# --- scan / reconstruction size -------------------------------------------- #
-# Chosen by a sweep over frame size, position count and iterations. Bigger is
-# not better here: at a fixed number of positions the larger grids are more
-# weakly constrained, and by shape 64 the split stops being meaningful at all
-# (recovery 0.42 against crosstalk 0.57, i.e. inverted). This configuration
-# separates cleanly and runs in ~16 s for the CPU and serial engines together.
+# Larger frames are more weakly constrained at this position count and the
+# two slices stop separating; keep the grid small.
 SHAPE = 32           # frame size in pixels
 NFRAMES = 150        # scan positions
 NUMITER = 80         # iterations per engine
@@ -59,37 +62,14 @@ DENSITY = 0.15
 SEP_FRAC = 0.85      # slice separation as a fraction of z_crit = N*dx^2/lambda
 SPOKES = 24
 
-# --- assertion thresholds -------------------------------------------------- #
-# Calibrated over six seeds (7, 11, 23, 42, 77, 101) on the configuration
-# above. Worst value seen across all of them, for both the CPU and the serial
-# engine:
-#
-#     recovery      >= 0.805      (threshold 0.60)
-#     crosstalk     <= 0.119      (threshold 0.30)
-#     backend agree >= 0.818      (threshold 0.60)
-#
-# The thresholds keep ~0.2 of headroom against the worst observed draw and
-# still require that each phantom correlates with its own slice at least
-# twice as well as with the other one.
+# The thresholds leave about 0.2 of headroom below the worst value observed
+# over several seeds and still require each phantom to correlate with its own
+# slice at least twice as well as with the other one.
 RECOVERY_MIN = 0.60
 CROSSTALK_MAX = 0.30
 CROSS_BACKEND_MIN = 0.60
 
 
-def have_cupy():
-    if importlib.util.find_spec("cupy") is None:
-        return False
-    try:
-        import cupy as cp
-        cp.cuda.Device(0).compute_capability
-        return True
-    except Exception:
-        return False
-
-
-# --------------------------------------------------------------------------- #
-# metrics
-# --------------------------------------------------------------------------- #
 def ncorr(a, b):
     """Normalized correlation of two complex fields, phase/scale invariant."""
     a = np.asarray(a).ravel()
@@ -146,9 +126,6 @@ def spoke_star(shape, spokes=SPOKES, phase=0.4, rmax=0.95):
     return (amp * np.exp(1j * ph)).astype(np.complex64)
 
 
-# --------------------------------------------------------------------------- #
-# the ground-truth scan
-# --------------------------------------------------------------------------- #
 _SCAN_NAME = "ThreePIEGroundTruthScan"
 _scan_registered = False
 
@@ -158,13 +135,11 @@ def _register_scan():
     global _scan_registered
     if _scan_registered:
         return
-    from ptypy import defaults_tree
     from ptypy.core.data import MoonFlowerScan
     from ptypy.experiment import register
     from ptypy.utils import Param
 
     @register()
-    @defaults_tree.parse_doc('scandata.' + _SCAN_NAME, True)
     class ThreePIEGroundTruthScan(MoonFlowerScan):
         """
         MoonFlower-style scan whose data come from a true two-slice forward
@@ -272,10 +247,7 @@ class ThreePIEGroundTruthTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(cls.outdir, ignore_errors=True)
-
-    # --- machinery --------------------------------------------------------- #
     def _params(self, engine_name):
-        import os
         p = u.Param()
         p.verbose_level = "error"
         p.io = u.Param()
@@ -332,14 +304,7 @@ class ThreePIEGroundTruthTest(unittest.TestCase):
 
         np.random.seed(SEED)
         pars = self._params(engine_name)
-        # All three engines draw their view order from an unseeded
-        # numpy.random.default_rng(). Give every engine the same seeded
-        # generator so the three reconstructions see the views in the same
-        # order and the comparison does not depend on the draw. Without
-        # this, a run can fall below the agreement threshold on a bad draw.
-        with mock.patch("numpy.random.default_rng",
-                        lambda *a, **k: np.random.Generator(
-                            np.random.PCG64(SEED))):
+        with seeded_view_order(SEED):
             P = Ptycho(pars, level=5)
         if type(self)._gt is None:
             ptyscan = list(P.model.scans.values())[0].ptyscan
@@ -370,15 +335,11 @@ class ThreePIEGroundTruthTest(unittest.TestCase):
                 "%s leaked phantom %d into slice %d "
                 "(ncorr %.3f, expected < %.2f)"
                 % (engine_name, i, j, crosstalk, CROSSTALK_MAX))
-
-    # --- the phantoms are distinct ----------------------------------------- #
     def test_phantoms_are_independent(self):
         """The premise: a reconstruction cannot score on both by accident."""
         self._run("ThreePIE_serial")
         gt = type(self)._gt
         self.assertLess(aligned_ncorr(gt[0], gt[1]), 0.2)
-
-    # --- per-engine separation --------------------------------------------- #
     def test_cpu_separates_slices(self):
         self._assert_separates("ThreePIE")
 
@@ -388,8 +349,6 @@ class ThreePIEGroundTruthTest(unittest.TestCase):
     @unittest.skipIf(not have_cupy(), "no cupy available")
     def test_cupy_separates_slices(self):
         self._assert_separates("ThreePIE_cupy")
-
-    # --- the backends agree slice by slice --------------------------------- #
     def test_backends_agree_per_slice(self):
         cpu = self._run("ThreePIE")
         serial = self._run("ThreePIE_serial")
