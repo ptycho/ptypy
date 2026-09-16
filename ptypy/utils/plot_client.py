@@ -585,9 +585,9 @@ class MPLplotter(object):
                     cmap = pp.cmaps[ind % len(pp.cmaps)] #if ind[1]=='p' else pp.cmaps[0]
                     if self.is_refractive: # plot real and imaginary part
                         if channel == 'a':
-                            channel = 'r'
-                        if channel == 'p':
                             channel = 'i'
+                        if channel == 'p':
+                            channel = 'r'
                     ptya = PtyAxis(axes[ii], data = data[layer], channel=channel, cmap = cmap)
                     ptya.set_mask(mask, False)
                     if pp.clims is not None and pp.clims[ind] is not None:
@@ -612,10 +612,10 @@ class MPLplotter(object):
                     ttl = '%s#%d (C)\n%s' % (title, layer, info)
                 elif channel == 'a':
                     ttl = '%s#%d (a)' % (title, layer)
-                elif channel == 'r':
-                    ttl = '%s#%d (r)' % (title, layer)
                 elif channel == 'i':
                     ttl = '%s#%d (i)' % (title, layer)
+                elif channel == 'r':
+                    ttl = '%s#%d (r)' % (title, layer)
                 else:
                     ttl = '%s#%d (p)' % (title, layer)
                 ptya.ax.set_title(ttl, size=12)
