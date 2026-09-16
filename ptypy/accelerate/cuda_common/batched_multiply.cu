@@ -13,7 +13,7 @@
 extern "C" __global__ void batched_multiply(const complex<IN_TYPE>* input,
                                             complex<OUT_TYPE>* output,
                                             const complex<MATH_TYPE>* filter,
-                                            MATH_TYPE scale,
+                                            float scale,
                                             int nBatches,
                                             int rows,
                                             int columns)

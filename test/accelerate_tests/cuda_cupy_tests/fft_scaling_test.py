@@ -290,15 +290,13 @@ class FftScalingTest(CupyCudaTest):
         self.rev_test(False, get_reverse_cuFFT, postfact=1.5, external=False, size=20, squared=False)
 
     def test_postfilt_rev_not_power_two_not_squared_scale_cufft_cupy(self):
-        self.rev_test(True, get_reverse_cuFFT, postfact=1.5, external=False, size=20, squared=False,
-                      decimal=5)  # float32 normalisation constant: one ulp at 20x22
+        self.rev_test(True, get_reverse_cuFFT, postfact=1.5, external=False, size=20, squared=False)
 
     def test_prepostfilt_rev_not_power_not_squared_two_noscale_cufft_cupy(self):
         self.rev_test(False, get_reverse_cuFFT, postfact=1.5, preffact=2.0, external=False, size=20, squared=False)
 
     def test_prepostfilt_rev_not_power_not_squared_two_scale_cufft_cupy(self):
-        self.rev_test(True, get_reverse_cuFFT, postfact=1.5, preffact=2.0, external=False, size=20, squared=False,
-                      decimal=5)  # float32 normalisation constant: one ulp at 20x22
+        self.rev_test(True, get_reverse_cuFFT, postfact=1.5, preffact=2.0, external=False, size=20, squared=False)
 
 if __name__ == '__main__':
     unittest.main()
