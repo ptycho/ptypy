@@ -1,0 +1,1 @@
+{"host": "radi2", "nprocs": 1, "nruns": 1, "benchmark": {"data_load": 1.1272946065291762, "engine_init": 0.1367555633187294, "engine_prepare": 0.40434253960847855, "engine_iterate": 26.0825785594061, "engine_finalize": 0.41398279927670956}}
