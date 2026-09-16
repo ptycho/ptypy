@@ -621,6 +621,8 @@ class MLPtychoTomo(PositionCorrectionEngine):
         del self.pr_grad_new
         del self.ptycho.containers[self.pr_h.ID]
         del self.pr_h
+        del self.ptycho.containers[self.projected_rho.ID]
+        del self.projected_rho
 
         # Save floating intensities into runtime
         self.ptycho.runtime["float_intens"] = parallel.gather_dict(self.ML_model.float_intens_coeff)
