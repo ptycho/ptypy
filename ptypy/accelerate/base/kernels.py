@@ -545,49 +545,6 @@ class AuxiliaryWaveKernel(BaseKernel):
                 aux[ind, :, :] = tmp
         return
 
-class ThreePIEWaveKernel(BaseKernel):
-    """
-    Serial (numpy) counterpart of the CUDA ``ThreePIEWaveKernel``.
-
-    Moves a local wavefront between the full probe storage and the per-frame
-    auxiliary buffer using ptypy's serialized address layout, exactly mirroring
-    ``threepie_wave.cu`` so the serial and GPU multislice engines share logic.
-    """
-
-    def __init__(self):
-        super(ThreePIEWaveKernel, self).__init__()
-        self.kernels = ['pr_to_aux', 'aux_to_pr']
-
-    def allocate(self):
-        pass
-
-    def pr_to_aux(self, b_aux, pr, addr):
-        """Copy the probe window for each address into the aux buffer."""
-        sh = addr.shape
-        nmodes = sh[1]
-        maxz = sh[0]
-        aux = b_aux[:maxz * nmodes]
-        flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
-        rows, cols = b_aux.shape[-2:]
-        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            aux[ind, :, :] = pr[prc[0], prc[1]:prc[1] + rows,
-                                prc[2]:prc[2] + cols]
-        return
-
-    def aux_to_pr(self, pr, b_aux, addr):
-        """Scatter the aux buffer back into the probe window for each address."""
-        sh = addr.shape
-        nmodes = sh[1]
-        maxz = sh[0]
-        aux = b_aux[:maxz * nmodes]
-        flat_addr = addr.reshape(maxz * nmodes, sh[2], sh[3])
-        rows, cols = b_aux.shape[-2:]
-        for ind, (prc, obc, exc, mac, dic) in enumerate(flat_addr):
-            pr[prc[0], prc[1]:prc[1] + rows,
-               prc[2]:prc[2] + cols] = aux[ind, :, :]
-        return
-
-
 class PoUpdateKernel(BaseKernel):
 
     def __init__(self):

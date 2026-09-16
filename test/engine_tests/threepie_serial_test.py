@@ -27,13 +27,26 @@ import ptypy.custom.threepie  # noqa: F401  (registers ThreePIE)
 import ptypy.custom.threepie_serial  # noqa: F401  (registers ThreePIE_serial)
 from ptypy import utils as u
 from ptypy.core import Ptycho
-from test.utils import seeded_view_order
 
 NUMITER = 60
 NFRAMES = 100
 SHAPE = 64
 THICK = 5e-7
 SEED = 5
+
+
+def seeded_view_order(seed):
+    """
+    Context manager that gives the stochastic engines a seeded view order.
+
+    The stochastic engines draw their view order from an unseeded
+    ``numpy.random.default_rng()``; patching it lets two reconstructions see
+    the views in the same order, so their results can be compared without
+    the draw entering the comparison.
+    """
+    from unittest import mock
+    return mock.patch("numpy.random.default_rng",
+                      lambda *a, **k: np.random.Generator(np.random.PCG64(seed)))
 
 
 def ncorr(a, b):

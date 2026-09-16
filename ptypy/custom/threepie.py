@@ -15,7 +15,7 @@ from ptypy.utils import Param
 from ptypy.utils.verbose import logger
 from ptypy import io
 import numpy as np
-from ptypy.utils.nvtx_ranges import nvtx_push, nvtx_pop
+from ptypy.custom.nvtx_ranges import nvtx_push, nvtx_pop
 
 @register()
 class ThreePIE(stochastic.EPIE):
