@@ -8,27 +8,11 @@ This file is part of the PTYPY package.
     :license: see LICENSE for details.
 """
 
-import importlib
-
 import numpy as np
 
-try:
-    _qmunwrap = importlib.import_module('._qmunwrap', __package__)
-    _import_error = None
-except ImportError as err:
-    _qmunwrap = None
-    _import_error = err
+from . import _qmunwrap
 
 __all__ = ['unwrap', 'qualitymap']
-
-
-def _extension():
-    if _qmunwrap is None:
-        raise ImportError(
-            "ptypy was installed without the compiled _qmunwrap extension "
-            "(%s). Reinstall ptypy with a C compiler available."
-            % _import_error)
-    return _qmunwrap
 
 
 def unwrap(phase, num_levels=8, start=(0, 0)):
@@ -57,8 +41,6 @@ def unwrap(phase, num_levels=8, start=(0, 0)):
     ndarray
         The unwrapped phase, equal to `phase` at the starting pixel.
     """
-    ext = _extension()
-
     phase = np.ascontiguousarray(phase, dtype=np.float64)
     if phase.ndim != 2:
         raise ValueError("phase must be a 2D array, got %d dimension(s)"
@@ -74,7 +56,7 @@ def unwrap(phase, num_levels=8, start=(0, 0)):
                          % ((start0, start1), phase.shape))
 
     out = np.empty_like(phase)
-    ext.unwrap(phase, out, num_levels, start0, start1)
+    _qmunwrap.unwrap(phase, out, num_levels, start0, start1)
     return out
 
 
@@ -96,13 +78,11 @@ def qualitymap(phase):
     ndarray
         The quality map, with the same shape as `phase`.
     """
-    ext = _extension()
-
     phase = np.ascontiguousarray(phase, dtype=np.float64)
     if phase.ndim != 2:
         raise ValueError("phase must be a 2D array, got %d dimension(s)"
                          % phase.ndim)
 
     qmap = np.zeros_like(phase)
-    ext.qualitymap(phase, qmap)
+    _qmunwrap.qualitymap(phase, qmap)
     return qmap

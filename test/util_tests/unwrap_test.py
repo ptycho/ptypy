@@ -11,11 +11,6 @@ This file is part of the PTYPY package.
 import unittest
 import numpy as np
 
-import pytest
-
-# Skip everything if ptypy was installed without the C extension.
-pytest.importorskip("ptypy.utils.unwrap._qmunwrap")
-
 from ptypy.utils.unwrap import unwrap, qualitymap
 
 

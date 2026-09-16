@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=74.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -72,3 +72,8 @@ ptypy = "ptypy"
 ptypy = ["resources/*",]
 "ptypy.accelerate.cuda_common" = ["*.cu", "*.cuh"]
 "ptypy.utils.unwrap" = ["*.c", "*.h"]
+
+[[tool.setuptools.ext-modules]]
+name = "ptypy.utils.unwrap._qmunwrap"
+sources = ["ptypy/utils/unwrap/_qmunwrapmodule.c",
+           "ptypy/utils/unwrap/_qmunwrap.c"]
