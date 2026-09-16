@@ -822,12 +822,16 @@ class GaussianModel(BaseModel):
 
             Imodel = np.zeros_like(I)
             f = {}
+            expobj = {}
 
             # First pod loop: compute total intensity
             for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
-                f[name] = pod.fw(pod.probe * np.exp(1j * self.projected_rho[pod.ex_view]))
+                # Held on to for the second loop, which needs the same value
+                # and would otherwise compute the exponential a second time
+                expobj[name] = np.exp(1j * self.projected_rho[pod.ex_view])
+                f[name] = pod.fw(pod.probe * expobj[name])
                 Imodel += pod.downsample(u.abs2(f[name]))
 
             # Floating intensity option
@@ -844,9 +848,8 @@ class GaussianModel(BaseModel):
                 if not pod.active:
                     continue
                 xi = pod.bw(pod.upsample(w*DI) * f[name])
-                expobj = np.exp(1j * self.projected_rho[pod.ex_view])
-                self.pr_grad[pod.pr_view] += 2. * xi * expobj.conj()
-                prod_xi_psi_conj = -1j * xi * (pod.probe * expobj).conj() / self.tot_power
+                self.pr_grad[pod.pr_view] += 2. * xi * expobj[name].conj()
+                prod_xi_psi_conj = -1j * xi * (pod.probe * expobj[name]).conj() / self.tot_power
                 self.projected_rho[pod.ex_view] = prod_xi_psi_conj
 
             diff_view.error = LLL
