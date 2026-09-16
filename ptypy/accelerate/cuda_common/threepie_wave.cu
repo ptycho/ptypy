@@ -2,6 +2,10 @@
  *
  * These kernels move a local propagated wave between full probe storage and
  * the auxiliary wave buffer using ptypy's serialized address layout.
+ *
+ * Data types:
+ * - IN_TYPE: the data type for the inputs (float or double)
+ * - OUT_TYPE: the data type for the outputs (float or double)
  */
 
 #include "common.cuh"

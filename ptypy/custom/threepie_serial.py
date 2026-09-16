@@ -9,13 +9,17 @@ This engine sits between the pod/view CPU reference
 It runs on the CPU but uses the same serialized address layout and kernel
 set as the GPU engine (``AuxiliaryWaveKernel``, ``PoUpdateKernel``,
 ``FourierUpdateKernel`` and ``ThreePIEWaveKernel`` from
-``ptypy.accelerate.base.kernels``). The ``engine_iterate`` multislice sweep
-is therefore a line-for-line NumPy mirror of the CuPy version. The algorithm
-can be checked here without a GPU, and the GPU port is a small diff.
+``ptypy.accelerate.base.kernels``). The multislice sweep follows the CuPy
+engine step by step, so the algorithm can be checked without a GPU.
 
 Reference: A. M. Maiden, M. J. Humphry, J. M. Rodenburg,
 "Ptychographic transmission microscopy in three dimensions using a multi-slice
 approach", J. Opt. Soc. Am. A 29, 1606 (2012). DOI: 10.1364/JOSAA.29.001606.
+
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: see LICENSE for details.
 """
 import numpy as np
 
@@ -28,72 +32,11 @@ from ptypy.engines.stochastic import EPIEMixin
 from ptypy.accelerate.base.engines.stochastic import _StochasticEngineSerial
 from ptypy.accelerate.base.kernels import ThreePIEWaveKernel
 from ptypy.accelerate.base import array_utils as au
+from ptypy.accelerate.base.multislice import (
+    normalize_slice_pad, slice_bandlimit, crop_pad_last2)
 from ptypy.utils.nvtx_ranges import nvtx_push, nvtx_pop
 
-__all__ = ["ThreePIE_serial", "normalize_slice_pad"]
-
-
-def normalize_slice_pad(value, shape, resolution, energy, slice_thickness):
-    """
-    Normalize the ThreePIE slice padding option to a positive integer.
-
-    ``"auto"`` chooses the smallest pad factor that satisfies the angular
-    spectrum sampling limit for the largest requested slice spacing, capped at
-    four to keep memory growth bounded.
-    """
-    if value is None:
-        return 1
-    if isinstance(value, str):
-        if value.lower() != "auto":
-            raise ValueError('slice_pad must be a positive integer or "auto"')
-        if isinstance(slice_thickness, (list, tuple)):
-            distance = max(abs(float(d)) for d in slice_thickness)
-        else:
-            distance = abs(float(slice_thickness))
-        n = int(min(shape[-2:]))
-        dx = float(np.mean(resolution))
-        wavelength = geometry.Geo._keV2m / float(energy)
-        ratio = distance / (n * dx * dx / wavelength)
-        return min(max(1, int(np.ceil(ratio))), 4)
-    pad = int(value)
-    if pad < 1:
-        raise ValueError("slice_pad must be a positive integer")
-    return pad
-
-
-def slice_bandlimit(shape, resolution, energy, distance):
-    """Angular-spectrum support mask for alias-free multislice propagation."""
-    nrows, ncols = shape[-2:]
-    dy, dx = resolution
-    wavelength = geometry.Geo._keV2m / float(energy)
-    distance = abs(float(distance))
-    if distance == 0.0:
-        return np.ones((nrows, ncols), dtype=np.complex64)
-    vlim_y = 1.0 / np.sqrt((2.0 * distance / (nrows * dy)) ** 2 + 1.0)
-    vlim_x = 1.0 / np.sqrt((2.0 * distance / (ncols * dx)) ** 2 + 1.0)
-    y = ((np.arange(nrows) + nrows // 2) % nrows) - nrows // 2
-    x = ((np.arange(ncols) + ncols // 2) % ncols) - ncols // 2
-    vy = y * (wavelength / (nrows * dy))
-    vx = x * (wavelength / (ncols * dx))
-    VY, VX = np.meshgrid(vy, vx, indexing="ij")
-    keep = (np.abs(VY) <= vlim_y) & (np.abs(VX) <= vlim_x)
-    return keep.astype(np.complex64)
-
-
-def crop_pad_last2(array, target_shape):
-    """Centered crop/pad on the last two axes."""
-    target_shape = tuple(int(v) for v in target_shape)
-    out = np.zeros(array.shape[:-2] + target_shape, dtype=array.dtype)
-    src_slices = []
-    dst_slices = []
-    for src_n, dst_n in zip(array.shape[-2:], target_shape):
-        n = min(src_n, dst_n)
-        src0 = (src_n - n) // 2
-        dst0 = (dst_n - n) // 2
-        src_slices.append(slice(src0, src0 + n))
-        dst_slices.append(slice(dst0, dst0 + n))
-    out[(...,) + tuple(dst_slices)] = array[(...,) + tuple(src_slices)]
-    return out
+__all__ = ["ThreePIE_serial"]
 
 
 class _PaddedSlicePROP:
@@ -188,7 +131,6 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
         )
         ptycho_parent.citations.add_article(**self.article)
 
-    # ------------------------------------------------------------------ setup
     def engine_initialize(self):
         super().engine_initialize()
 
@@ -258,7 +200,6 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
             kern.TWK = ThreePIEWaveKernel()
             kern.TWK.allocate()
 
-    # --------------------------------------------------------------- helpers
     def _slice_active(self, index):
         return self.curiter >= self.p.slice_start_iteration[index]
 
@@ -270,7 +211,6 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
             ob[:] *= self._object[s].S[oID].data
         self.pr.S[pID].data[:] = self._probe[0].S[pID].data
 
-    # ---------------------------------------------------------------- iterate
     def engine_iterate(self, num=1):
         """Compute one multislice ePIE iteration on the CPU (serialized)."""
         nslices = self.p.number_of_slices
@@ -317,7 +257,7 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                     self.position_update_local(prep, i)
 
                     nvtx_push("3pie.forward")
-                    # ---- forward multislice sweep --------------------------
+                    # forward multislice sweep
                     for s in range(nslices):
                         old_exit = kern.slice_exits[s]
                         if self._slice_active(s):
@@ -336,7 +276,7 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
 
                     nvtx_pop()
                     nvtx_push("3pie.fourier")
-                    # ---- last slice: far-field Fourier constraint ----------
+                    # last slice: far-field Fourier constraint
                     ex[:] = kern.slice_exits[-1][:ex.shape[0]]
                     AWK.make_aux(aux, addr, ob_layers[-1], pr_layers[-1], ex,
                                  c_po=self._c, c_e=1 - self._c)
@@ -365,7 +305,7 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
 
                     nvtx_pop()
                     nvtx_push("3pie.backward")
-                    # ---- backward sweep (update O_s, P_s) ------------------
+                    # backward sweep (update O_s, P_s)
                     back_wave = ex
                     for s in range(nslices - 1, -1, -1):
                         if s < nslices - 1:
@@ -404,7 +344,6 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                 self._sync_primary_arrays(oID, pID)
                 nvtx_pop()
 
-                # accumulate per-view errors (matches base serial engine)
                 errs = np.ascontiguousarray(
                     np.vstack([np.hstack(prep.err_fourier),
                                np.hstack(prep.err_phot),
@@ -424,15 +363,11 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
         return {"ID": str(name), "layer": int(view.layer),
                 "coord": np.asarray(view.pod.ob_view.coord, dtype=float)}
 
-    # --------------------------------------------------------------- finalize
     def engine_finalize(self):
-        # Build the product object into the primary container for output.
-        for oID in self.ob.S.keys():
-            self.ob.S[oID].data[:] = self._object[0].S[oID].data
-            for s in range(1, self.p.number_of_slices):
-                self.ob.S[oID].data[:] *= self._object[s].S[oID].data
+        for prep in self.diff_info.values():
+            pID, oID, _ = prep.poe_IDs
+            self._sync_primary_arrays(oID, pID)
 
-        # Save the per-slice objects.
         slices_info = Param()
         slices_info.number_of_slices = self.p.number_of_slices
         slices_info.slice_thickness = self.p.slice_thickness

@@ -26,29 +26,13 @@ from ptypy.accelerate.base import address_manglers
 from .. import get_context
 from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel,\
     PositionCorrectionKernel, PropagationKernel, ThreePIEWaveKernel
-from ..array_utils import MaxKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel,\
     TransposeKernel, MaxAbs2Kernel, MassCenterKernel, Abs2SumKernel,\
-    InterpolatedShiftKernel
+    InterpolatedShiftKernel, MaxKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..mem_utils import GpuDataManager
-
-import os as _os
-
-# NVTX ranges around the phases of the multislice loop, for Nsight Systems.
-# Switched on with the environment variable PTYPY_NVTX=1; otherwise the two
-# helpers are no-ops and the loop is unchanged.
-_NVTX = _os.environ.get("PTYPY_NVTX", "0").lower() not in ("", "0", "false", "no")
-
-
-def _nvtx_push(name):
-    if _NVTX:
-        cp.cuda.nvtx.RangePush(name)
-
-
-def _nvtx_pop():
-    if _NVTX:
-        cp.cuda.nvtx.RangePop()
+from ptypy.accelerate.base.multislice import normalize_slice_pad, slice_bandlimit
+from ptypy.utils.nvtx_ranges import nvtx_push, nvtx_pop
 
 MPI = False
 
@@ -577,9 +561,7 @@ class _PaddedSlicePROP:
 
     Wraps an allocated ``PropagationKernel`` built on the padded grid and keeps
     the ``fw(x, y)`` / ``bw(x, y)`` call signature of the unpadded kernel.
-    This is a helper, not an engine. Do not add ``@register()`` to it: an
-    older draft did that, registered a second ThreePIE_cupy and shadowed the
-    engine below.
+    This is a helper, not an engine, and must not be registered.
     """
 
     def __init__(self, prop_kernel, shape, pad=1):
@@ -662,10 +644,15 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
     doc =
 
     [cuda_graphs]
-    default = False
+    default = True
     type = bool
     help = Record the per-view update into CUDA graphs and replay them
-    doc = The ~55 kernel launches of one view are captured once per view (per data block and per set of active slices) and replayed with a single launch afterwards, which removes most of the host-side launch cost that bounds this engine. Ignored when position refinement is on.
+    doc = The kernel launches of one view are captured once per view (per
+          data block and per set of active slices) and replayed with a
+          single launch afterwards, which removes most of the host-side
+          launch cost that otherwise bounds this engine. The result is
+          identical to launching the kernels one by one. Set to False to
+          run the plain loop. Ignored when position refinement is on.
 
     """
 
@@ -685,6 +672,7 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
         ptycho_parent.citations.add_article(**self.article)
 
     def engine_initialize(self):
+        """Create the per-slice object, probe and exit-wave containers."""
         super().engine_initialize()
 
         if self.p.number_of_slices < 1:
@@ -713,6 +701,7 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
         self._setup_slice_propagators()
 
     def _setup_slice_propagators(self):
+        """Build the padded inter-slice propagators and per-slice buffers."""
         if isinstance(self.p.slice_thickness, (list, tuple)):
             if len(self.p.slice_thickness) != self.p.number_of_slices - 1:
                 raise ValueError(
@@ -721,11 +710,6 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
             thicknesses = self.p.slice_thickness
         else:
             thicknesses = [self.p.slice_thickness] * (self.p.number_of_slices - 1)
-
-        # The padding/bandlimit policy is shared with the serial engine so the
-        # two backends stay numerically comparable.
-        from ptypy.custom.threepie_serial import (
-            normalize_slice_pad, slice_bandlimit)
 
         for label, scan in self.ptycho.model.scans.items():
             geo = scan.geometries[0]
@@ -773,6 +757,7 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
             kern.MAXK = MaxKernel(queue=self.queue)
 
     def engine_prepare(self):
+        """Move the per-slice containers to the device; captured graphs expire."""
         super().engine_prepare()
         # captured graphs refer to the per-block device arrays that prepare
         # (re)allocates, so they are invalid from here on
@@ -784,7 +769,6 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
 
     def _slice_active(self, index):
         return self.curiter >= self.p.slice_start_iteration[index]
-
 
     def _last_view_record(self):
         """ID, frame index and position of the last view this engine processed."""
@@ -835,7 +819,7 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
         err_fourier = prep.err_fourier_gpu[i, None]
         err_exit = prep.err_exit_gpu[i, None]
 
-        _nvtx_push("3pie.forward")
+        nvtx_push("3pie.forward")
         for s in range(nslices):
             old_exit = kern.slice_exits[s]
             if self._slice_active(s):
@@ -845,9 +829,9 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
             if s < nslices - 1:
                 kern.slice_PROP[s].fw(old_exit, kern.slice_tmp)
                 TWK.aux_to_pr(pr_layers[s + 1], kern.slice_tmp, addr)
-        _nvtx_pop()
+        nvtx_pop()
 
-        _nvtx_push("3pie.fourier")
+        nvtx_push("3pie.fourier")
         cp.copyto(ex, kern.slice_exits[-1][:ex.shape[0]])
         AWK.make_aux(aux, addr, ob_layers[-1], pr_layers[-1], ex,
                      c_po=self._c, c_e=1 - self._c)
@@ -868,9 +852,9 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
             AWK.build_aux2_no_ex(aux, addr, ob_layers[-1], pr_layers[-1])
             PROP.fw(aux, aux)
             FUK.log_likelihood2(aux, addr, mag, ma, err_phot)
-        _nvtx_pop()
+        nvtx_pop()
 
-        _nvtx_push("3pie.backward")
+        nvtx_push("3pie.backward")
         back_wave = ex
         for s in range(nslices - 1, -1, -1):
             if s < nslices - 1:
@@ -898,7 +882,7 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
                         a=self._pr_a, b=self._pr_b)
             else:
                 TWK.aux_to_pr(pr_layers[s], back_wave, addr)
-        _nvtx_pop()
+        nvtx_pop()
 
     def _view_graphs(self, prep, kern, dID, ob_layers, pr_layers):
         """
@@ -999,9 +983,9 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
 
                 for i in vieworder:
                     if graphs is not None:
-                        _nvtx_push("3pie.view_graph")
+                        nvtx_push("3pie.view_graph")
                         graphs[i].launch(self.queue)
-                        _nvtx_pop()
+                        nvtx_pop()
                     else:
                         if self.do_position_refinement:
                             # position refinement reads the primary object
@@ -1020,9 +1004,9 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
             self.dID_list.reverse()
             # product object and entrance probe for output/plotting, once per
             # iteration: nothing inside the view loop reads them
-            _nvtx_push("3pie.sync")
+            nvtx_push("3pie.sync")
             self._sync_primary_gpu_arrays()
-            _nvtx_pop()
+            nvtx_pop()
             self.curiter += 1
             self.ex_data.syncback = False
 
@@ -1065,6 +1049,7 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
         return error
 
     def engine_finalize(self):
+        """Write the slice file and release the device arrays and graphs."""
         self._sync_primary_gpu_arrays()
         self.queue.synchronize()
 

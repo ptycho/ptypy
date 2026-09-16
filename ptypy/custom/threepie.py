@@ -3,7 +3,10 @@
 A simple implementation of Multislice for the
 ePIE algorithm.
 
-authors: Benedikt J. Daurer and more...
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: see LICENSE for details.
 """
 from ptypy.engines import stochastic
 from ptypy.engines import register
@@ -55,14 +58,17 @@ class ThreePIE(stochastic.EPIE):
     [object_regularization_rate]
     default = 0.0
     type = float
-    help = regularization rate for object slices
-    doc =
+    lowlim = 0.0
+    help = Strength of the axial Fourier-domain regularization of the object slices (0 disables it)
+    doc = Filters the stack of slices along the slice axis with the weight
+      1 - 2 * arctan2(rate^2 kz^2, kx^2 + ky^2) / pi. Only implemented for a
+      single object mode and a scalar slice_thickness.
 
     """
     def __init__(self, ptycho_parent, pars=None):
         super(ThreePIE, self).__init__(ptycho_parent, pars)
         self.article = dict(
-            title='{Ptychographic transmission microscopy in three dimensions using a multi-slice approach',
+            title='Ptychographic transmission microscopy in three dimensions using a multi-slice approach',
             author='A. M. Maiden et al.',
             journal='J. Opt. Soc. Am. A',
             volume=29,
@@ -76,7 +82,6 @@ class ThreePIE(stochastic.EPIE):
     def engine_initialize(self):
         super().engine_initialize()
 
-        # One object, probe and exit-wave container per slice
         self._object = [None] * self.p.number_of_slices
         self._probe = [None] * self.p.number_of_slices
         self._exits = [None] * self.p.number_of_slices
@@ -85,16 +90,12 @@ class ThreePIE(stochastic.EPIE):
             self._probe[i] = self.pr.copy(self.pr.ID + "_p_" + str(i))
             self._exits[i] = self.pr.copy(self.pr.ID + "_e_" + str(i))
 
-        # ToDo:
-        #    - allow for non equal slice spacing
-        #    - allow for start_slice_update at a freely chosen iteration
-        #      for each slice separately (works, but not if the
-        #      most downstream slice is switched off)
-
+        # slice_start_iteration per slice only works while the most
+        # downstream slice stays active
         if isinstance(self.p.slice_start_iteration, int):
             self.p.slice_start_iteration = np.ones(self.p.number_of_slices) * self.p.slice_start_iteration
-        #if len(self.p.slice_start_iteration) != self.p.number_of_slices:
-        #    logger.info(f'dimension of given slice_start_iteration ({len(self.p.slice_start_iteration)}) does not match number of slices ({self.p.number_of_slices})')
+        elif len(self.p.slice_start_iteration) != self.p.number_of_slices:
+            raise ValueError("slice_start_iteration must have one value per slice")
 
         scan = list(self.ptycho.model.scans.values())[0]
         geom = scan.geometries[0]
@@ -240,7 +241,6 @@ class ThreePIE(stochastic.EPIE):
                     pod.probe = self._probe[i][pod.pr_view]
                     pod.object = self._object[i][pod.ob_view]
 
-                # Object/probe update
                 self.object_update(view, {pod.ID:self._exits[i][pod.pr_view] for name, pod in view.pods.items()})
                 self.probe_update(view, {pod.ID:self._exits[i][pod.pr_view] for name, pod in view.pods.items()})
                 for name, pod in view.pods.items():
@@ -272,13 +272,17 @@ class ThreePIE(stochastic.EPIE):
             self.ob *= self._object[i]
 
     def apply_object_regularization(self):
-        # single mode implementation
-        # only valid for slices of identical thickness
-        assert(self.p.number_of_slices > 1)
-        assert(isinstance(self.p.slice_thickness, float))
+        """
+        Filter the stack of object slices along the slice axis.
 
-        # loop over the storage IDs (the original implementation hardcoded
-        # the "Sscan_00G00" ID and broke for any other scan name)
+        Implemented for a single object mode and slices of identical
+        thickness (a scalar ``slice_thickness``).
+        """
+        if self.p.number_of_slices < 2:
+            raise ValueError("object regularization needs more than one slice")
+        if not isinstance(self.p.slice_thickness, float):
+            raise ValueError("object regularization requires a single slice_thickness")
+
         for sname in self._object[0].S.keys():
             shape = self._object[0].S[sname].data.shape[1:]
             psize = self._object[0].S[sname].psize[0]
@@ -286,7 +290,6 @@ class ThreePIE(stochastic.EPIE):
             ky = np.fft.fftfreq(shape[0], psize)[..., np.newaxis]
             kx = np.fft.fftfreq(shape[1], psize)
 
-            # calculate the weight array
             w = 1 - 2*np.arctan2(self.p.object_regularization_rate**2 * kz**2, kx**2+ky**2+np.spacing(1))/np.pi
 
             current_object = np.fft.ifftn(np.fft.fftn(

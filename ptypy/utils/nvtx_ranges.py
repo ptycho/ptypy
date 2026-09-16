@@ -1,12 +1,17 @@
+# -*- coding: utf-8 -*-
 """
-NVTX ranges for Nsight Systems, shared by the CPU-side engines.
+NVTX ranges for Nsight Systems, shared by the ThreePIE engines.
 
 Switched on with the environment variable ``PTYPY_NVTX=1``; otherwise
-:func:`nvtx_push` and :func:`nvtx_pop` are no-ops and cost one attribute
-lookup. The ranges are host-side markers only, so they work in a process
-that never touches the GPU. The bindings of cupy are used when cupy is
-importable, else the ``nvtx`` package; without either the helpers stay
-no-ops. The GPU engine carries its own copy of the same two helpers.
+:func:`nvtx_push` and :func:`nvtx_pop` are no-ops. The ranges are host-side
+markers, so they work in a process that never touches the GPU. The cupy
+bindings are used when cupy is importable, else the ``nvtx`` package;
+without either the helpers stay no-ops.
+
+This file is part of the PTYPY package.
+
+    :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
+    :license: see LICENSE for details.
 """
 import os
 

@@ -653,6 +653,13 @@ class AuxiliaryWaveKernel(ab.AuxiliaryWaveKernel):
 
 
 class ThreePIEWaveKernel:
+    """
+    Moves the wave of one view between full probe storage and the
+    auxiliary buffer through the serialized address array:
+    ``pr_to_aux(aux, pr, addr)`` and ``aux_to_pr(pr, aux, addr)``.
+    ``math_type`` is accepted for parity with the other kernels; the copies
+    themselves have no arithmetic.
+    """
 
     def __init__(self, queue_thread=None, math_type='float'):
         self.queue = queue_thread

@@ -137,9 +137,8 @@ class MaxKernel:
     and NaN are ignored; it is meant for norms like the ePIE object and
     probe norms).
 
-    A single-block reduction (no scratch memory, no allocation), so it can
-    be recorded into a CUDA graph; for arrays up to a few hundred thousand
-    elements it costs about as much as one launch.
+    A single-block reduction without scratch memory or allocation, so it
+    can be recorded into a CUDA graph.
     """
 
     def __init__(self, queue=None):
@@ -790,4 +789,3 @@ class InterpolatedShiftKernel:
                     shared_mem=(32+2)**2*8+32*(32+2)*8)
 
         return out
-

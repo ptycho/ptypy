@@ -144,13 +144,6 @@ class FFT_cupy(FFT_base):
         self.symmetric = symmetric
         self.forward = forward
         self.npix = npix
-        if symmetric:
-            self.scale = 1.0 / np.sqrt(npix)
-        else:
-            self.scale = 1.0 if forward else 1.0 / npix
-        # norm and scale of the direction the object was built for; ft/ift
-        # of the other direction fall back to cupy's own scaling (see _ift)
-        self.norm = 'backward' if forward else 'forward'
 
         if pre_fft is not None:
             self.pre_fft = cp.asarray(pre_fft)
