@@ -373,7 +373,7 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.rho_grad_new.new_storage(ID=VOL_STORAGE_ID, shape=vol_shape)
         self.rho_h.new_storage(ID=VOL_STORAGE_ID, shape=vol_shape)
 
-        # Needed in poly_line_coeffs_rho
+        # Needed in poly_line_coeffs
         self.omega = self.ex
         self.projected_rho = self.ex.copy(self.ex.ID + '_proj_rho', fill=0.)
 
@@ -544,15 +544,17 @@ class MLPtychoTomo(PositionCorrectionEngine):
             t2 = time.time()
 
             if self.p.poly_line_coeffs == "quadratic":
-                B_rho = self.ML_model.poly_line_coeffs_rho(self.rho_h)
-                B_pr = self.ML_model.poly_line_coeffs_pr(self.pr_h)
+                B_rho, B_pr = self.ML_model.poly_line_coeffs(
+                    self.rho_h, self.pr_h)
 
                 # same as below but quicker when poly quadratic
                 self.tmin_rho = dt(-0.5 * B_rho[1] / B_rho[2])
                 self.tmin_pr = dt(-0.5 * B_pr[1] / B_pr[2])
 
             elif self.p.poly_line_coeffs == "all":
-                B_rho = self.ML_model.poly_line_all_coeffs_rho(self.rho_h)
+                B_rho, B_pr = self.ML_model.poly_line_all_coeffs(
+                    self.rho_h, self.pr_h)
+
                 diffB_rho = np.arange(1,len(B_rho))*B_rho[1:] # coefficients of poly derivative
                 roots = np.roots(np.flip(diffB_rho.astype(np.double))) # roots only supports double
                 real_roots = np.real(roots[np.isreal(roots)]) # not interested in complex roots
@@ -562,7 +564,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
                     evalp = lambda root: np.polyval(np.flip(B_rho),root)
                     self.tmin_rho = dt(min(real_roots, key=evalp)) # root with smallest poly objective
 
-                B_pr = self.ML_model.poly_line_all_coeffs_pr(self.pr_h)
                 diffB_pr = np.arange(1,len(B_pr))*B_pr[1:] # coefficients of poly derivative
                 roots = np.roots(np.flip(diffB_pr.astype(np.double))) # roots only supports double
                 real_roots = np.real(roots[np.isreal(roots)]) # not interested in complex roots
@@ -709,31 +710,17 @@ class BaseModel(object):
         """
         raise NotImplementedError
 
-    def poly_line_coeffs_rho(self, rho_h):
+    def poly_line_coeffs(self, rho_h, pr_h):
         """
-        Compute the coefficients of the polynomial for line minimization
-        in direction h for the volume
-        """
-        raise NotImplementedError
-
-    def poly_line_coeffs_pr(self, pr_h):
-        """
-        Compute the coefficients of the polynomial for line minimization
-        in direction h for the probe
+        Compute the coefficients of the polynomials for line minimization
+        in direction rho_h for the volume and pr_h for the probe
         """
         raise NotImplementedError
 
-    def poly_line_all_coeffs_rho(self, rho_h):
+    def poly_line_all_coeffs(self, rho_h, pr_h):
         """
-        Compute all the coefficients of the polynomial for line minimization
-        in direction h for the volume
-        """
-        raise NotImplementedError
-
-    def poly_line_all_coeffs_pr(self, pr_h):
-        """
-        Compute all the coefficients of the polynomial for line minimization
-        in direction h for the probe
+        Compute all the coefficients of the polynomials for line minimization
+        in direction rho_h for the volume and pr_h for the probe
         """
         raise NotImplementedError
 
@@ -883,46 +870,42 @@ class GaussianModel(BaseModel):
 
         return error_dct
 
-    def poly_line_coeffs_rho(self, rho_h):
+    def poly_line_coeffs(self, rho_h, pr_h):
         """
-        Compute the coefficients of the polynomial for line minimization
-        in direction h for the volume
+        Compute the coefficients of the polynomials for line minimization
+        in direction rho_h for the volume and pr_h for the probe
         """
-        return self._poly_line_coeffs_rho(rho_h, order=2)
+        return self._poly_line_coeffs(rho_h, pr_h, order=2)
 
-    def poly_line_all_coeffs_rho(self, rho_h):
+    def poly_line_all_coeffs(self, rho_h, pr_h):
         """
-        Compute all the coefficients of the polynomial for line minimization
-        in direction h for the volume
+        Compute all the coefficients of the polynomials for line minimization
+        in direction rho_h for the volume and pr_h for the probe
         """
-        return self._poly_line_coeffs_rho(rho_h, order=4)
+        return self._poly_line_coeffs(rho_h, pr_h, order=4)
 
-    def poly_line_coeffs_pr(self, pr_h):
+    def _poly_line_coeffs(self, rho_h, pr_h, order):
         """
-        Compute the coefficients of the polynomial for line minimization
-        in direction h for the probe
-        """
-        return self._poly_line_coeffs_pr(pr_h, order=2)
+        Compute the coefficients of the polynomials of the given order for
+        line minimization in direction rho_h for the volume and pr_h for the
+        probe.
 
-    def poly_line_all_coeffs_pr(self, pr_h):
-        """
-        Compute all the coefficients of the polynomial for line minimization
-        in direction h for the probe
-        """
-        return self._poly_line_coeffs_pr(pr_h, order=4)
-
-    def _poly_line_coeffs_rho(self, rho_h, order):
-        """
-        Compute the coefficients of the polynomial of the given order for
-        line minimization in direction rho_h for the volume.
+        Both directions are handled in the same pass over the pods because
+        they share the exit wave and its propagation, which is the expensive
+        part. Neither the volume nor the probe is stepped until both sets of
+        coefficients are in, so a single exit wave serves the two.
 
         Receives:
             rho_h   container - the volume minimization direction
+            pr_h    container - the probe minimization direction
             order   int - 2 for the quadratic approximation, 4 for all
                     coefficients
+
+        Returns the volume coefficients and the probe coefficients.
         """
 
-        B = np.zeros((order + 1,), dtype=np.longdouble)
+        B_rho = np.zeros((order + 1,), dtype=np.longdouble)
+        B_pr = np.zeros((order + 1,), dtype=np.longdouble)
         Brenorm = 1. / self.LL[0]**2
         ind = self.get_indexes_of_active_views()
 
@@ -951,100 +934,67 @@ class GaussianModel(BaseModel):
             w = self.weights[diff_view]
             I = diff_view.data
 
-            A0 = None
-            A1 = None
-            A2 = None
+            A0_rho = None
+            A1_rho = None
+            A2_rho = None
 
-            for name, pod in diff_view.pods.items():
-                if not pod.active:
-                    continue
-
-                psi = pod.probe * np.exp(1j * self.projected_rho[pod.ex_view]) # exit_wave
-                f = pod.fw(psi)
-
-                omega_i = self.omega[pod.ex_view]
-
-                a = pod.fw(psi*omega_i)
-                b = pod.fw(psi*(omega_i**2))
-
-                if A0 is None:
-                    A0 = u.abs2(f).astype(np.longdouble)
-                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
-                    A2 = np.real(f * b.conj()).astype(np.longdouble) + u.abs2(a).astype(np.longdouble)
-                else:
-                    A0 += u.abs2(f)
-                    A1 += 2 * np.real(f * a.conj())
-                    A2 += (np.real(f * b.conj()) + u.abs2(a))
-
-            self._accumulate_B(B, A0, A1, A2, w, I, pod, dname, Brenorm)
-
-        parallel.allreduce(B)
-
-        # Volume regularizer, which only contributes up to the quadratic term
-        if self.regularizer:
-            for name, s in self.rho.storages.items():
-                B[:3] += Brenorm * self.regularizer.poly_line_coeffs(
-                    rho_h.storages[name].data, s.data)
-
-        self._zero_non_finite_B(B)
-
-        self.B = B
-
-        return B
-
-    def _poly_line_coeffs_pr(self, pr_h, order):
-        """
-        Compute the coefficients of the polynomial of the given order for
-        line minimization in direction pr_h for the probe.
-
-        Receives:
-            pr_h    container - the probe minimization direction
-            order   int - 2 for the quadratic approximation, 4 for all
-                    coefficients
-        """
-
-        B = np.zeros((order + 1,), dtype=np.longdouble)
-        Brenorm = 1. / self.LL[0]**2
-
-        # Outer loop: through diffraction patterns
-        for dname, diff_view in self.di.views.items():
-            if not diff_view.active:
-                continue
-
-            # Weights and intensities for this view
-            w = self.weights[diff_view]
-            I = diff_view.data
-
-            A0 = None
-            A1 = None
-            A2 = None
+            A0_pr = None
+            A1_pr = None
+            A2_pr = None
 
             for name, pod in diff_view.pods.items():
                 if not pod.active:
                     continue
 
                 expobj = np.exp(1j * self.projected_rho[pod.ex_view])
-                f = pod.fw(pod.probe * expobj)
-                a = pod.fw(pr_h[pod.pr_view] * expobj)
+                psi = pod.probe * expobj # exit_wave
+                f = pod.fw(psi)
+                abs2_f = u.abs2(f)
 
-                if A0 is None:
-                    A0 = u.abs2(f).astype(np.longdouble)
-                    A1 = 2 * np.real(f * a.conj()).astype(np.longdouble)
-                    A2 = u.abs2(a).astype(np.longdouble)
+                # Volume direction
+                omega_i = self.omega[pod.ex_view]
+
+                a = pod.fw(psi*omega_i)
+                b = pod.fw(psi*(omega_i**2))
+
+                # Probe direction, which shares the exit wave and so f
+                a_pr = pod.fw(pr_h[pod.pr_view] * expobj)
+
+                if A0_rho is None:
+                    A0_rho = abs2_f.astype(np.longdouble)
+                    A1_rho = 2 * np.real(f * a.conj()).astype(np.longdouble)
+                    A2_rho = np.real(f * b.conj()).astype(np.longdouble) + u.abs2(a).astype(np.longdouble)
+
+                    A0_pr = abs2_f.astype(np.longdouble)
+                    A1_pr = 2 * np.real(f * a_pr.conj()).astype(np.longdouble)
+                    A2_pr = u.abs2(a_pr).astype(np.longdouble)
                 else:
-                    A0 += u.abs2(f)
-                    A1 += 2 * np.real(f * a.conj())
-                    A2 += u.abs2(a)
+                    A0_rho += abs2_f
+                    A1_rho += 2 * np.real(f * a.conj())
+                    A2_rho += (np.real(f * b.conj()) + u.abs2(a))
 
-            self._accumulate_B(B, A0, A1, A2, w, I, pod, dname, Brenorm)
+                    A0_pr += abs2_f
+                    A1_pr += 2 * np.real(f * a_pr.conj())
+                    A2_pr += u.abs2(a_pr)
 
-        parallel.allreduce(B)
+            self._accumulate_B(B_rho, A0_rho, A1_rho, A2_rho, w, I, pod, dname, Brenorm)
+            self._accumulate_B(B_pr, A0_pr, A1_pr, A2_pr, w, I, pod, dname, Brenorm)
 
-        self._zero_non_finite_B(B)
+        parallel.allreduce(B_rho)
+        parallel.allreduce(B_pr)
 
-        self.B = B
+        # Volume regularizer, which only contributes up to the quadratic term
+        if self.regularizer:
+            for name, s in self.rho.storages.items():
+                B_rho[:3] += Brenorm * self.regularizer.poly_line_coeffs(
+                    rho_h.storages[name].data, s.data)
 
-        return B
+        self._zero_non_finite_B(B_rho)
+        self._zero_non_finite_B(B_pr)
+
+        self.B = B_pr
+
+        return B_rho, B_pr
 
     def _accumulate_B(self, B, A0, A1, A2, w, I, pod, dname, Brenorm):
         """
