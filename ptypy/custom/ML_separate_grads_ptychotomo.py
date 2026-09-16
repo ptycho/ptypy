@@ -777,16 +777,19 @@ class GaussianModel(BaseModel):
         These index into the view list the projector was built with in
         `PtypyTomoWrapper._setup_projector`, which is in object view order,
         so the two orderings have to stay in step.
+
+        A pod is active exactly when its diffraction view is, so the pods of
+        a view are either all in or all out and only need counting.
         """
         ind_active_views = []
         i = 0
         for diff_view in self.di.views.values():
-            for pod in diff_view.pods.values():
-                if pod.active:
-                    ind_active_views.append(i)
-                i += 1
+            n_pods = len(diff_view.pods)
+            if diff_view.active:
+                ind_active_views.extend(range(i, i + n_pods))
+            i += n_pods
 
-        return ind_active_views
+        return np.asarray(ind_active_views, dtype=np.intp)
 
     def new_grad(self):
         """
