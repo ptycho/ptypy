@@ -49,6 +49,11 @@ class LBFGSCupyTest(unittest.TestCase):
             plt.plot(LL_LBFGS_cupy, label="LBFGS_cupy")
             plt.legend()
             plt.show()
+            plt.figure("Probe LBFGS serial")
+            plt.imshow(np.abs(PRB_LBFGS_serial))
+            plt.figure("Probe LBFGS cupy")
+            plt.imshow(np.abs(PRB_LBFGS_cupy))
+            plt.show()
             plt.figure("Phase LBFGS serial")
             plt.imshow(np.angle(OBJ_LBFGS_serial))
             plt.figure("Ampltitude LBFGS serial")
@@ -151,7 +156,7 @@ class LBFGSCupyTest(unittest.TestCase):
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)
 
-    @pytest.mark.skip(reason="The wavefield preconditioner is not fully implemented yet")
+    @pytest.mark.skip(reason="Funny behaviour with this test, the reconstructed probe has higher power")
     def test_LBFGS_cupy_wavefield_preconditioner(self):
         out = []
         for eng in ["LBFGS_serial", "LBFGS_cupy"]:

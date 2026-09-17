@@ -49,6 +49,11 @@ class LBFGSPycudaTest(unittest.TestCase):
             plt.plot(LL_LBFGS_pycuda, label="LBFGS_pycuda")
             plt.legend()
             plt.show()
+            plt.figure("Probe LBFGS serial")
+            plt.imshow(np.abs(PRB_LBFGS_serial))
+            plt.figure("Probe LBFGS pycuda")
+            plt.imshow(np.abs(PRB_LBFGS_pycuda))
+            plt.show()
             plt.figure("Phase LBFGS serial")
             plt.imshow(np.angle(OBJ_LBFGS_serial))
             plt.figure("Ampltitude LBFGS serial")
@@ -151,7 +156,7 @@ class LBFGSPycudaTest(unittest.TestCase):
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)
 
-    @pytest.mark.skip(reason="The wavefield preconditioner is not fully implemented yet")
+    @pytest.mark.skip(reason="Funny behaviour with this test, the reconstructed probe has higher power")
     def test_LBFGS_pycuda_wavefield_preconditioner(self):
         out = []
         for eng in ["LBFGS_serial", "LBFGS_pycuda"]:
