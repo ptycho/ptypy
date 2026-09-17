@@ -348,8 +348,10 @@ class MLPtychoTomo(PositionCorrectionEngine):
             rho_real = gaussian_filter(rho_real, sigma=self.p.init_vol_blur_sigma)
             rho_imag = gaussian_filter(rho_imag, sigma=self.p.init_vol_blur_sigma)
 
-        # Initialise volume rho as container
-        self.rho = Container()
+        # Initialise volume rho as container. The owner is what gives the
+        # container its precision: without one it falls back to complex128
+        # rather than following the global "data_type" switch.
+        self.rho = Container(self.ptycho, ID='Crho', data_type='complex')
         self.rho.new_storage(ID=VOL_STORAGE_ID, shape=vol_shape)
         self.rho.fill(0.)
 
@@ -363,9 +365,12 @@ class MLPtychoTomo(PositionCorrectionEngine):
             del rho_real, rho_imag
 
         # Initialise volume gradient and minimization direction
-        self.rho_grad = Container()
-        self.rho_grad_new = Container()
-        self.rho_h = Container()
+        self.rho_grad = Container(self.ptycho, ID='Crho_grad',
+                                  data_type='complex')
+        self.rho_grad_new = Container(self.ptycho, ID='Crho_grad_new',
+                                      data_type='complex')
+        self.rho_h = Container(self.ptycho, ID='Crho_h',
+                               data_type='complex')
 
         self.rho_grad.new_storage(ID=VOL_STORAGE_ID, shape=vol_shape)
         self.rho_grad_new.new_storage(ID=VOL_STORAGE_ID, shape=vol_shape)
@@ -602,8 +607,13 @@ class MLPtychoTomo(PositionCorrectionEngine):
         if self.p.save_vol:
             self._save_volume()
 
+        # The volume containers are owned by the ptycho instance, so dropping
+        # the attribute alone would leave them alive in its pool
+        del self.ptycho.containers[self.rho_grad.ID]
         del self.rho_grad
+        del self.ptycho.containers[self.rho_grad_new.ID]
         del self.rho_grad_new
+        del self.ptycho.containers[self.rho_h.ID]
         del self.rho_h
         del self.ptycho.containers[self.pr_grad.ID]
         del self.pr_grad
