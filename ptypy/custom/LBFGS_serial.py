@@ -152,10 +152,11 @@ class LBFGS_serial(LBFGS, ML_serial):
             if self.curiter == 0: # Initial steepest-descent step
 
                 # Wavefield preconditioner (applied twice)
-                if self.p.wavefield_precond:
-                    for name, s in new_ob_grad.storages.items():
-                        new_ob_grad.storages[name].data /= self.ob_fln.storages[name].data + self.p.wavefield_delta_object
-                        new_pr_grad.storages[name].data /= self.pr_fln.storages[name].data + self.p.wavefield_delta_probe
+                # FIXME: needs to be accelerated
+                # if self.p.wavefield_precond:
+                #     for name, s in new_ob_grad.storages.items():
+                #         new_ob_grad.storages[name].data /= self.ob_fln.storages[name].data + self.p.wavefield_delta_object
+                #         new_pr_grad.storages[name].data /= self.pr_fln.storages[name].data + self.p.wavefield_delta_probe
 
                 # Object steepest-descent step
                 self.ob_h -= new_ob_grad
@@ -167,13 +168,14 @@ class LBFGS_serial(LBFGS, ML_serial):
             else: # Two-loop LBFGS recursion
 
                 # Wavefield preconditioner
-                if self.p.wavefield_precond:
-                    for name, s in self.ob_h.storages.items():
-                        self.ob_h.storages[name].data *= np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
-                        self.pr_h.storages[name].data *= np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe)
-                    for name, s in new_ob_grad.storages.items():
-                        new_ob_grad.storages[name].data /= np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
-                        new_pr_grad.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe)
+                # FIXME: needs to be accelerated
+                # if self.p.wavefield_precond:
+                #     for name, s in self.ob_h.storages.items():
+                #         self.ob_h.storages[name].data *= np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
+                #         self.pr_h.storages[name].data *= np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe)
+                #     for name, s in new_ob_grad.storages.items():
+                #         new_ob_grad.storages[name].data /= np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
+                #         new_pr_grad.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe)
 
                 # Memory index
                 mi = min(self.curiter, self.p.bfgs_memory_size)
@@ -243,10 +245,11 @@ class LBFGS_serial(LBFGS, ML_serial):
                     self.pr_h += self.pr_grad
 
                 # Wavefield preconditioner
-                if self.p.wavefield_precond:
-                    for name, s in self.ob_h.storages.items():
-                        self.ob_h.storages[name].data /= np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
-                        self.pr_h.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe)
+                # FIXME: needs to be accelerated
+                # if self.p.wavefield_precond:
+                #     for name, s in self.ob_h.storages.items():
+                #         self.ob_h.storages[name].data /= np.sqrt(self.ob_fln.storages[name].data + self.p.wavefield_delta_object)
+                #         self.pr_h.storages[name].data /= np.sqrt(self.pr_fln.storages[name].data + self.p.wavefield_delta_probe)
 
                 # Flip step direction for minimisation
                 self.ob_h *= -1
