@@ -146,11 +146,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
     choices = ['gaussian','poisson','euclid']
     doc = One of ‘gaussian’, poisson’ or ‘euclid’.
 
-    [n_angles]
-    default = None
-    type = int
-    help = Number of tomography angles
-
     [shifts]
     default = None
     type = ndarray
@@ -307,7 +302,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
         self.tomo_wrapper = None
 
         # Other
-        self.nangles = self.p.n_angles
         self.tmin_rho = None
         self.tmin_pr = None
         self.ML_model = None
