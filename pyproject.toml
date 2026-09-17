@@ -48,6 +48,7 @@ cupy-cuda12x = ["mpi4py","matplotlib","pyzmq","pillow", "pyfftw", "cupy-cuda12x"
 "Documentation" = "https://ptycho.github.io/ptypy"
 
 [tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
 testpaths = [
   "test/core_tests",
   "test/engine_tests",
