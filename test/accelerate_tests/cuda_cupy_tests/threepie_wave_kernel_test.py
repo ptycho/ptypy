@@ -12,7 +12,7 @@ from . import CupyCudaTest, have_cupy
 
 if have_cupy():
     import cupy as cp
-    from ptypy.custom.threepie_cupy import ThreePIEWaveKernel
+    from ptypy.accelerate.cuda_cupy.kernels import ThreePIEWaveKernel
 
 COMPLEX_TYPE = np.complex64
 INT_TYPE = np.int32

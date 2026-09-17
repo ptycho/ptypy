@@ -8,9 +8,6 @@ the last one and sweeps back, updating object and probe slice by slice. The
 update of one scan position is issued as a single CUDA graph by default, see
 the ``cuda_graphs`` parameter.
 
-The CUDA sources and the kernels that are specific to this engine live next
-to this module, so the accelerate backend is untouched.
-
 This file is part of the PTYPY package.
 
     :copyright: Copyright 2014 by the PTYPY team, see AUTHORS.
@@ -28,232 +25,15 @@ from ptypy.utils import parallel
 from ptypy.utils.verbose import logger
 from ptypy.engines import register
 from ptypy.engines.stochastic import EPIEMixin
-from ptypy.accelerate.cuda_common.utils import map2ctype
-from ptypy.accelerate.cuda_cupy import compile_options
 from ptypy.accelerate.cuda_cupy.engines.stochastic import _StochasticEngineCupy
-from ptypy.accelerate.cuda_cupy.kernels import PropagationKernel, PoUpdateKernel
+from ptypy.accelerate.cuda_cupy.kernels import PropagationKernel, ThreePIEWaveKernel
+from ptypy.accelerate.cuda_cupy.array_utils import MaxKernel
 from ptypy.accelerate.cuda_cupy.mem_utils import \
     make_pagelocked_paired_arrays as mppa
-from ptypy.custom.multislice_utils import normalize_slice_pad, slice_bandlimit
+from ptypy.custom.multislice_utils import (
+    normalize_slice_pad, slice_bandlimit, PaddedSlicePropagationKernel)
 
 __all__ = ['ThreePIE_cupy']
-
-_KERNEL_DIR = os.path.dirname(os.path.abspath(__file__))
-
-
-def load_kernel(name, subs={}, file=None, options=None):
-    """
-    Compile a CUDA kernel that sits next to this module.
-
-    ``ptypy.accelerate.cuda_cupy.load_kernel`` only reads from the
-    ``cuda_common`` folder of the backend. This is the same function for the
-    sources of this engine; the compile options of the backend are reused, so
-    the headers of ``cuda_common`` stay on the include path.
-    """
-    fn = os.path.join(_KERNEL_DIR,
-                      file if file is not None else "%s.cu" % name)
-    with open(fn, 'r') as f:
-        kernel = f.read()
-    for k, v in list(subs.items()):
-        kernel = kernel.replace(k, str(v))
-    # insert a preprocessor line directive to assist compiler errors
-    kernel = '#line 1 "{}"\n'.format(fn.replace("\\", "\\\\")) + kernel
-    opt = [*compile_options]
-    if options is not None:
-        opt += list(options)
-    module = cp.RawModule(code=kernel, options=tuple(opt))
-    if isinstance(name, str):
-        return module.get_function(name)
-    else:  # tuple
-        return tuple(module.get_function(n) for n in name)
-
-
-class ThreePIEPoUpdateKernel(PoUpdateKernel):
-    """
-    Object/probe update kernels with a preallocated max(prn).
-
-    The local object update of the backend takes the maximum of the probe
-    norm with ``cp.max``, which allocates a fresh device scalar on every
-    call and therefore cannot be recorded into a CUDA graph. This subclass
-    accepts a one-element buffer that the engine fills with
-    :class:`MaxKernel` beforehand.
-    """
-
-    def ob_update_local(self, addr, ob, pr, ex, aux, prn, a=0., b=1.,
-                        prn_max=None):
-        if self.queue is not None:
-            self.queue.use()
-        if prn_max is None:
-            prn_max = cp.max(prn)
-        obsh = [np.int32(ax) for ax in ob.shape]
-        prsh = [np.int32(ax) for ax in pr.shape]
-        exsh = [np.int32(ax) for ax in ex.shape]
-        # atomics version only
-        if addr.shape[3] != 3 or addr.shape[2] != 5:
-            raise ValueError(
-                'Address not in required shape for tiled ob_update')
-        num_pods = np.int32(addr.shape[0] * addr.shape[1])
-        bx = 64
-        by = 1
-        self.ob_update_local_cuda(grid=(
-            1, int((exsh[1] + by - 1)//by), int(num_pods)),
-            block=(bx, by, 1),
-            args=(ex, aux,
-                  exsh[0], exsh[1], exsh[2],
-                  pr,
-                  prsh[0], prsh[1], prsh[2],
-                  prn,
-                  ob,
-                  obsh[0], obsh[1], obsh[2],
-                  addr,
-                  prn_max,
-                  np.float32(a),
-                  np.float32(b)))
-
-
-class ThreePIEWaveKernel:
-    """
-    Moves the wave of one view between full probe storage and the
-    auxiliary buffer through the serialized address array:
-    ``pr_to_aux(aux, pr, addr)`` and ``aux_to_pr(pr, aux, addr)``.
-    ``math_type`` is accepted for parity with the other kernels; the copies
-    themselves have no arithmetic.
-    """
-
-    def __init__(self, queue_thread=None, math_type='float'):
-        self.queue = queue_thread
-        self.math_type = math_type
-        if math_type not in ['float', 'double']:
-            raise ValueError("math type must be float or double")
-
-        self.pr_to_aux_cuda, self.aux_to_pr_cuda = load_kernel(
-            ("threepie_pr_to_aux", "threepie_aux_to_pr"), {
-                'IN_TYPE': 'float',
-                'OUT_TYPE': 'float',
-                'MATH_TYPE': self.math_type
-            }, "threepie_wave.cu")
-
-    def pr_to_aux(self, aux, pr, addr):
-        prsh = [np.int32(ax) for ax in pr.shape]
-        auxsh = [np.int32(ax) for ax in aux.shape]
-        bx = 64
-        by = 1
-        if self.queue is not None:
-            self.queue.use()
-        self.pr_to_aux_cuda(grid=(
-            1, int((auxsh[-2] + by - 1) // by),
-            int(addr.shape[0] * addr.shape[1])),
-            block=(bx, by, 1),
-            args=(aux,
-                  auxsh[-2], auxsh[-1],
-                  pr,
-                  prsh[-2], prsh[-1],
-                  addr))
-
-    def aux_to_pr(self, pr, aux, addr):
-        prsh = [np.int32(ax) for ax in pr.shape]
-        auxsh = [np.int32(ax) for ax in aux.shape]
-        bx = 64
-        by = 1
-        if self.queue is not None:
-            self.queue.use()
-        self.aux_to_pr_cuda(grid=(
-            1, int((auxsh[-2] + by - 1) // by),
-            int(addr.shape[0] * addr.shape[1])),
-            block=(bx, by, 1),
-            args=(aux,
-                  auxsh[-2], auxsh[-1],
-                  pr,
-                  prsh[-2], prsh[-1],
-                  addr))
-
-
-class MaxKernel:
-    """
-    Maximum of a non-negative, C-contiguous real array into a preallocated
-    one-element buffer (the reduction starts from zero, so negative values
-    and NaN are ignored; it is meant for norms like the ePIE object and
-    probe norms).
-
-    A single-block reduction without scratch memory or allocation, so it
-    can be recorded into a CUDA graph.
-    """
-
-    def __init__(self, queue=None):
-        self.queue = queue
-        self.kernels = {}
-
-    def max(self, X: cp.ndarray, out: cp.ndarray):
-        if not X.flags.c_contiguous:
-            raise ValueError("MaxKernel.max needs a C-contiguous array")
-        bx = 1024
-        version = '{},{}'.format(map2ctype(X.dtype), map2ctype(out.dtype))
-        if version not in self.kernels:
-            self.kernels[version] = load_kernel("max_real", {
-                'IN_TYPE': map2ctype(X.dtype),
-                'OUT_TYPE': map2ctype(out.dtype),
-                'BDIM_X': bx,
-            }, "threepie_max_real.cu")
-        if self.queue is not None:
-            self.queue.use()
-        self.kernels[version]((1, 1, 1), (bx, 1, 1),
-                              (X, np.int32(X.size), out))
-
-
-def _crop_pad_last2(array, target_shape, out=None):
-    """Centered crop/pad on the last two axes (GPU arrays)."""
-    target_shape = tuple(int(v) for v in target_shape)
-    if out is None:
-        out = cp.zeros(array.shape[:-2] + target_shape, dtype=array.dtype)
-    else:
-        out.fill(0)
-    src_slices = []
-    dst_slices = []
-    for src_n, dst_n in zip(array.shape[-2:], target_shape):
-        n = min(src_n, dst_n)
-        src0 = (src_n - n) // 2
-        dst0 = (dst_n - n) // 2
-        src_slices.append(slice(src0, src0 + n))
-        dst_slices.append(slice(dst0, dst0 + n))
-    out[(...,) + tuple(dst_slices)] = array[(...,) + tuple(src_slices)]
-    return out
-
-
-class _PaddedSlicePROP:
-    """
-    GPU inter-slice propagator with optional centered zero-padding.
-
-    Wraps an allocated ``PropagationKernel`` built on the padded grid and keeps
-    the ``fw(x, y)`` / ``bw(x, y)`` call signature of the unpadded kernel.
-    This is a helper, not an engine, and must not be registered.
-    """
-
-    def __init__(self, prop_kernel, shape, pad=1):
-        self.propagator = prop_kernel
-        self._pad_factor = int(pad)
-        self._shape = tuple(int(v) for v in shape)
-        self._padded_shape = tuple(
-            int(v) * self._pad_factor for v in self._shape)
-        self._buffer = None
-
-    def _run(self, x, y, direction):
-        if self._pad_factor == 1:
-            direction(x, y)
-            return
-        if self._buffer is None or self._buffer.shape != \
-                x.shape[:-2] + self._padded_shape:
-            self._buffer = cp.zeros(
-                x.shape[:-2] + self._padded_shape, dtype=x.dtype)
-        _crop_pad_last2(x, self._padded_shape, out=self._buffer)
-        direction(self._buffer, self._buffer)
-        _crop_pad_last2(self._buffer, self._shape, out=y)
-
-    def fw(self, x, y):
-        self._run(x, y, self.propagator.fw)
-
-    def bw(self, x, y):
-        self._run(x, y, self.propagator.bw)
-
 
 @register()
 class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
@@ -361,11 +141,6 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
 
     def _setup_kernels(self):
         super()._setup_kernels()
-        # the local object update of the backend takes max(prn) with cp.max,
-        # which allocates and so cannot be captured into a graph
-        for kern in self.kernels.values():
-            kern.POK = ThreePIEPoUpdateKernel(queue_thread=self.queue)
-            kern.POK.allocate()
         self._setup_slice_propagators()
 
     def _setup_slice_propagators(self):
@@ -408,8 +183,8 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
                     aux, G.propagator, self.queue, self.p.fft_lib
                 )
                 prop.allocate()
-                kern.slice_PROP.append(
-                    _PaddedSlicePROP(prop, kern.aux.shape[-2:], pad=pad))
+                kern.slice_PROP.append(PaddedSlicePropagationKernel(
+                    prop, kern.aux.shape[-2:], pad=pad))
             kern.slice_exits = [
                 cp.empty_like(kern.aux) for _ in range(self.p.number_of_slices)
             ]
