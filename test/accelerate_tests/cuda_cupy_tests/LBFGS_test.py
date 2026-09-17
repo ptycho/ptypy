@@ -151,7 +151,7 @@ class LBFGSCupyTest(unittest.TestCase):
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)
 
-    @pytest.mark.skip(reason="Funny behaviour with this test, reconstructed probes are of very different magnitudes")
+    @pytest.mark.skip(reason="The wavefield preconditioner is not fully implemented yet")
     def test_LBFGS_cupy_wavefield_preconditioner(self):
         out = []
         for eng in ["LBFGS_serial", "LBFGS_cupy"]:

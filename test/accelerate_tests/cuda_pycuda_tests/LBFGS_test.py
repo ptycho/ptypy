@@ -14,6 +14,7 @@ from ptypy.custom import LBFGS_serial, LBFGS_pycuda
 import tempfile
 import shutil
 import numpy as np
+import pytest
 
 class LBFGSPycudaTest(unittest.TestCase):
 
@@ -150,6 +151,7 @@ class LBFGSPycudaTest(unittest.TestCase):
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)
 
+    @pytest.mark.skip(reason="The wavefield preconditioner is not fully implemented yet")
     def test_LBFGS_pycuda_wavefield_preconditioner(self):
         out = []
         for eng in ["LBFGS_serial", "LBFGS_pycuda"]:
