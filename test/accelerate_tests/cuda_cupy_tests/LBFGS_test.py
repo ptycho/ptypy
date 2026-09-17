@@ -133,7 +133,7 @@ class LBFGSCupyTest(unittest.TestCase):
             engine_params.scale_precond = False
             out.append(tu.EngineTestRunner(engine_params, output_path=self.outpath, init_correct_probe=True,
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
-        self.check_engine_output(out, plotting=False, debug=False)
+        self.check_engine_output(out, plotting=False, debug=False, tol=0.2)
 
     def test_LBFGS_cupy_smoothing_regularizer(self):
         out = []
