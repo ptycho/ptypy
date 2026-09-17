@@ -151,7 +151,7 @@ class LBFGSSerialTest(unittest.TestCase):
                                            scanmodel="BlockFull", autosave=False, verbose_level="critical"))
         self.check_engine_output(out, plotting=False, debug=False)
 
-    @pytest.mark.skip(reason="Funny behaviour with this test, most likely related to Gaussian filter, see issue #607")
+    @pytest.mark.skip(reason="The wavefield preconditioner is not fully implemented yet")
     def test_LBFGS_serial_wavefield_preconditioner(self):
         out = []
         for eng in ["LBFGS", "LBFGS_serial"]:
