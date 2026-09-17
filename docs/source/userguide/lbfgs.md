@@ -46,7 +46,7 @@ H^{(n)} \approx
 \right)^{-1}.
 $$
 
-For more details, see the original limited-memory BFGS paper by [Liu D. C. and Nocedal J. (1989)](http://dx.doi.org/10.1007/BF01589116).
+This inverse Hessian approximation $H^{(n)}$ is computed using a two loop recursion and a limited memory of past updates $\Delta^{(n)}$ and gradient differences $g^{(n+1)}-g^{(n)}$. For more details, see the original limited-memory BFGS paper by [Liu D. C. and Nocedal J. (1989)](http://dx.doi.org/10.1007/BF01589116).
 
 ### Example Script
 
