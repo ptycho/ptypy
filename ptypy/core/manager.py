@@ -124,11 +124,6 @@ class ScanModel(object):
     default = 
     type = int
     help = Number of tomographic angles
-
-    [n_frames_per_angle]
-    default = 
-    type = int
-    help = Number of frames per angle
     """
     _PREFIX = MODEL_PREFIX
 

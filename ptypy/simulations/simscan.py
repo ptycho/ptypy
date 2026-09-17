@@ -321,11 +321,6 @@ class SimScan3D(SimScan):
     default =
     type = int
     help = Number of tomographic angles
-
-    [n_frames_per_angle]
-    default =
-    type = int
-    help = Number of frames per angle
     """
 
     def _positions_theory(self):
@@ -342,7 +337,6 @@ class SimScan3D(SimScan):
     def _customize_sim_scan(self, scan_pars):
         scan_pars.tomo_angles = self.info.tomo_angles
         scan_pars.projections = self.info.projections
-        scan_pars.n_frames_per_angle = self.info.n_frames_per_angle
         scan_pars.extra = self.info.extra
 
     def _prepare_exit_waves(self, ptycho):
