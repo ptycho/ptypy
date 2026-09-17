@@ -27,34 +27,18 @@ import ptypy.custom.threepie  # noqa: F401  (registers ThreePIE)
 import ptypy.custom.threepie_serial  # noqa: F401  (registers ThreePIE_serial)
 from ptypy import utils as u
 from ptypy.core import Ptycho
+from test.utils import seeded_view_order, ncorr, aligned_ncorr
 
 NUMITER = 60
-NFRAMES = 100
+# Two slices need enough data to be determined. With 100 frames the two
+# engines settle on visibly different solutions on some noise draws (their
+# objects correlated between 0.66 and 0.95 over five seeds); with 200 they
+# agree to 0.98 and better on every seed. Running longer does not help, which
+# is what tells the two apart: 120 iterations on 100 frames still gave 0.70.
+NFRAMES = 200
 SHAPE = 64
 THICK = 5e-7
 SEED = 5
-
-
-def seeded_view_order(seed):
-    """
-    Context manager that gives the stochastic engines a seeded view order.
-
-    The stochastic engines draw their view order from an unseeded
-    ``numpy.random.default_rng()``; patching it lets two reconstructions see
-    the views in the same order, so their results can be compared without
-    the draw entering the comparison.
-    """
-    from unittest import mock
-    return mock.patch("numpy.random.default_rng",
-                      lambda *a, **k: np.random.Generator(np.random.PCG64(seed)))
-
-
-def ncorr(a, b):
-    """Phase and scale invariant normalized correlation of two complex fields."""
-    a = a.ravel() - a.mean()
-    b = b.ravel() - b.mean()
-    den = np.linalg.norm(a) * np.linalg.norm(b)
-    return float(np.abs(np.vdot(a, b)) / den) if den else 0.0
 
 
 class ThreePIESerialTest(unittest.TestCase):
@@ -117,8 +101,8 @@ class ThreePIESerialTest(unittest.TestCase):
     def test_single_slice_matches_epie_serial(self):
         _, ob_e, pr_e = self._run("EPIE_serial", None)
         _, ob_1, pr_1 = self._run("ThreePIE_serial", 1)
-        self.assertGreater(ncorr(pr_e, pr_1), 0.85)
-        self.assertGreater(ncorr(ob_e, ob_1), 0.85)
+        self.assertGreater(aligned_ncorr(pr_e, pr_1), 0.85)
+        self.assertGreater(aligned_ncorr(ob_e, ob_1), 0.85)
 
     def test_two_slices_converge(self):
         P, _, _ = self._run("ThreePIE_serial", 2)
@@ -133,8 +117,11 @@ class ThreePIESerialTest(unittest.TestCase):
     def test_two_slices_match_cpu_reference(self):
         _, ob_r, pr_r = self._run("ThreePIE", 2)
         _, ob_s, pr_s = self._run("ThreePIE_serial", 2)
-        self.assertGreater(ncorr(pr_r, pr_s), 0.8)
-        self.assertGreater(ncorr(ob_r, ob_s), 0.8)
+        # A ptychographic solution is fixed only up to a joint probe/object
+        # shift, and the two engines settle on different ones, so the fields
+        # are registered against each other before they are compared.
+        self.assertGreater(aligned_ncorr(pr_r, pr_s), 0.8)
+        self.assertGreater(aligned_ncorr(ob_r, ob_s), 0.8)
 
 
 if __name__ == "__main__":
