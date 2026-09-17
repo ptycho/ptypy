@@ -35,7 +35,6 @@ from ptypy.accelerate.cuda_cupy.kernels import PropagationKernel, PoUpdateKernel
 from ptypy.accelerate.cuda_cupy.mem_utils import \
     make_pagelocked_paired_arrays as mppa
 from ptypy.custom.multislice_utils import normalize_slice_pad, slice_bandlimit
-from ptypy.custom.nvtx_ranges import nvtx_push, nvtx_pop
 
 __all__ = ['ThreePIE_cupy']
 
@@ -314,10 +313,9 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
     help = Record the per-view update into CUDA graphs and replay them
     doc = The kernel launches of one view are captured once per view (per
           data block and per set of active slices) and replayed with a
-          single launch afterwards, which removes most of the host-side
-          launch cost that otherwise bounds this engine. The result is
-          identical to launching the kernels one by one. Set to False to
-          run the plain loop. Ignored when position refinement is on.
+          single launch afterwards. The result is identical to launching
+          the kernels one by one. Set to False to run the plain loop.
+          Ignored when position refinement is on.
 
     """
 
@@ -489,7 +487,6 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
         err_fourier = prep.err_fourier_gpu[i, None]
         err_exit = prep.err_exit_gpu[i, None]
 
-        nvtx_push("3pie.forward")
         for s in range(nslices):
             old_exit = kern.slice_exits[s]
             if self._slice_active(s):
@@ -499,9 +496,7 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
             if s < nslices - 1:
                 kern.slice_PROP[s].fw(old_exit, kern.slice_tmp)
                 TWK.aux_to_pr(pr_layers[s + 1], kern.slice_tmp, addr)
-        nvtx_pop()
 
-        nvtx_push("3pie.fourier")
         cp.copyto(ex, kern.slice_exits[-1][:ex.shape[0]])
         AWK.make_aux(aux, addr, ob_layers[-1], pr_layers[-1], ex,
                      c_po=self._c, c_e=1 - self._c)
@@ -522,9 +517,7 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
             AWK.build_aux2_no_ex(aux, addr, ob_layers[-1], pr_layers[-1])
             PROP.fw(aux, aux)
             FUK.log_likelihood2(aux, addr, mag, ma, err_phot)
-        nvtx_pop()
 
-        nvtx_push("3pie.backward")
         back_wave = ex
         for s in range(nslices - 1, -1, -1):
             if s < nslices - 1:
@@ -552,7 +545,6 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
                         a=self._pr_a, b=self._pr_b)
             else:
                 TWK.aux_to_pr(pr_layers[s], back_wave, addr)
-        nvtx_pop()
 
     def _view_graphs(self, prep, kern, dID, ob_layers, pr_layers):
         """
@@ -653,9 +645,7 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
 
                 for i in vieworder:
                     if graphs is not None:
-                        nvtx_push("3pie.view_graph")
                         graphs[i].launch(self.queue)
-                        nvtx_pop()
                     else:
                         if self.do_position_refinement:
                             # position refinement reads the primary object
@@ -674,9 +664,7 @@ class ThreePIE_cupy(_StochasticEngineCupy, EPIEMixin):
             self.dID_list.reverse()
             # product object and entrance probe for output/plotting, once per
             # iteration: nothing inside the view loop reads them
-            nvtx_push("3pie.sync")
             self._sync_primary_gpu_arrays()
-            nvtx_pop()
             self.curiter += 1
             self.ex_data.syncback = False
 

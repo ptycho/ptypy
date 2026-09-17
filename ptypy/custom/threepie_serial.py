@@ -34,7 +34,6 @@ from ptypy.accelerate.base.kernels import BaseKernel
 from ptypy.accelerate.base import array_utils as au
 from ptypy.custom.multislice_utils import (
     normalize_slice_pad, slice_bandlimit, crop_pad_last2)
-from ptypy.custom.nvtx_ranges import nvtx_push, nvtx_pop
 
 __all__ = ["ThreePIE_serial"]
 
@@ -299,7 +298,6 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                         self._sync_primary_arrays(oID, pID)
                     self.position_update_local(prep, i)
 
-                    nvtx_push("3pie.forward")
                     # forward multislice sweep
                     for s in range(nslices):
                         old_exit = kern.slice_exits[s]
@@ -317,8 +315,6 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                             kern.slice_tmp[:] = kern.slice_FW[s](old_exit)
                             TWK.aux_to_pr(pr_layers[s + 1], kern.slice_tmp, addr)
 
-                    nvtx_pop()
-                    nvtx_push("3pie.fourier")
                     # last slice: far-field Fourier constraint
                     ex[:] = kern.slice_exits[-1][:ex.shape[0]]
                     AWK.make_aux(aux, addr, ob_layers[-1], pr_layers[-1], ex,
@@ -346,8 +342,6 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                         aux[:] = FW(aux)
                         FUK.log_likelihood(aux, addr, mag, ma, err_phot)
 
-                    nvtx_pop()
-                    nvtx_push("3pie.backward")
                     # backward sweep (update O_s, P_s)
                     back_wave = ex
                     for s in range(nslices - 1, -1, -1):
@@ -378,14 +372,11 @@ class ThreePIE_serial(_StochasticEngineSerial, EPIEMixin):
                         else:
                             TWK.aux_to_pr(pr_layers[s], back_wave, addr)
 
-                    nvtx_pop()
                     self._last_view = prep.view_IDs[i]
 
                 # product object and entrance probe for output/plotting, once
                 # per iteration: nothing inside the view loop reads them
-                nvtx_push("3pie.sync")
                 self._sync_primary_arrays(oID, pID)
-                nvtx_pop()
 
                 errs = np.ascontiguousarray(
                     np.vstack([np.hstack(prep.err_fourier),

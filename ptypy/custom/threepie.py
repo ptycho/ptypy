@@ -15,7 +15,6 @@ from ptypy.utils import Param
 from ptypy.utils.verbose import logger
 from ptypy import io
 import numpy as np
-from ptypy.custom.nvtx_ranges import nvtx_push, nvtx_pop
 
 @register()
 class ThreePIE(stochastic.EPIE):
@@ -148,9 +147,7 @@ class ThreePIE(stochastic.EPIE):
                     self._sync_product_object()
 
             # product object for live plotting, once per iteration
-            nvtx_push("3pie.sync")
             self._sync_product_object()
-            nvtx_pop()
             self.curiter += 1
 
         return error_dct
@@ -189,8 +186,6 @@ class ThreePIE(stochastic.EPIE):
         Performs one 'iteration' of 3PIE (multislice ePIE) for a single view.
         Based on https://doi.org/10.1364/JOSAA.29.001606
         """
-        nvtx_push("3pie.forward")
-
         for i in range(self.p.number_of_slices-1):
             for name, pod in view.pods.items():
                 # exit wave for this slice
@@ -212,12 +207,8 @@ class ThreePIE(stochastic.EPIE):
             pod.object = self._object[-1][pod.ob_view]
             pod.exit = self._exits[-1][pod.pr_view]
 
-        nvtx_pop()
         # Fourier update
-        nvtx_push("3pie.fourier")
         error = self.fourier_update(view)
-        nvtx_pop()
-        nvtx_push("3pie.backward")
 
         # Object/probe update for the last slice
         if self.curiter >= self.p.slice_start_iteration[-1]:
@@ -252,7 +243,6 @@ class ThreePIE(stochastic.EPIE):
 
         if self.p.object_regularization_rate > 0:
             self.apply_object_regularization()
-        nvtx_pop()
 
         return error
 
