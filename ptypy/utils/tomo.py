@@ -247,10 +247,13 @@ class AstraViewBased:
             self._sub_vec
         )
 
-    def _setup_config_for_forward(self, type="FP3D_CUDA"):
+    def _setup_config_for_forward(self, type="FP3D_CUDA", iter=1):
         """
-        Gets the type, e.g. FP3D_CUDA, and prepares cfg.
+        Gets the type, e.g. FP3D_CUDA, and the number of iteration 
+        and prepares cfg.
         """
+        self.forward_alg_iter = iter
+        
         cfg = astra.astra_dict(type)
         cfg["VolumeDataId"] = self._vol_id_real
         cfg["ProjectionDataId"] = self._proj_id_real
@@ -261,10 +264,13 @@ class AstraViewBased:
         cfg["ProjectionDataId"] = self._proj_id_imag
         self.forward_alg_id_imag = astra.algorithm.create(cfg)
 
-    def _setup_config_for_backward(self, type="BP3D_CUDA"):
+    def _setup_config_for_backward(self, type="BP3D_CUDA", iter=1):
         """
-        Gets the type, e.g. FP3D_CUDA, and prepares cfg.
+        Gets the type, e.g. FP3D_CUDA, , and the number of iteration 
+        and prepares cfg.
         """
+        self.backward_alg_iter = iter
+
         cfg = astra.astra_dict(type)
         cfg["ReconstructionDataId"] = self._vol_id_real
         cfg["ProjectionDataId"] = self._proj_id_real
@@ -296,14 +302,14 @@ class AstraViewBased:
         out.imag[:] = imag
         return out
 
-    def forward(self, iter=1, out=None):
+    def forward(self, out=None):
         """
         Computes the forward projection, based on self._vol (this must have
         been defined). Writes the result into "out" if provided, and returns
         it either way.
         """
-        astra.algorithm.run(self.forward_alg_id_real, iter)
-        astra.algorithm.run(self.forward_alg_id_imag, iter)
+        astra.algorithm.run(self.forward_alg_id_real, self.forward_alg_iter)
+        astra.algorithm.run(self.forward_alg_id_imag, self.forward_alg_iter)
 
         _proj_data_real = astra.data3d.get(self._proj_id_real)
         _proj_data_imag = astra.data3d.get(self._proj_id_imag)
@@ -313,14 +319,14 @@ class AstraViewBased:
 
         return self._combine(_ob_views_real, _ob_views_imag, out)
 
-    def backward(self, iter=1, out=None):
+    def backward(self, out=None):
         """
         Computes the backward projection, based on self._proj_array (this must
         have been defined). Writes the result into "out" if provided, and
         returns it either way.
         """
-        astra.algorithm.run(self.backward_alg_id_real, iter)
-        astra.algorithm.run(self.backward_alg_id_imag, iter)
+        astra.algorithm.run(self.backward_alg_id_real, self.backward_alg_iter)
+        astra.algorithm.run(self.backward_alg_id_imag, self.backward_alg_iter)
 
         _vol_real = astra.data3d.get(self._vol_id_real)
         _vol_imag = astra.data3d.get(self._vol_id_imag)
