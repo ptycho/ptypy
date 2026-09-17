@@ -247,13 +247,6 @@ class MLPtychoTomo(PositionCorrectionEngine):
     help = Decay rate for smoothing preconditioner
     doc = Sigma for gaussian filter will reduce exponentially at this rate
 
-    [probe_update_start]
-    default = 0
-    type = int
-    lowlim = 0
-    help = Number of iterations before probe update starts
-    doc = probe_update_start doesn't work with MLPtychoTomo yet.
-
     [poly_line_coeffs]
     default = quadratic
     type = str
@@ -481,17 +474,9 @@ class MLPtychoTomo(PositionCorrectionEngine):
 
             tg += time.time() - t1
 
-            if self.p.probe_update_start <= self.curiter:
-                # Apply probe support if needed
-                for name, s in new_pr_grad.storages.items():
-                    self.support_constraint(s)
-                    #support = self.probe_support.get(name)
-                    #if support is not None:
-                    #    s.data *= support
-            # FIXME: this hack doesn't work here as we step in probe and volume separately
-            # FIXME: really it's the probe step that should be zeroed out not the gradient
-            else:
-                new_pr_grad.fill(0.)
+            # Apply probe support if needed
+            for name, s in new_pr_grad.storages.items():
+                self.support_constraint(s)
 
             # Smoothing preconditioner for the volume
             if self.smooth_gradient:
