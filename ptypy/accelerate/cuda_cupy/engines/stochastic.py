@@ -25,7 +25,7 @@ from ..kernels import FourierUpdateKernel, AuxiliaryWaveKernel, PoUpdateKernel,\
     PositionCorrectionKernel, PropagationKernel
 from ..array_utils import ArrayUtilsKernel, GaussianSmoothingKernel,\
     TransposeKernel, MaxAbs2Kernel, MassCenterKernel, Abs2SumKernel,\
-    InterpolatedShiftKernel
+    InterpolatedShiftKernel, ClipObjectKernel
 from ..mem_utils import make_pagelocked_paired_arrays as mppa
 from ..mem_utils import GpuDataManager
 
@@ -144,6 +144,10 @@ class _StochasticEngineCupy(_StochasticEngineSerial):
             kern.PROP.allocate()
             kern.resolution = geo.resolution[0]
 
+            # Clip Magnitudes Kernel
+            log(4, "Setting up ClipObjectKernel")
+            kern.CMK = ClipObjectKernel(queue=self.queue)
+
             if self.do_position_refinement:
                 log(4, "Setting up position correction")
                 kern.PCK = PositionCorrectionKernel(
@@ -247,6 +251,7 @@ class _StochasticEngineCupy(_StochasticEngineSerial):
                 POK = kern.POK
                 MAK = kern.MAK
                 PROP = kern.PROP
+                CMK = kern.CMK
 
                 # get aux buffer
                 aux = kern.aux
@@ -329,7 +334,10 @@ class _StochasticEngineCupy(_StochasticEngineSerial):
                     POK.pr_norm_local(addr, pr, prn)
                     POK.ob_update_local(
                         addr, ob, pr, ex, aux, prn, a=self._ob_a, b=self._ob_b)
-
+                    
+                    if self.p.clip_object is not None:
+                        CMK.clip_object_to_range(ob, self.p.clip_object)
+                    
                     # probe update
                     if self._object_norm_is_global and self._pr_a == 0:
                         obn_max = cp.empty((1,), dtype=np.float32)

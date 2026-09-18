@@ -15,7 +15,7 @@ from ..accelerate.cuda_cupy.kernels import (FourierUpdateKernel,
     AuxiliaryWaveKernel, PoUpdateKernel, PositionCorrectionKernel,
     PropagationKernel)
 from ..accelerate.cuda_cupy.array_utils import (ArrayUtilsKernel,
-    GaussianSmoothingKernel, TransposeKernel, ClipMagnitudesKernel,
+    GaussianSmoothingKernel, TransposeKernel, ClipObjectKernel,
     MaxAbs2Kernel, MassCenterKernel, Abs2SumKernel, InterpolatedShiftKernel)
 from ..accelerate.cuda_cupy.mem_utils import make_pagelocked_paired_arrays as mppa
 from ..accelerate.cuda_cupy.mem_utils import GpuDataManager
@@ -41,6 +41,16 @@ class WASP_cupy(WASP_serial):
     type = str
     help =
     doc =
+
+    [probe_update_cuda_atomics]
+    default = False
+    type = bool
+    help = For GPU, use the atomics version for probe update kernel
+
+    [object_update_cuda_atomics]
+    default = True
+    type = bool
+    help = For GPU, use the atomics version for object update kernel
 
     [fft_lib]
     default = reikna
@@ -82,7 +92,7 @@ class WASP_cupy(WASP_serial):
             self.ISK = InterpolatedShiftKernel(queue=self.queue)
 
         # Clip Magnitudes Kernel
-        self.CMK = ClipMagnitudesKernel(queue=self.queue)
+        self.CMK = ClipObjectKernel(queue=self.queue)
 
         super().engine_initialize()
         self.qu_htod = cp.cuda.Stream()
@@ -403,10 +413,10 @@ class WASP_cupy(WASP_serial):
 
     def clip_object(self, ob):
         """
-        Clips magnitudes of object into given range.
+        Clips object magnitude and phase into given range.
         """
-        cmin, cmax = self.p.clip_object
-        self.CMK.clip_magnitudes_to_range(ob, cmin, cmax)
+        if self.p.clip_object is not None:
+            self.CMK.clip_object_to_range(ob, self.p.clip_object)
 
     def position_update(self):
         """

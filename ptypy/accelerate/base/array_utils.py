@@ -145,13 +145,15 @@ def interpolated_shift(c, shift, do_linear=False):
             np.imag(c), shift, order=1, mode='constant', cval=0, prefilter=False)
 
 
-def clip_complex_magnitudes_to_range(complex_input, clip_min, clip_max):
+def clip_object_to_range(complex_input, clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase):
     '''
-    This takes a single precision 2D complex input, clips the absolute magnitudes to be within a range, but leaves the phase untouched.
+    This takes a single precision 2D complex input, and clips its magnitude and phase to the given ranges.
     '''
     ampl = np.abs(complex_input)
     phase = np.exp(1j * np.angle(complex_input))
-    ampl = np.clip(ampl, clip_min, clip_max)
+    ampl = np.clip(ampl, clip_min_mag, clip_max_mag)
+    phase = np.clip(np.angle(complex_input), clip_min_phase, clip_max_phase)
+    phase = np.exp(1j * phase)  
     complex_input[:] = ampl * phase
 
 
