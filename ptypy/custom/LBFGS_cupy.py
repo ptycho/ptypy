@@ -116,6 +116,41 @@ class LBFGS_cupy(LBFGS_serial, ML_cupy):
             for name, s in new_ob_grad.storages.items():
                 s.gpu = self._get_smooth_gradient(s.gpu, self.smooth_gradient.sigma)
 
+    def _apply_wavefield_precond_initial(self):
+        new_ob_grad = self.ob_grad_new
+        new_pr_grad = self.pr_grad_new
+        if self.p.wavefield_precond:
+            for name, s in new_ob_grad.storages.items():
+                s.gpu /= self.ob_fln.storages[name].gpu + self.p.wavefield_delta_object
+            for name, s in new_pr_grad.storages.items():
+                s.gpu /= self.pr_fln.storages[name].gpu + self.p.wavefield_delta_probe
+
+    def _apply_wavefield_precond_first_time(self):
+        new_ob_grad = self.ob_grad_new
+        new_pr_grad = self.pr_grad_new
+        if self.p.wavefield_precond:
+            for name, s in self.ob_h.storages.items():
+                s.gpu *= cp.sqrt(self.ob_fln.storages[name].gpu
+                                 + self.p.wavefield_delta_object)
+            for name, s in self.pr_h.storages.items():
+                s.gpu *= cp.sqrt(self.pr_fln.storages[name].gpu
+                                 + self.p.wavefield_delta_probe)
+            for name, s in new_ob_grad.storages.items():
+                s.gpu /= cp.sqrt(self.ob_fln.storages[name].gpu
+                                 + self.p.wavefield_delta_object)
+            for name, s in new_pr_grad.storages.items():
+                s.gpu /= cp.sqrt(self.pr_fln.storages[name].gpu
+                                 + self.p.wavefield_delta_probe)
+
+    def _apply_wavefield_precond_second_time(self):
+        if self.p.wavefield_precond:
+            for name, s in self.ob_h.storages.items():
+                s.gpu /= cp.sqrt(self.ob_fln.storages[name].gpu
+                                 + self.p.wavefield_delta_object)
+            for name, s in self.pr_h.storages.items():
+                s.gpu /= cp.sqrt(self.pr_fln.storages[name].gpu
+                                 + self.p.wavefield_delta_probe)
+
     def _get_ob_norm(self):
         norm = self._get_norm(self.ob_grad_new)
         return norm

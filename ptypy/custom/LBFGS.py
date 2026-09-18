@@ -100,7 +100,7 @@ class LBFGS(ML):
     default = False
     type = bool
     help = Whether to use the wavefield preconditioner
-    doc = Not implemented for accelerated engines. This parameter can give faster convergence.
+    doc = This parameter can give faster convergence.
 
     [wavefield_delta_object]
     default = 0.1
