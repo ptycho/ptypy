@@ -17,6 +17,7 @@ from .citations import *
 from .metrics import *
 from . import descriptor
 from . import parallel
+from . import reporting
 from .. import __has_matplotlib__ as hmpl
 if hmpl:
     from .plot_utils import *
