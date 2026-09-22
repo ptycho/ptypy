@@ -36,9 +36,30 @@ jobs:
       - name: Set Path to Sphinx Build
         run: echo "SPHINXBUILD=`which sphinx-build`" >> $GITHUB_ENV
 
+      - name: Checkout PtyPy Tutorials
+        uses: actions/checkout@v7
+        with:
+          repository: ptycho/tutorials
+          path: tutorials
+          ref: main
+
+      - name: Convert Notebooks
+        working-directory: tutorials
+        run: |
+          mv notebooks docs/
+          python docs/scripts/convert.py --actions
+
+      - name: Set Path to Tutorial Notebooks
+        run: echo "PTYPY_PATH_TO_NOTEBOOKS=`readlink -e ./tutorials/docs/notebooks`" >> $GITHUB_ENV
+
       - name: Build Sphinx Documentation
         working-directory: docs
         run: make html
+        env:
+          PTYPY_BUILD_LEGACY_TUTORIALS: 1
+          PTYPY_BUILD_PARAM_TREE: 1
+          PTYPY_BUILD_USERGUIDE_IMAGES: 1
+          PTYPY_BUILD_NOTEBOOK_TUTORIALS: 1
 
       - name: Rename Build Directory
         run: |

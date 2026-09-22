@@ -51,6 +51,9 @@ if generate_param_tree:
     generate_parameters_rst("engines", outfile="engines.rst", title="List of Engines (p.engines)")
     generate_parameters_rst("engine", outfile="engine.rst", title="Engine Definition (p.engines.engine_00)")
 
+# Create folder generated in userguide
+os.makedirs("./userguide/generated", exist_ok=True)
+
 # Generate images for user guide
 if generate_userguide_images:
     from _userguide_generator import create_test_image
