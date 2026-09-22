@@ -1,3 +1,4 @@
+
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -6,29 +7,79 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-import sys
+import sys, os
+import inspect
 from pathlib import Path
 
 sys.path.insert(0, str(Path('../..', 'ptypy').resolve()))
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
-from _param_generator import generate_parameters_rst
+
+# Hack to solve import issues with mocked libraries like fabio etc.
+# Save the original unwrap function
+original_unwrap = inspect.unwrap
+
+def safe_unwrap(func, *args, **kwargs):
+    # If it's a Sphinx Mock object, prevent it from looping
+    if type(func).__name__ == '_MockObject' or hasattr(func, '__sphinx_mock__'):
+        return func
+    try:
+        return original_unwrap(func, *args, **kwargs)
+    except ValueError as e:
+        if "wrapper loop when unwrapping" in str(e):
+            return func
+        raise
+
+# Overwrite the standard library inspect.unwrap with our safe version
+inspect.unwrap = safe_unwrap
+# End of hack
+
+# Check environment variables to decide what to generate as part of the build
+generate_legacy_tutorials = int(os.environ["PTYPY_BUILD_LEGACY_TUTORIALS"]) if "PTYPY_BUILD_LEGACY_TUTORIALS" in os.environ else 0
+generate_param_tree = int(os.environ["PTYPY_BUILD_PARAM_TREE"]) if "PTYPY_BUILD_PARAM_TREE" in os.environ else 0
+generate_userguide_images = int(os.environ["PTYPY_BUILD_USERGUIDE_IMAGES"]) if "PTYPY_BUILD_USERGUIDE_IMAGES" in os.environ else 0
+generate_notebook_tutorials = int(os.environ["PTYPY_BUILD_NOTEBOOK_TUTORIALS"]) if "PTYPY_BUILD_NOTEBOOK_TUTORIALS" in os.environ else 0
+path_to_notebooks = os.environ["PTYPY_PATH_TO_NOTEBOOKS"] if "PTYPY_PATH_TO_NOTEBOOKS" in os.environ else None
 
 # Generate List of Parameters
-#generate_parameters_rst("ptycho", outfile="ptycho.rst", title="Root/Ptycho (p)")
-generate_parameters_rst("io", outfile="io.rst", title="Input/Output (p.io)")
-generate_parameters_rst("scans", outfile="scans.rst", title="List of Scans (p.scans)")
-generate_parameters_rst("scan", outfile="scan.rst", title="Scan Definition (p.scans.scan_00)")
-generate_parameters_rst("scandata", outfile="scandata.rst", title="Scan Data Definition (p.scans.scan_00.data)")
-generate_parameters_rst("engines", outfile="engines.rst", title="List of Engines (p.engines)")
-generate_parameters_rst("engine", outfile="engine.rst", title="Engine Definition (p.engines.engine_00)")
+if generate_param_tree:
+    from _param_generator import generate_parameters_rst
+    #generate_parameters_rst("ptycho", outfile="ptycho.rst", title="Root/Ptycho (p)")
+    generate_parameters_rst("io", outfile="io.rst", title="Input/Output (p.io)")
+    generate_parameters_rst("scans", outfile="scans.rst", title="List of Scans (p.scans)")
+    generate_parameters_rst("scan", outfile="scan.rst", title="Scan Definition (p.scans.scan_00)")
+    generate_parameters_rst("scandata", outfile="scandata.rst", title="Scan Data Definition (p.scans.scan_00.data)")
+    generate_parameters_rst("engines", outfile="engines.rst", title="List of Engines (p.engines)")
+    generate_parameters_rst("engine", outfile="engine.rst", title="Engine Definition (p.engines.engine_00)")
+
+# Create folder generated in userguide
+os.makedirs("./userguide/generated", exist_ok=True)
 
 # Generate images for user guide
-from _userguide_generator import create_test_image
-create_test_image(outdir="./userguide/generated/", outfile="test.png")
-from _userguide_generator import create_all_init_probe_figures
-create_all_init_probe_figures(outdir="./userguide/generated/")
+if generate_userguide_images:
+    from _userguide_generator import create_test_image
+    create_test_image(outdir="./userguide/generated/", outfile="test.png")
+    from _userguide_generator import create_all_init_probe_figures
+    create_all_init_probe_figures(outdir="./userguide/generated/")
 
+# Generate legacy tutorials
+if generate_legacy_tutorials:
+    from _legacy_tutorial_generator import generate_legacy_tutorial_rst
+    generate_legacy_tutorial_rst("minimal_script.py", outdir="userguide/generated/legacy/")
+    generate_legacy_tutorial_rst("ptypyclasses.py", outdir="userguide/generated/legacy/")
+    generate_legacy_tutorial_rst("simupod.py", outdir="userguide/generated/legacy/")
+    generate_legacy_tutorial_rst("ownengine.py", outdir="userguide/generated/legacy/")
+    generate_legacy_tutorial_rst("subclassptyscan.py", outdir="userguide/generated/legacy/")
 
+    from _legacy_tutorial_generator import replace_rst_in_templates
+    replace_rst_in_templates("./userguide/rst_templates/getting_started.tmp")
+    replace_rst_in_templates("./userguide/rst_templates/concept.tmp")
+    replace_rst_in_templates("./userguide/rst_templates/data_management.tmp")
+
+# Convert notebooks
+path_to_generated_notebooks = "./userguide/generated/notebooks"
+if generate_notebook_tutorials and (path_to_notebooks is not None):
+    if not os.path.lexists(path_to_generated_notebooks):
+        os.symlink(path_to_notebooks, path_to_generated_notebooks)
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -45,13 +96,16 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
-    'myst_parser',
+    'myst_nb',
 ]
 
 myst_enable_extensions = [
     "dollarmath",
     "amsmath",
+    "colon_fence"
 ]
+
+nb_execution_mode = 'off'
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
@@ -65,6 +119,7 @@ autosummary_generate = True
 autodoc_mock_imports = ["cupy", "pycuda", "reikna", "hdf5plugin", "bitshuffle", "fabio", "swmr_tools"]
 
 todo_include_todos = True
+numfig = True
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

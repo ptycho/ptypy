@@ -9,10 +9,7 @@ Parameter definitions
 .. toctree::
    :maxdepth: 1
 
-   generated/ptycho
    generated/io
-   generated/scans
    generated/scan
    generated/scandata
-   generated/engines
    generated/engine

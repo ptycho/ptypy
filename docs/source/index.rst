@@ -20,8 +20,8 @@ PtyPy Documentation Contents
    :maxdepth: 2
 
    overview
-   installation
    userguide/index
+   tutorials/index
    parameters/index
    reference/index
 

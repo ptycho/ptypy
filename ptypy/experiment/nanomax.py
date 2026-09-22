@@ -8,9 +8,9 @@ logger = u.verbose.logger
 
 import numpy as np
 try:
-	import hdf5plugin
+    import hdf5plugin
 except ImportError:
-	logger.warning('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
+    logger.warning('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
 import h5py
 import os.path
 

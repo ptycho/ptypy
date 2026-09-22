@@ -1,4 +1,4 @@
-# setting the initial probe
+# Probe initialisation
 
 Starting a ptychography reconstruction with a good or bad initial estimate of the probe(s) can change the convergence speed of the reconstruction or even influence if the reconstruction converges at all or fails.
 The closer the initial estimate is to the real probing wavefront on the sample, the better.
@@ -16,7 +16,7 @@ One way is simply using an arbitrary numpy array of the right size that the user
 Results from previous reconstructions can also be loaded.
 The initial probe estimate can also be made from basic geometric shapes that can also be modified in various ways.
 
-## init by any numpy array
+## Initialise with any numpy array
 
 If you know some numpy, you are able to create any probe estimate you like.
 Just create a three-dimensional array where the first dimension is simply as long as the number of probe modes (in the most simple case =1) and the other two dimensions match the size of the 2D probe array depending on the cropping and binning.
@@ -57,7 +57,7 @@ p.scans.scan00.illumination.aperture = u.Param()
 
 ![init probe from numpy array](generated/init_probe_example_02.png)
 
-## init by loading a previous reconstructions
+## Initialise by loading a previous reconstructions
 
 By setting 'illumination.model' to 'recon' one can load the probe of a previous reconstruction by giving the the relative or absolute file path of a previous reconstruction (the .ptyr file).
 
@@ -82,7 +82,7 @@ Likewise, the other way around, the too large input array will simply be cropped
 
 Again, if no aperture is defined, the default aperture (circle with a third of the array size as a diameter) is applied and might cut down the probe that you loaded.
 
-## init by geometric base shapes (illumination.aperture)
+## Initialise with geometric base shapes (illumination.aperture)
 
 Besides making a probe yourself or loading a previous reconstruction, it is also possible to define inital probe estimate(s) using simple geometric shapes with the 'illumination.aperture' parameter in the parameter tree.
 
@@ -300,7 +300,7 @@ p.scans.scan00.illumination.aperture.diffuser = (0.5 * 3.1415, 10 , 0.7, 5)
 ![init probe from base shapes](generated/init_probe_example_54.png)
 
 
-## propagation
+## Propagation
 A very powerful feature is the capability to propagate a probe estimate.
 This works for probes given as numpy arrays, for loaded probes and also for probes defined as apertures.
 This feature allows to give the initial probe estimate the right phase curvature, to kick the reconstruction in the right way.

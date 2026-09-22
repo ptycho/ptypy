@@ -1,6 +1,12 @@
 # User Guide
 
-## The Basics Concepts
+## Getting Started
+```{toctree}
+:maxdepth: 1
+generated/legacy/rst/getting_started.rst
+```
+
+## The Basic Concepts
 PtyPy is a Python-based reconstruction framework that offers a large variety of features which can be
 configured using a "parameter tree". The following articles describe the basic concepts of PtyPy and
 how to work with this parameter tree.
@@ -8,12 +14,13 @@ how to work with this parameter tree.
 ```{toctree}
 :maxdepth: 1
 :caption: Basics
-parameters.md
-config_files.md
-input_output.md
-scan_models.md
+generated/notebooks/basic_examples/00_the_parameter_tree.ipynb
+generated/notebooks/basic_examples/01_using_yaml_or_json_config.ipynb
+generated/notebooks/basic_examples/02_input_output_parameters.ipynb
+generated/notebooks/basic_examples/03_scan_models.ipynb
 setting_probe_init.md
-reporting.md
+generated/legacy/rst/concept.rst
+generated/legacy/rst/data_management.rst
 ```
 
 ## Core Reconstruction Engines
@@ -24,11 +31,11 @@ The following articles describe the core engines and their features in more deta
 
 ```{toctree}
 :maxdepth: 1
-:caption: Core Engines
-engine_overview.md
-projectional.md
-stochastic.md
-gradient_based.md
+:caption: Core Engine
+generated/notebooks/basic_examples/04_choosing_engines.ipynb
+generated/notebooks/basic_examples/05_projectional_engines.ipynb
+generated/notebooks/basic_examples/06_stochastic_engines.ipynb
+generated/notebooks/basic_examples/07_gradient_based_engines.ipynb
 ```
 
 ## Custom Reconstruction Engines
@@ -46,3 +53,12 @@ lbfgs.md
 wasp.md
 object_regul.md
 ```
+
+## Quality and Metrics
+
+```{toctree}
+:maxdepth: 1
+:caption: Metrics
+reporting.md
+```
+
