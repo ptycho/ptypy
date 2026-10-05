@@ -128,6 +128,38 @@ class TransposeKernel:
             grd, blk, (input, output, np.int32(width), np.int32(height)))
 
 
+class MaxKernel:
+    """
+    Maximum of a non-negative, C-contiguous real array into a preallocated
+    one-element buffer (the reduction starts from zero, so negative values
+    and NaN are ignored; it is meant for norms like the ePIE object and
+    probe norms).
+
+    A single-block reduction without scratch memory or allocation, so it
+    can be recorded into a CUDA graph.
+    """
+
+    def __init__(self, queue=None):
+        self.queue = queue
+        self.kernels = {}
+
+    def max(self, X: cp.ndarray, out: cp.ndarray):
+        if not X.flags.c_contiguous:
+            raise ValueError("MaxKernel.max needs a C-contiguous array")
+        bx = 1024
+        version = '{},{}'.format(map2ctype(X.dtype), map2ctype(out.dtype))
+        if version not in self.kernels:
+            self.kernels[version] = load_kernel("max_real", {
+                'IN_TYPE': map2ctype(X.dtype),
+                'OUT_TYPE': map2ctype(out.dtype),
+                'BDIM_X': bx,
+            })
+        if self.queue is not None:
+            self.queue.use()
+        self.kernels[version]((1, 1, 1), (bx, 1, 1),
+                              (X, np.int32(X.size), out))
+
+
 class MaxAbs2Kernel:
 
     def __init__(self, queue=None):

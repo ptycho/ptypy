@@ -178,3 +178,61 @@ def EngineTestRunner2(engine_params,propagator='farfield',output_path='./', outp
     parallel.loadmanager.reset()
 
     return P
+
+def seeded_view_order(seed):
+    """
+    Context manager that gives the stochastic engines a seeded view order.
+
+    They draw their view order from an unseeded ``numpy.random.default_rng()``;
+    patching it lets two reconstructions see the views in the same order, so
+    their results can be compared without the draw entering the comparison.
+    """
+    from unittest import mock
+    return mock.patch("numpy.random.default_rng",
+                      lambda *a, **k: np.random.Generator(np.random.PCG64(seed)))
+
+
+def ncorr(a, b):
+    """Phase and scale invariant normalised correlation of two complex fields."""
+    a = np.asarray(a).ravel()
+    b = np.asarray(b).ravel()
+    a = a - a.mean()
+    b = b - b.mean()
+    den = np.linalg.norm(a) * np.linalg.norm(b)
+    return float(np.abs(np.vdot(a, b)) / den) if den else 0.0
+
+
+def register_shift(a, b):
+    """Integer shift that best aligns ``b`` onto ``a``, by cross-correlation."""
+    A = np.fft.fft2(a - a.mean())
+    B = np.fft.fft2(b - b.mean())
+    cc = np.fft.ifft2(A * np.conj(B))
+    idx = np.unravel_index(np.argmax(np.abs(cc)), cc.shape)
+    return [int(s) if s <= n // 2 else int(s - n) for s, n in zip(idx, cc.shape)]
+
+
+def common_central(a, b, frac=0.75):
+    """The same central fraction of both arrays, for a like-for-like compare."""
+    n0 = int(min(a.shape[-2], b.shape[-2]) * frac)
+    n1 = int(min(a.shape[-1], b.shape[-1]) * frac)
+
+    def crop(x):
+        c0 = (x.shape[-2] - n0) // 2
+        c1 = (x.shape[-1] - n1) // 2
+        return x[..., c0:c0 + n0, c1:c1 + n1]
+    return crop(a), crop(b)
+
+
+def aligned_ncorr(a, b, margin_frac=0.1, crop_frac=0.75):
+    """
+    ``ncorr`` after removing the joint-translation gauge.
+
+    A ptychographic solution is only defined up to a common shift of probe and
+    object, so two engines may land on different shifts of the same solution.
+    The fields are registered against each other before the correlation is
+    taken, and the wrap-around margins are trimmed.
+    """
+    a, b = common_central(a, b, frac=crop_frac)
+    b = np.roll(b, register_shift(a, b), axis=(-2, -1))
+    m = max(1, int(min(a.shape[-2:]) * margin_frac))
+    return ncorr(a[..., m:-m, m:-m], b[..., m:-m, m:-m])
