@@ -336,20 +336,6 @@ class WASP(base.PositionCorrectionEngine):
                 is_zero = np.isclose(pr_sum_dnm, 0)
                 p.data = np.where(is_zero, pr_sum_nmr, pr_sum_nmr / pr_sum_dnm)
 
-    def clip_object(self, ob):
-        """Copied from _ProjectionEngine
-        """
-
-        # Clip object (This call takes like one ms. Not time critical)
-        if self.p.clip_object is not None:
-            clip_min, clip_max = self.p.clip_object
-            ampl_obj = np.abs(ob.data)
-            phase_obj = np.exp(1j * np.angle(ob.data))
-            too_high = (ampl_obj > clip_max)
-            too_low = (ampl_obj < clip_min)
-            ob.data[too_high] = clip_max * phase_obj[too_high]
-            ob.data[too_low] = clip_min * phase_obj[too_low]
-
     def center_probe(self):
         """Copied from _ProjectionEngine
         """
