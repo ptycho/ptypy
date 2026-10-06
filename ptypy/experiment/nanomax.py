@@ -13,6 +13,7 @@ except ImportError:
     logger.warning('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
 import h5py
 import os.path
+from PIL import Image
 
 @register()
 class NanomaxStepscanNov2018(PtyScan):
@@ -140,6 +141,7 @@ class NanomaxStepscanNov2018(PtyScan):
         if normdata:
             normdata = np.concatenate(normdata)
             self.normdata = normdata / np.mean(normdata)
+
         x = np.concatenate(x)
         y = np.concatenate(y)      
         positions = -np.vstack((y, x)).T * 1e-6
@@ -398,7 +400,7 @@ class NanomaxFlyscanMay2019(PtyScan):
 @register()
 class NanomaxStepscanSep2019(PtyScan):
     """
-	This class loads data written with the nanomax pirate system
+    This class loads data written with the nanomax pirate system
 
     Defaults:
 
@@ -446,14 +448,26 @@ class NanomaxStepscanSep2019(PtyScan):
     [xMotorAngle]
     default = 0.0
     type = float
-    help = Angle of the motor x axis relative to the lab x axis
+    help = Angle of the motor x axis relative to the lab x axis in degree
     doc =
 
     [yMotorAngle]
     default = 0.0
     type = float
-    help = Angle of the motor y axis relative to the lab y axis
+    help = Angle of the motor y axis relative to the lab y axis in degree
     doc =
+
+    [zDetectorAngle]
+    default = 0.0
+    type = float
+    help = Relative rotation angle between the motor x and y axes and the detector pixel rows and columns in degree
+    doc = If the Detector is mounted rotated around the beam axis relative to the scanning motors, use this angle to rotate the motor position into the detector frame of reference. The rotation angle is in mathematical positive sense from the motors to the detector pixel grid.
+
+    [xyAxisSkewOffset]
+    default = 0.0
+    type = float
+    help = Relative rotation angle beyond the expected 90 degrees between the motor x and y axes in degree
+    doc = If for example the scanner is damaged and x and y end up not beeing perfectly under 90 degrees, this value can can be used to correct for that.
 
     [detector]
     default = 'pilatus'
@@ -472,6 +486,17 @@ class NanomaxStepscanSep2019(PtyScan):
     help = Normalization channel, like ni/counter1 for example
     doc =
 
+    [trigger_offset]
+    default = 0
+    type = int
+    help = by how many triggers are the positions and diffraction patterns offset
+    doc =
+
+    [only_load_first_N]
+    default = None
+    type = int
+    help = load only the first N diffraction patterns
+    doc =
     """
 
     def load_positions(self):
@@ -488,11 +513,10 @@ class NanomaxStepscanSep2019(PtyScan):
             yFlipper = -1
             logger.warning("note: y motor is specified as flipped")
 
-        # if the x axis is tilted, take that into account.
+        # if the x/y axis is tilted with respect to the beam axis, take that into account.
         xCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
         yCosFactor = np.cos(self.info.yMotorAngle / 180.0 * np.pi)
-        logger.info(
-            "x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
+        logger.info("x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
 
         try:
             self.info.scanNumber = tuple(self.info.scanNumber)
@@ -520,9 +544,44 @@ class NanomaxStepscanSep2019(PtyScan):
         if normdata:
             normdata = np.concatenate(normdata)
             self.normdata = normdata / np.mean(normdata)
+
+        # make list to arrays
         x = np.concatenate(x)
-        y = np.concatenate(y)      
+        y = np.concatenate(y)   
+
+        chi_rad_x = 0
+        chi_rad_y = 0
+        # if the detector and motor frame of reference are roated around the beam axis
+        if self.info.zDetectorAngle != 0:
+            chi_rad_x = self.info.zDetectorAngle / 180.0 * np.pi
+            chi_rad_y = 1.*chi_rad_x
+            logger.info("x and y motor positions were roated by %.4f degree to align with the detector pixel grid" % (self.info.zDetectorAngle))
+        # if x and y are not under 90 degrees to each other
+        if self.info.xyAxisSkewOffset != 0:
+            chi_rad_x += -0.5 * self.info.xyAxisSkewOffset / 180.0 * np.pi
+            chi_rad_y += +0.5 * self.info.xyAxisSkewOffset / 180.0 * np.pi
+            logger.info("x and y motor positions were skewed by %.4f degree to each other" % (self.info.xyAxisSkewOffset))
+        x, y = np.cos(chi_rad_x)*x-np.sin(chi_rad_y)*y, np.sin(chi_rad_x)*x+np.cos(chi_rad_y)*y
+            
+        # trigger offset
+        if self.info.trigger_offset>0:
+            x = x[self.info.trigger_offset:]
+            y = y[self.info.trigger_offset:]
+        elif self.info.trigger_offset<0:
+            x = x[:self.info.trigger_offset]
+            y = y[:self.info.trigger_offset]
+
+        # set minimum to zero so ptypy can work out the proper object size
+        x -= np.min(x)
+        y -= np.min(y)
+
+        # put the two arrays together and express in [m]
         positions = -np.vstack((y, x)).T * 1e-6
+
+        # only load the first N images:
+        if self.info.only_load_first_N != None:
+            positions = positions[:self.info.only_load_first_N]
+
         return positions
 
 
@@ -678,52 +737,467 @@ class NanomaxContrast(NanomaxStepscanSep2019):
     in a slightly matured state. Step and fly scan have the same
     format.
 
+    Defaults:
+
     [name]
     default = NanomaxContrast
     type = str
     help =
 
+    [energy]
+    default = None
+    type = float
+    help = photon energy in keV, if None it will be read from the scan file
+    doc =
+
+    [cropOnLoad]
+    default = True
+    type = bool
+    help = Only load the used bits of each detector frame
+    doc =
+
+    [cropOnLoad_y_lower]
+    default = None
+    type = int, list, tuple
+    help = y-axis lower limit
+    doc =
+
+    [cropOnLoad_y_upper]
+    default = None
+    type = int, list, tuple
+    help = y-axis upper limit
+    doc =
+
+    [cropOnLoad_x_lower]
+    default = None
+    type = int, list, tuple
+    help = x-axis lower limit
+    doc =
+
+    [cropOnLoad_x_upper]
+    default = None
+    type = int, list, tuple
+    help = x-axis upper limit
+    doc =
+
+    [tmp_center]
+    default = None
+    type = int, list, tuple
+    help = x-axis upper limit
+    doc =
+
+    [make_positions_relative]
+    default = False
+    type = bool
+    help = if True, will make all positions start at zero
+    doc =
+
+    [ingnore_first_N]
+    default = None
+    type = int
+    help = only load after the first N positions / diffraction patterns
+    doc =
+
+    [ingnore_beyond_N]
+    default = None
+    type = int
+    help = load only the first N positions / diffraction patterns
+    doc =
+
+    [position_limit_x_min]
+    default = None
+    type = float
+    help = only load data from horizontal scan positions larger or equal to this number
+    doc =
+
+    [position_limit_x_max]
+    default = None
+    type = float
+    help = only load data from horizontal scan positions smaller or equal to this number
+    doc =
+
+    [position_limit_y_min]
+    default = None
+    type = float
+    help = only load data from vertical scan positions larger or equal to this number
+    doc =
+
+    [position_limit_y_max]
+    default = None
+    type = float
+    help = only load data from vertical scan positions smaller or equal to this number
+    doc =
+
     """
+
+    def clean_mask(self, mask):
+        mask[mask>=0.5] = 1
+        mask[mask<0.5] = 0
+        return mask
+
+    def load_mask_h5(self):
+        with h5py.File(self.info.maskfile, 'r') as hf:
+            mask = np.array(hf.get('mask')) 
+        return self.clean_mask(mask)
+
+    def load_mask_tiff(self):
+        with Image.open(self.info.maskfile) as im:
+            mask = np.array(im) 
+        return self.clean_mask(mask)
+
+    def pad_to_size(self, frame, value):
+        ny, nx = np.shape(frame)
+        cy, cx = self.info.tmp_center
+        try:
+            iter(self.info.shape)
+            dy, dx = self.info.shape 
+        except TypeError:
+            dy, dx = self.info.shape, self.info.shape
+        ry, rx = dy//2 , dx//2
+        pad_xl   = rx - cx
+        pad_xu   = rx + cx - nx 
+        pad_yl   = ry - cy
+        pad_yu   = ry + cy - ny 
+        return np.pad(frame, [[pad_yl,pad_yu],[pad_xl,pad_xu]], mode='constant', constant_values=[value])
+
+    def calc_mask(self, diffraction_pattern, log=False):
+        """
+        Calculates the mask for a given diffraction pattern.
+        log = True would print / log how many pixels got masked.
+        """
+        
+        data = diffraction_pattern
+        mask = np.ones_like(data)
+        if self.info.detector == 'pilatus':
+            mask[np.where(data < 0)] = 0
+        if ('eiger' in self.info.detector) or('selun' in self.info.detector) :
+            bit_depth = int(''.join(filter(str.isdigit, str(data.dtype))))
+            if log: logger.info(f"found bit depth of {bit_depth} in the eiger frames")
+            if log: logger.info(f"    -> masking all pixels with values of {2**(bit_depth) -1} and above")
+            mask[np.where(data < 0)] = 0
+            mask[np.where(data >= ((2**bit_depth)-1))] = 0
+        if log: logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
+                            (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
+
+        if self.info.maskfile:
+            if self.info.maskfile.endswith('.h5'):
+                mask2 = self.load_mask_h5()
+            else:
+                mask2 = self.load_mask_tiff()
+
+            if self.info.cropOnLoad:
+                mask2 = mask2[self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, 
+                                self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                mask2 = self.pad_to_size(mask2, 0)
+
+            if log: logger.info("loaded additional mask, %u x %u, sum %u, so %u masked pixels" %
+                                (mask2.shape + (np.sum(mask2), np.prod(mask2.shape)-np.sum(mask2))))
+            mask = mask * mask2
+            if log:logger.info("total mask, %u x %u, sum %u, so %u masked pixels" %
+                               (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
+
+        return mask
+
+    def check_positions(self, xpositions, ypositions):
+        """
+        Checking a list of positions and returns boolean mask for those points
+        that fall within the given selection.
+        """
+        
+        # create a boolean mask for all positons in the given list of positions
+        position_mask = np.ones(len(xpositions), dtype=int)
+
+        # check for a limiting rectangle
+        if self.info.position_limit_x_min != None:
+            position_mask[xpositions<self.info.position_limit_x_min] = 0
+        if self.info.position_limit_x_max != None:
+            position_mask[xpositions>self.info.position_limit_x_max] = 0
+        if self.info.position_limit_y_min != None:
+            position_mask[ypositions<self.info.position_limit_y_min] = 0
+        if self.info.position_limit_y_max != None:
+            position_mask[ypositions>self.info.position_limit_y_max] = 0
+
+        # check if certain scan position indicees are exluded
+        if self.info.ingnore_first_N != None:
+            position_mask[:self.info.ingnore_first_N] = 0
+        if self.info.ingnore_beyond_N != None:    
+            position_mask[self.info.ingnore_beyond_N:] = 0
+
+        # room for more sophisticated rules if needed
+
+        # return the boolean mask on which positions to use / not use
+        return position_mask
+
+    def load_positions(self):
+        self.frames_per_scan = {}
+        self.scan_to_load_from = []
+        self.data_index_to_load_from = []
+        self.per_scan_mask = {}
+        self.per_scan_indicees = {}
+
+        xFlipper, yFlipper = 1, 1
+        if self.info.xMotorFlipped:
+            xFlipper = -1
+            logger.warning("note: x motor is specified as flipped")
+        if self.info.yMotorFlipped:
+            yFlipper = -1
+            logger.warning("note: y motor is specified as flipped")
+
+        # if the x/y axis is tilted with respect to the beam axis, take that into account.
+        xCosFactor = np.cos(self.info.xMotorAngle / 180.0 * np.pi)
+        yCosFactor = np.cos(self.info.yMotorAngle / 180.0 * np.pi)
+        logger.info("x and y motor angles result in multiplication by %.2f, %.2f" % (xCosFactor, yCosFactor))
+
+        try:
+            self.info.scanNumber = tuple(self.info.scanNumber)
+        except TypeError:
+            self.info.scanNumber = (self.info.scanNumber,)
+
+        normdata, x, y = [], [], []
+        for scan in self.info.scanNumber:
+
+            # which file to load from
+            filename = f'{scan:0>6}.h5'
+            fullfilename = os.path.join(self.info.path, filename)
+
+            # load the positions
+            with h5py.File(fullfilename, 'r') as hf:
+                # load the raw positions from the scan file
+                x_raw = np.array(hf['entry/measurement/%s' % (self.info.xMotor)])
+                y_raw = np.array(hf['entry/measurement/%s' % (self.info.yMotor)]) 
+
+                # check which ones to ues and which ones to discard for the reconstruction
+                position_selection_mask = self.check_positions(x_raw, y_raw)
+                if np.sum(position_selection_mask) < len(x_raw) and np.sum(position_selection_mask) >0:
+                    logger.info(f'[!] Scan #{scan} has {len(x_raw)} scan positions.')
+                    logger.info(f'    But {len(x_raw)-np.sum(position_selection_mask)} of them were discarded due to selection rules.')
+                    logger.info(f'    That leaves {np.sum(position_selection_mask)} positions from scan #{scan} that are being used in the reconstruction.')
+                elif np.sum(position_selection_mask) == 0:
+                    logger.info(f'[!] Scan #{scan} has {len(x_raw)} scan positions.')
+                    logger.info(f'    But all of them were discarded due to selection rules. ')
+                # calc which indicees per scan to load
+                indicees = np.linspace(0, len(x_raw)-1, len(x_raw), dtype=int)
+                indicees_to_load = indicees[position_selection_mask==1]
+
+                # convert according to paramters given
+                x_tmp = xFlipper * xCosFactor * x_raw[position_selection_mask==1]
+                y_tmp = yFlipper * yCosFactor * y_raw[position_selection_mask==1]
+
+                # append the selected and converted positions of this scan to the overall list
+                x.append(x_tmp)
+                y.append(y_tmp)
+
+                # keep some information on which positions were taken, so that only the corresponding frames scan be loaded
+                self.frames_per_scan[scan] = x[-1].shape[0]
+                self.scan_to_load_from += [scan for _ in x_tmp]
+                self.data_index_to_load_from += [index for index in range(len(x_raw)) if position_selection_mask[index]==1]
+                self.per_scan_mask[scan] = position_selection_mask
+                self.per_scan_indicees[scan] = indicees_to_load
+
+            # may as well get normalization data of this scan here too
+            if self.info.I0 is not None:
+                logger.info('*** going to normalize by channel %s' % self.info.I0)
+                with h5py.File(fullfilename, 'r') as hf:
+                    normdata_raw = np.array(hf['entry/measurement/%s' % (self.info.I0)], dtype=float)
+                    normdata.append(normdata_raw[position_selection_mask==1])
+
+        # make some lists to arrays for easier use later down the line
+        self.scan_to_load_from = np.array(self.scan_to_load_from)
+        self.data_index_to_load_from = np.array(self.data_index_to_load_from)
+
+        # unify norm data over all scans
+        first_frames = [sum(list(self.frames_per_scan.values())[:i]) for i in range(len(self.frames_per_scan))]
+        self.first_frame_of_scan = {scan:first_frames[i] for i, scan in enumerate(self.info.scanNumber)}
+        if normdata:
+            normdata = np.concatenate(normdata)
+            self.normdata = normdata / np.mean(normdata)
+
+        # make list of lists of positions to one single array
+        x = np.concatenate(x)
+        y = np.concatenate(y)   
+
+        chi_rad_x = 0
+        chi_rad_y = 0
+        # if the detector and motor frame of reference are roated around the beam axis
+        if self.info.zDetectorAngle != 0:
+            chi_rad_x = self.info.zDetectorAngle / 180.0 * np.pi
+            chi_rad_y = 1.*chi_rad_x
+            logger.info("x and y motor positions were roated by %.4f degree to align with the detector pixel grid" % (self.info.zDetectorAngle))
+        # if x and y are not under 90 degrees to each other
+        if self.info.xyAxisSkewOffset != 0:
+            chi_rad_x += -0.5 * self.info.xyAxisSkewOffset / 180.0 * np.pi
+            chi_rad_y += +0.5 * self.info.xyAxisSkewOffset / 180.0 * np.pi
+            logger.info("x and y motor positions were skewed by %.4f degree to each other" % (self.info.xyAxisSkewOffset))
+        x, y = np.cos(chi_rad_x)*x-np.sin(chi_rad_y)*y, np.sin(chi_rad_x)*x+np.cos(chi_rad_y)*y
+            
+        # set origin of the used scan position to the lowest and left most positions recorded
+        if self.info.make_positions_relative:
+            x -= np.min(x)
+            y -= np.min(y)
+
+        # put the two arrays (vertical and horizontal positions) together and express in [m]
+        positions = -np.vstack((y, x)).T * 1e-6
+
+        # return a list of all the scan positions across all scans to be loaded
+        return positions
+
+
+    def figure_out_cropping(self):
+        """
+        Function to figure out the required cropping for the detector frames on
+        load according to what is specified in the scan file
+        """
+
+        scan = self.info.scanNumber[0]
+        filename = f'{scan:0>6}.h5'
+        fullfilename = os.path.join(self.info.path, filename)
+        logger.info(f'Will figure out the beam center using scan #{scan}')
+
+        # crop on load is requested, but the actual indices to crop are not yet defined
+        if self.info.cropOnLoad and self.info.cropOnLoad_y_lower == None:
+            
+            # center of the diffraction patterns is not explicitly given
+            if self.info.center==None:
+                # requires to load the first frame and to find the center of mass there
+                with h5py.File(fullfilename, 'r') as fp:
+                    frame = fp['entry/measurement/%s/frames'%self.info.detector][0]
+                # and to mask the hot pixels ... sadly this will have double with self.load_weight
+                mask = np.ones_like(frame)
+                if self.info.detector == 'pilatus':
+                    mask[np.where(frame < 0)] = 0
+                if 'eiger' in self.info.detector:
+                    mask[np.where(frame == 2**32-1)] = 0
+                    mask[np.where(frame == 2**16-1)] = 0
+                if self.info.maskfile:
+                    with h5py.File(self.info.maskfile, 'r') as hf:
+                        mask2 = np.array(hf.get('mask'))
+                    mask *= mask2
+                # now find the center of mass can be estimated using the ptypy internal function and make it integers
+                self.info.center = u.scripts.mass_center(frame*mask)
+                self.info.center = [int(x) for x in self.info.center]
+                logger.info(f'Estimated the center of the (first) diffraction pattern to be {self.info.center}')
+
+            # the center of the full frames is (now) known, and thus the indices for the cropping can be defined
+            cy, cx  = self.info.center
+            try:
+                iter(self.info.shape)
+                dy, dx = self.info.shape 
+            except TypeError:
+                dy, dx = self.info.shape, self.info.shape
+            logger.info(f'Found the center of the full frames at {self.info.center}')
+            logger.info(f'Will crop all diffraction patterns on load to a size of {self.info.shape}')
+            self.info.cropOnLoad_y_lower, self.info.cropOnLoad_x_lower = int(cy)-dy//2, int(cx)-dy//2
+            self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_upper = self.info.cropOnLoad_y_lower+dy, self.info.cropOnLoad_x_lower+dx
+
+            # the (temporary) center needs to be redefined for the cropped frames
+            tmp_center_y, tmp_center_x = dy//2, dx//2
+
+            # if the lower crop indices are negative, set them zero
+            if self.info.cropOnLoad_y_lower<0:
+                tmp_center_y += self.info.cropOnLoad_y_lower
+                self.info.cropOnLoad_y_lower = 0
+            if self.info.cropOnLoad_x_lower<0:
+                tmp_center_x += self.info.cropOnLoad_x_lower
+                self.info.cropOnLoad_x_lower = 0    
+            # no need to have something similar for too large upper indices due to the way python slices arrays
+
+            # now fix the new center
+            self.info.tmp_center = (tmp_center_y, tmp_center_x)
+            self.info.center = (dy//2, dx//2)
+
+
+    def figure_out_photon_energy(self):
+        """
+        Function to setthe photon energy of the probing beam either from the first
+        scan file or using the number explicitly given in the reconstruction script.
+        """
+        # placed where the photon energy could be in the scan file (backwards compatability)
+        path_options = ['entry/snapshot/energy',
+                        'entry/snapshots/pre_scan/energy',
+                        'entry/snapshots/prost_scan/energy']
+
+        if self.info.energy == None: 
+            # load from scan file   
+            scan = self.info.scanNumber[0]
+            filename = f'{scan:0>6}.h5'
+            fullfilename = os.path.join(self.info.path, filename)  
+            logger.info(f'Will figure out the photon energy using scan #{scan}')
+            with h5py.File(fullfilename, 'r') as fp:
+                existing_paths = [x for x in path_options if x in fp.keys()]
+                self.meta.energy = fp[existing_paths[0]][:] * 1e-3
+        else:
+            # use what is explictly defined in the reconstruction script
+            logger.info(f'Using the photon energy explicitly given in the reconstruction script')
+            self.meta.energy = np.array([self.info.energy])
+        logger.info(f'Using a photon energy of {self.meta.energy[0]:.3f} eV')
+
 
     def load(self, indices):
         raw, weights, positions = {}, {}, {}
 
-        filename = '%06u.h5' % self.info.scanNumber
-        fullfilename = os.path.join(self.info.path, filename)
+        # figure out cropping and photon energy yo use
+        self.figure_out_cropping()
+        self.figure_out_photon_energy()
 
-        with h5py.File(fullfilename, 'r') as fp:
-            self.meta.energy = fp['entry/snapshot/energy'][:] * 1e-3
-            for ind in indices:
-                raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][ind]
-                if self.info.I0:
-                    raw[ind] = raw[ind] / self.normdata[ind]
+        # figure out which scan files to open
+        scan_files_to_open = self.scan_to_load_from[indices]
+        scan_files_to_open = list(set(scan_files_to_open))
+
+        # making sure to open each scan file only ones and load the indices in question
+        for scan in scan_files_to_open:
+            # figure out which of the requested indices are in this file
+            tmp_scan_to_load_from = np.array(self.scan_to_load_from[indices], dtype=int)
+            subset_indices = [v for i, v in enumerate(indices) if tmp_scan_to_load_from[i]==scan]
+
+            # load the scan file
+            filename = f'{scan:0>6}.h5'
+            fullfilename = os.path.join(self.info.path, filename)
+            with h5py.File(fullfilename, 'r') as fp:
+
+                # iterate over the indices that can be found in this file
+                for ind in subset_indices: 
+
+                    # which data pint in the file to load to get this index
+                    load_ind = self.data_index_to_load_from[ind]
+         
+                    # load only a cropped bit of the full frame
+                    if self.info.cropOnLoad:
+                        frame = fp['entry/measurement/%s/frames'%self.info.detector][load_ind,self.info.cropOnLoad_y_lower:self.info.cropOnLoad_y_upper, self.info.cropOnLoad_x_lower:self.info.cropOnLoad_x_upper]
+                        raw[ind] = self.pad_to_size(frame, -1)
+                    # load the full raw frame                
+                    else:	
+                        raw[ind] = fp['entry/measurement/%s/frames'%self.info.detector][load_ind]
+                    # if there is I0 information, use it to normalize the just loaded frame                
+                    if self.info.I0:
+                        self.normdata = self.normdata.flatten()
+                        #logger.info('normalizing frame %u by %f' % (ind, self.normdata[ind]))
+                        #logger.info('hack! assuming mask = 2**32-1 when I0-normalizing')
+                        msk = np.where(raw[ind] == 2**32-1)
+                        raw[ind] = np.round(raw[ind] / self.normdata[ind]).astype(raw[ind].dtype)
+                        raw[ind][msk] = 2**32-1
+
+        # calculate a seperate mask for each diffraction pattern
+        for ind in raw.keys():
+            if ind==0:
+                weights[ind] = self.calc_mask(raw[ind], log=True)
+            else:
+                # no printing / logging on screen for consecutive frames
+                weights[ind] = self.calc_mask(raw[ind], log=False) 
 
         return raw, positions, weights
 
     def load_weight(self):
         """
-        Provides the mask for the whole scan, the shape of the first 
-        frame.
+        Provides the ONE mask for the WHOLE scan, 
+        the shape of the first frame.
         """
+        
+        pass  # moved into the main load function to work on individual patterns
+        
+        #r, w, p = self.load(indices=(0,))
+        #data = r[0]
+        #mask = self.calc_mask(data)
+        #return mask
 
-        r, w, p = self.load(indices=(0,))
-        data = r[0]
-        mask = np.ones_like(data)
-        if self.info.detector == 'pilatus':
-            mask[np.where(data < 0)] = 0
-        if self.info.detector == 'eiger':
-            mask[np.where(data == 2**32-1)] = 0
-            mask[np.where(data == 2**16-1)] = 0
-        logger.info("took account of the built-in mask, %u x %u, sum %u, so %u masked pixels" %
-                    (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
 
-        if self.info.maskfile:
-            with h5py.File(self.info.maskfile, 'r') as hf:
-                mask2 = np.array(hf.get('mask'))
-            logger.info("loaded additional mask, %u x %u, sum %u, so %u masked pixels" %
-                        (mask2.shape + (np.sum(mask2), np.prod(mask2.shape)-np.sum(mask2))))
-            mask = mask * mask2
-            logger.info("total mask, %u x %u, sum %u, so %u masked pixels" %
-                    (mask.shape + (np.sum(mask), np.prod(mask.shape)-np.sum(mask))))
 
-        return mask
