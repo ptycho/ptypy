@@ -13,6 +13,7 @@ except ImportError:
     logger.warning('Couldnt find hdf5plugin - better hope your h5py has bitshuffle!')
 import h5py
 import os.path
+from PIL import Image
 
 @register()
 class NanomaxStepscanNov2018(PtyScan):
