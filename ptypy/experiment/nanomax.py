@@ -918,9 +918,9 @@ class NanomaxContrast(NanomaxStepscanSep2019):
 
         # check if certain scan position indicees are exluded
         if self.info.ingnore_first_N != None:
-            position_mask[self.info.ingnore_first_N:] = 0
+            position_mask[:self.info.ingnore_first_N] = 0
         if self.info.ingnore_beyond_N != None:    
-            position_mask[:self.info.ingnore_beyond_N] = 0
+            position_mask[self.info.ingnore_beyond_N:] = 0
 
         # room for more sophisticated rules if needed
 
@@ -1127,7 +1127,7 @@ class NanomaxContrast(NanomaxStepscanSep2019):
         else:
             # use what is explictly defined in the reconstruction script
             logger.info(f'Using the photon energy explicitly given in the reconstruction script')
-            self.meta.energy = self.info.energy
+            self.meta.energy = np.array([self.info.energy])
         logger.info(f'Using a photon energy of {self.meta.energy[0]:.3f} eV')
 
 
