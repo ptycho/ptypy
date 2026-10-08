@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout PtyPy Code
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
 
       - name: Setup Python
         uses: actions/setup-python@v7
@@ -54,12 +56,14 @@ jobs:
 
       - name: Build Sphinx Documentation
         working-directory: docs
-        run: make html
+        run: |
+          make html
         env:
           PTYPY_BUILD_LEGACY_TUTORIALS: 1
           PTYPY_BUILD_PARAM_TREE: 1
           PTYPY_BUILD_USERGUIDE_IMAGES: 1
           PTYPY_BUILD_NOTEBOOK_TUTORIALS: 1
+          PTYPY_DOCS_VERSION: ${{ inputs.tag }}
 
       - name: Rename Build Directory
         run: |

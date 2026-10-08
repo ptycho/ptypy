@@ -11,6 +11,9 @@ import sys, os
 import inspect
 from pathlib import Path
 
+from sphinx.util import logging
+logger = logging.getLogger(__name__)
+
 sys.path.insert(0, str(Path('../..', 'ptypy').resolve()))
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
@@ -81,6 +84,9 @@ if generate_notebook_tutorials and (path_to_notebooks is not None):
     if not os.path.lexists(path_to_generated_notebooks):
         os.symlink(path_to_notebooks, path_to_generated_notebooks)
 
+# Extract doc version from env variable
+version_match = os.environ.get("PTYPY_DOCS_VERSION")
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
@@ -148,8 +154,8 @@ html_theme_options = {
         },
     ],
     "switcher": {
-        "json_url": "https://daurer.github.io/ptypy-new-docs/switcher.json",
-        "version_match": "master",
+        "json_url": "https://ptycho.github.io/ptypy/switcher.json",
+        "version_match": version_match,
     },
     "navbar_start": ["navbar-logo", "version-switcher"]
 }

@@ -12,16 +12,22 @@ jobs:
     with: 
       tag: legacy
 
-  new_docs:
+  new_docs_master:
     uses: ./.github/workflows/_build_docs.yaml
     with:
-      tag: ${{ github.ref_name }}
+      tag: master
+
+  new_docs_dev:
+    uses: ./.github/workflows/_build_docs.yaml
+    with:
+      tag: dev
 
   switcher:
     uses: ./.github/workflows/_switcher.yaml
     needs:
       - legacy_docs
-      - new_docs
+      - new_docs_master
+      - new_docs_dev
 
   github_pages:
     needs: switcher
