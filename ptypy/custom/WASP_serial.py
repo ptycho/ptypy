@@ -328,15 +328,7 @@ class WASP_serial(WASP):
                 self.benchmark.wasp_averaging += time.time() - t1
                 self.benchmark.calls_wasp_averaging += 1
 
-                # Clip object (This call takes like one ms. Not time critical)
-                if self.p.clip_object is not None:
-                    clip_min, clip_max = self.p.clip_object
-                    ampl_obj = np.abs(ob)
-                    phase_obj = np.exp(1j * np.angle(ob))
-                    too_high = (ampl_obj > clip_max)
-                    too_low = (ampl_obj < clip_min)
-                    ob[too_high] = clip_max * phase_obj[too_high]
-                    ob[too_low] = clip_min * phase_obj[too_low]
+                self.clip_object(self.ob.S[oID]) 
 
             # Re-center the probe
             self.center_probe()

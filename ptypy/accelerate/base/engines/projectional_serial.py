@@ -468,15 +468,9 @@ class _ProjectionEngine_serial(_ProjectionEngine):
             else:
                 ob.data /= obn.data
 
-            # Clip object (This call takes like one ms. Not time critical)
-            if self.p.clip_object is not None:
-                clip_min, clip_max = self.p.clip_object
-                ampl_obj = np.abs(ob.data)
-                phase_obj = np.exp(1j * np.angle(ob.data))
-                too_high = (ampl_obj > clip_max)
-                too_low = (ampl_obj < clip_min)
-                ob.data[too_high] = clip_max * phase_obj[too_high]
-                ob.data[too_low] = clip_min * phase_obj[too_low]
+
+            self.clip_object(ob.data) # Clip object (This call takes like one ms. Not time critical)
+
 
         self.benchmark.object_update += time.time() - t1
         self.benchmark.calls_object += 1

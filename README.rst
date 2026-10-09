@@ -21,9 +21,16 @@ PtyPy - Ptychography Reconstruction for Python
 
 |ptypysite|
 
-.. image:: https://github.com/ptycho/ptypy/actions/workflows/test.yml/badge.svg?branch=master
-    :target: https://github.com/ptycho/ptypy/actions/workflows/test.yml
+.. image:: https://github.com/ptycho/ptypy/actions/workflows/tests.yaml/badge.svg?branch=master
+    :target: https://github.com/ptycho/ptypy/actions/workflows/tests.yaml
 
+.. image:: https://github.com/ptycho/ptypy/actions/workflows/docs.yaml/badge.svg?branch=master
+    :target: https://github.com/ptycho/ptypy/actions/workflows/docs.yaml
+
+.. image:: https://github.com/ptycho/ptypy/actions/workflows/container.yaml/badge.svg?branch=master
+    :target: https://github.com/ptycho/ptypy/actions/workflows/container.yaml
+
+             
 Welcome Ptychonaut!
 -------------------
      
@@ -142,7 +149,7 @@ If you are having issues, please let us know.
 
 .. |ptypy| replace:: PtyPy
 
-.. |ptypysite| image:: https://ptycho.github.io/ptypy/_static/logo_100px.png
+.. |ptypysite| image:: https://ptycho.github.io/ptypy/master/_static/logo_100px.png
          :target: https://ptycho.github.io/ptypy/
 
 

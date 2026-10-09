@@ -16,7 +16,7 @@ def write_json(path: Path, repository: str, versions: list[str]):
     """Write the JSON switcher to path."""
     org, repo_name = repository.split("/")
     struct = [
-        {"version": version, "url": f"https://{org}.github.io/{repo_name}/{version}/"}
+        {"version": version, "name": version, "url": f"https://{org}.github.io/{repo_name}/{version}/"}
         for version in versions
     ]
     text = json.dumps(struct, indent=2)

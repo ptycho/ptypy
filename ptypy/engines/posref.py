@@ -219,6 +219,7 @@ class GridSearchRefine(PositionRefine):
         '''
         Grid Search Position Refinement.
 
+        Parameters
         ----------
         position_refinement_parameters : ptypy.utils.parameters.Param
             The parameter tree for the refinement

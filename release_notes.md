@@ -1,3 +1,12 @@
+# PtyPy 0.11 release notes
+
+New release in preparation for the PtyPy beginner workshop 2026 in Lund, Sweden. This release provides new features that were developed at the previous developer hackathon including a new custom engine using the L-BFGS algorithm, a new module for quality-guided phase unwrapping, a new option to clip the object both in magnitude and phase, and improvements to the new documentation page. 
+
+## Other changes
+
+We have dropped support for Python <= 3.10.
+
+
 # PtyPy 0.10 release notes
 
 New release in preparation for the PtyPy hackathon 2026. This release provides the skeleton of a new documentation page, a new module for FRC/FSC calculations, and a few bug fixes.

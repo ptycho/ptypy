@@ -64,6 +64,8 @@ def create_one_init_probe_figure(p=None, outdir="./userguide/generated/", outfil
 	plt.ylabel('um')
 	plt.tight_layout()
 	plt.savefig(f'{outdir}{outfile}')
+	plt.clf()
+	plt.close("all")
 
 def make_geometry():
 	g = u.Param()

@@ -128,6 +128,38 @@ class TransposeKernel:
             grd, blk, (input, output, np.int32(width), np.int32(height)))
 
 
+class MaxKernel:
+    """
+    Maximum of a non-negative, C-contiguous real array into a preallocated
+    one-element buffer (the reduction starts from zero, so negative values
+    and NaN are ignored; it is meant for norms like the ePIE object and
+    probe norms).
+
+    A single-block reduction without scratch memory or allocation, so it
+    can be recorded into a CUDA graph.
+    """
+
+    def __init__(self, queue=None):
+        self.queue = queue
+        self.kernels = {}
+
+    def max(self, X: cp.ndarray, out: cp.ndarray):
+        if not X.flags.c_contiguous:
+            raise ValueError("MaxKernel.max needs a C-contiguous array")
+        bx = 1024
+        version = '{},{}'.format(map2ctype(X.dtype), map2ctype(out.dtype))
+        if version not in self.kernels:
+            self.kernels[version] = load_kernel("max_real", {
+                'IN_TYPE': map2ctype(X.dtype),
+                'OUT_TYPE': map2ctype(out.dtype),
+                'BDIM_X': bx,
+            })
+        if self.queue is not None:
+            self.queue.use()
+        self.kernels[version]((1, 1, 1), (bx, 1, 1),
+                              (X, np.int32(X.size), out))
+
+
 class MaxAbs2Kernel:
 
     def __init__(self, queue=None):
@@ -555,26 +587,37 @@ class GaussianSmoothingKernel:
             data[:] = tmp[:]  # only one of them has run, output is in tmp
 
 
-class ClipMagnitudesKernel:
+class ClipObjectKernel:
 
     def __init__(self, queue=None):
         self.queue = queue
-        self.clip_magnitudes_cuda = load_kernel("clip_magnitudes", {
+        self.clip_object_cuda = load_kernel("clip_object", {
             'IN_TYPE': 'complex<float>',
         })
 
-    def clip_magnitudes_to_range(self, array, clip_min, clip_max):
+    def clip_object_to_range(self, array, clip_limits):
+
+        if len(clip_limits) == 2: # using if statement to guarantee backwards compatibility with previous scenario that used only magnitude clipping
+            clip_min_mag, clip_max_mag = clip_limits
+            clip_min_phase, clip_max_phase = None, None
+        elif len(clip_limits) == 4:
+            clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase = clip_limits
+        else:
+            raise ValueError("clip_limits must be a tuple of 2 or 4 elements")
+
         if self.queue is not None:
             self.queue.use()
 
-        cmin = np.float32(clip_min)
-        cmax = np.float32(clip_max)
+        # Change from None to +/- inf. This will be used to identify None cases inside CUDA kernel. Important to cast to float32 before calling kernel
+        clip_min_mag = np.float32(-np.inf) if clip_min_mag is None else np.float32(clip_min_mag)
+        clip_max_mag = np.float32(np.inf) if clip_max_mag is None else np.float32(clip_max_mag)
+        clip_min_phase = np.float32(-np.inf) if clip_min_phase is None else np.float32(clip_min_phase)
+        clip_max_phase = np.float32(np.inf) if clip_max_phase is None else np.float32(clip_max_phase)
 
         npixel = np.int32(np.prod(array.shape))
         bx = 256
         gx = int((npixel + bx - 1) // bx)
-        self.clip_magnitudes_cuda((gx, 1, 1), (bx, 1, 1), (array, cmin, cmax,
-                npixel))
+        self.clip_object_cuda((gx, 1, 1), (bx, 1, 1), (array, clip_min_mag, clip_max_mag, clip_min_phase, clip_max_phase , npixel))
 
 class MassCenterKernel:
 

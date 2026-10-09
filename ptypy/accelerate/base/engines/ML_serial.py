@@ -302,6 +302,10 @@ class ML_serial(ML):
             self.ob_h *= self.tmin
             self.pr_h *= self.tmin
             self.ob += self.ob_h
+
+            for name, s in self.ob.storages.items(): 
+                self.clip_object(s)
+
             self.pr += self.pr_h
             # Newton-Raphson loop would end here
 
