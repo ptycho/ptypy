@@ -6,7 +6,7 @@ import os
 from ptypy.utils.verbose import headerline, log
 
 kernel_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'cuda_common'))
-compile_options =['-std=c++14', '-DPTYPY_CUPY_NVTRC=1', '-I' + kernel_dir, '-DNDEBUG']
+compile_options =['-std=c++17', '-DPTYPY_CUPY_NVTRC=1', '-I' + kernel_dir, '-DNDEBUG']
 queue = None
 device = None
 
