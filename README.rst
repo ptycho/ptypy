@@ -81,8 +81,8 @@ Features
   overcoming partial coherence or related phenomena.
   
 * **On-the-fly** reconstructions (while data is being acquired) using the
-  the `PtyScan <http://http://ptycho.github.io/ptypy/rst/ptypy.core.html#ptypy.core.data.PtyScan>`_
-  class in the `linking mode <http://ptycho.github.io/ptypy/rst/data_management.html#case-flyscan>`_
+  the `PtyScan <http://http://ptycho.github.io/ptypy/legacy/rst/ptypy.core.html#ptypy.core.data.PtyScan>`_
+  class in the `linking mode <http://ptycho.github.io/ptypy/legacy/rst/data_management.html#case-flyscan>`_
 
 
 Installation
@@ -122,17 +122,17 @@ We support an accelerated version of |ptypy| for CUDA-capable GPUs based on our 
  
 Quicklinks
 ----------
-* | The complete `documentation <http://ptycho.github.io/ptypy/content.html#contents>`_ .
+* | The complete `documentation <http://ptycho.github.io/ptypy/legacy/content.html#contents>`_ .
 
 * | Starting from a **clean slate**?
-  | Check out the `installation instructions <http://ptycho.github.io/ptypy/rst/getting_started.html#installation>`_ . 
+  | Check out the `installation instructions <http://ptycho.github.io/ptypy/legacy/rst/getting_started.html#installation>`_ . 
   
 * | You want to understand the **inner principles** of ptypy without 
     having to browse the source code?
-  | Have a look at the `tutorials about its special classes <http://ptycho.github.io/ptypy/rst/concept.html#concepts>`_ .
+  | Have a look at the `tutorials about its special classes <http://ptycho.github.io/ptypy/legacy/rst/concept.html#concepts>`_ .
   
 * | Only interested in |ptypy|'s **data file structure** and 
-    **management**? Indulge yourself `here <http://ptycho.github.io/ptypy/rst/data_management.html#ptyd-file>`__ for the structure and `here <http://ptycho.github.io/ptypy/rst/data_management.html#ptypy-data>`__  for the concepts.
+    **management**? Indulge yourself `here <http://ptycho.github.io/ptypy/legacy/rst/data_management.html#ptyd-file>`__ for the structure and `here <http://ptycho.github.io/ptypy/legacy/rst/data_management.html#ptypy-data>`__  for the concepts.
 
 
 Contribute
