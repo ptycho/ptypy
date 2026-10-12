@@ -620,9 +620,9 @@ class PtyAxis(object):
 
             - ``'a'`` to plot absolute/modulus value of the data,
             - ``'p'`` to plot phase value of the data,
-            - ``'a'`` to plot real value of the data,
-            - ``'a'`` to plot imaginary value of the data,
-            - ``'a'`` to plot a composite image where phase channel maps to hue and
+            - ``'r'`` to plot real value of the data,
+            - ``'i'`` to plot imaginary value of the data,
+            - ``'c'`` to plot a composite image where phase channel maps to hue and
               modulus channel maps to brightness of the color.
 
         cmap : str
