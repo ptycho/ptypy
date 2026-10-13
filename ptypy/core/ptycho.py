@@ -267,7 +267,23 @@ class Ptycho(Base):
     doc = Switch to request the production of a movie from the dumped plots at the end of the
       reconstruction.
 
-    [io.benchmark]
+    [io.report]
+    default = None
+    type = Param
+    help = Final report parameters
+    doc = Container for the final report parameters.
+    userlevel = 2
+
+    [io.report.metrics]
+    default = 'all'
+    type = str
+    help = Compute metrics for the report
+    doc = Choose which metrics to compute for the final report.
+        [``'all'``]
+    choices = ['all']
+    userlevel = 2
+    
+    [io.report.benchmark]
     default = None
     type = str
     help = Produce timings for benchmarking the performance of data loaders and engines
@@ -323,8 +339,8 @@ class Ptycho(Base):
                   see :py:meth:`init_communication`
             - 4 : also initializes reconstruction engines,
                   see :py:meth:`init_engine`
-            - >= 4 : also and starts reconstruction
-                    see :py:meth:`run`
+            - >=5 : also and starts reconstruction
+                  see :py:meth:`run`
         """
         super(Ptycho, self).__init__(None, 'Ptycho')
 
@@ -381,18 +397,19 @@ class Ptycho(Base):
         )
 
         if level >= 1:
-            logger.info('\n' + headerline('Ptycho init level 1', 'l'))
+            logger.info('\n' + headerline('Ptycho init level 1 (init_structures)', 'l'))
             self.init_structures()
         if level >= 2:
-            logger.info('\n' + headerline('Ptycho init level 2', 'l'))
+            logger.info('\n' + headerline('Ptycho init level 2 (init_data)', 'l'))
             self.init_data()
         if level >= 3:
-            logger.info('\n' + headerline('Ptycho init level 3', 'l'))
+            logger.info('\n' + headerline('Ptycho init level 3 (init_communication)', 'l'))
             self.init_communication()
         if level >= 4:
-            logger.info('\n' + headerline('Ptycho init level 4', 'l'))
+            logger.info('\n' + headerline('Ptycho init level 4 (init_engine)', 'l'))
             self.init_engine()
         if level >= 5:
+            logger.info('\n' + headerline('Ptycho init level 5 (run)', 'l'))
             self.run()
             self.finalize()
 
@@ -445,14 +462,20 @@ class Ptycho(Base):
         # Find run name
         self.runtime.run = self.paths.run(p.run)
 
-        # Benchmark
-        if self.p.io.benchmark == 'all':
-            self.benchmark = u.Param()
-            self.benchmark.data_load = 0
-            self.benchmark.engine_init = 0
-            self.benchmark.engine_prepare = 0
-            self.benchmark.engine_iterate = 0
-            self.benchmark.engine_finalize = 0
+        # Reporting
+        if self.p.io.report:
+            # Initialize report dict
+            self.report = {}
+            # switch on the recording of positions
+            self.record_positions = True
+            # Benchmark
+            if self.p.io.report.benchmark == 'all':
+                self.benchmark = u.Param()
+                self.benchmark.data_load = 0
+                self.benchmark.engine_init = 0
+                self.benchmark.engine_prepare = 0
+                self.benchmark.engine_iterate = 0
+                self.benchmark.engine_finalize = 0
 
     def init_communication(self):
         """
@@ -535,10 +558,10 @@ class Ptycho(Base):
         """
         # Load the data. This call creates automatically the scan managers,
         # which create the views and the PODs. Sets self.new_data
-        with LogTime(self.p.io.benchmark == 'all') as t:
+        with LogTime(self.p.io.report.benchmark == 'all') as t:
             while not self.new_data:
                 self.new_data = self.model.new_data()
-        if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
+        if (self.p.io.report.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
         # Print stats
         parallel.barrier()
@@ -658,16 +681,16 @@ class Ptycho(Base):
 
             # Prepare the engine
             ilog_message('%s: initializing engine' %engine.p.name)
-            with LogTime(self.p.io.benchmark == 'all') as t:
+            with LogTime(self.p.io.report.benchmark == 'all') as t:
                 engine.initialize()
-            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_init += t.duration
+            if (self.p.io.report.benchmark == 'all') and parallel.master: self.benchmark.engine_init += t.duration
 
             # One .prepare() is always executed, as Ptycho may hold data
             ilog_message('%s: preparing engine' %engine.p.name)
             self.new_data = [(d.label, d) for d in self.diff.S.values()]
-            with LogTime(self.p.io.benchmark == 'all') as t:
+            with LogTime(self.p.io.report.benchmark == 'all') as t:
                 engine.prepare()
-            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
+            if (self.p.io.report.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
             # Start the iteration loop
             ilog_streamer('%s: starting engine' %engine.p.name)
@@ -679,16 +702,16 @@ class Ptycho(Base):
                 parallel.barrier()
 
                 # Check for new data
-                with LogTime(self.p.io.benchmark == 'all') as t:
+                with LogTime(self.p.io.report.benchmark == 'all') as t:
                     self.new_data = self.model.new_data()
-                if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
+                if (self.p.io.report.benchmark == 'all') and parallel.master: self.benchmark.data_load += t.duration
 
                 # Last minute preparation before a contiguous block of
                 # iterations
                 if self.new_data:
-                    with LogTime(self.p.io.benchmark == 'all') as t:
+                    with LogTime(self.p.io.report.benchmark == 'all') as t:
                         engine.prepare()
-                    if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
+                    if (self.p.io.report.benchmark == 'all') and parallel.master: self.benchmark.engine_prepare += t.duration
 
                 # Keep loading data, unless we have reached minimum nr. of frames or end of scan
                 if (len(self.diff.V) < self.p.min_frames_for_recon) and not self.model.end_of_scan:
@@ -709,9 +732,9 @@ class Ptycho(Base):
                     engine.numiter += engine.p.numiter_contiguous
 
                 # One iteration
-                with LogTime(self.p.io.benchmark == 'all') as t:
+                with LogTime(self.p.io.report.benchmark == 'all') as t:
                     engine.iterate()
-                if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_iterate += t.duration
+                if (self.p.io.report.benchmark == 'all') and parallel.master: self.benchmark.engine_iterate += t.duration
 
                 # Display runtime information and do saving
                 if parallel.master:
@@ -740,9 +763,17 @@ class Ptycho(Base):
             ilog_newline()
 
             # Done. Let the engine finish up
-            with LogTime(self.p.io.benchmark == 'all') as t:
+            with LogTime(self.p.io.report.benchmark == 'all') as t:
                 engine.finalize()
-            if (self.p.io.benchmark == 'all') and parallel.master: self.benchmark.engine_finalize += t.duration
+            if (self.p.io.report.benchmark == 'all') and parallel.master: self.benchmark.engine_finalize += t.duration
+
+            # Create report if requested
+            if self.p.io.report is not None:
+                self.create_report()
+
+                # Append benchmark info to report
+                if (self.p.io.report.benchmark == 'all') and parallel.master:
+                    self.report['benchmark'] = self.benchmark
 
             # Save
             if self.p.io.rfile:
@@ -752,14 +783,6 @@ class Ptycho(Base):
             # Time the initialization
             self.runtime.stop = time.asctime()
 
-            # Save benchmarks to json file
-            if (self.p.io.benchmark == 'all') and parallel.master:
-                try:
-                    with open(self.paths.home + "/benchmark.json", "w") as json_file:
-                        json.dump(self.benchmark, json_file)
-                    logger.info("Benchmarks have been written to %s" %self.paths.home + "/benchmark.json")
-                except Exception as e:
-                    logger.warning("Failed to write benchmarks to file: %s" %e)
 
         elif epars is not None:
             # A fresh set of engine parameters arrived.
@@ -1039,6 +1062,9 @@ class Ptycho(Base):
                 for ID, S in self.obj.storages.items():
                     content.positions[ID] = np.array([v.coord for v in S.views if v.pod.pr_view.layer==0])
 
+            if self.p.io.report is not None:
+                content.report = self.report
+
             h5opt = io.h5options['UNSUPPORTED']
             io.h5options['UNSUPPORTED'] = 'ignore'
             logger.info('Saving to %s' % dest_file)
@@ -1159,6 +1185,26 @@ class Ptycho(Base):
             for scan in self.model.scans.values():
                 scan._initialize_exit(list(self.pods.values()))
 
+    def create_report(self):
+        """
+        Create a final report at the end of a reconstruction. 
+
+        For now: just print out info.
+
+        WIP: Some metrics that are worth knowing about the reconstruction:
+            *what was the probe size (probes are messy, so a metric or various metrics would need to be found and reported)
+            *what was the average step size
+            *using those numbers, what was the (linear / area) overlap in the sample plane
+            *using those numbers, what was the oversampling in the detector plane
+            *what do these photon error metrics mean
+            *maps of which pixels are covered by how many views (how often do they get updated)
+            *fluence map - how much of the total intensity ended up in each pixel of the object
+            *just again saying there were X diffraction patterns of size N * M
+        """
+        logger.info(headerline('Ptycho final report', 'l', '='))
+        if self.p.io.report.metrics == 'all':
+            self.report['metrics'] = u.reporting.calculate_metrics(self)
+            
     def _redistribute_data(self, div = 'rect', obj_storage=None):
         """
         This function redistributes data among nodes, so that each
