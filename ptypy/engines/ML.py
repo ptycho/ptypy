@@ -415,6 +415,9 @@ class ML(PositionCorrectionEngine):
         # Delete model
         del self.ML_model
 
+        # Gather the refined positions of all MPI ranks onto the master node
+        super().engine_finalize()
+
 class BaseModel(object):
     """
     Base class for log-likelihood models.
