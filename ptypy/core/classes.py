@@ -631,6 +631,9 @@ class Storage(Base):
         if update:
             self.update()
 
+        # Keep track if we need to update views again at the end (which can be costly)
+        requires_update = False
+
         # List of views on this storage
         views = self.views
 
@@ -694,6 +697,7 @@ class Storage(Base):
                 % (str(self.ID), str(self.owner.ID), _misfit_str))
         
         if needtocrop_or_pad:
+            requires_update = True
             if self.padonly:
                 misfit[negmisfit] = 0
 
@@ -731,6 +735,7 @@ class Storage(Base):
         
         # Deal with layermap
         if self.layermap != new_layermap:
+            requires_update = True
             relaid_data = []
             for i in new_layermap:
                 if i in self.layermap:
@@ -757,6 +762,8 @@ class Storage(Base):
         self.data = new_data
         self.shape = new_shape
         self.center = new_center
+        if requires_update:
+            self.update()
                 
     def _to_pix(self, coord):
         """
@@ -827,7 +834,7 @@ class Storage(Base):
         """
         self._center = u.expectN(v, self.ndim)
         self._origin = - self._center * self._psize
-        self.update()
+        #self.update()
 
     @property
     def views(self):
@@ -1814,7 +1821,7 @@ class Container(Base):
         # Return new storage
         return s
 
-    def reformat(self, also_in_copies=False):
+    def reformat(self, also_in_copies=False, update=True):
         """
         Reformats all storages in this container.
 
@@ -1824,7 +1831,7 @@ class Container(Base):
             If True, also reformat associated copies of this container
         """
         for ID, s in self.storages.items():
-            s.reformat()
+            s.reformat(update=update)
             if also_in_copies:
                 for c in self.copies:
                     c.S[ID].reformat()
