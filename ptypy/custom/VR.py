@@ -16,7 +16,7 @@ from ptypy import utils as u
 from ptypy.utils.verbose import logger
 from ptypy.utils import parallel
 from ptypy.engines import register
-from ptypy.engines.base import BaseEngine
+from ptypy.engines.base import PositionCorrectionEngine
 from ptypy.core.manager import Full, Vanilla, BlockVanilla, BlockFull
 from ptypy.accelerate.base.engines.projectional_serial import serialize_array_access
 
@@ -163,7 +163,7 @@ def _poisson_loss_grad(fm, idx, grads):
     return per_frame.sum(), per_frame
 
 @register()
-class VR(BaseEngine):
+class VR(PositionCorrectionEngine):
     """
     Variance-reduced mini-batch maximum likelihood reconstruction engine.
 
