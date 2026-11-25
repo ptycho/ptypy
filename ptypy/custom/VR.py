@@ -560,7 +560,7 @@ class VR(PositionCorrectionEngine):
         self._lr = lr
 
         # One GPU synchronisation per epoch, not per update
-        self._error_cpu = np.array([mean_loss])
+        self._error_cpu = mean_loss
 
         self._order = None
         self._epoch_loss.zero_()
