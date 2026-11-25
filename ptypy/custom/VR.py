@@ -560,7 +560,7 @@ class VR(PositionCorrectionEngine):
         self._lr = lr
 
         # One GPU synchronisation per epoch, not per update
-        self._error_cpu = self.mean_loss.cpu().numpy()
+        self._error_cpu = np.array([mean_loss])
 
         self._order = None
         self._epoch_loss.zero_()
@@ -588,7 +588,7 @@ class VR(PositionCorrectionEngine):
         """
         ptypy error dictionary: Poisson NLL per view as of the last completed epoch.
         """
-        return {name: np.array([0., self._error_cpu[i], 0.])
+        return {name: np.array([0., self._error_cpu, 0.])
                 for i, name in enumerate(self._view_names)}
 
     def engine_finalize(self):
