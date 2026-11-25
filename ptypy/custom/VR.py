@@ -560,14 +560,29 @@ class VR(PositionCorrectionEngine):
         self._lr = lr
 
         # One GPU synchronisation per epoch, not per update
-        self._error_cpu = self._frame_error.cpu().numpy()
-
-        logger.info('Epoch %d: Poisson NLL %.4f, lr %.3g, batch %d'
-                    % (self.epoch, mean_loss, lr, self.batch_size))
+        self._error_cpu = self.mean_loss.cpu().numpy()
 
         self._order = None
         self._epoch_loss.zero_()
         self._epoch_batches = 0
+
+    def _write_back(self):
+        """
+        Copy the current estimate into the ptypy containers.
+
+        The effective probe is probe * scale_k, so the probe written is the
+        probe times the mean scaling over frames, per mode. 
+        """
+        fm = self.forward_model
+        with torch.no_grad():
+            mean_scale = fm.scale.mean(dim=0)              # (M, 1, 1)
+            probe = (fm.probe * mean_scale).cpu().numpy()
+            obj = fm.obj.cpu().numpy()
+
+        pr = next(iter(self.pr.storages.values()))
+        ob = next(iter(self.ob.storages.values()))
+        pr.data[:] = probe
+        ob.data[0] = obj
 
     def _error_dict(self):
         """
